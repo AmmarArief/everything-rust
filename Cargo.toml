@@ -2,11 +2,11 @@
 name = "carcinize"
 version = "0.1.0"
 edition = "2024"
-description = "Plan, bridge, verify and ship incremental migrations of TypeScript/JavaScript code to Rust"
+description = "Plan, bridge, verify and ship incremental migrations to Rust from TypeScript/JavaScript, Python, C, Go, Ruby and Java"
 license = "MIT"
 readme = "README.md"
 rust-version = "1.88"
-keywords = ["migration", "typescript", "napi", "wasm", "rewrite"]
+keywords = ["migration", "rewrite", "ffi", "napi", "pyo3"]
 categories = ["command-line-utilities", "development-tools", "wasm"]
 # repository and homepage: set once the project has a name and a home.
 exclude = ["demo/", "docs/examples/", "tests/fixtures/**/node_modules"]
