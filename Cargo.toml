@@ -23,6 +23,7 @@ oxc_ast_visit = "0.158"
 oxc_parser = "0.158"
 oxc_span = "0.158"
 oxc_syntax = "0.158"
+regex = "1"
 serde = { version = "1", features = ["derive"] }
 # float_roundtrip: recorded floats must survive parsing bit for bit.
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order"] }

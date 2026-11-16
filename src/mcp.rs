@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 
-use crate::{analyze, bridge, gate, harness, shadow};
+use crate::{analyze, app, bridge, gate, harness, shadow};
 
 const PROTOCOL_VERSION: &str = "2025-06-18";
 
@@ -154,6 +154,26 @@ fn tools() -> Value {
             "description": "Definition of done: fmt, clippy -D warnings, cargo test, unsafe with SAFETY comments only, no unimplemented functions, build, API present, recorded behavior matches.",
             "inputSchema": { "type": "object", "properties": { "crate": crate_dir }, "required": ["crate"] },
         },
+        {
+            "name": "app_record",
+            "description": "Record the whole CLI app's behavior: run the original on its own documented examples, an inputs file and semantic traps (non-ASCII and emoji, negative division, overflow, float extremes, map order), twice each; what differs between runs becomes a wildcard. Cases are trycmd files in <repo>/rust/app-cases/ (argv, stdin, env, files in; stdout, stderr, exit code, files out).",
+            "inputSchema": { "type": "object", "properties": {
+                "repo": { "type": "string", "description": "Repository root." },
+                "run": { "type": "array", "items": { "type": "string" }, "description": "Command that runs the original, paths relative to repo: [\"python3\", \"cli.py\"]. Optional after the first record." },
+                "inputs": { "type": "string", "description": "JSONL of extra cases: {\"name\", \"args\": [...], \"stdin\", \"env\": {...}, \"files\": {path: text}}." },
+                "normalize": { "type": "array", "items": { "type": "string" }, "description": "Normalizers: timestamps, uuids, key-order, or name=regex." },
+                "name": { "type": "string", "description": "Name the app is invoked by in its docs." },
+                "traps": { "type": "boolean", "description": "Add semantic-trap cases (default true)." },
+            }, "required": ["repo"] },
+        },
+        {
+            "name": "app_replay",
+            "description": "Replay <repo>/rust/app-cases/ against a build (the original, the front door, the final Rust binary): passed/total, fallback rate when the build reports it, and a report with a diff per failing case (rust/app-cases/replay-report.md).",
+            "inputSchema": { "type": "object", "properties": {
+                "repo": { "type": "string", "description": "Repository root." },
+                "build": { "type": "string", "description": "Command line of the build to test; the original when omitted." },
+            }, "required": ["repo"] },
+        },
     ])
 }
 
@@ -263,6 +283,27 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             serde_json::to_value(shadow::shadow(&path("crate")?, out.as_deref())?)?
         }
         "gate" => serde_json::to_value(gate::gate(Path::new(&path("crate")?), &no_node_args)?)?,
+        "app_record" => {
+            let repo = path("repo")?;
+            let inputs = opt_path("inputs");
+            serde_json::to_value(app::record(&app::RecordOptions {
+                repo: &repo,
+                run: &strings("run"),
+                inputs: inputs.as_deref(),
+                normalize: &strings("normalize"),
+                name: args["name"].as_str(),
+                traps: args["traps"].as_bool().unwrap_or(true),
+                timeout_secs: None,
+            })?)?
+        }
+        "app_replay" => {
+            let repo = path("repo")?;
+            serde_json::to_value(app::replay(&app::ReplayOptions {
+                repo: &repo,
+                build: args["build"].as_str(),
+                timeout_secs: None,
+            })?)?
+        }
         _ => anyhow::bail!("unknown tool `{name}`"),
     })
 }
@@ -288,8 +329,18 @@ mod tests {
         assert_eq!(
             names,
             [
-                "analyze", "bridge", "refresh", "record", "build", "diff", "profile", "bench",
-                "shadow", "gate"
+                "analyze",
+                "bridge",
+                "refresh",
+                "record",
+                "build",
+                "diff",
+                "profile",
+                "bench",
+                "shadow",
+                "gate",
+                "app_record",
+                "app_replay"
             ]
         );
         let bad = handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "gate", "arguments": {} } })).unwrap();

@@ -17,7 +17,7 @@ macro_rules! say_raw {
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use rust_anything::{analyze, bridge, gate, harness, mcp, report, shadow};
+use rust_anything::{analyze, app, bridge, gate, harness, mcp, report, shadow};
 
 #[derive(Parser)]
 #[command(
@@ -177,6 +177,11 @@ enum Cmd {
         #[arg(long = "node-arg", allow_hyphen_values = true)]
         node_args: Vec<String>,
     },
+    /// Record the whole app's behavior and replay any build against it (CLIs).
+    App {
+        #[command(subcommand)]
+        command: AppCmd,
+    },
     /// Serve every step as MCP tools over stdio.
     Mcp,
     /// Register rust-anything with your coding agents (Claude Code, Codex, Cursor, Gemini CLI):
@@ -192,6 +197,56 @@ enum Cmd {
         /// Show what would change, write nothing.
         #[arg(long)]
         dry_run: bool,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum AppCmd {
+    /// Run the original CLI on cases (its own examples, `--inputs`, semantic traps), twice
+    /// each, and store them as trycmd files in `<repo>/rust/app-cases/`.
+    /// `rust-anything app record . -- python3 cli.py`
+    Record {
+        /// Repository root.
+        #[arg(default_value = ".")]
+        repo: PathBuf,
+        /// Extra cases: JSONL of `{"name", "args": [...], "stdin", "env": {...}, "files": {path: text}}`.
+        #[arg(long)]
+        inputs: Option<PathBuf>,
+        /// Normalizer: `timestamps`, `uuids`, `key-order`, or `name=regex` for your own. Repeatable;
+        /// saved with the cases.
+        #[arg(long)]
+        normalize: Vec<String>,
+        /// The name the app is invoked by in its docs (found from the command and manifests when omitted).
+        #[arg(long)]
+        name: Option<String>,
+        /// Leave out the semantic-trap inputs.
+        #[arg(long)]
+        no_traps: bool,
+        /// Seconds before a run is killed (default 30).
+        #[arg(long)]
+        timeout: Option<u64>,
+        #[arg(long)]
+        json: bool,
+        /// The command that runs the original, after `--`; paths are relative to the repository.
+        /// Taken from the saved cases when omitted.
+        #[arg(last = true)]
+        run: Vec<String>,
+    },
+    /// Run a build against `<repo>/rust/app-cases/`, print passed/total, write a report with a
+    /// diff per failing case; exits non-zero on any mismatch.
+    Replay {
+        /// Repository root.
+        #[arg(default_value = ".")]
+        repo: PathBuf,
+        /// Command line of the build to test (the original, the front door, the final binary);
+        /// the original when omitted.
+        #[arg(long)]
+        build: Option<String>,
+        /// Seconds before a run is killed.
+        #[arg(long)]
+        timeout: Option<u64>,
         #[arg(long)]
         json: bool,
     },
@@ -474,6 +529,7 @@ fn run() -> Result<ExitCode> {
                 return Ok(ExitCode::FAILURE);
             }
         }
+        Cmd::App { command } => return run_app(command),
         Cmd::Mcp => mcp::serve()?,
         Cmd::Setup {
             agents,
@@ -496,6 +552,95 @@ fn run() -> Result<ExitCode> {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
                 print!("{}", rust_anything::setup::text(&report));
+            }
+        }
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn run_app(command: AppCmd) -> Result<ExitCode> {
+    match command {
+        AppCmd::Record {
+            repo,
+            inputs,
+            normalize,
+            name,
+            no_traps,
+            timeout,
+            json,
+            run,
+        } => {
+            let outcome = app::record(&app::RecordOptions {
+                repo: &repo,
+                run: &run,
+                inputs: inputs.as_deref(),
+                normalize: &normalize,
+                name: name.as_deref(),
+                traps: !no_traps,
+                timeout_secs: timeout,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+                return Ok(ExitCode::SUCCESS);
+            }
+            say!(
+                "Recorded {} cases in {} ({} from examples, {} from inputs, {} traps)",
+                outcome.cases,
+                outcome.dir.display(),
+                outcome.examples,
+                outcome.inputs,
+                outcome.traps
+            );
+            if !outcome.noisy.is_empty() {
+                say!(
+                    "Noise (differed between two runs, now wildcards): {}",
+                    outcome.noisy.join(", ")
+                );
+            }
+            if !outcome.unstable.is_empty() {
+                say!(
+                    "Unstable (exit code or files differed between runs; check them): {}",
+                    outcome.unstable.join(", ")
+                );
+            }
+            if !outcome.timed_out.is_empty() {
+                say!("Timed out, not recorded: {}", outcome.timed_out.join(", "));
+            }
+        }
+        AppCmd::Replay {
+            repo,
+            build,
+            timeout,
+            json,
+        } => {
+            let outcome = app::replay(&app::ReplayOptions {
+                repo: &repo,
+                build: build.as_deref(),
+                timeout_secs: timeout,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                say!("{}/{} cases passed", outcome.passed, outcome.total);
+                if let Some(f) = &outcome.fallback {
+                    say!(
+                        "Fallback rate: {:.1}% ({}/{})",
+                        f.rate * 100.0,
+                        f.cases,
+                        f.total
+                    );
+                }
+                for f in outcome.failures.iter().take(20) {
+                    let fields: Vec<&str> = f.problems.iter().map(|p| p.field.as_str()).collect();
+                    say!("- {}: {}", f.case, fields.join(", "));
+                }
+                if outcome.failures.len() > 20 {
+                    say!("- ... and {} more", outcome.failures.len() - 20);
+                }
+                say!("Report: {}", outcome.report.display());
+            }
+            if !outcome.failures.is_empty() {
+                return Ok(ExitCode::FAILURE);
             }
         }
     }

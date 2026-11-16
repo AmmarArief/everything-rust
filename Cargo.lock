@@ -881,6 +881,7 @@ dependencies = [
  "oxc_parser",
  "oxc_span",
  "oxc_syntax",
+ "regex",
  "serde",
  "serde_json",
  "toml_edit",

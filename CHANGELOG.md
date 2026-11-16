@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- `app record` and `app replay` (also MCP tools `app_record` and `app_replay`): app-level
+  behavior for CLIs in all six languages. `record` runs the original on its documented examples,
+  an `--inputs` file and semantic traps, twice each, turns what differs between runs into
+  wildcards, applies named normalizers (`timestamps`, `uuids`, `key-order`, `name=regex`), and
+  writes trycmd-compatible cases to `rust/app-cases/`. `replay` runs any build against them,
+  prints `passed/total`, writes a report with a diff per failing case, exits non-zero on a
+  mismatch, and reports the fallback rate of builds that write `RUST_ANYTHING_FALLBACK_LOG`.
+
 ## 1.0.1 (2026-11-16)
 
 - npm: one `rust-anything` package that carries the binaries for macOS, Linux and Windows.

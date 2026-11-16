@@ -4,6 +4,7 @@
 //! each source language is a plugin module. TypeScript/JavaScript (`ts`) is the first.
 
 pub mod analyze;
+pub mod app;
 pub mod bridge;
 pub mod codegen;
 pub mod codegen_batch;

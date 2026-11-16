@@ -142,6 +142,34 @@ they all match and `gate` passes. Callers keep the original API throughout.
 | 5. Gate | `rust-anything gate <crate>` | fmt, clippy `-D warnings`, tests, `unsafe` audit, nothing unported, build, API, behavior |
 | Agents | `rust-anything setup` | Registers the MCP server (`rust-anything mcp`, every step as a tool) and the workflow skill ([`skills/rust-anything/SKILL.md`](./skills/rust-anything/SKILL.md)) with your coding agents |
 
+## Whole-app behavior: `app record` and `app replay`
+
+`record` and `diff` prove one unit. `app record` and `app replay` prove the whole program from the
+outside, for CLIs in any of the six languages (the app is a black box):
+
+```sh
+rust-anything app record . -- python3 cli.py          # the command that runs the original
+rust-anything app replay .                            # the original must pass 100%
+rust-anything app replay . --build "target/release/mytool"
+```
+
+- `app record` runs the original on the app's own documented examples (`$ mytool ...` lines in
+  its Markdown and shell files, with the files they name), an `--inputs` JSONL file
+  (`{"name", "args", "stdin", "env", "files"}`), and semantic traps derived from those cases
+  (non-ASCII and emoji strings, negative division and modulo, overflow, large and tiny floats,
+  map order, missing files). Each case runs twice; what differs between the two runs becomes a
+  `[..]` wildcard. `--normalize timestamps|uuids|key-order` or `--normalize name=regex` adds
+  normalizers, saved with the cases.
+- Cases are [trycmd](https://docs.rs/trycmd) files in `rust/app-cases/`: `<case>.toml` (argv, env,
+  exit code), `.stdin`, `.stdout`, `.stderr`, `.in/` (files in) and `.out/` (files written). Read
+  and edit them by hand; a Rust test can run them with `trycmd` once the port has a binary.
+- `app replay` runs any build against the cases, prints `passed/total`, writes
+  `rust/app-cases/replay-report.md` with a diff per failing case, and exits non-zero on any
+  mismatch. A build that appends to the file named by `RUST_ANYTHING_FALLBACK_LOG` (one line per
+  fallback to the original) also gets its fallback rate reported.
+
+Both are MCP tools too: `app_record` and `app_replay`.
+
 ## Case study: x18n's core
 
 All 29 functions of x18n's core that can move without an API change were ported with rust-anything:
@@ -301,7 +329,7 @@ installed, and TS that needs transforming (enums, parameter properties) is retri
 ## Development
 
 ```sh
-cargo test                        # unit tests, fixture repo, record/diff/shadow loop (needs node)
+cargo test                        # unit tests, fixture repo, record/diff/shadow loop (needs node), app record/replay per language
 cargo clippy --all-targets -- -D warnings
 cargo fmt
 ```
