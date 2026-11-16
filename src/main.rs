@@ -179,6 +179,22 @@ enum Cmd {
     },
     /// Serve every step as MCP tools over stdio.
     Mcp,
+    /// Register rust-anything with your coding agents (Claude Code, Codex, Cursor, Gemini CLI):
+    /// the MCP server and, where the agent reads skills, the workflow skill. Keeps your other
+    /// settings; run it again any time.
+    Setup {
+        /// Agents to set up (repeatable); every agent found by default.
+        #[arg(long = "agent", value_enum)]
+        agents: Vec<rust_anything::setup::Agent>,
+        /// Take the rust-anything entries out again.
+        #[arg(long)]
+        remove: bool,
+        /// Show what would change, write nothing.
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> ExitCode {
@@ -459,6 +475,29 @@ fn run() -> Result<ExitCode> {
             }
         }
         Cmd::Mcp => mcp::serve()?,
+        Cmd::Setup {
+            agents,
+            remove,
+            dry_run,
+            json,
+        } => {
+            let home = rust_anything::setup::home()?;
+            let command = std::env::current_exe()
+                .and_then(|p| p.canonicalize())
+                .context("finding the rust-anything executable")?;
+            let report = rust_anything::setup::setup(&rust_anything::setup::Options {
+                home: &home,
+                agents,
+                command,
+                remove,
+                dry_run,
+            })?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                print!("{}", rust_anything::setup::text(&report));
+            }
+        }
     }
     Ok(ExitCode::SUCCESS)
 }

@@ -1,26 +1,71 @@
 # rust-anything
 
+**Make the slow part of your app fast in Rust, without rewriting the app.** For TypeScript/JavaScript,
+Python, C, Go, Ruby and Java codebases, one hot path at a time, proven identical by recorded
+behavior.
+
+| Real workload, same results as the original | Original | With rust-anything |
+| --- | ---: | ---: |
+| x18n's sidebar search, 50,000 keys (TypeScript, Node) | 10 ms per query | **0.5 ms: 20x faster** |
+| The same search in the browser (wasm, one thread) | 10 ms | **0.95 ms: 11.5x** |
+| `slugify` over 20,000 strings (Python) | 98 ms | **17x faster** |
+| `Shellwords.shellescape` from Ruby's standard library, 50,000 values | 88 ms | **11.8x faster** |
+| `Slugify` over 50,000 strings (Go) | 49 ms | **4x faster** |
+| `slugify` over 50,000 strings (Java) | 43 ms | **3x faster** |
+
+Measured on 4 cores; every number has a benchmark in [`demo/`](./demo) that first checks the
+results are identical. Calling Rust once per small function is usually *slower* than a JIT;
+rust-anything finds the loop worth moving, and moves it.
+
 > rust-anything is an independent project, not affiliated with or endorsed by the Rust Project
 > or the Rust Foundation. "Rust" is a trademark of the Rust Foundation.
 
-Move a codebase to Rust one module at a time, without breaking it. TypeScript/JavaScript,
-Python, C, Go, Ruby and Java.
+## Quick start
+
+```sh
+cargo install --path .        # from a clone; crates.io and prebuilt binaries are coming
+rust-anything setup           # registers it with Claude Code, Codex, Cursor and Gemini CLI
+```
+
+`setup` adds the MCP server to each agent it finds and installs the workflow skill where the agent
+reads skills. It keeps your other settings, is safe to run again, and `--remove` undoes it.
+Then ask your agent, for example:
+
+- *"This search feels slow. Profile it with rust-anything and move the hot loop to Rust."*
+- *"Plan a migration of `src/parser/` to Rust with rust-anything; port the first unit and prove it."*
+- *"Bench the Rust port in `rust/text-rs` against the original and tell me whether to ship it."*
+
+Or run the steps yourself:
+
+```sh
+rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
+rust-anything bridge . src/fuzzy.ts --batch fuzzyScore:text
+# write src/port.rs (or let your agent), then:
+rust-anything record rust/fuzzy-rs && rust-anything build rust/fuzzy-rs
+rust-anything diff rust/fuzzy-rs                       # every recorded case must match
+rust-anything bench rust/fuzzy-rs                      # faster? the verdict says
+rust-anything gate rust/fuzzy-rs                       # done means this passes
+```
 
 rust-anything does not translate code: your coding agent (Claude Code, Codex, Cursor, ...) or you write
-the Rust. rust-anything supplies what an agent cannot guess reliably: what to port first and in which
-order, a bridge so the rest of the code can call the Rust with its API unchanged, the exact
-behavior the port must match, a safe way to ship it, and a gate that says when a port is done.
+the Rust. rust-anything supplies what an agent cannot guess reliably: where the time goes, what to port
+first and in which order, a bridge so the rest of the code calls the Rust with its API unchanged,
+the exact behavior the port must match, a safe way to ship it, and a gate that says when a port is
+done.
 
 ## Languages
 
 | Language | Unit | Bridge | Recorded and replayed by |
 | --- | --- | --- | --- |
-| TypeScript/JavaScript | folder or file | napi-rs or wasm-bindgen, classes and async included | Node, running the `.ts` sources |
-| Python | package or module | PyO3 (abi3), typed exceptions | Python, importing the original |
+| TypeScript/JavaScript | folder or file | napi-rs or wasm-bindgen with a generated binary wire; classes and async included | Node, running the `.ts` sources |
+| Python | package or module | PyO3 (abi3), direct conversion, typed exceptions | Python, importing the original |
 | C | `.c` file | `extern "C"` functions with the original names and a header | the original compiled to a shared library, called through ctypes, one fork per case |
-| Go | package | JSON dispatcher + generated cgo package with the original API | a generated Go driver, built as its own module |
-| Ruby | file or folder of module functions | JSON dispatcher + generated Fiddle wrapper defining the same modules | a generated Ruby driver |
-| Java | package of `public static` methods | JSON dispatcher over JNI + generated wrapper classes | a generated reflection driver |
+| Go | package | typed cgo calls and a generated binary wire, in a package with the original API | a generated Go driver, built as its own module |
+| Ruby | file or folder of module functions | a magnus extension under the original modules | a generated Ruby driver |
+| Java | package of `public static` methods | typed JNI and a generated binary wire, in wrapper classes with the original methods | a generated reflection driver |
+
+Every language except C also gets batch classes (`--batch`): the items cross once and stay in
+Rust, and each call runs over all of them on all cores.
 
 The language is detected from the repository (`go.mod`, `pom.xml`, `pyproject.toml`, `Gemfile`,
 `package.json`, else the most common source files); `--lang` overrides it. Types come from the
@@ -40,7 +85,7 @@ used as numbers are inferred as numbers.
 | 3. Bench | `rust-anything bench <crate>` | Times the recorded cases on the original and on Rust, bridge included |
 | 4. Shadow | `rust-anything shadow <crate>` | Drop-in that runs both, returns the original's result, reports mismatches; `RUST_ANYTHING_MODE=old\|shadow\|new` |
 | 5. Gate | `rust-anything gate <crate>` | fmt, clippy `-D warnings`, tests, `unsafe` audit, nothing unported, build, API, behavior |
-| Agents | `rust-anything mcp` | Every step as an MCP tool over stdio; workflow skill in `skills/rustanything/SKILL.md` |
+| Agents | `rust-anything setup` | Registers the MCP server (`rust-anything mcp`, every step as a tool) and the workflow skill ([`skills/rust-anything/SKILL.md`](./skills/rust-anything/SKILL.md)) with your coding agents |
 
 ## Case study: x18n's core
 
@@ -144,12 +189,13 @@ cargo install --path .
 ```
 
 `record`, `diff` and `bench` run the original in its own runtime: Node 22.6+ for TS (it runs `.ts`
-sources directly), Python 3.9+ for Python and C (ctypes), Go 1.21+, Ruby 3+ with Fiddle, JDK 17+
+sources directly), Python 3.9+ for Python and C (ctypes), Go 1.21+, Ruby 3+, JDK 17+
 (`javac` and `java`). C also needs a C compiler. wasm bridges also need `rustup target add wasm32-unknown-unknown` and
 `cargo install wasm-bindgen-cli --version <the crate's wasm-bindgen version> --locked`; `build` names
 the exact version.
 
-For agents, add the MCP server (`.mcp.json`):
+For agents, `rust-anything setup` registers everything (see Quick start). To add the MCP server to
+one project by hand instead (`.mcp.json`):
 
 ```json
 { "mcpServers": { "rust-anything": { "command": "rust-anything", "args": ["mcp"] } } }
