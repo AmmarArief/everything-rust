@@ -1,19 +1,36 @@
 ---
 name: carcinize
-description: Migrate a TypeScript/JavaScript, Python, C, Go, Ruby or Java codebase to Rust incrementally with the carcinize CLI or MCP tools - plan, bridge one unit at a time, record the original's behavior, port, diff, shadow and gate. Use when asked to rewrite, port or migrate code to Rust, or to plan such a migration.
+description: Migrate a TypeScript/JavaScript, Python, C, Go, Ruby or Java codebase to Rust incrementally with the carcinize CLI or MCP tools - profile, plan, bridge one unit at a time, record the original's behavior, port, diff, bench, shadow and gate; batch hot loops so they run in Rust on all cores. Use when asked to rewrite, port or migrate code to Rust, to plan such a migration, or to make slow code faster with Rust.
 ---
 
 # Incremental migration to Rust with carcinize
 
-Works for TypeScript/JavaScript, Python, C, Go, Ruby and Java; the language is detected (or pass
-`--lang`). The steps are the same; the bridge and the wrapper the original's callers load differ
-(see the README's language table). Examples below use TS terms; read "the source language" for TS.
-
 carcinize gives you ground truth; you write the Rust. Never port a whole codebase at once, and never
 call a port done before `gate` passes.
 
-Tools: the `carcinize` CLI, or the same steps as MCP tools (`carcinize mcp`): `analyze`, `bridge`,
-`record`, `build`, `diff`, `shadow`, `gate`.
+Languages: TypeScript/JavaScript, Python, C, Go, Ruby, Java. The language is detected; `--lang`
+overrides it. The steps are the same everywhere; only the bridge differs (napi-rs or wasm for
+TS, PyO3, a C ABI, cgo, a magnus extension, JNI), and the original's callers keep their API.
+
+Tools: the `carcinize` CLI, or the same steps as MCP tools (`carcinize mcp`): `profile`,
+`analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`.
+
+## 0. Profile: find what is worth moving
+
+When the goal is speed, measure before choosing anything:
+
+```sh
+carcinize profile <repo> -- node bench.mjs      # or: python3 bench.py, ruby bench.rb,
+                                                #     java -cp out Main, go test -run X -bench . ./pkg
+```
+
+It runs a real workload under the runtime's own profiler and lists hot functions with their
+callers and advice. Go profiles only through `go test`; C is not supported (use `perf`).
+
+- A small function called once per item is **not** worth porting alone: one call into Rust costs
+  more than its work, and JITs (V8, the JVM, Go) run it in nanoseconds. Port it together with its
+  callers, or batch it (step 2b). The advice line says which, with the exact command.
+- If the user only wants a migration, skip to step 1.
 
 ## 1. Plan, then stop
 
@@ -23,8 +40,9 @@ carcinize analyze <repo> --json            # you: schema carcinize/analyze@1
 ```
 
 - Present the `start_here` units (best first ports) and the order by package and wave.
-- Call out `keep` units (UI, editor code: stay in TS), `blocked` units and their reason, and npm
-  dependencies with fit `none` or `unknown`. Do not hand-roll a missing crate silently: flag it.
+- Call out `keep` units (UI, editor code: they stay in the source language), `blocked` units and
+  their reason, and dependencies with fit `none` or `unknown`. Do not hand-roll a missing crate
+  silently: flag it.
 - **Wait for the user's approval of the plan and of the first unit.**
 
 ## 2. Port one unit
@@ -34,61 +52,79 @@ carcinize bridge <repo> <unit-id>          # crate in <repo>/rust/<name>; never 
 carcinize record <crate>                   # the original's behavior on edge-case inputs -> cases.jsonl
 ```
 
-- Add real-world inputs with `--inputs cases.jsonl` (`{"fn": name, "args": [...]}` per line) when the
-  generated ones cannot reach the interesting paths (structured arguments, domain strings).
-- If the TS source cannot run directly in Node (extensionless imports, path aliases), record from
-  built output with `--module dist/x.mjs` or pass `--node-arg=--import=tsx`.
-- If the original has no tests, `record` is the characterization suite: keep `cases.jsonl` in the repo.
+- Add real-world inputs with `--inputs cases.jsonl` (`{"fn": name, "args": [...]}` per line) when
+  the generated ones cannot reach the interesting paths (structured arguments, domain strings).
+- TS that cannot run directly in Node (extensionless imports, path aliases): record from built
+  output with `--module dist/x.mjs`, or pass `--node-arg=--import=tsx`.
+- If the original has no tests, `record` is the characterization suite: keep `cases.jsonl`.
 
-Write the port in `src/port.rs` only; `src/lib.rs` is the thin binding layer.
+Write the port in `src/port.rs` only; `src/lib.rs` and the wrappers are generated. After changing
+a signature in `port.rs`, run `carcinize refresh <crate>`.
 
 - Read each risk the plan lists for the unit, at its `file:line`, before writing code.
-- String offsets: use `src/utf16.rs`. JS indexes UTF-16 code units, Rust UTF-8 bytes.
-- Speed: before choosing what to port, profile a real workload: `carcinize profile <repo> -- node
-  bench.mjs` (or `python3 bench.py`, `go test -run X -bench . ./pkg`, `java -cp out Main`,
-  `ruby bench.rb`). A hot function called in a loop is a batch, not a port:
-  `carcinize bridge <repo> <unit> --batch fn:param` (or `refresh <crate> --batch fn:param`), then
-  have the caller build the batch once (`new FnBatch(items)`, `NewFnBatch(items)` in Go,
-  `Mod::FnBatch.new(items)` in Ruby) and call `rank`/`run` per query; close it in Go and Java. Define
-  `pub struct FnIndex` in `port.rs` with `new(items)` and `run(...)` to prepare the items once
-  (lowercase, masks, sorted tables); it must give the same result as the function, item by item.
-  Give it a `rank(<fixed>, min)` when ranking can skip work (narrowing to the last query's
-  matches as the user types, table lookups); test it against the function over every item. Map
-  returned indexes with a plain loop, not `Array.from(order, fn)`.
-- A batch multiplies the port's per-item speed by the cores, so against compiled originals (Go,
-  Java) the port itself must be fast: handle ASCII without Unicode tables, build the result in
-  one pre-sized `String`, avoid intermediate lowercase copies; keep `diff` passing.
-- Speed: run `carcinize bench` and follow its verdict. In Go and Java, a call into Rust costs more
-  than a small function's work: port the function with its callers, not alone. In Python ports,
-  use `crate::pynum::Num` for numbers that may be int or float, not `serde_json::Value`.
-- Errors: return `Err("TypeName: message")` (Python, Ruby, Java exception types; Go `error` text).
-- Dynamic languages: inputs that are ints in Python or Ruby must come back as ints where the
-  original passes them through; `diff` shows where. C: inputs recorded as `crash:` are undefined
-  behavior; any result passes.
-- Ordered maps and object keys: use `indexmap` where order reaches output.
+- String offsets: JS and Java index UTF-16 code units, Rust UTF-8 bytes: use `src/utf16.rs`.
+- Errors: return `Err("TypeName: message")`; it becomes that exception in Python, Ruby and Java,
+  and the `error` text in Go.
+- Numbers in Python and Ruby: ints that the original passes through must come back as ints;
+  in Python ports use `crate::pynum::Num` for int-or-float, not `serde_json::Value`.
+- C: inputs recorded as `crash:` are undefined behavior; any result passes.
+- Ordered maps and object keys: `indexmap` where order reaches output.
 - Regex lookaround or backreferences: `fancy-regex`, not `regex`.
 - No `unsafe`. If truly needed: minimal, isolated, with a `// SAFETY:` comment.
 - Add Rust unit tests in `port.rs` for the cases you reason about.
+
+## 2b. Batch a hot loop
+
+For a function called over many items (search, scoring, formatting a list):
+
+```sh
+carcinize bridge <repo> <unit> --batch fn:param    # or: carcinize refresh <crate> --batch fn:param
+```
+
+This generates a class that takes the `param` values once and keeps them in Rust:
+`new FnBatch(items)` (TS, Python, Java), `Mod::FnBatch.new(items)` (Ruby), `NewFnBatch(items)`
+(Go). Per query, `run(<other args>)` returns every result as one array, and `rank(<other args>,
+min)` returns the item indexes, best first. It runs on all cores, and errors are the original's.
+Close the batch when done in Go and Java (finalizers are only a fallback).
+
+- Make the caller build the batch once, not per query. Map returned indexes back to items with a
+  plain loop; in JS, `Array.from(order, fn)` costs 20x more.
+- To prepare items once (lowercase, masks, position tables), define `pub struct FnIndex` in
+  `port.rs` with `new(items)` and `run(<other args>) -> Result<Vec<R>, String>`. It must give the
+  same result as the function, item by item: test it against the function over every item.
+- When ranking can skip work, give the index its own `rank(<other args>, min) -> Result<Vec<u32>,
+  String>` (narrowing to the last query's matches as the user types, table lookups). It must
+  match ranking the function's results: score high to low, ties in item order.
+- A batch multiplies the port's per-item speed by the cores. Against compiled originals (Go,
+  Java) the port itself must be fast: handle ASCII without Unicode tables, build each result in one
+  pre-sized `String`, avoid intermediate copies. Keep `diff` passing.
+- Items and other arguments: numbers, booleans and strings (Ruby: any value); results: numbers,
+  booleans or strings. Not for C.
 
 ## 3. Prove it
 
 ```sh
 carcinize build <crate>
 carcinize diff <crate>                     # must be N/N
+carcinize bench <crate>                    # original vs Rust, bridge included, with a verdict
 ```
 
 A mismatch is a behavior difference: fix the port, never the recording. If the difference is
 intended, ask the user first, then re-record with their approval.
 
+Follow `bench`'s verdict: ship, keep the slower functions in the source language, or port a
+bigger unit (batch or include the callers). Do not ship a port that makes callers slower without
+saying so.
+
 ## 4. Ship it safely
 
 ```sh
-carcinize shadow <crate>                   # drop-in module, same exports as the original
+carcinize shadow <crate>                   # drop-in with the original's API
 ```
 
-Import the shadow module where the app imported the original. `CARCINIZE_MODE=shadow` (default)
-returns the original's results and reports Rust mismatches (`onMismatch`, `shadowStats`); `new`
-switches to Rust; `old` turns Rust off. The public API does not change.
+Load the shadow where the app loaded the original. `CARCINIZE_MODE=shadow` (default) returns the
+original's results and reports Rust mismatches; `new` switches to Rust; `old` turns Rust off.
+The public API does not change.
 
 ## 5. Done means gate passes
 
@@ -97,11 +133,11 @@ carcinize gate <crate>
 ```
 
 fmt, clippy with warnings as errors, cargo tests, `unsafe` only with SAFETY comments, nothing
-`unimplemented!`, module builds, every TS export present, every recorded case matches.
+`unimplemented!`, the module builds, every export present, every recorded case matches.
 
 Then report to the user, and **wait for their go-ahead before the next unit**:
 
-- what changed (files, functions, bridge),
-- gate output and diff counts,
+- what changed (files, functions, bridge, batches),
+- gate output, diff counts and bench numbers,
 - behavior differences or risks left (e.g. error messages differ, lone surrogates become U+FFFD
   in a napi `String`), and what is left in the plan.
