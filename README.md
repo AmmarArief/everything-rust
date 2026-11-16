@@ -37,6 +37,18 @@ Then ask your agent, for example:
 - *"Plan a migration of `src/parser/` to Rust with rust-anything; port the first unit and prove it."*
 - *"Bench the Rust port in `rust/text-rs` against the original and tell me whether to ship it."*
 
+### Works with
+
+| Agent | `rust-anything setup` adds |
+| --- | --- |
+| Claude Code | MCP server in `~/.claude.json`, skill in `~/.claude/skills/` |
+| Codex | MCP server in `~/.codex/config.toml`, skill in `~/.codex/skills/` |
+| Cursor | MCP server in `~/.cursor/mcp.json` |
+| Gemini CLI | MCP server in `~/.gemini/settings.json` |
+| Any other MCP client | add `rust-anything mcp` as a stdio server by hand (see [Install](#install)) |
+
+Before changing a file that exists, `setup` saves a copy beside it (`<file>.rust-anything.bak`).
+
 Or run the steps yourself:
 
 ```sh
@@ -73,6 +85,19 @@ The language is detected from the repository (`go.mod`, `pom.xml`, `pyproject.to
 `package.json`, else the most common source files); `--lang` overrides it. Types come from the
 source: TS types, Python hints, C and Go and Java signatures, Ruby YARD tags; untyped parameters
 used as numbers are inferred as numbers.
+
+## How it works
+
+```
+profile ──> analyze ──> bridge ──> record ──> port.rs ──> diff ──> bench ──> shadow ──> gate
+ where the    what to     the Rust   what the    you or      every     faster?    both side   done means
+ time goes    port first  crate and  original    your agent  recorded  the        by side in  this passes
+                          wrapper    does        write it    case      verdict    production
+```
+
+The original stays the source of truth: `record` runs it on edge cases (and your own inputs) and
+saves what it returns or throws; `diff` replays every case against the Rust; nothing ships until
+they all match and `gate` passes. Callers keep the original API throughout.
 
 ## The loop
 
@@ -153,9 +178,9 @@ one thread. Demo: [`demo/x18n-search`](./demo/x18n-search/README.md).
 Go's `path`, Ruby's `shellwords`, Python's `colorsys`, JDK and glibc behavior behind small
 facades: every port passes its gate, 13,010 recorded cases in all. The runs found and fixed
 bugs in rust-anything (floats off by one ULP through `serde_json`, C crashes during recording,
-untyped code getting garbage inputs). With direct bridges, the Ruby port runs 4.4x faster than
-Ruby and the Python port 1.35x faster than CPython; Go and Java leaf functions stay faster in
-their own language, and `bench` says to port bigger units there.
+untyped code getting garbage inputs). Called per function, the Ruby port runs 4.4x faster than
+Ruby and the Python port 1.35x faster than CPython, while Go and Java leaf functions stay faster
+in their own language; as batches, all of them win (see the table above).
 Report: [`docs/real-world-languages.md`](./docs/real-world-languages.md).
 
 ## Example: a real module from x18n
@@ -211,7 +236,8 @@ one project by hand instead (`.mcp.json`):
   generics, and values whose types (followed through imports, re-exports and `extends`) hold
   functions. `--keep "name: reason"` keeps more, e.g. code that depends on `Intl` data.
 - TS types map to Rust types, with type aliases resolved through imports and parameter types
-  inferred from default values; anything structured crosses as JSON.
+  inferred from default values; structured values cross as a generated binary wire (JSON only
+  as a fallback for shapes the wire does not model).
 - JSON cannot express `undefined`, NaN, Infinity, -0 or lone surrogates: structured values carry
   markers (`{"$undefined": true}`, `{"$num": "NaN"}`, `{"$utf16": [...]}`) that the generated
   `index.cjs` translates, with helpers in the crate's `js.rs`.
@@ -253,3 +279,38 @@ cargo fmt
 ```
 
 Design choices and their reasons: [DECISIONS.md](./DECISIONS.md).
+
+
+## FAQ
+
+**Does it rewrite my code automatically?** No. It finds what to move, generates the bridge,
+records what the original does and checks the Rust against it. You or your agent write the Rust
+in `port.rs`; `diff` and `gate` decide when it is right.
+
+**Will my app's API change?** No. Callers import the same functions (or the shadow module, which
+runs both and returns the original's result while you build confidence).
+
+**Is Rust always faster?** No, and rust-anything says so. A small function called once per item
+is often slower in Rust, because each call crosses a bridge; V8, the JVM and Go run such functions
+in nanoseconds. `profile` finds the loop around it, `--batch` moves the whole loop, and `bench`
+gives a verdict before you ship.
+
+**Does my code leave my machine?** No: rust-anything runs locally and sends none of your code
+anywhere. Cargo downloads crates as usual, and your agent's model provider sees what your agent
+sends it, under its own policy.
+
+**What does it need installed?** Rust, plus the runtime of the language you port (see
+[Install](#install)).
+
+**Something broke.** Open an issue with the command, its output and your platform.
+
+## Contributing
+
+Issues and pull requests are welcome. Before a pull request: `cargo fmt`, `cargo clippy
+--all-targets -- -D warnings` and `cargo test` must pass (see [Development](#development)); design
+choices and their reasons are in [DECISIONS.md](./DECISIONS.md). Case studies of real ports are
+especially welcome.
+
+## License
+
+[MIT](./LICENSE). Ports and generated code in your repository are yours.

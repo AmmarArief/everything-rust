@@ -87,6 +87,9 @@ pub struct Change {
     pub file: PathBuf,
     /// `added`, `updated`, `unchanged`, `removed` or `absent`.
     pub action: &'static str,
+    /// The copy of the file as it was, when an existing file was changed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backup: Option<PathBuf>,
 }
 
 #[derive(Debug, Serialize)]
@@ -172,6 +175,18 @@ pub fn setup(opts: &Options) -> Result<Report> {
     })
 }
 
+/// Copies an existing settings file to `<file>.rust-anything.bak` before it is changed.
+fn backup(path: &Path) -> Result<Option<PathBuf>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".rust-anything.bak");
+    let copy = path.with_file_name(name);
+    std::fs::copy(path, &copy).with_context(|| format!("backing up {}", path.display()))?;
+    Ok(Some(copy))
+}
+
 /// Writes `text` to `path` through a temporary file, so a failed write never leaves half a file.
 fn write(path: &Path, text: &str) -> Result<()> {
     if let Some(dir) = path.parent() {
@@ -240,13 +255,16 @@ fn json_server(
             }
         }
     };
+    let mut saved = None;
     if !opts.dry_run && matches!(action, "added" | "updated" | "removed") {
+        saved = backup(path)?;
         write(path, &(serde_json::to_string_pretty(&doc)? + "\n"))?;
     }
     Ok(Change {
         agent,
         file: path.to_path_buf(),
         action,
+        backup: saved,
     })
 }
 
@@ -299,13 +317,16 @@ fn codex_server(agent: Agent, path: &Path, command: &str, opts: &Options) -> Res
         servers.insert(NAME, toml_edit::Item::Table(entry));
         if had { "updated" } else { "added" }
     };
+    let mut saved = None;
     if !opts.dry_run && matches!(action, "added" | "updated" | "removed") {
+        saved = backup(path)?;
         write(path, &doc.to_string())?;
     }
     Ok(Change {
         agent,
         file: path.to_path_buf(),
         action,
+        backup: saved,
     })
 }
 
@@ -342,6 +363,7 @@ fn skill(agent: Agent, dir: &Path, opts: &Options) -> Result<Change> {
         agent,
         file: path,
         action,
+        backup: None,
     })
 }
 
@@ -358,6 +380,9 @@ pub fn text(r: &Report) -> String {
             c.action,
             c.file.display()
         ));
+        if let Some(b) = &c.backup {
+            out.push_str(&format!("  {:<10} {:<9} {}\n", "", "backup", b.display()));
+        }
     }
     if !r.dry_run
         && r.changes
@@ -427,6 +452,17 @@ mod tests {
             json!(["mcp"])
         );
         assert_eq!(claude["mcpServers"]["other"]["command"], "x");
+        // The existing file was copied before the change; new files need no copy.
+        let saved = r.changes[0]
+            .backup
+            .clone()
+            .expect("an existing file is backed up");
+        assert!(
+            std::fs::read_to_string(saved)
+                .unwrap()
+                .starts_with(r#"{"zeta": 1"#)
+        );
+        assert!(r.changes.iter().any(|c| c.backup.is_none()));
         let keys: Vec<&String> = claude.as_object().unwrap().keys().collect();
         assert_eq!(keys, ["zeta", "mcpServers", "alpha"], "key order kept");
         let codex = std::fs::read_to_string(home.join(".codex/config.toml")).unwrap();

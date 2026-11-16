@@ -31,5 +31,6 @@ First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and 
 - `shadow`: drop-in modules running TS and Rust side by side, `RUST_ANYTHING_MODE=old|shadow|new`.
 - `gate`: fmt, clippy, tests, `unsafe` audit, nothing unported, build, API, behavior.
 - `setup`: registers the MCP server and the workflow skill with Claude Code, Codex, Cursor and
-  Gemini CLI, keeping other settings; `--remove` and `--dry-run`.
+  Gemini CLI, keeping other settings and backing up each file it changes; `--remove` and
+  `--dry-run`.
 - `mcp`: every step as an MCP tool; agent skill in `skills/rust-anything`.
