@@ -10,7 +10,7 @@ use serde_json::Value;
 use crate::bridge::Manifest;
 use crate::harness::{BenchRow, CASES, DiffOutcome};
 
-const WORK_DIR: &str = ".carcinize";
+const WORK_DIR: &str = ".rust-anything";
 
 fn python() -> &'static str {
     if Command::new("python3").arg("--version").output().is_ok() {
@@ -104,7 +104,7 @@ pub fn diff(crate_dir: &Path, manifest: &Manifest, ignore_key_order: bool) -> Re
     let cases = crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
-            "no {CASES} in {} (run `carcinize record` first)",
+            "no {CASES} in {} (run `rust-anything record` first)",
             crate_dir.display()
         );
     }
@@ -129,7 +129,7 @@ pub fn bench(crate_dir: &Path, manifest: &Manifest, min_ms: u64) -> Result<Vec<B
     let cases = crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
-            "no {CASES} in {} (run `carcinize record` first)",
+            "no {CASES} in {} (run `rust-anything record` first)",
             crate_dir.display()
         );
     }

@@ -1,6 +1,6 @@
 # Real-world runs
 
-What happened when carcinize met real code, and what changed in the tool because of it.
+What happened when rust-anything met real code, and what changed in the tool because of it.
 
 ## x18n (the case-study repository)
 

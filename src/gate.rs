@@ -125,7 +125,7 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         checks.push(Check {
             name: "behavior",
             passed: false,
-            detail: "no recorded cases: run `carcinize record` first".into(),
+            detail: "no recorded cases: run `rust-anything record` first".into(),
         });
     } else if built_ok {
         match harness::diff(&DiffOptions {
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn requires_safety_comments() {
-        let dir = std::env::temp_dir().join(format!("carcinize-gate-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("rust-anything-gate-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("a.rs"),

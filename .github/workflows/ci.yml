@@ -39,5 +39,5 @@ jobs:
       - name: Gate the fixture ports
         run: |
           for crate in demo/fixtures/async-rs; do
-            carcinize gate "$crate"
+            rust-anything gate "$crate"
           done

@@ -1,4 +1,4 @@
 target/
-.carcinize/
+.rust-anything/
 ruby/*.so
 ruby/*.bundle

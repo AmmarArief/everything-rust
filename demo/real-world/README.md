@@ -1,9 +1,9 @@
 # Real-world ports
 
-The crates carcinize produced in the runs described in
+The crates rust-anything produced in the runs described in
 [`docs/real-world-languages.md`](../../docs/real-world-languages.md): each holds the Rust port
 (`src/port.rs`), the generated bridge, `cases.jsonl` (the recorded behavior of the original) and,
-where used, `inputs.jsonl` (extra inputs passed to `carcinize record --inputs`).
+where used, `inputs.jsonl` (extra inputs passed to `rust-anything record --inputs`).
 
 | Crate | Original | Where it came from |
 | --- | --- | --- |
@@ -15,10 +15,10 @@ where used, `inputs.jsonl` (extra inputs passed to `carcinize record --inputs`).
 
 The originals are not copied here: the standard-library sources keep their own licenses, and the
 ports name theirs in `src/port.rs`. To rerun one, put the original in place as described, point
-`carcinize.json`'s `root` at that project, and run:
+`rust-anything.json`'s `root` at that project, and run:
 
 ```sh
-carcinize record <crate> --inputs <crate>/inputs.jsonl   # or keep the recorded cases.jsonl
-carcinize gate <crate>
-carcinize bench <crate>
+rust-anything record <crate> --inputs <crate>/inputs.jsonl   # or keep the recorded cases.jsonl
+rust-anything gate <crate>
+rust-anything bench <crate>
 ```

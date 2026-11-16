@@ -11,7 +11,7 @@ use serde_json::Value;
 use crate::bridge::Manifest;
 use crate::harness::{BenchRow, CASES, DiffOutcome};
 
-const WORK_DIR: &str = ".carcinize";
+const WORK_DIR: &str = ".rust-anything";
 
 fn run(cmd: &mut Command, what: &str) -> Result<()> {
     let output = cmd.output().with_context(|| format!("running {what}"))?;
@@ -95,7 +95,7 @@ pub fn diff(crate_dir: &Path, m: &Manifest) -> Result<DiffOutcome> {
     let cases = crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
-            "no {CASES} in {} (run `carcinize record` first)",
+            "no {CASES} in {} (run `rust-anything record` first)",
             crate_dir.display()
         );
     }
@@ -108,7 +108,7 @@ pub fn bench(crate_dir: &Path, m: &Manifest, min_ms: u64) -> Result<Vec<BenchRow
     let cases = crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
-            "no {CASES} in {} (run `carcinize record` first)",
+            "no {CASES} in {} (run `rust-anything record` first)",
             crate_dir.display()
         );
     }

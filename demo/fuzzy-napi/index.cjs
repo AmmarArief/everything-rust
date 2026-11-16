@@ -1,2 +1,3 @@
-// Loads the native module built by `carcinize build`.
-module.exports = require('./fuzzy_rs.node')
+// Loads the native module built by `rust-anything build`.
+const native = require('./fuzzy_rs.node')
+module.exports = native

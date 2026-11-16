@@ -1,6 +1,6 @@
 # Real code in six languages
 
-carcinize was run end to end (analyze, bridge, record, port, diff, gate, bench) on real code in
+rust-anything was run end to end (analyze, bridge, record, port, diff, gate, bench) on real code in
 each language it supports. The code had to be already on this machine: code downloaded from the
 internet was not executed. So the targets are standard-library modules shipped with the
 installed toolchains, and for Java and C, where no suitable library source was on disk, the JDK
@@ -56,7 +56,7 @@ What decides it:
 ### Batches: x18n's search
 
 The leaf ports above are measured per call. On x18n's sidebar search (50,000 keys, typed letter
-by letter), `carcinize profile` showed `fuzzyScore` at about a quarter of the run, called once per key by
+by letter), `rust-anything profile` showed `fuzzyScore` at about a quarter of the run, called once per key by
 `matched`, and suggested `--batch fuzzyScore:text`. The generated `FuzzyScoreBatch` keeps the
 keys in Rust; a `FuzzyScoreIndex` in `port.rs` lowercases them to UTF-16 once and keeps a 64-bit
 mask of the code units in each key, so most keys that cannot match are skipped unread. Results
@@ -107,12 +107,12 @@ Per call, the Go port went from 0.73x to 0.93x, the Java one from 0.46x to 0.68x
 
 ## What the runs found
 
-### Bugs in carcinize, fixed
+### Bugs in rust-anything, fixed
 
 - **Floats changed by one ULP** (Java run). `serde_json`'s default float parser is not always
-  correctly rounded. carcinize perturbed recorded inputs when it read them, and generated crates
+  correctly rounded. rust-anything perturbed recorded inputs when it read them, and generated crates
   perturbed them again. 43 `Double.toString` cases failed for a correct port. Fixed with
-  `serde_json`'s `float_roundtrip` feature in carcinize and in every crate it generates (napi-rs,
+  `serde_json`'s `float_roundtrip` feature in rust-anything and in every crate it generates (napi-rs,
   wasm and the JSON dispatcher).
 - **C crashes killed recording** (C run). Inputs outside a C function's contract (`isalpha(INT_MAX)`)
   segfault glibc. The C driver now runs each case in a forked child and records
@@ -190,4 +190,4 @@ Handled in the first port, and confirmed by the recorded cases:
 | Ruby | generated driver loads the original files | the same driver loads the Fiddle wrapper | JSON dispatcher + Fiddle wrapper defining the same modules | file to require after the original: `prepend`s both |
 | Java | reflection driver compiled with the original sources | the same driver compiled with the JNI wrapper classes | JSON dispatcher over JNI + wrapper classes with the original static methods | `<Class>Shadow` classes |
 | Python | in-process driver imports the original | the same driver imports the PyO3 package | PyO3 | module with the original API |
-| C | `cc -shared` of the original, called through ctypes, one fork per case | ctypes over the Rust `cdylib` | `extern "C"` functions with the original names and a header | shadow `.c` with `-D` renames; the crate's `shadow` feature exports only `carcinize_` names |
+| C | `cc -shared` of the original, called through ctypes, one fork per case | ctypes over the Rust `cdylib` | `extern "C"` functions with the original names and a header | shadow `.c` with `-D` renames; the crate's `shadow` feature exports only `rust_anything_` names |

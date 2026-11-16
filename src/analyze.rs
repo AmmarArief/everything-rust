@@ -16,7 +16,7 @@ use crate::ts::discover::{self, FileKind, Package, Workspace};
 use crate::ts::scan::{self, FileFacts, Platform};
 
 /// Version of the JSON output. Bump on any breaking change to its shape.
-pub const SCHEMA: &str = "carcinize/analyze@1";
+pub const SCHEMA: &str = "rust-anything/analyze@1";
 const SAMPLES_PER_RISK: usize = 3;
 /// Units smaller than this are not suggested as a first port.
 const MIN_CANDIDATE_LOC: usize = 20;

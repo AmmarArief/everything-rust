@@ -18,7 +18,7 @@ use crate::ts::exports::LocalType;
 use crate::ts::shape::{self, Shape};
 
 pub const CASES: &str = "cases.jsonl";
-const WORK_DIR: &str = ".carcinize";
+const WORK_DIR: &str = ".rust-anything";
 
 /// Strings that break naive ports: empty, case, whitespace, non-ASCII, astral, combining.
 const STRINGS: &[&str] = &[
@@ -235,13 +235,13 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
         .arg(&script)
         .arg(&inputs_path)
         .arg(&out)
-        .env("CARCINIZE_PATHS", &aliases)
-        .env("CARCINIZE_WORKSPACE", workspace_env(manifest));
+        .env("RUST_ANYTHING_PATHS", &aliases)
+        .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
     if let Some(dir) = opts.resolve_from {
         let dir = dir
             .canonicalize()
             .with_context(|| format!("resolving {}", dir.display()))?;
-        cmd.env("CARCINIZE_RESOLVE_FROM", dir);
+        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
     }
     if let Err(error) = run(&mut cmd, "node") {
         // Enums and parameter properties need Node to transform TS, not only strip types.
@@ -256,10 +256,10 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
             .arg(&script)
             .arg(&inputs_path)
             .arg(&out)
-            .env("CARCINIZE_PATHS", &aliases)
-            .env("CARCINIZE_WORKSPACE", workspace_env(manifest));
+            .env("RUST_ANYTHING_PATHS", &aliases)
+            .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
         if let Some(dir) = opts.resolve_from {
-            retry.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
+            retry.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonicalize()?);
         }
         run(&mut retry, "node --experimental-transform-types")?;
     }
@@ -474,7 +474,7 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
-            "no {CASES} in {} (run `carcinize record` first)",
+            "no {CASES} in {} (run `rust-anything record` first)",
             opts.crate_dir.display()
         );
     }
@@ -523,10 +523,10 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
         .arg(&cases)
         .arg(&out)
         .arg(opts.min_ms.to_string())
-        .env("CARCINIZE_PATHS", alias_env(&manifest))
-        .env("CARCINIZE_WORKSPACE", workspace_env(&manifest));
+        .env("RUST_ANYTHING_PATHS", alias_env(&manifest))
+        .env("RUST_ANYTHING_WORKSPACE", workspace_env(&manifest));
     if let Some(dir) = opts.resolve_from {
-        cmd.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
+        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonicalize()?);
     }
     run(&mut cmd, "node")?;
     Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
@@ -575,7 +575,7 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
-            "no {CASES} in {} (run `carcinize record` first)",
+            "no {CASES} in {} (run `rust-anything record` first)",
             opts.crate_dir.display()
         );
     }
@@ -1028,17 +1028,17 @@ const REGISTER_JS: &str =
     "import { register } from 'node:module'\nregister('./resolve.mjs', import.meta.url)\n";
 
 /// Node resolve hook: bundler-style relative imports, and npm packages from
-/// `CARCINIZE_RESOLVE_FROM` when the source tree has none installed.
+/// `RUST_ANYTHING_RESOLVE_FROM` when the source tree has none installed.
 const RESOLVE_JS: &str = r#"
 import { existsSync, statSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const extra = process.env.CARCINIZE_RESOLVE_FROM
+const extra = process.env.RUST_ANYTHING_RESOLVE_FROM
 // tsconfig `paths`: [[pattern, [absolute targets]]], longest prefix first.
-const aliases = JSON.parse(process.env.CARCINIZE_PATHS || '[]')
+const aliases = JSON.parse(process.env.RUST_ANYTHING_PATHS || '[]')
   .sort(([a], [b]) => b.split('*')[0].length - a.split('*')[0].length)
 // Workspace packages by name: `@x18n/core` and `@x18n/core/sub` resolve to source.
-const workspace = JSON.parse(process.env.CARCINIZE_WORKSPACE || '{}')
+const workspace = JSON.parse(process.env.RUST_ANYTHING_WORKSPACE || '{}')
 const workspaceTargets = (specifier) => {
   for (const [name, src] of Object.entries(workspace)) {
     if (specifier === name)

@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "carcinize": {
-      "command": "carcinize",
+    "rust-anything": {
+      "command": "rust-anything",
       "args": ["mcp"]
     }
   }

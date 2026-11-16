@@ -2,7 +2,7 @@ use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-/// `println!` that stops quietly when stdout is closed (`carcinize ... | head`).
+/// `println!` that stops quietly when stdout is closed (`rust-anything ... | head`).
 macro_rules! say {
     ($($arg:tt)*) => {{
         let _ = writeln!(std::io::stdout().lock(), $($arg)*);
@@ -16,12 +16,12 @@ macro_rules! say_raw {
 }
 
 use anyhow::{Context, Result};
-use carcinize::{analyze, bridge, gate, harness, mcp, report, shadow};
 use clap::{Parser, Subcommand, ValueEnum};
+use rust_anything::{analyze, bridge, gate, harness, mcp, report, shadow};
 
 #[derive(Parser)]
 #[command(
-    name = "carcinize",
+    name = "rust-anything",
     version,
     about = "Plan, bridge, verify and ship incremental TypeScript/JavaScript to Rust migrations",
     after_help = "Loop per unit: analyze -> bridge -> record -> port src/port.rs -> build -> diff -> shadow -> gate"
@@ -44,7 +44,7 @@ enum Cmd {
         /// Repository root.
         #[arg(default_value = ".")]
         root: PathBuf,
-        /// Print the machine-readable report (schema `carcinize/analyze@1`) instead of Markdown.
+        /// Print the machine-readable report (schema `rust-anything/analyze@1`) instead of Markdown.
         #[arg(long)]
         json: bool,
         /// Write to this file instead of stdout.
@@ -52,7 +52,7 @@ enum Cmd {
         out: Option<PathBuf>,
         /// Source language; detected from the repository when omitted.
         #[arg(long, value_enum)]
-        lang: Option<carcinize::lang::Lang>,
+        lang: Option<rust_anything::lang::Lang>,
     },
     /// 2. Scaffold a Rust crate with JS bindings for one unit.
     Bridge {
@@ -146,7 +146,7 @@ enum Cmd {
         node_args: Vec<String>,
     },
     /// Run a real workload under the language's profiler and say what to port: hot functions,
-    /// their callers, and loops to batch. `carcinize profile <repo> -- node bench.mjs` (also
+    /// their callers, and loops to batch. `rust-anything profile <repo> -- node bench.mjs` (also
     /// `python3 x.py`, `go test -bench . ./pkg`, `java ...`, `ruby x.rb`)
     Profile {
         /// Repository root.
@@ -155,7 +155,7 @@ enum Cmd {
         json: bool,
         /// Source language; detected from the repository when omitted.
         #[arg(long, value_enum)]
-        lang: Option<carcinize::lang::Lang>,
+        lang: Option<rust_anything::lang::Lang>,
         /// The workload, after `--`.
         #[arg(last = true, required = true)]
         command: Vec<String>,
@@ -199,7 +199,7 @@ fn run() -> Result<ExitCode> {
             out,
             lang,
         } => {
-            let lang = lang.unwrap_or_else(|| carcinize::lang::Lang::detect(&root));
+            let lang = lang.unwrap_or_else(|| rust_anything::lang::Lang::detect(&root));
             let report = analyze::analyze_lang(&root, lang)
                 .with_context(|| format!("analyzing {}", root.display()))?;
             let text = if json {
@@ -390,11 +390,11 @@ fn run() -> Result<ExitCode> {
             lang,
             command,
         } => {
-            let report = carcinize::profile::profile(&root, &command, lang)?;
+            let report = rust_anything::profile::profile(&root, &command, lang)?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&report)?);
             } else {
-                say!("{}", carcinize::profile::markdown(&report));
+                say!("{}", rust_anything::profile::markdown(&report));
             }
         }
         Cmd::Shadow { crate_dir, out } => {
@@ -406,15 +406,15 @@ fn run() -> Result<ExitCode> {
             );
             if outcome.path.extension().is_some_and(|e| e == "java") {
                 say!(
-                    "Call the <Class>Shadow classes in place of the originals; compile them with the originals and java/carcinize. -Dcarcinize.mode=old|shadow|new switches at runtime."
+                    "Call the <Class>Shadow classes in place of the originals; compile them with the originals and java/rust-anything. -Drust-anything.mode=old|shadow|new switches at runtime."
                 );
             } else if outcome.path.extension().is_some_and(|e| e == "rb") {
                 say!(
-                    "Require it after the original files. CARCINIZE_MODE=old|shadow|new switches at runtime."
+                    "Require it after the original files. RUST_ANYTHING_MODE=old|shadow|new switches at runtime."
                 );
             } else if outcome.path.extension().is_some_and(|e| e == "go") {
                 say!(
-                    "Import it in place of the original package (require and replace both modules in go.mod). CARCINIZE_MODE=old|shadow|new switches at runtime."
+                    "Import it in place of the original package (require and replace both modules in go.mod). RUST_ANYTHING_MODE=old|shadow|new switches at runtime."
                 );
             } else if outcome.path.extension().is_some_and(|e| e == "c") {
                 say!(
@@ -422,7 +422,7 @@ fn run() -> Result<ExitCode> {
                 );
             } else {
                 say!(
-                    "Import it in place of the original. CARCINIZE_MODE=old|shadow|new switches at runtime."
+                    "Import it in place of the original. RUST_ANYTHING_MODE=old|shadow|new switches at runtime."
                 );
             }
         }

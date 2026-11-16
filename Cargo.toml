@@ -1,5 +1,5 @@
 [package]
-name = "carcinize"
+name = "rust-anything"
 version = "0.1.0"
 edition = "2024"
 description = "Plan, bridge, verify and ship incremental migrations to Rust from TypeScript/JavaScript, Python, C, Go, Ruby and Java"

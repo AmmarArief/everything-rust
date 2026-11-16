@@ -214,12 +214,12 @@ fn js_dec(target: &str, t: &Ty, d: usize) -> String {
 
 /// The JS runtime: registered buffers, writers, readers, tagged values.
 const WIRE_NAPI_CJS: &str = r#"
-// The binary wire (see carcinize's `wire.rs`): arguments are written into `wIn`, results read
+// The binary wire (see rust-anything's `wire.rs`): arguments are written into `wIn`, results read
 // from `wOut`; both are registered with the native module once.
 let wIn = new Uint8Array(1 << 16), wOut = new Uint8Array(1 << 16)
 let iv = new DataView(wIn.buffer), ov = new DataView(wOut.buffer), at = 0, p = 0
-native.carcinizeWireInit(wIn, wOut)
-const regrow = () => native.carcinizeWireInit(wIn, wOut)
+native.rustAnythingWireInit(wIn, wOut)
+const regrow = () => native.rustAnythingWireInit(wIn, wOut)
 // Runs a wire function; a result larger than `wOut` is fetched once `wOut` has grown.
 const wireCall = fn => {
   const n = fn(at)
@@ -227,8 +227,8 @@ const wireCall = fn => {
   if (n < 0) {
     wOut = new Uint8Array(Math.max(wOut.length * 2, -n))
     ov = new DataView(wOut.buffer)
-    native.carcinizeWireInit(wIn, wOut)
-    native.carcinizeWireFlush()
+    native.rustAnythingWireInit(wIn, wOut)
+    native.rustAnythingWireFlush()
   }
   p = 0
   return true
@@ -236,10 +236,10 @@ const wireCall = fn => {
 "#;
 
 const WIRE_WASM_CJS: &str = r#"
-// The binary wire (see carcinize's `wire.rs`): arguments are written into `wIn` and copied into
+// The binary wire (see rust-anything's `wire.rs`): arguments are written into `wIn` and copied into
 // wasm memory in one step; results are read where the Rust side left them.
 let wIn = new Uint8Array(1 << 16), iv = new DataView(wIn.buffer), at = 0, p = 0
-const mem = native.carcinizeWireMemory()
+const mem = native.rustAnythingWireMemory()
 let wOut = new Uint8Array(mem.buffer), ov = new DataView(mem.buffer)
 const regrow = () => {}
 // Growing wasm memory replaces its buffer: views are made again when that happened.
@@ -250,12 +250,12 @@ const views = () => {
   }
 }
 const wireCall = fn => {
-  const ptr = native.carcinizeWireIn(at)
+  const ptr = native.rustAnythingWireIn(at)
   views()
   wOut.set(wIn.subarray(0, at), ptr)
   if (fn(at) === 0xFFFFFFFF) return false
   views()
-  p = native.carcinizeWireOut()
+  p = native.rustAnythingWireOut()
   return true
 }
 "#;
@@ -345,14 +345,14 @@ thread_local! {
 }
 
 /// Registers the argument and result buffers `index.cjs` writes to and reads from.
-#[napi(js_name = "carcinizeWireInit")]
-pub fn carcinize_wire_init(input: napi::bindgen_prelude::Uint8Array, output: napi::bindgen_prelude::Uint8Array) {
+#[napi(js_name = "rustAnythingWireInit")]
+pub fn rust_anything_wire_init(input: napi::bindgen_prelude::Uint8Array, output: napi::bindgen_prelude::Uint8Array) {
     WIRE.with(|w| *w.borrow_mut() = Some((input, output)));
 }
 
 /// Copies a result that did not fit into the (now larger) result buffer.
-#[napi(js_name = "carcinizeWireFlush")]
-pub fn carcinize_wire_flush() -> f64 {
+#[napi(js_name = "rustAnythingWireFlush")]
+pub fn rust_anything_wire_flush() -> f64 {
     let bytes = PENDING.with(|p| std::mem::take(&mut *p.borrow_mut()));
     WIRE.with(|w| {
         let mut w = w.borrow_mut();
@@ -368,12 +368,12 @@ pub fn carcinize_wire_flush() -> f64 {
 }
 
 /// Reads `len` argument bytes, runs `f`, and writes its result; a negative return is the size
-/// of a result that did not fit, kept for `carcinizeWireFlush`.
+/// of a result that did not fit, kept for `rustAnythingWireFlush`.
 fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Result<(), String>) -> napi::Result<f64> {
     WIRE.with(|cell| {
         let mut guard = cell.borrow_mut();
         let Some((input, output)) = guard.as_mut() else {
-            return Err(napi::Error::from_reason("carcinize: the wire buffers are not registered"));
+            return Err(napi::Error::from_reason("rust-anything: the wire buffers are not registered"));
         };
         let len = (len as usize).min(input.len());
         let mut w = wire::Writer::default();
@@ -405,14 +405,14 @@ thread_local! {
 }
 
 /// This module's memory, where `index.cjs` reads and writes the wire buffers.
-#[wasm_bindgen(js_name = "carcinizeWireMemory")]
-pub fn carcinize_wire_memory() -> JsValue {
+#[wasm_bindgen(js_name = "rustAnythingWireMemory")]
+pub fn rust_anything_wire_memory() -> JsValue {
     wasm_bindgen::memory()
 }
 
 /// The address of an argument buffer of `len` bytes.
-#[wasm_bindgen(js_name = "carcinizeWireIn")]
-pub fn carcinize_wire_in(len: u32) -> u32 {
+#[wasm_bindgen(js_name = "rustAnythingWireIn")]
+pub fn rust_anything_wire_in(len: u32) -> u32 {
     WIRE_IN.with(|b| {
         let mut b = b.borrow_mut();
         b.resize(len as usize, 0);
@@ -421,12 +421,12 @@ pub fn carcinize_wire_in(len: u32) -> u32 {
 }
 
 /// The address of the last result.
-#[wasm_bindgen(js_name = "carcinizeWireOut")]
-pub fn carcinize_wire_out() -> u32 {
+#[wasm_bindgen(js_name = "rustAnythingWireOut")]
+pub fn rust_anything_wire_out() -> u32 {
     WIRE_OUT.with(|b| b.borrow().as_ptr() as usize as u32)
 }
 
-/// Reads `len` argument bytes, runs `f`, and keeps its result for `carcinizeWireOut`.
+/// Reads `len` argument bytes, runs `f`, and keeps its result for `rustAnythingWireOut`.
 fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Result<(), String>) -> Result<u32, JsError> {
     let input = WIRE_IN.with(|b| std::mem::take(&mut *b.borrow_mut()));
     let mut w = wire::Writer::default();

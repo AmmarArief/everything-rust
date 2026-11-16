@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use crate::lang::Lang;
 
-pub const SCHEMA: &str = "carcinize/profile@1";
+pub const SCHEMA: &str = "rust-anything/profile@1";
 
 #[derive(Debug, Serialize)]
 pub struct Caller {
@@ -72,13 +72,15 @@ type Key = (String, String, u32);
 
 pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Report> {
     if command.is_empty() {
-        bail!("give the workload to run after `--`, e.g. `carcinize profile . -- node bench.mjs`");
+        bail!(
+            "give the workload to run after `--`, e.g. `rust-anything profile . -- node bench.mjs`"
+        );
     }
     let root = root
         .canonicalize()
         .with_context(|| format!("resolving {}", root.display()))?;
     let lang = lang.unwrap_or_else(|| Lang::detect(&root));
-    let work = std::env::temp_dir().join(format!("carcinize-profile-{}", std::process::id()));
+    let work = std::env::temp_dir().join(format!("rust-anything-profile-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&work);
     std::fs::create_dir_all(&work)?;
     let (functions, total_ms) = match lang {
@@ -303,7 +305,7 @@ fn python(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, 
         .unwrap_or_default();
     if !program.starts_with("python") {
         bail!(
-            "for Python, give the interpreter and script: `carcinize profile . -- python3 bench.py`"
+            "for Python, give the interpreter and script: `rust-anything profile . -- python3 bench.py`"
         );
     }
     let stats = work.join("profile.pstats");
@@ -510,7 +512,7 @@ fn go(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Acc>
         .unwrap_or_default();
     if program != "go" || command.get(1).map(String::as_str) != Some("test") {
         bail!(
-            "for Go, profile a benchmark or test: `carcinize profile . -- go test -run XXX -bench . ./pkg` \
+            "for Go, profile a benchmark or test: `rust-anything profile . -- go test -run XXX -bench . ./pkg` \
              (Go profiles only from inside the process; `go test` adds -cpuprofile)"
         );
     }
@@ -703,7 +705,7 @@ fn java(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
 const RUBY_TRACER: &str = r#"
 require "json"
 
-module CarcinizeProfile
+module RustAnythingProfile
   STATS = Hash.new { |h, k| h[k] = { calls: 0, self: 0.0, total: 0.0, callers: Hash.new { |c, ck| c[ck] = [0, 0.0] } } }
   STACK = []
   ACTIVE = Hash.new(0)
@@ -742,14 +744,14 @@ module CarcinizeProfile
       { file: file, line: line, name: name, calls: s[:calls], self: s[:self] * 1000, total: s[:total] * 1000,
         callers: s[:callers].map { |(f, l, n), (calls, total)| { file: f, line: l, name: n, calls: calls, total: total * 1000 } } }
     end
-    File.write(ENV.fetch("CARCINIZE_PROFILE_OUT"), JSON.generate(out))
+    File.write(ENV.fetch("RUST_ANYTHING_PROFILE_OUT"), JSON.generate(out))
   end
 end
 "#;
 
 /// Ruby: the tracer above, loaded into any Ruby command through `RUBYOPT`.
 fn ruby(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Acc>, f64)> {
-    let tracer = work.join("carcinize_profile.rb");
+    let tracer = work.join("rust_anything_profile.rb");
     std::fs::write(&tracer, RUBY_TRACER)?;
     let out = work.join("profile.json");
     let mut rubyopt = std::env::var("RUBYOPT").unwrap_or_default();
@@ -759,7 +761,7 @@ fn ruby(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
         .args(&command[1..])
         .current_dir(root)
         .env("RUBYOPT", rubyopt.trim())
-        .env("CARCINIZE_PROFILE_OUT", &out)
+        .env("RUST_ANYTHING_PROFILE_OUT", &out)
         .status()
         .with_context(|| format!("running {}", command[0]))?;
     let total_ms = start.elapsed().as_secs_f64() * 1000.0;
@@ -965,7 +967,7 @@ fn report(
                         Some(param) => format!(
                             "Called in a loop by `{}` ({}:{}{calls}): a call per item would cost more than the work. \
                              Batch it, keeping the items in Rust and using all cores: \
-                             `carcinize bridge {} {u} --batch {name}:{param}`, then prepare the items once in a \
+                             `rust-anything bridge {} {u} --batch {name}:{param}`, then prepare the items once in a \
                              `{}Index` in port.rs. Better still, port `{}` with it.",
                             c.name, c.file, c.line, root.display(), crate::codegen_batch::pascal(&name), c.name
                         ),
@@ -976,11 +978,11 @@ fn report(
                     }
                 }
                 (Some((u, true)), Some(_)) => format!(
-                    "Hot and exported by `{u}`: port it (`carcinize bridge {} {u}`), then check `carcinize bench`.",
+                    "Hot and exported by `{u}`: port it (`rust-anything bridge {} {u}`), then check `rust-anything bench`.",
                     root.display()
                 ),
                 (Some((u, true)), None) => format!("Hot inside `{u}`: port the exported function that calls it, with it."),
-                (Some((u, false)), _) => format!("Hot, but `{u}` must stay in the source language (see `carcinize analyze`)."),
+                (Some((u, false)), _) => format!("Hot, but `{u}` must stay in the source language (see `rust-anything analyze`)."),
                 (None, _) => "Hot, outside the analyzed units.".into(),
             };
             Hot {
@@ -1118,7 +1120,8 @@ mod tests {
 
     #[test]
     fn finds_the_argument_that_varies_per_item() {
-        let root = std::env::temp_dir().join(format!("carcinize-profile-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("rust-anything-profile-{}", std::process::id()));
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
             root.join("search.ts"),

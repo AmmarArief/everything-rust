@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use carcinize::analyze::{Bridge, Report, Status, UnitReport, analyze};
-use carcinize::risks::Risk;
+use rust_anything::analyze::{Bridge, Report, Status, UnitReport, analyze};
+use rust_anything::risks::Risk;
 
 fn mini() -> Report {
     analyze(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mini")).unwrap()
@@ -97,7 +97,7 @@ fn picks_status_and_bridge() {
 #[test]
 fn json_output_is_versioned() {
     let json = serde_json::to_value(mini()).unwrap();
-    assert_eq!(json["schema"], "carcinize/analyze@1");
+    assert_eq!(json["schema"], "rust-anything/analyze@1");
     assert_eq!(json["units"][0]["status"], "ready");
     assert_eq!(json["units"][0]["bridge"], "napi-rs");
 }

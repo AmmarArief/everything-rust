@@ -17,8 +17,8 @@ use crate::ts::exports::{
     ExportedClass, ExportedFn, LocalType, exported_classes, exported_functions, local_types,
 };
 
-pub const MANIFEST: &str = "carcinize.json";
-pub const SCHEMA: &str = "carcinize/bridge@1";
+pub const MANIFEST: &str = "rust-anything.json";
+pub const SCHEMA: &str = "rust-anything/bridge@1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -152,7 +152,10 @@ impl Manifest {
     pub fn load(crate_dir: &Path) -> Result<Self> {
         let path = crate_dir.join(MANIFEST);
         let text = std::fs::read_to_string(&path).with_context(|| {
-            format!("reading {} (run `carcinize bridge` first)", path.display())
+            format!(
+                "reading {} (run `rust-anything bridge` first)",
+                path.display()
+            )
         })?;
         serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))
     }
@@ -667,7 +670,7 @@ pub fn add_batches(crate_dir: &Path, specs: &[String]) -> Result<Refreshed> {
 }
 
 /// Cargo.toml with the dependencies and library types today's bindings need, for crates
-/// bridged by an older carcinize; versions and features already set are kept.
+/// bridged by an older rust-anything; versions and features already set are kept.
 fn with_template_deps(cargo: &str, template: &str) -> Result<String> {
     let mut doc: toml_edit::DocumentMut = cargo.parse().context("Cargo.toml")?;
     let template: toml_edit::DocumentMut = template.parse().context("Cargo.toml template")?;
@@ -676,6 +679,14 @@ fn with_template_deps(cargo: &str, template: &str) -> Result<String> {
         for (name, item) in want {
             if deps.get(name).is_none() {
                 deps[name] = item.clone();
+            }
+        }
+    }
+    if let Some(want) = template.get("features").and_then(|d| d.as_table()) {
+        let features = doc["features"].or_insert(toml_edit::table());
+        for (name, item) in want {
+            if features.get(name).is_none() {
+                features[name] = item.clone();
             }
         }
     }
@@ -762,7 +773,13 @@ pub struct Refreshed {
 pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     let manifest = Manifest::load(crate_dir)?;
     if manifest.kind == Kind::CAbi {
-        let files = c_bindings(&manifest);
+        let mut files = c_bindings(&manifest);
+        let cargo =
+            std::fs::read_to_string(crate_dir.join("Cargo.toml")).context("reading Cargo.toml")?;
+        files.push((
+            "Cargo.toml".into(),
+            with_template_deps(&cargo, &crate::codegen_c::cargo_toml(&manifest))?,
+        ));
         write_files(crate_dir, &files)?;
         format_rust(crate_dir);
         return Ok(Refreshed {
@@ -856,7 +873,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         .units
         .iter()
         .find(|u| u.id == wanted || u.id.trim_end_matches('/') == wanted.trim_end_matches('/'))
-        .with_context(|| format!("no unit `{wanted}`; `carcinize analyze` lists unit ids"))?;
+        .with_context(|| format!("no unit `{wanted}`; `rust-anything analyze` lists unit ids"))?;
     if matches!(unit.status, Status::Keep | Status::Blocked) && !opts.force {
         bail!(
             "unit `{}` is {:?}: {}. Pass --force to bridge it anyway.",
@@ -1019,7 +1036,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         .unwrap_or_else(|| root.join("rust").join(&crate_name));
     if crate_dir.exists() && std::fs::read_dir(&crate_dir)?.next().is_some() {
         bail!(
-            "{} already exists and is not empty; carcinize never overwrites a port in progress",
+            "{} already exists and is not empty; rust-anything never overwrites a port in progress",
             crate_dir.display()
         );
     }
@@ -1061,7 +1078,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         loader_file(&manifest, &fns),
         (
             ".gitignore".into(),
-            "target/\n*.node\npkg/\n.carcinize/\n*.so\n*.pyd\n__pycache__/\n".into(),
+            "target/\n*.node\npkg/\n.rust-anything/\n*.so\n*.pyd\n__pycache__/\n".into(),
         ),
         ("README.md".into(), readme(&manifest)),
         (
@@ -1098,7 +1115,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
 
     format_rust(&crate_dir);
     let mut notes = vec![format!(
-        "Port each function in src/port.rs, then: carcinize record {0} && carcinize build {0} && carcinize diff {0}",
+        "Port each function in src/port.rs, then: rust-anything record {0} && rust-anything build {0} && rust-anything diff {0}",
         crate_dir.display()
     )];
     if utf16 {
@@ -1196,6 +1213,15 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
     };
     match m.language {
         crate::lang::Lang::Go => {
+            // The wrapper package takes its name and types from the original sources: without
+            // them it would be written under a wrong name beside the old one.
+            if crate::codegen_go::unit_sources(m).is_empty() {
+                bail!(
+                    "cannot read the Go sources of `{}` under {}: is `root` in {MANIFEST} right?",
+                    m.unit,
+                    m.root.display()
+                );
+            }
             files.push(("go/go.mod".into(), crate::harness_go::wrapper_go_mod(m)));
             files.push((
                 format!("go/{}.go", crate::codegen_go::package_name(m)),
@@ -1215,21 +1241,21 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
             );
             files.push((
                 format!(
-                    "java/carcinize/{}.java",
+                    "java/rustanything/{}.java",
                     crate::codegen_ffi::java_native_class(m)
                 ),
                 crate::codegen_java::native_class(m, api),
             ));
             files.push((
-                "java/carcinize/CarcinizeJson.java".into(),
+                "java/rustanything/RustAnythingJson.java".into(),
                 crate::codegen_java::JSON_JAVA.into(),
             ));
             files.push((
-                "java/carcinize/CarcinizeWire.java".into(),
+                "java/rustanything/RustAnythingWire.java".into(),
                 crate::codegen_java::WIRE_JAVA.into(),
             ));
             files.push((
-                "java/carcinize/CarcinizeError.java".into(),
+                "java/rustanything/RustAnythingError.java".into(),
                 crate::codegen_java::ERROR_JAVA.into(),
             ));
         }
@@ -1256,7 +1282,7 @@ fn bridge_ffi(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<
         ("src/port.rs".into(), port),
         (
             ".gitignore".into(),
-            "target/\n.carcinize/\nruby/*.so\nruby/*.bundle\n".into(),
+            "target/\n.rust-anything/\nruby/*.so\nruby/*.bundle\n".into(),
         ),
         ("README.md".into(), readme(manifest)),
         (
@@ -1269,7 +1295,7 @@ fn bridge_ffi(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<
     format_rust(crate_dir);
     format_wrapper(crate_dir);
     let mut notes = vec![format!(
-        "Port each function in src/port.rs, then: carcinize record {0} && carcinize build {0} && carcinize diff {0}",
+        "Port each function in src/port.rs, then: rust-anything record {0} && rust-anything build {0} && rust-anything diff {0}",
         crate_dir.display()
     )];
     for j in kept {
@@ -1298,7 +1324,7 @@ fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Ou
         ("src/port.rs".into(), crate::codegen_c::port_rs(manifest)),
         (
             ".gitignore".into(),
-            "target/\n.carcinize/\nruby/*.so\nruby/*.bundle\n".into(),
+            "target/\n.rust-anything/\nruby/*.so\nruby/*.bundle\n".into(),
         ),
         ("README.md".into(), readme(manifest)),
         (
@@ -1311,7 +1337,7 @@ fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Ou
     format_rust(crate_dir);
     let mut notes = vec![
         format!(
-            "Port each function in src/port.rs, then: carcinize record {0} && carcinize build {0} && carcinize diff {0}",
+            "Port each function in src/port.rs, then: rust-anything record {0} && rust-anything build {0} && rust-anything diff {0}",
             crate_dir.display()
         ),
         format!(
@@ -1339,10 +1365,10 @@ fn readme(m: &Manifest) -> String {
         .map(|f| format!("- `{}` (`{}:{}`)\n", f.name, f.file, f.line))
         .collect();
     format!(
-        "# {name}\n\nRust port of `{unit}`, bridged with {kind}. Generated by carcinize.\n\n## Functions\n\n{functions}\n\
-         ## Loop\n\n```sh\ncarcinize record .   # record what the TS code does\ncarcinize build .    # build the {kind} module\n\
-         carcinize diff .     # run the recorded cases against Rust\ncarcinize shadow .   # run both in the app, log mismatches\n\
-         carcinize gate .     # fmt, clippy, tests, unsafe, API, diff\n```\n",
+        "# {name}\n\nRust port of `{unit}`, bridged with {kind}. Generated by rust-anything.\n\n## Functions\n\n{functions}\n\
+         ## Loop\n\n```sh\nrust-anything record .   # record what the TS code does\nrust-anything build .    # build the {kind} module\n\
+         rust-anything diff .     # run the recorded cases against Rust\nrust-anything shadow .   # run both in the app, log mismatches\n\
+         rust-anything gate .     # fmt, clippy, tests, unsafe, API, diff\n```\n",
         name = m.crate_name,
         unit = m.unit,
         kind = match m.kind {

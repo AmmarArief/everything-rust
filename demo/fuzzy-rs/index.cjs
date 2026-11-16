@@ -1,2 +1,3 @@
-// Loads the wasm-pack (nodejs target) output built by `carcinize build`.
-module.exports = require('./pkg/fuzzy_rs.js')
+// Loads the wasm-bindgen (nodejs target) output built by `rust-anything build`.
+const native = require('./pkg/fuzzy_rs.js')
+module.exports = native

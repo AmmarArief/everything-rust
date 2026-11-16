@@ -11,7 +11,7 @@ Choices made so far, with reasons. Each one can be revisited.
 | D3 | Core plus one plugin per source language: `src/ts/`, then `src/lang/{python,c,go,ruby,java}.rs` on tree-sitter. | The plan, ordering, scoring and report are the same for every language; parsers, bridges and risks are not. |
 | D4 | Written in Rust, parsing with oxc. | Fast (x18n, 27k lines, in about 0.1 s), and the tool uses the language it moves people to. |
 | D5 | Shadow mode for every language. | Cloudflare FL2 ran old and new side by side in one process and moved traffic gradually. Tests prove a port; production traffic confirms it. |
-| D6 | Working name `carcinize`. | Placeholder. Name to be decided. |
+| D6 | Name `rust-anything` (was `carcinize`). Java packages use `rustanything`, identifiers `rust_anything`/`RustAnything`, environment variables `RUST_ANYTHING_*`. | Says what it does. The Rust trademark policy allows "Rust" in crate and repository names that refer to the language, as long as nothing looks official; the README says so. |
 
 ## `analyze`
 
@@ -26,7 +26,7 @@ Choices made so far, with reasons. Each one can be revisited.
 | A7 | Readiness = 100 - weighted risks (log of count) - size - fan-in - dependency penalties + test bonus. | Log keeps big files from drowning in counts; fan-in pushes widely-used units later, where a mistake costs more. |
 | A8 | Priority = half readiness, half value (loops and string work per line, tests, size between 80 and 600 lines). | Readiness alone picks trivial declaration files. A first port should be safe and worth the bridge. |
 | A9 | npm to crate table is hand-curated; unknown packages are reported as `unknown`, never guessed. | The prompt: flag missing equivalents instead of hand-rolling silently. |
-| A10 | JSON output carries `schema: carcinize/analyze@1`. | Agents read it; it is a wire contract and gets versioned. |
+| A10 | JSON output carries `schema: rust-anything/analyze@1`. | Agents read it; it is a wire contract and gets versioned. |
 
 ## The loop
 
@@ -59,14 +59,14 @@ Choices made so far, with reasons. Each one can be revisited.
 | # | Decision | Reason |
 | --- | --- | --- |
 | M1 | Every language maps its types into the TS-like dialect (`string`, `number`, `int`, `T[]`, `Record<string, T>`, `T \| undefined`). | The planner, input generator and port stubs stay one implementation; a language plugin only discovers, scans, resolves and lists exports. |
-| M2 | Python uses PyO3 (abi3), C a plain C ABI, and Go, Ruby and Java one JSON dispatcher (`carcinize_call`, or one JNI method) behind a generated wrapper with the original API. | PyO3 and the C ABI are each language's native extension path. For the other three, one dispatcher keeps the Rust side identical, and the generated wrapper keeps callers unchanged. |
+| M2 | Python uses PyO3 (abi3), C a plain C ABI, and Go, Ruby and Java one JSON dispatcher (`rust_anything_call`, or one JNI method) behind a generated wrapper with the original API. | PyO3 and the C ABI are each language's native extension path. For the other three, one dispatcher keeps the Rust side identical, and the generated wrapper keeps callers unchanged. |
 | M3 | `diff` goes through the same wrapper callers will use (cgo package, Fiddle file, JNI classes, PyO3 package). | The test must see what callers see: wrapper bugs, type conversions and exception mapping included. |
-| M4 | Record and diff run in the source language's own runtime, with generated drivers; nothing is written into the original repository (Go builds its driver as a separate module with `replace`). | The original must run exactly as it does for its callers, and carcinize must not edit code it is migrating. |
+| M4 | Record and diff run in the source language's own runtime, with generated drivers; nothing is written into the original repository (Go builds its driver as a separate module with `replace`). | The original must run exactly as it does for its callers, and rust-anything must not edit code it is migrating. |
 | M5 | C records each case in a forked child; a crash is recorded as `crash: <signal>` and accepts any port behavior. | Inputs outside a C function's contract are undefined behavior: real glibc segfaults on `isalpha(INT_MAX)`. |
 | M6 | C strings arrive in the port as `Option<&[u8]>`; pointer parameters other than `const char *`, pointer returns, structs and variadics stay in C. All `unsafe` is in the generated `lib.rs`, each with a `// SAFETY:` comment. | Ownership of buffers and structs has to be designed, not guessed; the port itself stays `#![forbid(unsafe_code)]`. |
 | M7 | Errors compare by exception type (Python, Ruby, Java), Go `error` values by message, Go panics by being panics. A port signals one with `Err("TypeName: message")`. | Messages are rarely a contract, except Go's error strings, which callers often compare. |
 | M8 | Unannotated parameters used as numbers become `number` (Python, Ruby); Python recording passes integral numbers as ints in every fourth case. | `colorsys` got 1,709 garbage cases out of 1,800 without inference, and its int results were never recorded without ints. |
-| M9 | `serde_json` runs with `float_roundtrip` in carcinize and in every generated crate. | The default parser can be one ULP off; Java's `Double.toString` exposed it in 43 cases. |
+| M9 | `serde_json` runs with `float_roundtrip` in rust-anything and in every generated crate. | The default parser can be one ULP off; Java's `Double.toString` exposed it in 43 cases. |
 | M10 | Shadow per language: a Go package, a Ruby file that `prepend`s, `<Class>Shadow` Java classes, a C file with `-D` renames and a `shadow` crate feature. | Each is the least invasive drop-in that language allows. |
 
 ## Speed

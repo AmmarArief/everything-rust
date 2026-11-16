@@ -6,9 +6,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use carcinize::bridge::{self, Kind, Manifest};
-use carcinize::harness::{self, DiffOptions, RecordOptions};
-use carcinize::shadow;
+use rust_anything::bridge::{self, Kind, Manifest};
+use rust_anything::harness::{self, DiffOptions, RecordOptions};
+use rust_anything::shadow;
 
 fn node_available() -> bool {
     Command::new("node")
@@ -23,7 +23,7 @@ fn fixture() -> PathBuf {
 
 /// A fresh crate for `util.ts` in a temp folder.
 fn bridged(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("carcinize-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     bridge::bridge(&bridge::Options {
         root: &fixture(),
@@ -162,7 +162,7 @@ fn shadow_returns_the_original_and_reports_mismatches() {
     let run = |mode: &str| {
         let o = Command::new("node")
             .arg(&script)
-            .env("CARCINIZE_MODE", mode)
+            .env("RUST_ANYTHING_MODE", mode)
             .output()
             .unwrap();
         assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
@@ -178,7 +178,7 @@ fn shadow_returns_the_original_and_reports_mismatches() {
 
 #[test]
 fn mcp_runs_analyze() {
-    let response = carcinize::mcp::handle(&serde_json::json!({
+    let response = rust_anything::mcp::handle(&serde_json::json!({
         "jsonrpc": "2.0",
         "id": 7,
         "method": "tools/call",
@@ -188,7 +188,7 @@ fn mcp_runs_analyze() {
     assert_eq!(response["result"]["isError"], false);
     assert_eq!(
         response["result"]["structuredContent"]["schema"],
-        "carcinize/analyze@1"
+        "rust-anything/analyze@1"
     );
 }
 
@@ -199,7 +199,7 @@ fn record_follows_bundler_style_imports() {
         return;
     }
     // `fs.ts` imports `./util.js`, a file that only exists as `util.ts`.
-    let dir = std::env::temp_dir().join(format!("carcinize-resolve-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-resolve-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     bridge::bridge(&bridge::Options {
         root: &fixture(),
@@ -231,8 +231,10 @@ fn record_follows_bundler_style_imports() {
 fn async_functions_get_async_bindings() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/async");
     for kind in [Kind::Napi, Kind::Wasm] {
-        let dir =
-            std::env::temp_dir().join(format!("carcinize-async-{kind:?}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "rust-anything-async-{kind:?}-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         bridge::bridge(&bridge::Options {
             root: &root,
@@ -280,7 +282,7 @@ fn classes_are_bridged_recorded_and_replayed() {
         return;
     }
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/classes");
-    let dir = std::env::temp_dir().join(format!("carcinize-classes-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-classes-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let outcome = bridge::bridge(&bridge::Options {
         root: &root,
@@ -347,7 +349,7 @@ fn classes_are_bridged_recorded_and_replayed() {
 #[test]
 fn tsconfig_aliases_are_followed() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aliases");
-    let report = carcinize::analyze::analyze(&root).unwrap();
+    let report = rust_anything::analyze::analyze(&root).unwrap();
     let greet = report
         .units
         .iter()
@@ -357,7 +359,7 @@ fn tsconfig_aliases_are_followed() {
     if !node_available() {
         return;
     }
-    let dir = std::env::temp_dir().join(format!("carcinize-alias-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-alias-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     bridge::bridge(&bridge::Options {
         root: &root,
@@ -391,7 +393,7 @@ fn record_resolves_workspace_packages_to_source() {
     }
     // `@m/b` imports `@m/a` by name; `@m/a` has no build output (`dist/` does not exist).
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/monorepo");
-    let dir = std::env::temp_dir().join(format!("carcinize-monorepo-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-monorepo-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     bridge::bridge(&bridge::Options {
         root: &root,
@@ -428,7 +430,7 @@ fn python_available() -> bool {
 #[test]
 fn python_modules_bridge_record_and_diff() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/python");
-    let dir = std::env::temp_dir().join(format!("carcinize-python-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-python-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let outcome = bridge::bridge(&bridge::Options {
         root: &root,
@@ -512,7 +514,7 @@ fn cc_available() -> bool {
 #[test]
 fn c_units_bridge_record_and_diff() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/c");
-    let dir = std::env::temp_dir().join(format!("carcinize-c-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-c-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let outcome = bridge::bridge(&bridge::Options {
         root: &root,
@@ -589,7 +591,7 @@ fn go_available() -> bool {
 #[test]
 fn go_packages_bridge_record_and_diff() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/go");
-    let dir = std::env::temp_dir().join(format!("carcinize-go-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-go-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let outcome = bridge::bridge(&bridge::Options {
         root: &root,
@@ -674,7 +676,7 @@ fn ruby_available() -> bool {
 #[test]
 fn ruby_modules_bridge_record_and_diff() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ruby");
-    let dir = std::env::temp_dir().join(format!("carcinize-ruby-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-ruby-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let outcome = bridge::bridge(&bridge::Options {
         root: &root,
@@ -754,7 +756,7 @@ fn java_available() -> bool {
 #[test]
 fn java_classes_bridge_record_and_diff() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/java");
-    let dir = std::env::temp_dir().join(format!("carcinize-java-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rust-anything-java-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let outcome = bridge::bridge(&bridge::Options {
         root: &root,
@@ -775,7 +777,10 @@ fn java_classes_bridge_record_and_diff() {
         "{port}"
     );
     let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
-    assert!(lib.contains("fn Java_carcinize_TextRsNative_call"), "{lib}");
+    assert!(
+        lib.contains("fn Java_rustanything_TextRsNative_call"),
+        "{lib}"
+    );
     let wrapper = std::fs::read_to_string(dir.join("java/com/example/text/Strings.java")).unwrap();
     assert!(
         wrapper.contains("public static List<String> words(String text)"),

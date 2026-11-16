@@ -28,6 +28,6 @@ First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and 
   functions, async functions and classes; JS-only exports stay in TS with a reason.
 - `record` / `diff` / `bench`: recorded TS behavior from shaped, edge-case inputs and class
   scenarios, replayed against Rust; timing with the bridge included.
-- `shadow`: drop-in modules running TS and Rust side by side, `CARCINIZE_MODE=old|shadow|new`.
+- `shadow`: drop-in modules running TS and Rust side by side, `RUST_ANYTHING_MODE=old|shadow|new`.
 - `gate`: fmt, clippy, tests, `unsafe` audit, nothing unported, build, API, behavior.
-- `mcp`: every step as an MCP tool; agent skill in `skills/carcinize`.
+- `mcp`: every step as an MCP tool; agent skill in `skills/rust-anything`.

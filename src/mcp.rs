@@ -43,7 +43,7 @@ pub fn handle(request: &Value) -> Option<Value> {
         "initialize" => json!({
             "protocolVersion": request["params"]["protocolVersion"].as_str().unwrap_or(PROTOCOL_VERSION),
             "capabilities": { "tools": {} },
-            "serverInfo": { "name": "carcinize", "version": env!("CARGO_PKG_VERSION") },
+            "serverInfo": { "name": "rust-anything", "version": env!("CARGO_PKG_VERSION") },
             "instructions": "Incremental TS/JS to Rust migration. Loop per unit: analyze -> bridge -> \
                 record -> (port src/port.rs) -> build -> diff -> shadow -> gate. Never mark a port done \
                 before gate passes.",
@@ -75,7 +75,7 @@ fn error(id: Value, code: i64, message: &str) -> Value {
 }
 
 fn tools() -> Value {
-    let crate_dir = json!({ "type": "string", "description": "Folder of the generated crate (holds carcinize.json)." });
+    let crate_dir = json!({ "type": "string", "description": "Folder of the generated crate (holds rust-anything.json)." });
     json!([
         {
             "name": "analyze",
@@ -146,7 +146,7 @@ fn tools() -> Value {
         },
         {
             "name": "shadow",
-            "description": "Generate a drop-in shadow (a TS or Python module, Go package, Ruby file, Java classes or C file) that runs the original and the Rust port side by side and reports mismatches; CARCINIZE_MODE=old|shadow|new switches at runtime.",
+            "description": "Generate a drop-in shadow (a TS or Python module, Go package, Ruby file, Java classes or C file) that runs the original and the Rust port side by side and reports mismatches; RUST_ANYTHING_MODE=old|shadow|new switches at runtime.",
             "inputSchema": { "type": "object", "properties": { "crate": crate_dir, "out": { "type": "string" } }, "required": ["crate"] },
         },
         {
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn speaks_mcp() {
         let init = handle(&json!({ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2025-06-18" } })).unwrap();
-        assert_eq!(init["result"]["serverInfo"]["name"], "carcinize");
+        assert_eq!(init["result"]["serverInfo"]["name"], "rust-anything");
         assert!(
             handle(&json!({ "jsonrpc": "2.0", "method": "notifications/initialized" })).is_none()
         );

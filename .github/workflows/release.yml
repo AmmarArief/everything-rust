@@ -23,8 +23,8 @@ jobs:
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
-          name: carcinize-${{ matrix.target }}
+          name: rust-anything-${{ matrix.target }}
           path: |
-            target/${{ matrix.target }}/release/carcinize
-            target/${{ matrix.target }}/release/carcinize.exe
+            target/${{ matrix.target }}/release/rust-anything
+            target/${{ matrix.target }}/release/rust-anything.exe
           if-no-files-found: error
