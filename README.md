@@ -2,10 +2,10 @@
   <img src="docs/assets/hero.png" alt="rust-anything: Rewrite anything in Rust. Keep it working the whole way. Piece by piece, checked against the original at every step, until it is pure Rust." width="820">
 </p>
 
-**Rewrite your app in Rust, one piece at a time, proving nothing changed.** For TypeScript/JavaScript,
-Python, C, Go, Ruby and Java apps: rust-anything ports your app piece by piece, checks every step
-against the original's recorded behavior, and hands you a pure Rust app. Only need the slow part
-fast? Port just that, one hot path at a time:
+**Rewrite your whole app in Rust, one piece at a time, proving nothing changed.** For CLIs, HTTP
+servers and libraries in TypeScript/JavaScript, Python, C, Go, Ruby and Java: rust-anything ports
+your app piece by piece, checks every step against the original's recorded behavior, and hands
+you a pure Rust app. Only need the slow part fast? Port just that, one hot path at a time:
 
 | Real workload, same results as the original | Original | With rust-anything |
 | --- | ---: | ---: |
@@ -159,7 +159,21 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 The goal is a pure Rust app that behaves like the original, with the original kept as reference.
 Your agent writes the Rust; rust-anything orders the work, scaffolds it, and proves every step.
 The [whole-app skill](./skills/rust-anything/whole-app.md) walks the agent through it, starting
-with the decisions only you can make.
+with the decisions only you can make:
+
+- **Grilling**: the agent asks in rounds, each question with its recommended answer, until every
+  decision the port depends on is settled, and writes each one as an ADR in `rust/DECISIONS.md`,
+  with `rust/GLOSSARY.md` mapping the original's terms to Rust names.
+- **Research**: background agents read each dependency's primary sources and write
+  `rust/research/<topic>.md`, with every semantic trap they found.
+- **Across sessions**: `rust/MAP.md` lists every unit with its state; a session claims one unit
+  before it starts, and each checkpoint leaves a `rust/HANDOFF.md` for the next session. Units in
+  one wave can be ported in parallel by subagents.
+- **Cutover**: the agent does what it can and writes `rust/cutover.sh`, an interactive script for
+  the steps only you can do (deploys, DNS, secrets), with a way back at each step.
+
+Grilling, research and these practices are adapted from
+[Matt Pocock's skills](https://github.com/mattpocock/skills).
 
 Plan first: `rust-anything analyze . --whole-app` adds the app's shape (CLI, server or library)
 and entry points, every external dependency (imported or declared) with its Rust crate and fit,
@@ -190,6 +204,8 @@ rust-anything app replay . --build "target/release/mytool"
   `rust/app-cases/replay-report.md` with a diff per failing case, and exits non-zero on any
   mismatch. A build that appends to the file named by `RUST_ANYTHING_FALLBACK_LOG` (one line per
   fallback to the original), as the front door below does, also gets its fallback rate reported.
+- `app replay --case <name>` reruns one case by the name the report gives it: the fast,
+  repeatable loop for fixing a mismatch before running everything again.
 
 Then move the entry point to Rust and hand it commands one unit at a time:
 
