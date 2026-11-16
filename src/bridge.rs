@@ -629,6 +629,20 @@ fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
     }
 }
 
+/// A port function whose doc line does not name an export (`/// Port of \`Integer.toString\``)
+/// takes the name of the export it was generated for, matched by its Rust name.
+pub fn match_export_names(m: &Manifest, api: &mut codegen::PortApi) {
+    for f in &mut api.functions {
+        if m.exports.iter().any(|e| e.name == f.js_name) {
+            continue;
+        }
+        let rust = f.rust_name.trim_start_matches("r#");
+        if let Some(e) = m.exports.iter().find(|e| snake_case(&e.name) == rust) {
+            f.js_name = e.name.clone();
+        }
+    }
+}
+
 /// What `refresh` rewrote.
 #[derive(Debug, Serialize)]
 pub struct Refreshed {
@@ -652,7 +666,8 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     if manifest.kind == Kind::Ffi {
         let port = std::fs::read_to_string(crate_dir.join("src/port.rs"))
             .context("reading src/port.rs")?;
-        let api = codegen::parse_port(&port);
+        let mut api = codegen::parse_port(&port);
+        match_export_names(&manifest, &mut api);
         let files = ffi_bindings(&manifest, &api)?;
         write_files(crate_dir, &files)?;
         format_rust(crate_dir);
@@ -664,7 +679,8 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     }
     let port =
         std::fs::read_to_string(crate_dir.join("src/port.rs")).context("reading src/port.rs")?;
-    let fns = codegen::parse_port(&port);
+    let mut fns = codegen::parse_port(&port);
+    match_export_names(&manifest, &mut fns);
     if fns.functions.is_empty() && fns.classes.is_empty() {
         bail!("src/port.rs has no `pub fn` or ported class: nothing to bind");
     }
@@ -1030,7 +1046,11 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
             ),
         ]
     } else {
-        vec![("src/lib.rs".to_string(), crate::codegen_ffi::lib_rs(m, api))]
+        let mut lib = crate::codegen_ffi::lib_rs(m, api);
+        if m.language == crate::lang::Lang::Java {
+            lib.push_str(&crate::codegen_java::typed_rs(m, api));
+        }
+        vec![("src/lib.rs".to_string(), lib)]
     };
     match m.language {
         crate::lang::Lang::Go => {
@@ -1047,13 +1067,13 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
             ));
         }
         crate::lang::Lang::Java => {
-            files.extend(crate::codegen_java::wrappers(m));
+            files.extend(crate::codegen_java::wrappers(m, api));
             files.push((
                 format!(
                     "java/carcinize/{}.java",
                     crate::codegen_ffi::java_native_class(m)
                 ),
-                crate::codegen_java::native_class(m),
+                crate::codegen_java::native_class(m, api),
             ));
             files.push((
                 "java/carcinize/CarcinizeJson.java".into(),

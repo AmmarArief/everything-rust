@@ -143,3 +143,258 @@ pub extern "system" fn Java_carcinize_JdkRsNative_call<'local>(
     env.new_string(call_json(&name, &args))
         .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw)
 }
+
+/// Throws `"Type: message"` as that exception (java.lang, java.util, java.io, or a full
+/// name); anything else as a RuntimeException.
+fn throw(env: &mut jni::JNIEnv, message: &str) {
+    if let Some((kind, text)) = message.split_once(": ") {
+        let path = kind.replace('.', "/");
+        for prefix in ["java/lang/", "java/util/", "java/io/", ""] {
+            let name = format!("{prefix}{path}");
+            if env.find_class(name.as_str()).is_ok() {
+                let _ = env.throw_new(name.as_str(), text);
+                return;
+            }
+            let _ = env.exception_clear();
+        }
+    }
+    let _ = env.throw_new("java/lang/RuntimeException", message);
+}
+
+/// Runs the port; a panic becomes an error instead of unwinding into the JVM.
+fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
+        let text = panic
+            .downcast_ref::<&str>()
+            .map(ToString::to_string)
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        Err(format!("RuntimeException: Rust panic: {text}"))
+    })
+}
+
+/// A `String` argument; `None` (with a NullPointerException thrown) for null.
+fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String> {
+    if s.is_null() {
+        let _ = env.throw_new("java/lang/NullPointerException", "null String argument");
+        return None;
+    }
+    env.get_string(s).ok().map(Into::into)
+}
+
+/// `com.example.jdk.Jdk.toRadix(int value, int radix)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_toRadix`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1toRadix<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    value: jni::sys::jint,
+    radix: jni::sys::jint,
+) -> jni::sys::jstring {
+    match run(|| port::to_radix(i64::from(value), i64::from(radix))) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.parseRadix(String text, int radix)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_parseRadix`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1parseRadix<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+    radix: jni::sys::jint,
+) -> jni::sys::jint {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return 0;
+    };
+    match run(|| port::parse_radix(text, i64::from(radix))) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.toBinary(int value)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_toBinary`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1toBinary<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    value: jni::sys::jint,
+) -> jni::sys::jstring {
+    match run(|| port::to_binary(i64::from(value))) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.toHex(long value)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_toHex`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1toHex<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    value: jni::sys::jlong,
+) -> jni::sys::jstring {
+    match run(|| port::to_hex(value)) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.reverseBits(int value)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_reverseBits`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1reverseBits<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    value: jni::sys::jint,
+) -> jni::sys::jint {
+    match run(|| port::reverse_bits(i64::from(value))) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.floorMod(int a, int b)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_floorMod`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1floorMod<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    a: jni::sys::jint,
+    b: jni::sys::jint,
+) -> jni::sys::jint {
+    match run(|| port::floor_mod(i64::from(a), i64::from(b))) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.addExact(int a, int b)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_addExact`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1addExact<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    a: jni::sys::jint,
+    b: jni::sys::jint,
+) -> jni::sys::jint {
+    match run(|| port::add_exact(i64::from(a), i64::from(b))) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.formatDouble(double value)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_formatDouble`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1formatDouble<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    value: jni::sys::jdouble,
+) -> jni::sys::jstring {
+    match run(|| port::format_double(value)) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.urlEncode(String text)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_urlEncode`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1urlEncode<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+) -> jni::sys::jstring {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return std::ptr::null_mut();
+    };
+    match run(|| port::url_encode(text)) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.base64(String text)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_base64`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1base64<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+) -> jni::sys::jstring {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return std::ptr::null_mut();
+    };
+    match run(|| port::base64(text)) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.jdk.Jdk.upper(String text)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.JdkRsNative.n_upper`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_JdkRsNative_n_1upper<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+) -> jni::sys::jstring {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return std::ptr::null_mut();
+    };
+    match run(|| port::upper(text)) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}

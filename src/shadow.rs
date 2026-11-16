@@ -31,7 +31,10 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
     }
     if manifest.language == crate::lang::Lang::Java {
         let dir = out.map_or_else(|| crate_dir.join("java"), Path::to_path_buf);
-        let files = crate::codegen_java::shadows(&manifest);
+        let port = std::fs::read_to_string(crate_dir.join("src/port.rs")).unwrap_or_default();
+        let mut api = crate::codegen::parse_port(&port);
+        crate::bridge::match_export_names(&manifest, &mut api);
+        let files = crate::codegen_java::shadows(&manifest, &api);
         for (path, _) in &files {
             let target = dir.join(path.trim_start_matches("shadow/"));
             if target.exists() {

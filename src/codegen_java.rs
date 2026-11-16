@@ -385,7 +385,7 @@ fn boxed(t: &str) -> String {
 }
 
 /// The native class: loads the Rust library and calls the dispatcher.
-pub fn native_class(m: &Manifest) -> String {
+pub fn native_class(m: &Manifest, api: &crate::codegen::PortApi) -> String {
     let class = java_native_class(m);
     let lib = m.lib_name();
     format!(
@@ -408,6 +408,9 @@ public final class {class} {{
     }}
 
     private static native String call(String name, String args);
+
+    // Typed methods: primitives and strings cross JNI directly, without JSON.
+{typed}
 
     /** Calls the port of {{@code name}}; its answer is converted to {{@code type}}. */
     public static Object invoke(String name, Type type, Object... args) {{
@@ -445,11 +448,13 @@ public final class {class} {{
 }}
 "#,
         unit = m.unit,
+        typed = typed_declarations(m, api),
     )
 }
 
 /// The wrapper classes: `(path, source)` for each class of the unit with ported methods.
-pub fn wrappers(m: &Manifest) -> Vec<(String, String)> {
+pub fn wrappers(m: &Manifest, api: &crate::codegen::PortApi) -> Vec<(String, String)> {
+    let typed = typed_names(m, api);
     let native = java_native_class(m);
     let mut classes: Vec<(String, Vec<String>)> = Vec::new();
     for f in &m.exports {
@@ -472,7 +477,22 @@ pub fn wrappers(m: &Manifest) -> Vec<(String, String)> {
         } else {
             format!(", {}", args.join(", "))
         };
-        let body = if ret == "void" {
+        let direct = format!(
+            "carcinize.{native}.n_{}({})",
+            f.name,
+            f.params
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        let body = if typed.contains(&f.name) {
+            if ret == "void" {
+                format!("{direct};")
+            } else {
+                format!("return {direct};")
+            }
+        } else if ret == "void" {
             format!(
                 "carcinize.{native}.invoke(\"{}\", void.class{args});",
                 f.name
@@ -767,7 +787,8 @@ public final class CarcinizeDriver {
 /// Shadow classes, `<Class>Shadow` beside each original class: the same static methods,
 /// running the original and the Rust port, returning the original's result and counting
 /// mismatches. `-Dcarcinize.mode=old` runs the original only, `new` the port only.
-pub fn shadows(m: &Manifest) -> Vec<(String, String)> {
+pub fn shadows(m: &Manifest, api: &crate::codegen::PortApi) -> Vec<(String, String)> {
+    let typed = typed_names(m, api);
     let native = java_native_class(m);
     let mut classes: Vec<(String, Vec<String>)> = Vec::new();
     for f in &m.exports {
@@ -800,10 +821,14 @@ pub fn shadows(m: &Manifest) -> Vec<(String, String)> {
                 boxed(ret)
             )
         };
-        let port = format!(
-            "carcinize.{native}.invoke(\"{}\", {type_ref}{native_args})",
-            f.name
-        );
+        let port = if typed.contains(&f.name) {
+            format!("carcinize.{native}.n_{}({call_args})", f.name)
+        } else {
+            format!(
+                "carcinize.{native}.invoke(\"{}\", {type_ref}{native_args})",
+                f.name
+            )
+        };
         let method = if ret == "void" {
             format!(
                 "    @SuppressWarnings(\"unchecked\")\n    public static void {name}({params}) {{\n        if (MODE.equals(\"new\")) {{\n            {port};\n            return;\n        }}\n\
@@ -855,4 +880,233 @@ pub fn shadows(m: &Manifest) -> Vec<(String, String)> {
             (path, out)
         })
         .collect()
+}
+
+/// A Java type that crosses JNI without JSON: the JNI type, the port type it must match, how
+/// the argument becomes the port's value, how the port's result becomes the JNI value, and the
+/// value returned while an exception is pending.
+struct Jni {
+    jni: &'static str,
+    port: &'static str,
+    arg: fn(&str) -> String,
+    out: &'static str,
+    default: &'static str,
+}
+
+fn jni(java: &str) -> Option<Jni> {
+    let int = |jni, out| Jni {
+        jni,
+        port: "i64",
+        arg: |n| format!("i64::from({n})"),
+        out,
+        default: "0",
+    };
+    Some(match java.trim() {
+        "int" => int("jni::sys::jint", "out as jni::sys::jint"),
+        "short" => int("jni::sys::jshort", "out as jni::sys::jshort"),
+        "byte" => int("jni::sys::jbyte", "out as jni::sys::jbyte"),
+        "long" => Jni {
+            jni: "jni::sys::jlong",
+            port: "i64",
+            arg: |n| n.to_string(),
+            out: "out",
+            default: "0",
+        },
+        "double" => Jni {
+            jni: "jni::sys::jdouble",
+            port: "f64",
+            arg: |n| n.to_string(),
+            out: "out",
+            default: "0.0",
+        },
+        "float" => Jni {
+            jni: "jni::sys::jfloat",
+            port: "f64",
+            arg: |n| format!("f64::from({n})"),
+            out: "out as jni::sys::jfloat",
+            default: "0.0",
+        },
+        "boolean" => Jni {
+            jni: "jni::sys::jboolean",
+            port: "bool",
+            arg: |n| format!("{n} != 0"),
+            out: "jni::sys::jboolean::from(out)",
+            default: "0",
+        },
+        "String" => Jni {
+            jni: "jni::objects::JString<'local>",
+            port: "String",
+            arg: |n| n.to_string(),
+            out: "env.new_string(out).map_or(std::ptr::null_mut(), jni::objects::JString::into_raw)",
+            default: "std::ptr::null_mut()",
+        },
+        _ => return None,
+    })
+}
+
+/// Whether a function crosses as a typed JNI method: every parameter and the result are
+/// primitives or `String`, and the port kept the matching Rust types.
+fn typed<'m>(
+    m: &'m Manifest,
+    f: &crate::codegen::PortFn,
+) -> Option<&'m crate::ts::exports::ExportedFn> {
+    let e = m.exports.iter().find(|e| e.name == f.js_name)?;
+    if e.params.len() != f.params.len() {
+        return None;
+    }
+    for (p, (_, port_ty)) in e.params.iter().zip(&f.params) {
+        if jni(p.native_type.as_deref()?)?.port != port_ty {
+            return None;
+        }
+    }
+    match e.native_return.as_deref()? {
+        "void" => (f.ret == "()").then_some(e),
+        r => (jni(r)?.port == f.ret).then_some(e),
+    }
+}
+
+fn mangle(s: &str) -> String {
+    s.replace('_', "_1")
+}
+
+/// Typed JNI functions for `lib.rs`, appended after the JSON dispatcher.
+pub fn typed_rs(m: &Manifest, api: &crate::codegen::PortApi) -> String {
+    let class = java_native_class(m);
+    let mut out = String::from(
+        r#"
+/// Throws `"Type: message"` as that exception (java.lang, java.util, java.io, or a full
+/// name); anything else as a RuntimeException.
+fn throw(env: &mut jni::JNIEnv, message: &str) {
+    if let Some((kind, text)) = message.split_once(": ") {
+        let path = kind.replace('.', "/");
+        for prefix in ["java/lang/", "java/util/", "java/io/", ""] {
+            let name = format!("{prefix}{path}");
+            if env.find_class(name.as_str()).is_ok() {
+                let _ = env.throw_new(name.as_str(), text);
+                return;
+            }
+            let _ = env.exception_clear();
+        }
+    }
+    let _ = env.throw_new("java/lang/RuntimeException", message);
+}
+
+/// Runs the port; a panic becomes an error instead of unwinding into the JVM.
+fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
+        let text = panic
+            .downcast_ref::<&str>()
+            .map(ToString::to_string)
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        Err(format!("RuntimeException: Rust panic: {text}"))
+    })
+}
+
+/// A `String` argument; `None` (with a NullPointerException thrown) for null.
+fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String> {
+    if s.is_null() {
+        let _ = env.throw_new("java/lang/NullPointerException", "null String argument");
+        return None;
+    }
+    env.get_string(s).ok().map(Into::into)
+}
+"#,
+    );
+    for f in &api.functions {
+        let Some(e) = typed(m, f) else { continue };
+        let ret_java = e.native_return.as_deref().unwrap_or("void");
+        let ret = if ret_java == "void" {
+            None
+        } else {
+            jni(ret_java)
+        };
+        let mut params = vec![
+            "mut env: jni::JNIEnv<'local>".to_string(),
+            "_class: jni::objects::JClass<'local>".to_string(),
+        ];
+        let mut prelude = String::new();
+        let mut args = Vec::new();
+        let default = ret.as_ref().map_or("", |r| r.default);
+        for (p, (name, _)) in e.params.iter().zip(&f.params) {
+            let t = jni(p.native_type.as_deref().unwrap_or_default()).expect("typed");
+            params.push(format!("{name}: {}", t.jni));
+            if t.port == "String" {
+                let _ = writeln!(
+                    prelude,
+                    "    let Some({name}) = string_arg(&mut env, &{name}) else {{\n        return {default};\n    }};"
+                );
+                args.push(name.clone());
+            } else {
+                args.push((t.arg)(name));
+            }
+        }
+        let call = format!("port::{}({})", f.rust_name, args.join(", "));
+        let call = if f.fallible {
+            call
+        } else {
+            format!("Ok({call})")
+        };
+        let (ret_ty, ok) = match &ret {
+            Some(r) => (
+                format!(
+                    " -> {}",
+                    r.jni
+                        .replace("JString<'local>", "jstring")
+                        .replace("jni::objects::jstring", "jni::sys::jstring")
+                ),
+                r.out.to_string(),
+            ),
+            None => (String::new(), "()".to_string()),
+        };
+        let _ = writeln!(
+            out,
+            "\n/// `{proto}`: typed, no JSON.\n// SAFETY: the JNI symbol of `carcinize.{class}.n_{js}`; nothing else defines it.\n\
+             #[unsafe(no_mangle)]\npub extern \"system\" fn Java_carcinize_{mclass}_n_1{mjs}<'local>({params}){ret_ty} {{\n\
+             {prelude}    match run(|| {call}) {{\n        Ok(out) => {ok},\n        Err(message) => {{\n            \
+             throw(&mut env, &message);\n            {default}\n        }}\n    }}\n}}",
+            proto = e.prototype.as_deref().unwrap_or(&e.name),
+            js = f.js_name,
+            mclass = mangle(&class),
+            mjs = mangle(&f.js_name),
+            params = params.join(", "),
+        );
+    }
+    out
+}
+
+/// The exports that cross as typed JNI methods.
+fn typed_names(m: &Manifest, api: &crate::codegen::PortApi) -> Vec<String> {
+    api.functions
+        .iter()
+        .filter(|f| typed(m, f).is_some())
+        .map(|f| f.js_name.clone())
+        .collect()
+}
+
+/// The `static native` declarations of the typed methods.
+fn typed_declarations(m: &Manifest, api: &crate::codegen::PortApi) -> String {
+    let mut out = String::new();
+    for f in &api.functions {
+        let Some(e) = typed(m, f) else { continue };
+        let params: Vec<String> = e
+            .params
+            .iter()
+            .map(|p| {
+                format!(
+                    "{} {}",
+                    p.native_type.as_deref().unwrap_or("Object"),
+                    p.name
+                )
+            })
+            .collect();
+        let _ = writeln!(
+            out,
+            "    public static native {} n_{}({});",
+            e.native_return.as_deref().unwrap_or("void"),
+            f.js_name,
+            params.join(", ")
+        );
+    }
+    out
 }

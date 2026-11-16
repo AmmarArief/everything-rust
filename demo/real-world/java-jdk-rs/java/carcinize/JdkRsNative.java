@@ -18,6 +18,20 @@ public final class JdkRsNative {
 
     private static native String call(String name, String args);
 
+    // Typed methods: primitives and strings cross JNI directly, without JSON.
+    public static native String n_toRadix(int value, int radix);
+    public static native int n_parseRadix(String text, int radix);
+    public static native String n_toBinary(int value);
+    public static native String n_toHex(long value);
+    public static native int n_reverseBits(int value);
+    public static native int n_floorMod(int a, int b);
+    public static native int n_addExact(int a, int b);
+    public static native String n_formatDouble(double value);
+    public static native String n_urlEncode(String text);
+    public static native String n_base64(String text);
+    public static native String n_upper(String text);
+
+
     /** Calls the port of {@code name}; its answer is converted to {@code type}. */
     public static Object invoke(String name, Type type, Object... args) {
         String answer = call(name, CarcinizeJson.write(java.util.Arrays.asList(args)));
