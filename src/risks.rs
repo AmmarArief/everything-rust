@@ -20,6 +20,20 @@ pub enum Risk {
     Callbacks,
     NumberSemantics,
     Json,
+    /// Unbounded or differently sized integers (Python `int`, C/Go/Java widths and overflow).
+    IntegerSemantics,
+    /// Floor division and modulo that differ from Rust's (`//`, `%` on negatives, C `/` by zero).
+    DivisionSemantics,
+    /// Iteration over hash sets or maps whose order a port cannot reproduce.
+    UnorderedIteration,
+    /// Raw pointers, pointer arithmetic, manual memory.
+    Pointers,
+    /// Threads, goroutines, locks, shared mutable state.
+    Concurrency,
+    /// Null references that any object value may hold (Java, Go nil, C NULL).
+    NullReferences,
+    /// Changing classes, modules or methods at runtime (monkeypatching, `method_missing`).
+    Monkeypatching,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -54,16 +68,21 @@ impl Risk {
             | Self::Reflection
             | Self::Callbacks => Severity::Medium,
             Self::Exceptions | Self::NumberSemantics | Self::Json => Severity::Low,
+            Self::Pointers | Self::Monkeypatching | Self::UnorderedIteration => Severity::High,
+            Self::IntegerSemantics
+            | Self::DivisionSemantics
+            | Self::Concurrency
+            | Self::NullReferences => Severity::Medium,
         }
     }
 
     pub fn title(self) -> &'static str {
         match self {
-            Self::StringOffsets => "String offsets (UTF-16 vs UTF-8)",
+            Self::StringOffsets => "String offsets and slicing",
             Self::RegexSyntax => "Regex features the `regex` crate lacks",
             Self::DynamicRegex => "Regexes built at runtime",
             Self::DynamicCode => "Dynamic code (eval, new Function, computed import)",
-            Self::DynamicTyping => "Dynamic typing (`any`, `in` checks)",
+            Self::DynamicTyping => "Dynamic typing",
             Self::OrderedCollections => "Insertion-ordered maps and object keys",
             Self::Exceptions => "Exceptions",
             Self::Async => "Async and promises",
@@ -73,6 +92,13 @@ impl Risk {
             Self::Callbacks => "Callback-shaped APIs",
             Self::NumberSemantics => "Number semantics",
             Self::Json => "JSON round-trips",
+            Self::IntegerSemantics => "Integer width and overflow",
+            Self::DivisionSemantics => "Division and modulo",
+            Self::UnorderedIteration => "Hash iteration order",
+            Self::Pointers => "Pointers and manual memory",
+            Self::Concurrency => "Concurrency",
+            Self::NullReferences => "Null references",
+            Self::Monkeypatching => "Runtime changes to code",
         }
     }
 
@@ -133,6 +159,34 @@ impl Risk {
             Self::Json => {
                 "JSON.stringify key order and number formatting must match `serde_json` output if \
                  the result is user-visible."
+            }
+            Self::IntegerSemantics => {
+                "Python ints never overflow; C, Go and Java ints wrap or are undefined on overflow. \
+                 Pick i64, i128 or a bignum crate deliberately, and use wrapping_* where the source wraps."
+            }
+            Self::DivisionSemantics => {
+                "Python `//` and `%` floor toward negative infinity; Rust `/` and `%` truncate: use \
+                 `div_euclid`/`rem_euclid` or explicit floor math. C division by zero is undefined."
+            }
+            Self::UnorderedIteration => {
+                "Set and map iteration order comes from the source language's hash function. A port \
+                 cannot reproduce it: sort before output, or make the order part of the contract."
+            }
+            Self::Pointers => {
+                "Pointer arithmetic and manual memory become slices, indices and owned types. Code that \
+                 exposes pointers across the boundary needs `unsafe`, isolated and explained."
+            }
+            Self::Concurrency => {
+                "Threads, goroutines and locks need a design in Rust (channels, Send/Sync), not a \
+                 line-by-line translation; keep concurrency in the caller where possible."
+            }
+            Self::NullReferences => {
+                "Any reference may be null in the source: decide per parameter whether it is `Option` \
+                 and what null means, instead of mapping every value to `Option`."
+            }
+            Self::Monkeypatching => {
+                "Code that rewrites classes or modules at runtime has no Rust equivalent: keep it in \
+                 the source language and port the stable parts."
             }
         }
     }

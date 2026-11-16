@@ -33,6 +33,7 @@ fn bridged(name: &str) -> PathBuf {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     })
     .unwrap();
     dir
@@ -79,6 +80,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     });
     assert!(again.unwrap_err().to_string().contains("never overwrites"));
     let blocked = bridge::bridge(&bridge::Options {
@@ -89,6 +91,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     });
     assert!(blocked.unwrap_err().to_string().contains("Blocked"));
     std::fs::remove_dir_all(&dir).unwrap();
@@ -203,6 +206,7 @@ fn record_follows_bundler_style_imports() {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -234,6 +238,7 @@ fn async_functions_get_async_bindings() {
             name: None,
             force: false,
             keep: Vec::new(),
+            lang: None,
         })
         .unwrap();
         let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -250,6 +255,7 @@ fn async_functions_get_async_bindings() {
                 assert!(cargo.contains("features = [\"async\"]") && cargo.contains("futures"))
             }
             Kind::Wasm => assert!(cargo.contains("wasm-bindgen-futures")),
+            Kind::Pyo3 => {}
         }
         let index = std::fs::read_to_string(dir.join("index.cjs")).unwrap();
         // Only structured functions are wrapped; `countWords` passes its promise straight through.
@@ -279,6 +285,7 @@ fn classes_are_bridged_recorded_and_replayed() {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     })
     .unwrap();
     assert_eq!(outcome.exports, ["class TextStats", "class LruCache"]);
@@ -354,6 +361,7 @@ fn tsconfig_aliases_are_followed() {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -386,6 +394,7 @@ fn record_resolves_workspace_packages_to_source() {
         name: None,
         force: false,
         keep: Vec::new(),
+        lang: None,
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -398,5 +407,88 @@ fn record_resolves_workspace_packages_to_source() {
     })
     .unwrap();
     assert_eq!((recorded.cases, recorded.errors), (10, 0));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+fn python_available() -> bool {
+    Command::new("python3")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+}
+
+#[test]
+fn python_modules_bridge_record_and_diff() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/python");
+    let dir = std::env::temp_dir().join(format!("carcinize-python-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/textkit/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+    })
+    .unwrap();
+    assert_eq!(outcome.kind, Kind::Pyo3);
+    let manifest = Manifest::load(&dir).unwrap();
+    let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
+    assert_eq!(kept, ["walk", "apply", "configure"]);
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    // A literal default stays a plain value; `None` as default is an Option.
+    assert!(
+        port.contains("pub fn slugify(text: String, sep: String, max_length: Option<i64>)"),
+        "{port}"
+    );
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(
+        lib.contains(r#"signature = (text, sep=String::from("-"), *, max_length=None)"#),
+        "{lib}"
+    );
+    assert!(lib.contains("#[pyclass(name = \"Stack\")]"));
+    if !python_available() {
+        return;
+    }
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 60,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(recorded.cases > 200);
+    // A pure-Python stand-in for the built package: `page_count` truncates instead of flooring.
+    let package = dir.join("python/textkit_rs");
+    std::fs::create_dir_all(&package).unwrap();
+    let original = std::fs::read_to_string(root.join("src/textkit/words.py")).unwrap();
+    let stack = std::fs::read_to_string(root.join("src/textkit/stack.py")).unwrap();
+    let buggy = original.replace(
+        "return -(-total // per_page)",
+        "return int(-(-total / per_page))",
+    );
+    std::fs::write(package.join("__init__.py"), format!("{buggy}\n{stack}")).unwrap();
+    let diff = |dir: &Path| {
+        harness::diff(&DiffOptions {
+            crate_dir: dir,
+            module: None,
+            ignore_key_order: false,
+            node_args: &[],
+        })
+        .unwrap()
+    };
+    let buggy = diff(&dir);
+    assert!(
+        buggy.failed > 0 && buggy.mismatches.iter().all(|m| m["fn"] == "page_count"),
+        "{:?}",
+        buggy.mismatches
+    );
+    std::fs::write(package.join("__init__.py"), format!("{original}\n{stack}")).unwrap();
+    let fixed = diff(&dir);
+    assert_eq!(fixed.failed, 0, "{:?}", fixed.mismatches);
     std::fs::remove_dir_all(&dir).unwrap();
 }

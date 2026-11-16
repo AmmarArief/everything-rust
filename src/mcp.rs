@@ -177,6 +177,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                             .collect()
                     })
                     .unwrap_or_default(),
+                lang: None,
             })?)?
         }
         "record" => {

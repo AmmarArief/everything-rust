@@ -9,6 +9,7 @@ use std::path::Path;
 use anyhow::Result;
 use serde::Serialize;
 
+use crate::lang::Lang;
 use crate::risks::{Risk, Severity};
 use crate::ts::deps::{self, Fit};
 use crate::ts::discover::{self, FileKind, Package, Workspace};
@@ -38,7 +39,16 @@ pub enum Status {
 pub enum Bridge {
     NapiRs,
     WasmBindgen,
+    /// Keep in the source language (named for JS, the first language; applies to all).
     KeepInJs,
+    Pyo3,
+    /// A C ABI: drop-in `extern "C"` functions for C.
+    CAbi,
+    /// Go through cgo over a C ABI.
+    Cgo,
+    /// Ruby through Fiddle over a C ABI.
+    Fiddle,
+    Jni,
 }
 
 impl Bridge {
@@ -46,14 +56,41 @@ impl Bridge {
         match self {
             Self::NapiRs => "napi-rs",
             Self::WasmBindgen => "wasm-bindgen",
-            Self::KeepInJs => "keep in JS",
+            Self::KeepInJs => "keep",
+            Self::Pyo3 => "PyO3",
+            Self::CAbi => "C ABI",
+            Self::Cgo => "cgo",
+            Self::Fiddle => "Fiddle (C ABI)",
+            Self::Jni => "JNI",
         }
+    }
+
+    /// The bridge a language uses for code that can move.
+    pub fn for_lang(lang: Lang) -> Self {
+        match lang {
+            Lang::Ts => Self::NapiRs,
+            Lang::Python => Self::Pyo3,
+            Lang::C => Self::CAbi,
+            Lang::Go => Self::Cgo,
+            Lang::Ruby => Self::Fiddle,
+            Lang::Java => Self::Jni,
+        }
+    }
+}
+
+/// The Rust counterpart of a dependency, from the language's table.
+pub fn crate_for(lang: Lang, name: &str) -> Option<deps::CrateMatch> {
+    match lang {
+        Lang::Ts => deps::lookup(name),
+        Lang::Python => crate::lang::python::lookup(name),
+        _ => crate::lang::lookup(lang, name),
     }
 }
 
 #[derive(Debug, Serialize)]
 pub struct Report {
     pub schema: &'static str,
+    pub language: Lang,
     pub summary: Summary,
     pub packages: Vec<PackageReport>,
     pub units: Vec<UnitReport>,
@@ -170,12 +207,22 @@ struct UnitBuild {
 }
 
 pub fn analyze(root: &Path) -> Result<Report> {
-    let ws = discover::discover(root)?;
+    analyze_lang(root, Lang::detect(root))
+}
+
+pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
+    let ws = match lang {
+        Lang::Ts => discover::discover(root)?,
+        _ => crate::lang::discover(lang, root)?,
+    };
     let facts: Vec<Option<FileFacts>> = ws
         .files
         .iter()
         .map(|file| {
             let text = std::fs::read_to_string(root.join(&file.path)).ok()?;
+            if lang != Lang::Ts {
+                return Some(crate::lang::scan(lang, &file.path, &text));
+            }
             let code = crate::ts::script_of(&file.path, &text);
             let is_sfc = [".vue", ".svelte", ".astro"]
                 .iter()
@@ -184,15 +231,15 @@ pub fn analyze(root: &Path) -> Result<Report> {
             Some(scan::scan(parse_as, &code))
         })
         .collect();
-    let mut report = build(root, &ws, &facts);
-    check_bridgeable(root, &mut report);
+    let mut report = build(root, &ws, &facts, lang);
+    check_bridgeable(root, &mut report, lang);
     Ok(report)
 }
 
 /// Counts each unit's exports that can cross a bridge, with the rules `bridge` applies. A unit
 /// whose exports are all JS-shaped (plugin objects, callbacks) cannot be ported without an API
 /// change: it is marked `caution` and left out of `start_here`.
-fn check_bridgeable(root: &Path, report: &mut Report) {
+fn check_bridgeable(root: &Path, report: &mut Report, lang: Lang) {
     use crate::ts::exports::{exported_classes, exported_functions};
     for unit in &mut report.units {
         if matches!(unit.status, Status::Keep | Status::Blocked) {
@@ -204,6 +251,16 @@ fn check_bridgeable(root: &Path, report: &mut Report) {
                 continue;
             };
             let types = crate::bridge::types_in_scope(root, file, &text);
+            if lang != Lang::Ts {
+                let (functions, classes) = crate::lang::exports(lang, file, &text);
+                exports += functions.len() + classes.len();
+                bridgeable += functions
+                    .iter()
+                    .filter(|f| crate::bridge::js_only_reason(f, &[]).is_none())
+                    .count();
+                bridgeable += classes.iter().filter(|c| c.blocker.is_none()).count();
+                continue;
+            }
             for mut f in exported_functions(file, &text) {
                 exports += 1;
                 crate::bridge::substitute_constraints(&mut f, &types);
@@ -244,7 +301,7 @@ fn check_bridgeable(root: &Path, report: &mut Report) {
     report.start_here = start_here(&report.units);
 }
 
-fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
+fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -> Report {
     let file_index: HashMap<&str, usize> = ws
         .files
         .iter()
@@ -255,6 +312,14 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
     let alias_cache: std::cell::RefCell<HashMap<String, crate::ts::tsconfig::PathAliases>> =
         std::cell::RefCell::new(HashMap::new());
     let classify = |from: &str, spec: &str| -> Target {
+        if lang != Lang::Ts {
+            return match crate::lang::resolve(lang, from, spec, &file_index, ws) {
+                crate::lang::Resolution::File(i) => Target::File(i),
+                crate::lang::Resolution::External(name) => Target::External(name),
+                crate::lang::Resolution::Stdlib => Target::Platform,
+                crate::lang::Resolution::Unresolved => Target::Unresolved,
+            };
+        }
         if spec.starts_with("./") || spec.starts_with("../") || spec == "." || spec == ".." {
             return resolve_relative(from, spec, &file_index)
                 .map_or(Target::Unresolved, Target::File);
@@ -379,7 +444,8 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
                 Target::External(name) if !import.type_only => {
                     units[u].external_deps.insert(name);
                 }
-                Target::Unresolved => units[u].unresolved += 1,
+                Target::Unresolved if !import.type_only => units[u].unresolved += 1,
+                Target::Unresolved => {}
                 Target::External(_) | Target::Platform => {}
             }
         }
@@ -414,6 +480,7 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
         .map(|(_, unit)| unit.package)
         .collect();
     let ctx = Ctx {
+        lang,
         ws,
         units: &units,
         package_tests: &package_tests,
@@ -436,9 +503,10 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
 
     let start_here = start_here(&reports);
     let packages = package_reports(ws, &reports, &package_tests, &node_packages);
-    let dependencies = dependency_reports(&reports);
+    let dependencies = dependency_reports(&reports, lang);
     Report {
         schema: SCHEMA,
+        language: lang,
         summary,
         packages,
         units: reports,
@@ -448,6 +516,7 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
 }
 
 struct Ctx<'a> {
+    lang: Lang,
     ws: &'a Workspace,
     units: &'a [UnitBuild],
     package_tests: &'a [usize],
@@ -472,12 +541,12 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
     let blocking_deps: Vec<&String> = unit
         .external_deps
         .iter()
-        .filter(|d| deps::lookup(d).is_some_and(|m| m.fit == Fit::None))
+        .filter(|d| crate_for(ctx.lang, d).is_some_and(|m| m.fit == Fit::None))
         .collect();
     let unknown_deps = unit
         .external_deps
         .iter()
-        .filter(|d| deps::lookup(d).is_none())
+        .filter(|d| crate_for(ctx.lang, d).is_none())
         .count();
 
     let risk_points: f64 = unit
@@ -568,6 +637,8 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
     };
     let bridge = if keep {
         Bridge::KeepInJs
+    } else if ctx.lang != Lang::Ts {
+        Bridge::for_lang(ctx.lang)
     } else if ctx.node_reach[u] || ctx.node_packages.contains(&unit.package) {
         Bridge::NapiRs
     } else {
@@ -715,7 +786,7 @@ fn package_reports(
     reports
 }
 
-fn dependency_reports(units: &[UnitReport]) -> Vec<DependencyReport> {
+fn dependency_reports(units: &[UnitReport], lang: Lang) -> Vec<DependencyReport> {
     let mut used: BTreeMap<&str, usize> = BTreeMap::new();
     for unit in units.iter().filter(|u| u.status != Status::Keep) {
         for dep in &unit.external_deps {
@@ -725,7 +796,7 @@ fn dependency_reports(units: &[UnitReport]) -> Vec<DependencyReport> {
     let mut out: Vec<DependencyReport> = used
         .into_iter()
         .map(|(name, used_by)| {
-            let found = deps::lookup(name);
+            let found = crate_for(lang, name);
             DependencyReport {
                 name: name.to_string(),
                 used_by,

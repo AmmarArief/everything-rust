@@ -15,13 +15,20 @@ pub fn markdown(report: &Report, title: &str) -> String {
 
 fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
     let s = &r.summary;
-    writeln!(out, "# Rust migration plan: {title}\n")?;
+    writeln!(
+        out,
+        "# Rust migration plan: {title} ({})\n",
+        r.language.name()
+    )?;
     writeln!(
         out,
         "{} packages, {} source files ({} lines), {} test files, {} UI files, grouped into {} units.\n",
         s.packages, s.source_files, s.loc, s.test_files, s.ui_files, s.units
     )?;
-    writeln!(out, "| Ready | Caution | Blocked | Keep in JS/TS |")?;
+    writeln!(
+        out,
+        "| Ready | Caution | Blocked | Keep in source language |"
+    )?;
     writeln!(out, "| ---: | ---: | ---: | ---: |")?;
     writeln!(
         out,

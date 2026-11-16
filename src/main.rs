@@ -50,6 +50,9 @@ enum Cmd {
         /// Write to this file instead of stdout.
         #[arg(long, short)]
         out: Option<PathBuf>,
+        /// Source language; detected from the repository when omitted.
+        #[arg(long, value_enum)]
+        lang: Option<carcinize::lang::Lang>,
     },
     /// 2. Scaffold a Rust crate with JS bindings for one unit.
     Bridge {
@@ -167,9 +170,15 @@ fn main() -> ExitCode {
 
 fn run() -> Result<ExitCode> {
     match Cli::parse().command {
-        Cmd::Analyze { root, json, out } => {
-            let report =
-                analyze::analyze(&root).with_context(|| format!("analyzing {}", root.display()))?;
+        Cmd::Analyze {
+            root,
+            json,
+            out,
+            lang,
+        } => {
+            let lang = lang.unwrap_or_else(|| carcinize::lang::Lang::detect(&root));
+            let report = analyze::analyze_lang(&root, lang)
+                .with_context(|| format!("analyzing {}", root.display()))?;
             let text = if json {
                 serde_json::to_string_pretty(&report)? + "\n"
             } else {
@@ -206,6 +215,7 @@ fn run() -> Result<ExitCode> {
                 name,
                 force,
                 keep,
+                lang: None,
             })?;
             say!(
                 "Created {} ({:?}) for {}",

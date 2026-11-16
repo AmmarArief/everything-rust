@@ -8,16 +8,22 @@ use oxc_parser::Parser;
 use oxc_span::{GetSpan, SourceType};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Param {
     pub name: String,
-    /// The TS type as written; `unknown` when there is no annotation.
+    /// The type in the TS-like dialect; `unknown` when there is no annotation.
     pub ts_type: String,
     pub optional: bool,
     pub rest: bool,
+    /// The default value as written in the source, when the language has defaults.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+    /// Python keyword-only parameter (after `*`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub keyword_only: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExportedFn {
     pub name: String,
     /// Source file, relative to the repository root.
@@ -35,6 +41,9 @@ pub struct ExportedFn {
     /// The body checks `instanceof`: class identity, which does not survive a bridge.
     #[serde(default)]
     pub uses_instanceof: bool,
+    /// Why the function must stay in its language, found by the language plugin.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocker: Option<String>,
 }
 
 /// An exported class: its constructor and public instance methods, or why it must stay in TS.
@@ -72,6 +81,7 @@ pub fn exported_classes(path: &str, source: &str) -> Vec<ExportedClass> {
                 ts_type: annotation(p.type_annotation.as_deref()),
                 optional: p.optional || p.initializer.is_some(),
                 rest: false,
+                ..Default::default()
             })
             .collect()
     };
@@ -136,6 +146,7 @@ pub fn exported_classes(path: &str, source: &str) -> Vec<ExportedClass> {
                                 is_generator: f.generator,
                                 type_params: Vec::new(),
                                 uses_instanceof: uses_instanceof(&text(m.span)),
+                                ..Default::default()
                             });
                         }
                     }
@@ -216,6 +227,7 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
                 },
                 optional: p.optional || p.initializer.is_some(),
                 rest: false,
+                ..Default::default()
             })
             .collect();
         if let Some(rest) = &params.rest {
@@ -224,6 +236,7 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
                 ts_type: annotation(rest.type_annotation.as_deref()),
                 optional: true,
                 rest: true,
+                ..Default::default()
             });
         }
         out
@@ -249,6 +262,7 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
                         is_generator: f.generator,
                         type_params: type_params_of(f.type_parameters.as_deref(), &text),
                         uses_instanceof: uses_instanceof(&text(f.span)),
+                        ..Default::default()
                     });
                 }
             }
@@ -290,6 +304,7 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
                         is_generator,
                         type_params,
                         uses_instanceof: uses_instanceof(&text(span)),
+                        ..Default::default()
                     });
                 }
             }

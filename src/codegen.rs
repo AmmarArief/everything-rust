@@ -71,8 +71,8 @@ pub enum Wire {
 pub fn wire(ty: &str) -> Wire {
     let ty: String = ty.chars().filter(|c| !c.is_whitespace()).collect();
     match ty.as_str() {
-        "String" | "f64" | "bool" | "()" | "Vec<String>" | "Vec<f64>" | "Option<String>"
-        | "Option<f64>" | "Option<bool>" => Wire::Native,
+        "String" | "f64" | "i64" | "bool" | "()" | "Vec<String>" | "Vec<f64>" | "Vec<i64>"
+        | "Option<String>" | "Option<f64>" | "Option<i64>" | "Option<bool>" => Wire::Native,
         "Vec<u16>" => Wire::Units,
         _ => Wire::Json,
     }
@@ -84,9 +84,10 @@ pub fn wire(ty: &str) -> Wire {
 pub fn port_rs(m: &Manifest) -> String {
     let mut out = format!(
         "//! The Rust port of `{}`.\n//!\n\
-         //! Replace each `unimplemented!` with the port of the TS function. Return `Err` where the\n\
-         //! TS throws: it becomes a JS error. After changing a signature, run `carcinize refresh`\n\
-         //! to regenerate the bindings. `carcinize diff` checks behavior against the recorded TS.\n\n\
+         //! Replace each `unimplemented!` with the port of the source function. Return `Err` where\n\
+         //! the source throws or raises: the caller gets an error there too. After changing a\n\
+         //! signature, run `carcinize refresh` to regenerate the bindings. `carcinize diff` checks\n\
+         //! behavior against what the source recorded.\n\n\
          #![forbid(unsafe_code)]\n",
         m.unit
     );
@@ -94,7 +95,7 @@ pub fn port_rs(m: &Manifest) -> String {
         let params = f
             .params
             .iter()
-            .map(|p| format!("{}: {}", snake_case(&p.name), param_type(p).rust()))
+            .map(|p| format!("{}: {}", snake_case(&p.name), port_param_type(m, p).rust()))
             .collect::<Vec<_>>()
             .join(", ");
         let ret = match RType::from_ts(&f.returns) {
@@ -105,6 +106,14 @@ pub fn port_rs(m: &Manifest) -> String {
         let asyncness = if is_async(f) { "async " } else { "" };
         out.push('\n');
         let _ = writeln!(out, "/// Port of `{}` (`{}:{}`).", f.name, f.file, f.line);
+        for p in f.params.iter().filter(|p| p.default.is_some()) {
+            let _ = writeln!(
+                out,
+                "///\n/// `{}` defaults to `{}` in the source.",
+                snake_case(&p.name),
+                p.default.as_deref().unwrap_or_default()
+            );
+        }
         let _ = writeln!(
             out,
             "pub {asyncness}fn {}({params}) -> Result<{ret}, String> {{",
@@ -135,7 +144,7 @@ pub fn port_rs(m: &Manifest) -> String {
         );
         let _ = writeln!(out, "pub struct {} {{}}\n", c.name);
         let _ = writeln!(out, "impl {} {{", c.name);
-        let ctor = stub_params(&c.constructor);
+        let ctor = stub_params(m, &c.constructor);
         let _ = writeln!(
             out,
             "    /// Port of `{}` constructor (`{}:{}`).",
@@ -149,7 +158,7 @@ pub fn port_rs(m: &Manifest) -> String {
             c.name
         );
         for f in &c.methods {
-            let (params, unused) = stub_params(&f.params);
+            let (params, unused) = stub_params(m, &f.params);
             let ret = match RType::from_ts(&f.returns) {
                 RType::Unit => "()".to_string(),
                 t => t.rust(),
@@ -181,11 +190,21 @@ pub fn port_rs(m: &Manifest) -> String {
     out
 }
 
+/// A parameter's type in the port. Python parameters with a literal default (`sep="-"`) are
+/// plain values: PyO3 fills in the default, and an explicit `None` stays an error, as in Python.
+fn port_param_type(m: &Manifest, p: &crate::ts::exports::Param) -> RType {
+    if m.language == crate::lang::Lang::Python && crate::codegen_py::has_literal_default(p) {
+        RType::from_ts(&p.ts_type)
+    } else {
+        param_type(p)
+    }
+}
+
 /// Parameters of a method stub, and a line marking them used.
-fn stub_params(params: &[crate::ts::exports::Param]) -> (String, String) {
+fn stub_params(m: &Manifest, params: &[crate::ts::exports::Param]) -> (String, String) {
     let list = params
         .iter()
-        .map(|p| format!("{}: {}", snake_case(&p.name), param_type(p).rust()))
+        .map(|p| format!("{}: {}", snake_case(&p.name), port_param_type(m, p).rust()))
         .collect::<Vec<_>>()
         .join(", ");
     let names: Vec<String> = params
@@ -440,6 +459,9 @@ pub struct Modules {
 }
 
 pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
+    if m.kind == Kind::Pyo3 {
+        return crate::codegen_py::lib_rs(m, api, modules);
+    }
     let mut out = format!(
         "//! JS bindings for `{}`: generated from the signatures in `port.rs` by carcinize.\n\
          //! Regenerate with `carcinize refresh` after changing them.\n\n",
@@ -447,7 +469,7 @@ pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
     );
     out.push_str(match m.kind {
         Kind::Wasm => "use wasm_bindgen::prelude::*;\n\n",
-        Kind::Napi => "use napi_derive::napi;\n\n",
+        _ => "use napi_derive::napi;\n\n",
     });
     if modules.js {
         out.push_str("pub mod js;\n");
@@ -602,7 +624,8 @@ fn bind_class(out: &mut String, kind: Kind, c: &PortClass) {
             }
             out.push_str("}\n");
         }
-        Kind::Wasm => {
+        // PyO3 bindings come from `codegen_py`.
+        Kind::Wasm | Kind::Pyo3 => {
             let _ = writeln!(
                 out,
                 "\nfn {snake}_new_inner({ctor_params}) -> Result<port::{name}, String> {{\n{}}}",
@@ -716,7 +739,8 @@ fn bind(out: &mut String, kind: Kind, f: &PortFn) {
             }
             out.push_str("}\n");
         }
-        Kind::Wasm => {
+        // PyO3 bindings come from `codegen_py`.
+        Kind::Wasm | Kind::Pyo3 => {
             // `?` needs a function boundary: the body lives in a private helper.
             let inner = format!("{}_inner", f.rust_name.trim_start_matches("r#"));
             let _ = writeln!(
@@ -799,7 +823,7 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
             "// Loads the native module built by `carcinize build`.\nconst native = require('./{}.node')\n",
             m.lib_name()
         ),
-        Kind::Wasm => format!(
+        Kind::Wasm | Kind::Pyo3 => format!(
             "// Loads the wasm-bindgen (nodejs target) output built by `carcinize build`.\nconst native = require('./pkg/{}.js')\n",
             m.lib_name()
         ),
@@ -1044,6 +1068,13 @@ pub fn required_deps(kind: Kind, api: &PortApi) -> Vec<(&'static str, String)> {
             if any_async {
                 deps.push(("futures", r#""0.3""#.into()));
             }
+        }
+        Kind::Pyo3 => {
+            // abi3: one build for every Python from 3.9 on.
+            deps.push((
+                "pyo3",
+                r#"{ version = "0.30", features = ["extension-module", "abi3-py39"] }"#.into(),
+            ));
         }
         Kind::Wasm => {
             deps.push(("wasm-bindgen", r#""0.2""#.into()));

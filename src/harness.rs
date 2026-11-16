@@ -114,7 +114,9 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         }
         let types = &scopes[&f.file];
         for args in generate(f, opts.count, types) {
-            cases.push(json!({ "fn": f.name, "module": module, "args": args }));
+            let mut case = json!({ "fn": f.name, "module": module, "args": args });
+            split_keyword_only(&f.params, &mut case);
+            cases.push(case);
         }
     }
     for class in &manifest.classes {
@@ -167,55 +169,11 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         }
     }
 
-    let work = opts.crate_dir.join(WORK_DIR);
-    std::fs::create_dir_all(&work)?;
-    let inputs_path = work.join("inputs.json");
-    std::fs::write(&inputs_path, serde_json::to_string(&cases)?)?;
-    let script = work.join("record.mjs");
-    std::fs::write(&script, format!("{CODEC_JS}\n{RECORD_JS}"))?;
-    let out = opts.crate_dir.join(CASES);
-    // TS sources often import the way bundlers resolve (`./errors`, `./types`): a resolve hook
-    // lets Node follow them, so the original runs as it is.
-    std::fs::write(work.join("resolve.mjs"), RESOLVE_JS)?;
-    std::fs::write(work.join("register.mjs"), REGISTER_JS)?;
-    let register = work.canonicalize()?.join("register.mjs");
-    let mut node_args = vec![format!("--import={}", file_url(&register))];
-    node_args.extend(opts.node_args.iter().cloned());
-    let aliases = alias_env(&manifest);
-    let mut cmd = Command::new("node");
-    cmd.args(&node_args)
-        .arg(&script)
-        .arg(&inputs_path)
-        .arg(&out)
-        .env("CARCINIZE_PATHS", &aliases)
-        .env("CARCINIZE_WORKSPACE", workspace_env(&manifest));
-    if let Some(dir) = opts.resolve_from {
-        let dir = dir
-            .canonicalize()
-            .with_context(|| format!("resolving {}", dir.display()))?;
-        cmd.env("CARCINIZE_RESOLVE_FROM", dir);
-    }
-    if let Err(error) = run(&mut cmd, "node") {
-        // Enums and parameter properties need Node to transform TS, not only strip types.
-        if !format!("{error:#}").contains("ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX") {
-            return Err(error);
-        }
-        let mut retry = Command::new("node");
-        retry
-            .arg("--experimental-transform-types")
-            .arg("--no-warnings=ExperimentalWarning")
-            .args(&node_args)
-            .arg(&script)
-            .arg(&inputs_path)
-            .arg(&out)
-            .env("CARCINIZE_PATHS", &aliases)
-            .env("CARCINIZE_WORKSPACE", workspace_env(&manifest));
-        if let Some(dir) = opts.resolve_from {
-            retry.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
-        }
-        run(&mut retry, "node --experimental-transform-types")?;
-    }
-
+    let out = if manifest.language == crate::lang::Lang::Python {
+        crate::harness_py::record(opts.crate_dir, &cases)?
+    } else {
+        record_node(opts, &manifest, &cases)?
+    };
     let text = std::fs::read_to_string(&out)?;
     let mut per_function = BTreeMap::new();
     let mut errors = 0;
@@ -241,9 +199,64 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     })
 }
 
+/// Runs the recorded inputs through Node: the original TS/JS, with the resolve hook.
+fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Result<PathBuf> {
+    let work = opts.crate_dir.join(WORK_DIR);
+    std::fs::create_dir_all(&work)?;
+    let inputs_path = work.join("inputs.json");
+    std::fs::write(&inputs_path, serde_json::to_string(cases)?)?;
+    let script = work.join("record.mjs");
+    std::fs::write(&script, format!("{CODEC_JS}\n{RECORD_JS}"))?;
+    let out = opts.crate_dir.join(CASES);
+    // TS sources often import the way bundlers resolve (`./errors`, `./types`): a resolve hook
+    // lets Node follow them, so the original runs as it is.
+    std::fs::write(work.join("resolve.mjs"), RESOLVE_JS)?;
+    std::fs::write(work.join("register.mjs"), REGISTER_JS)?;
+    let register = work.canonicalize()?.join("register.mjs");
+    let mut node_args = vec![format!("--import={}", file_url(&register))];
+    node_args.extend(opts.node_args.iter().cloned());
+    let aliases = alias_env(manifest);
+    let mut cmd = Command::new("node");
+    cmd.args(&node_args)
+        .arg(&script)
+        .arg(&inputs_path)
+        .arg(&out)
+        .env("CARCINIZE_PATHS", &aliases)
+        .env("CARCINIZE_WORKSPACE", workspace_env(manifest));
+    if let Some(dir) = opts.resolve_from {
+        let dir = dir
+            .canonicalize()
+            .with_context(|| format!("resolving {}", dir.display()))?;
+        cmd.env("CARCINIZE_RESOLVE_FROM", dir);
+    }
+    if let Err(error) = run(&mut cmd, "node") {
+        // Enums and parameter properties need Node to transform TS, not only strip types.
+        if !format!("{error:#}").contains("ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX") {
+            return Err(error);
+        }
+        let mut retry = Command::new("node");
+        retry
+            .arg("--experimental-transform-types")
+            .arg("--no-warnings=ExperimentalWarning")
+            .args(&node_args)
+            .arg(&script)
+            .arg(&inputs_path)
+            .arg(&out)
+            .env("CARCINIZE_PATHS", &aliases)
+            .env("CARCINIZE_WORKSPACE", workspace_env(manifest));
+        if let Some(dir) = opts.resolve_from {
+            retry.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
+        }
+        run(&mut retry, "node --experimental-transform-types")?;
+    }
+
+    Ok(out)
+}
+
 pub fn build(crate_dir: &Path) -> Result<PathBuf> {
     let manifest = Manifest::load(crate_dir)?;
     match manifest.kind {
+        Kind::Pyo3 => crate::harness_py::build(crate_dir, &manifest),
         Kind::Napi => {
             let target = crate_dir.join("target");
             run(
@@ -347,6 +360,9 @@ pub struct BenchOptions<'a> {
 /// Times the recorded cases against the TS original and the built Rust module, bridge included.
 pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     let manifest = Manifest::load(opts.crate_dir)?;
+    if manifest.language == crate::lang::Lang::Python {
+        return crate::harness_py::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -418,6 +434,12 @@ pub struct DiffOptions<'a> {
 }
 
 pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Python
+        && opts.module.is_none()
+    {
+        return crate::harness_py::diff(opts.crate_dir, &manifest, opts.ignore_key_order);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -609,6 +631,7 @@ fn shaped(s: &Shape, types: &[LocalType], rng: &mut Rng, depth: usize) -> Value 
     match s {
         Shape::Str => value(&RType::Str, rng),
         Shape::Num => value(&RType::F64, rng),
+        Shape::Int => value(&RType::Int, rng),
         Shape::Bool => value(&RType::Bool, rng),
         Shape::Null => Value::Null,
         Shape::Undefined => json!({ "$undefined": true }),
@@ -665,6 +688,24 @@ fn value(t: &RType, rng: &mut Rng) -> Value {
             } else {
                 Value::String(a.into())
             }
+        }
+        RType::Int => {
+            // Small, signed, and the edges of 32 and 64 bits.
+            let n: [i64; 12] = [
+                0,
+                1,
+                -1,
+                2,
+                7,
+                42,
+                100,
+                -100,
+                255,
+                i64::from(i32::MAX),
+                i64::from(i32::MIN),
+                i64::MAX,
+            ];
+            json!(n[rng.below(n.len())])
         }
         RType::F64 => {
             let n = [
@@ -750,6 +791,31 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// Python keyword-only parameters (after `*`) are passed by name: they move from `args` into
+/// `kwargs`, and an omitted (`undefined`) one is left out.
+fn split_keyword_only(params: &[crate::ts::exports::Param], case: &mut Value) {
+    if !params.iter().any(|p| p.keyword_only) {
+        return;
+    }
+    let Some(args) = case["args"].as_array().cloned() else {
+        return;
+    };
+    let mut positional = Vec::new();
+    let mut kwargs = serde_json::Map::new();
+    for (i, value) in args.into_iter().enumerate() {
+        match params.get(i) {
+            Some(p) if p.keyword_only => {
+                if value.get("$undefined").is_none() {
+                    kwargs.insert(p.name.clone(), value);
+                }
+            }
+            _ => positional.push(value),
+        }
+    }
+    case["args"] = Value::Array(positional);
+    case["kwargs"] = Value::Object(kwargs);
 }
 
 /// Workspace packages as `{ name: absolute source folder }` for the resolve hook: a monorepo
@@ -1159,6 +1225,7 @@ mod tests {
                     ts_type: (*t).into(),
                     optional: false,
                     rest: false,
+                    ..Default::default()
                 })
                 .collect(),
             returns: "number".into(),
@@ -1166,6 +1233,7 @@ mod tests {
             is_generator: false,
             type_params: Vec::new(),
             uses_instanceof: false,
+            ..Default::default()
         }
     }
 

@@ -25,6 +25,7 @@ pub const SCHEMA: &str = "carcinize/bridge@1";
 pub enum Kind {
     Napi,
     Wasm,
+    Pyo3,
 }
 
 /// What `bridge` generated; every later step starts from it.
@@ -34,6 +35,8 @@ pub struct Manifest {
     /// Absolute repository root.
     pub root: PathBuf,
     pub unit: String,
+    #[serde(default)]
+    pub language: crate::lang::Lang,
     pub kind: Kind,
     pub crate_name: String,
     /// Exports ported to Rust.
@@ -89,6 +92,9 @@ fn has_functions(name: &str, local_types: &[LocalType], seen: &mut Vec<String>) 
 /// Functions, iterators, RegExp objects and objects with function members are JS values a
 /// Rust function can neither take nor return; porting them would change the public API.
 pub fn js_only_reason(f: &ExportedFn, local_types: &[LocalType]) -> Option<String> {
+    if let Some(blocker) = &f.blocker {
+        return Some(blocker.clone());
+    }
     if f.is_generator {
         return Some("generator: returns a lazy iterator".into());
     }
@@ -159,6 +165,8 @@ pub struct Options<'a> {
     pub force: bool,
     /// Exports to keep in TS, with an optional reason: `name` or `name: reason`.
     pub keep: Vec<String>,
+    /// Source language; detected from the repository when `None`.
+    pub lang: Option<crate::lang::Lang>,
 }
 
 #[derive(Debug, Serialize)]
@@ -175,6 +183,8 @@ pub struct Outcome {
 pub enum RType {
     Str,
     F64,
+    /// A whole number (`int` in the type dialect: Python, Go, Java and C have one; JS does not).
+    Int,
     Bool,
     Unit,
     Vec(Box<RType>),
@@ -236,6 +246,7 @@ impl RType {
         match ts {
             "string" => Self::Str,
             "number" => Self::F64,
+            "int" => Self::Int,
             "boolean" => Self::Bool,
             "void" | "undefined" => Self::Unit,
             _ if is_string_literal(ts) => Self::Str,
@@ -251,6 +262,7 @@ impl RType {
         match self {
             Self::Str => "String".into(),
             Self::F64 => "f64".into(),
+            Self::Int => "i64".into(),
             Self::Bool => "bool".into(),
             Self::Unit => "()".into(),
             Self::Vec(t) => format!("Vec<{}>", t.rust()),
@@ -591,6 +603,17 @@ fn format_rust(crate_dir: &Path) {
         .output();
 }
 
+/// The language-side loader: `index.cjs` for JS, the wrapper package for Python.
+fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
+    match m.kind {
+        Kind::Pyo3 => (
+            format!("python/{}/__init__.py", m.lib_name()),
+            crate::codegen_py::package_init(m, api),
+        ),
+        _ => ("index.cjs".into(), codegen::index_cjs(m, api)),
+    }
+}
+
 /// What `refresh` rewrote.
 #[derive(Debug, Serialize)]
 pub struct Refreshed {
@@ -612,19 +635,26 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
         utf16: crate_dir.join("src/utf16.rs").exists(),
         js: needs_js(&fns) || crate_dir.join("src/js.rs").exists(),
     };
-    let mut files = vec![
-        ("src/lib.rs", codegen::lib_rs(&manifest, &fns, &modules)),
-        ("index.cjs", codegen::index_cjs(&manifest, &fns)),
+    let mut files: Vec<(String, String)> = vec![
+        (
+            "src/lib.rs".into(),
+            codegen::lib_rs(&manifest, &fns, &modules),
+        ),
+        loader_file(&manifest, &fns),
     ];
     if modules.js {
-        files.push(("src/js.rs", codegen::JS_RS.to_string()));
+        files.push(("src/js.rs".into(), codegen::JS_RS.to_string()));
     }
     let cargo_path = crate_dir.join("Cargo.toml");
     let cargo = std::fs::read_to_string(&cargo_path).context("reading Cargo.toml")?;
     let cargo = codegen::ensure_deps(&cargo, manifest.kind, &fns).map_err(anyhow::Error::msg)?;
-    files.push(("Cargo.toml", cargo));
+    files.push(("Cargo.toml".into(), cargo));
     for (path, text) in &files {
-        std::fs::write(crate_dir.join(path), text).with_context(|| format!("writing {path}"))?;
+        let target = crate_dir.join(path);
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&target, text).with_context(|| format!("writing {path}"))?;
     }
     format_rust(crate_dir);
     Ok(Refreshed {
@@ -634,7 +664,7 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
             .map(|f| f.js_name.clone())
             .chain(fns.classes.iter().map(|c| format!("class {}", c.js_name)))
             .collect(),
-        files: files.iter().map(|(p, _)| (*p).to_string()).collect(),
+        files: files.into_iter().map(|(p, _)| p).collect(),
     })
 }
 
@@ -643,7 +673,10 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         .root
         .canonicalize()
         .with_context(|| format!("resolving {}", opts.root.display()))?;
-    let report = analyze::analyze(&root)?;
+    let lang = opts
+        .lang
+        .unwrap_or_else(|| crate::lang::Lang::detect(&root));
+    let report = analyze::analyze_lang(&root, lang)?;
     let wanted = opts.unit.trim_start_matches("./");
     let unit = report
         .units
@@ -660,6 +693,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     }
     let kind = opts.kind.unwrap_or(match unit.bridge {
         Bridge::WasmBindgen => Kind::Wasm,
+        Bridge::Pyo3 => Kind::Pyo3,
         _ => Kind::Napi,
     });
 
@@ -672,6 +706,39 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         }
         let text =
             std::fs::read_to_string(root.join(file)).with_context(|| format!("reading {file}"))?;
+        if lang != crate::lang::Lang::Ts {
+            let (functions, foreign_classes) = crate::lang::exports(lang, file, &text);
+            for f in functions {
+                match keep_reason(&opts.keep, &f.name).or_else(|| js_only_reason(&f, &[])) {
+                    Some(reason) => js_only.push(JsOnly {
+                        name: f.name,
+                        file: f.file,
+                        line: f.line,
+                        reason,
+                    }),
+                    None => exports.push(f),
+                }
+            }
+            for class in foreign_classes {
+                let method_reason = class
+                    .methods
+                    .iter()
+                    .find_map(|m| js_only_reason(m, &[]).map(|r| format!("`{}`: {r}", m.name)));
+                match keep_reason(&opts.keep, &class.name)
+                    .or_else(|| class.blocker.clone())
+                    .or(method_reason)
+                {
+                    Some(reason) => js_only.push(JsOnly {
+                        name: class.name,
+                        file: class.file,
+                        line: class.line,
+                        reason: format!("class: {reason}"),
+                    }),
+                    None => classes.push(class),
+                }
+            }
+            continue;
+        }
         let types = types_in_scope(&root, file, &text);
         for mut class in exported_classes(file, &text) {
             let kept = keep_reason(&opts.keep, &class.name);
@@ -685,6 +752,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
                 is_generator: false,
                 type_params: Vec::new(),
                 uses_instanceof: false,
+                ..Default::default()
             };
             let method_reason = std::iter::once(&constructor)
                 .chain(&class.methods)
@@ -779,11 +847,14 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         );
     }
 
-    let utf16 = unit.risks.iter().any(|r| r.risk == Risk::StringOffsets);
+    // UTF-16 helpers matter for JS strings only; Python indexes code points, like `chars()`.
+    let utf16 =
+        lang == crate::lang::Lang::Ts && unit.risks.iter().any(|r| r.risk == Risk::StringOffsets);
     let manifest = Manifest {
         schema: SCHEMA.into(),
         root: root.clone(),
         unit: unit.id.clone(),
+        language: lang,
         kind,
         crate_name: crate_name.clone(),
         exports: exports.clone(),
@@ -803,7 +874,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             codegen::lib_rs(&manifest, &fns, &modules),
         ),
         ("src/port.rs".into(), port),
-        ("index.cjs".into(), codegen::index_cjs(&manifest, &fns)),
+        loader_file(&manifest, &fns),
         (
             ".gitignore".into(),
             "target/\n*.node\npkg/\n.carcinize/\n".into(),
@@ -844,8 +915,10 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     }
     for j in &js_only {
         notes.push(format!(
-            "`{}` stays in TS: {}. The shadow module re-exports the original.",
-            j.name, j.reason
+            "`{}` stays in {}: {}. The shadow module re-exports the original.",
+            j.name,
+            lang.name(),
+            j.reason
         ));
     }
     if exports.iter().any(codegen::is_async) {
@@ -882,6 +955,7 @@ fn readme(m: &Manifest) -> String {
         kind = match m.kind {
             Kind::Napi => "napi-rs",
             Kind::Wasm => "wasm-bindgen",
+            Kind::Pyo3 => "PyO3",
         },
     )
 }
