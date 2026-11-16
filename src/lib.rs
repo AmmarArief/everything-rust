@@ -5,6 +5,7 @@
 
 pub mod analyze;
 pub mod bridge;
+pub mod codegen;
 pub mod gate;
 pub mod harness;
 pub mod mcp;

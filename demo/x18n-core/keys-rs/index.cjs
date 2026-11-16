@@ -1,28 +1,46 @@
 // Loads the wasm-bindgen (nodejs target) output built by `carcinize build`.
 const native = require('./pkg/keys_rs.js')
 
-// JSON has no `undefined`. Structured values cross the bridge with `{"$undefined": true}`
-// in its place (`js::undefined()` in Rust), so `{ a: undefined }` and `null` stay distinct.
-const UNDEFINED = '$undefined'
-const toNative = v => v === undefined
-  ? { [UNDEFINED]: true }
-  : Array.isArray(v) ? v.map(toNative)
-  : v !== null && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toNative(x)]))
+// Structured values cross as JSON text. JSON has no `undefined`, NaN or -0, and Rust strings no
+// lone surrogates: those travel as `{"$undefined": true}`, `{"$num": "NaN"}` and
+// `{"$utf16": [...]}` (see `js.rs`), so `{ a: undefined }`, `null` and half an emoji survive.
+const replacer = (_, v) => v === undefined ? { $undefined: true }
+  : typeof v === 'number' ? (Number.isFinite(v) && !Object.is(v, -0) ? v : { $num: Object.is(v, -0) ? '-0' : String(v) })
+  : typeof v === 'string' && !v.isWellFormed() ? { $utf16: Array.from({ length: v.length }, (_, i) => v.charCodeAt(i)) }
   : v
-const fromNative = v => Array.isArray(v) ? v.map(fromNative)
-  : v !== null && typeof v === 'object' ? (v[UNDEFINED] === true && Object.keys(v).length === 1 ? undefined : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fromNative(x)])))
-  : v
-module.exports = { ...native }
-for (const name of ['splitKey']) {
-  // Top-level `undefined` stays as is: optional parameters are `Option` in Rust.
-  module.exports[name] = (...args) => fromNative(native[name](...args.map(a => a === undefined ? a : toNative(a))))
+const encode = v => JSON.stringify(v, replacer)
+const single = (v, key) => Object.keys(v).length === 1 && key in v
+const revive = v => Array.isArray(v) ? v.map(revive)
+  : v !== null && typeof v === 'object'
+    ? (single(v, '$undefined') ? undefined
+      : single(v, '$utf16') ? String.fromCharCode(...v.$utf16)
+      : single(v, '$num') ? Number(v.$num)
+      : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, revive(x)])))
+    : v
+// Most results carry no marker: skip the walk unless the text has one.
+const decode = text => {
+  const value = JSON.parse(text)
+  return text.includes('"$') ? revive(value) : value
 }
-
-// `replaceKeyPrefix` returns UTF-16 code units so lone surrogates survive, as in JS.
 const fromUnits = (units) => {
   let out = ''
   for (let i = 0; i < units.length; i += 8192)
-    out += String.fromCharCode(...units.subarray(i, i + 8192))
+    out += String.fromCharCode.apply(null, Array.prototype.slice.call(units, i, i + 8192))
   return out
 }
-module.exports.replaceKeyPrefix = (...args) => fromUnits(native.replaceKeyPrefix(...args))
+
+module.exports = { ...native }
+const specs = {
+  splitKey: [[0, 0], 'json', false],
+  replaceKeyPrefix: [[0, 0, 0], 'units', false],
+}
+// Per function: [structured arguments, result kind, async].
+for (const [name, [structured, result, isAsync]] of Object.entries(specs)) {
+  const call = native[name]
+  const out = result === 'json' ? decode : result === 'units' ? fromUnits : x => x
+  // An omitted structured argument is `undefined`, not a missing value.
+  const args = a => Array.from({ length: Math.max(a.length, structured.length) }, (_, i) => structured[i] ? encode(a[i]) : a[i])
+  module.exports[name] = isAsync
+    ? async (...a) => out(await call(...args(a)))
+    : (...a) => out(call(...args(a)))
+}

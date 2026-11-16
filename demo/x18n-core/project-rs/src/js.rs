@@ -1,11 +1,27 @@
-//! JS values that JSON cannot express.
+//! JS values that JSON cannot express, and the JSON transport of the bindings.
 
 #![forbid(unsafe_code)]
 
+/// Reads a structured argument sent by `index.cjs`.
+pub fn from_json<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, String> {
+    serde_json::from_str(text).map_err(|e| format!("TypeError: {e}"))
+}
+
+/// Writes a structured result for `index.cjs`.
+pub fn to_json<T: serde::Serialize>(value: &T) -> Result<String, String> {
+    serde_json::to_string(value).map_err(|e| e.to_string())
+}
+
 /// JS `undefined` inside a structured value: `{ a: undefined }` is not `{ a: null }`.
-/// `index.cjs` turns this marker into `undefined` on the way out, and back on the way in.
 pub fn undefined() -> serde_json::Value {
     serde_json::json!({ "$undefined": true })
+}
+
+/// Whether a structured value received from JS was `undefined`.
+pub fn is_undefined(value: &serde_json::Value) -> bool {
+    value.as_object().is_some_and(|o| {
+        o.len() == 1 && o.get("$undefined") == Some(&serde_json::Value::Bool(true))
+    })
 }
 
 /// A JS string from UTF-16 code units: a plain string when well-formed, else a marker that
@@ -60,11 +76,4 @@ pub fn as_number(value: &serde_json::Value) -> Option<f64> {
         },
         _ => None,
     }
-}
-
-/// Whether a structured value received from JS was `undefined`.
-pub fn is_undefined(value: &serde_json::Value) -> bool {
-    value.as_object().is_some_and(|o| {
-        o.len() == 1 && o.get("$undefined") == Some(&serde_json::Value::Bool(true))
-    })
 }

@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::bridge::{Kind, Manifest, RType, param_type};
+use crate::ts::exports::LocalType;
+use crate::ts::shape::{self, Shape};
 
 pub const CASES: &str = "cases.jsonl";
 const WORK_DIR: &str = ".carcinize";
@@ -100,9 +102,18 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         };
         Ok(path.to_string_lossy().into_owned())
     };
+    let mut scopes: BTreeMap<String, Vec<LocalType>> = BTreeMap::new();
     for f in &manifest.exports {
         let module = module_for(&f.file)?;
-        for args in generate(f, opts.count) {
+        if !scopes.contains_key(&f.file) {
+            let text = std::fs::read_to_string(manifest.root.join(&f.file)).unwrap_or_default();
+            scopes.insert(
+                f.file.clone(),
+                crate::bridge::types_in_scope(&manifest.root, &f.file, &text),
+            );
+        }
+        let types = &scopes[&f.file];
+        for args in generate(f, opts.count, types) {
             cases.push(json!({ "fn": f.name, "module": module, "args": args }));
         }
     }
@@ -416,7 +427,11 @@ fn locked_version(lock: &str, package: &str) -> Option<String> {
 }
 
 /// Deterministic inputs for one function: edge cases first, then seeded random mixes.
-pub fn generate(f: &crate::ts::exports::ExportedFn, count: usize) -> Vec<Value> {
+pub fn generate(
+    f: &crate::ts::exports::ExportedFn,
+    count: usize,
+    types: &[LocalType],
+) -> Vec<Value> {
     let mut rng = Rng::new(f.name.bytes().fold(0x9E37_79B9_7F4A_7C15, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
     }));
@@ -428,6 +443,15 @@ pub fn generate(f: &crate::ts::exports::ExportedFn, count: usize) -> Vec<Value> 
         let mut args: Vec<Value> = Vec::new();
         for p in &f.params {
             let t = param_type(p);
+            // Structured parameters: values that fit the TS type, and now and then a value
+            // that does not, so error paths get recorded too.
+            let structured = |rng: &mut Rng| {
+                if rng.below(100) < 15 {
+                    value(&RType::Json, rng)
+                } else {
+                    shaped(&shape::parse(&p.ts_type), types, rng, 0)
+                }
+            };
             if p.rest {
                 let inner = match t {
                     RType::Vec(inner) => *inner,
@@ -436,6 +460,13 @@ pub fn generate(f: &crate::ts::exports::ExportedFn, count: usize) -> Vec<Value> 
                 for _ in 0..rng.below(3) {
                     args.push(value(&inner, &mut rng));
                 }
+            } else if t.contains_json() {
+                let v = structured(&mut rng);
+                args.push(if p.optional && rng.below(5) == 0 {
+                    json!({ "$undefined": true })
+                } else {
+                    v
+                });
             } else {
                 args.push(value(&t, &mut rng));
             }
@@ -468,6 +499,64 @@ pub fn generate(f: &crate::ts::exports::ExportedFn, count: usize) -> Vec<Value> 
         }
     }
     out
+}
+
+/// Property names for generated objects: plain, nested-looking, integer-like (JS orders those
+/// first), non-ASCII.
+const KEYS: &[&str] = &[
+    "a", "b", "nav", "home", "title", "2", "10", "ünï", "😀", "a.b",
+];
+
+/// A value that fits a TS shape. Named types resolve against `types`; recursion stops at a depth.
+fn shaped(s: &Shape, types: &[LocalType], rng: &mut Rng, depth: usize) -> Value {
+    match s {
+        Shape::Str => value(&RType::Str, rng),
+        Shape::Num => value(&RType::F64, rng),
+        Shape::Bool => value(&RType::Bool, rng),
+        Shape::Null => Value::Null,
+        Shape::Undefined => json!({ "$undefined": true }),
+        Shape::LitStr(text) => Value::String(text.clone()),
+        Shape::LitNum(n) => json!(n),
+        Shape::LitBool(b) => Value::Bool(*b),
+        Shape::Union(items) if !items.is_empty() => {
+            shaped(&items[rng.below(items.len())], types, rng, depth)
+        }
+        Shape::Array(item) if depth < 6 => Value::Array(
+            (0..rng.below(4))
+                .map(|_| shaped(item, types, rng, depth + 1))
+                .collect(),
+        ),
+        Shape::Tuple(items) => Value::Array(
+            items
+                .iter()
+                .map(|i| shaped(i, types, rng, depth + 1))
+                .collect(),
+        ),
+        Shape::Object(props, index) if depth < 6 => {
+            let mut out = serde_json::Map::new();
+            for (name, optional, prop) in props {
+                if *optional && rng.below(4) == 0 {
+                    continue;
+                }
+                out.insert(name.clone(), shaped(prop, types, rng, depth + 1));
+            }
+            if let Some(item) = index {
+                for _ in 0..rng.below(4) {
+                    out.insert(
+                        KEYS[rng.below(KEYS.len())].to_string(),
+                        shaped(item, types, rng, depth + 1),
+                    );
+                }
+            }
+            Value::Object(out)
+        }
+        Shape::Ref(name, args) if depth < 6 => {
+            shaped(&shape::resolve(name, args, types), types, rng, depth + 1)
+        }
+        Shape::Any => value(&RType::Json, rng),
+        // Too deep, or empty: a leaf ends the recursion.
+        _ => Value::Null,
+    }
 }
 
 fn value(t: &RType, rng: &mut Rng) -> Value {
@@ -802,8 +891,8 @@ mod tests {
 
     #[test]
     fn generates_deterministic_distinct_inputs() {
-        let a = generate(&f(&[("q", "string"), ("t", "string")]), 50);
-        let b = generate(&f(&[("q", "string"), ("t", "string")]), 50);
+        let a = generate(&f(&[("q", "string"), ("t", "string")]), 50, &[]);
+        let b = generate(&f(&[("q", "string"), ("t", "string")]), 50, &[]);
         assert_eq!(a, b);
         assert_eq!(a.len(), 50);
         let unique: std::collections::HashSet<String> = a.iter().map(|v| v.to_string()).collect();
@@ -815,8 +904,24 @@ mod tests {
     }
 
     #[test]
+    fn generates_values_that_fit_object_types() {
+        let types = crate::ts::exports::local_types(
+            "m.ts",
+            "export interface Edit { readonly range: { start: number, end: number }, readonly text: string }\n",
+        );
+        let cases = generate(&f(&[("edits", "readonly Edit[]")]), 60, &types);
+        let fitting = cases
+            .iter()
+            .filter_map(|args| args[0].as_array())
+            .flatten()
+            .filter(|e| e["range"]["start"].is_number() || e["range"]["start"].is_object())
+            .count();
+        assert!(fitting > 20, "{fitting}");
+    }
+
+    #[test]
     fn covers_number_edge_cases() {
-        let cases = generate(&f(&[("n", "number")]), 18);
+        let cases = generate(&f(&[("n", "number")]), 18, &[]);
         let text = serde_json::to_string(&cases).unwrap();
         assert!(text.contains("NaN") && text.contains("-0"));
     }

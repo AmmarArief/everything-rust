@@ -73,6 +73,11 @@ enum Cmd {
         #[arg(long)]
         keep: Vec<String>,
     },
+    /// 2b. Regenerate the bindings (`lib.rs`, `index.cjs`, `js.rs`) from the signatures in `port.rs`.
+    Refresh {
+        #[arg(default_value = ".")]
+        crate_dir: PathBuf,
+    },
     /// 3a. Record what the TS functions return on generated and given inputs.
     Record {
         /// Crate folder made by `bridge`.
@@ -240,6 +245,14 @@ fn run() -> Result<ExitCode> {
             for (name, n) in &outcome.per_function {
                 say!("  {name}: {n}");
             }
+        }
+        Cmd::Refresh { crate_dir } => {
+            let r = bridge::refresh(&crate_dir)?;
+            say!(
+                "Regenerated {} for {}",
+                r.files.join(", "),
+                r.functions.join(", ")
+            );
         }
         Cmd::Build { crate_dir } => {
             say!("Built {}", harness::build(&crate_dir)?.display());

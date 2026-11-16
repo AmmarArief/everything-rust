@@ -60,10 +60,13 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
     let names: Vec<&str> = manifest.exports.iter().map(|f| f.name.as_str()).collect();
     assert_eq!(names, ["rangeOf", "words", "count"]);
     let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
-    assert!(lib.contains(
-        "pub fn range_of(text: String, word: String) -> napi::Result<serde_json::Value>"
-    ));
+    // Structured results cross as JSON text; string lists cross natively.
+    assert!(lib.contains("pub fn range_of(text: String, word: String) -> napi::Result<String>"));
     assert!(lib.contains("pub fn words(text: String) -> napi::Result<Vec<String>>"));
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    assert!(port.contains(
+        "pub fn range_of(text: String, word: String) -> Result<serde_json::Value, String>"
+    ));
     assert!(
         dir.join("src/utf16.rs").exists(),
         "util.ts uses string offsets"
@@ -214,4 +217,47 @@ fn record_follows_bundler_style_imports() {
     // The paths do not exist: every call throws, but the module loaded and ran.
     assert_eq!((recorded.cases, recorded.errors), (5, 5));
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn async_functions_get_async_bindings() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/async");
+    for kind in [Kind::Napi, Kind::Wasm] {
+        let dir =
+            std::env::temp_dir().join(format!("carcinize-async-{kind:?}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        bridge::bridge(&bridge::Options {
+            root: &root,
+            unit: "src/pipeline.ts",
+            kind: Some(kind),
+            out: Some(dir.clone()),
+            name: None,
+            force: false,
+            keep: Vec::new(),
+        })
+        .unwrap();
+        let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+        assert!(port.contains("pub async fn count_words(text: String) -> Result<f64, String>"));
+        assert!(port.contains("pub fn upper(text: String) -> Result<String, String>"));
+        let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+        assert!(
+            lib.contains("pub async fn count_words(text: String)"),
+            "{lib}"
+        );
+        let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
+        match kind {
+            Kind::Napi => {
+                assert!(cargo.contains("features = [\"async\"]") && cargo.contains("futures"))
+            }
+            Kind::Wasm => assert!(cargo.contains("wasm-bindgen-futures")),
+        }
+        let index = std::fs::read_to_string(dir.join("index.cjs")).unwrap();
+        // Only structured functions are wrapped; `countWords` passes its promise straight through.
+        assert!(
+            index.contains("normalize: [[1, 0], 'json', true]"),
+            "{index}"
+        );
+        assert!(!index.contains("countWords:"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }

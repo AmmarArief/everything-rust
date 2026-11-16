@@ -5,8 +5,6 @@
 
 #![forbid(unsafe_code)]
 
-use std::cmp::Ordering;
-
 use serde_json::{Map, Value, json};
 
 use crate::js;
@@ -63,14 +61,15 @@ pub fn apply_text_edits(text: String, edits: Vec<Value>) -> Result<Value, String
         parsed.push((field("start"), field("end"), text));
     }
     // `b.range.start - a.range.start || b.range.end - a.range.end`; NaN compares as equal.
-    parsed.sort_by(|a, b| {
+    // `b.range.start - a.range.start || b.range.end - a.range.end`: NaN and 0 fall through to
+    // the second difference; a NaN result makes the order V8's, so sort as V8 does.
+    js::sort(&mut parsed, |a, b| {
         let first = sub(b.0, a.0);
-        let diff = if first != 0.0 && !first.is_nan() {
+        if first != 0.0 && !first.is_nan() {
             first
         } else {
             sub(b.1, a.1)
-        };
-        diff.partial_cmp(&0.0).unwrap_or(Ordering::Equal)
+        }
     });
     let mut out = utf16::units(&text);
     for (start, end, insert) in parsed {
@@ -117,6 +116,10 @@ pub fn hash_text(text: String) -> String {
 fn to_number(value: &Value) -> Option<f64> {
     if js::is_undefined(value) {
         return None;
+    }
+    // NaN, Infinity and -0 arrive as `{"$num": ...}` markers.
+    if let Some(n) = js::as_number(value) {
+        return Some(n);
     }
     Some(match value {
         Value::Null => 0.0,

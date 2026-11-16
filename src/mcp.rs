@@ -95,6 +95,11 @@ fn tools() -> Value {
             }, "required": ["root", "unit"] },
         },
         {
+            "name": "refresh",
+            "description": "Regenerate a crate's bindings (lib.rs, index.cjs, js.rs) from the signatures in src/port.rs, after changing them. Never touches port.rs.",
+            "inputSchema": { "type": "object", "properties": { "crate": crate_dir }, "required": ["crate"] },
+        },
+        {
             "name": "record",
             "description": "Run the original TS functions on generated edge-case inputs (non-ASCII, emoji, -0, NaN, ...) plus optional extra inputs, and save the results as cases.jsonl: the behavior the port must match.",
             "inputSchema": { "type": "object", "properties": {
@@ -190,6 +195,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 node_args: &no_node_args,
             })?)?
         }
+        "refresh" => serde_json::to_value(bridge::refresh(&path("crate")?)?)?,
         "build" => json!({ "artifact": harness::build(&path("crate")?)? }),
         "diff" => {
             let crate_dir = path("crate")?;
@@ -240,7 +246,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                "analyze", "bridge", "record", "build", "diff", "bench", "shadow", "gate"
+                "analyze", "bridge", "refresh", "record", "build", "diff", "bench", "shadow",
+                "gate"
             ]
         );
         let bad = handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "gate", "arguments": {} } })).unwrap();

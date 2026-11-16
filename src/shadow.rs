@@ -79,20 +79,31 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
          \x20 report = handler\n\
          }}\n\
          {codec}\n\
-         function check(name: string, args: unknown[], expected: unknown, run: () => unknown): void {{\n\
-         \x20 shadowStats.calls++\n\
-         \x20 let actual: unknown\n\
-         \x20 try {{\n\
-         \x20   actual = {{ ok: enc(run()) }}\n\
-         \x20 }}\n\
-         \x20 catch (error) {{\n\
-         \x20   actual = {{ error: String((error as Error)?.message ?? error) }}\n\
-         \x20 }}\n\
+         function compare(name: string, args: unknown[], expected: unknown, actual: unknown): void {{\n\
          \x20 const want = {{ ok: enc(expected) }}\n\
          \x20 if (!same(want, actual)) {{\n\
          \x20   shadowStats.mismatches++\n\
          \x20   report({{ fn: name, args, expected: want, actual }})\n\
          \x20 }}\n\
+         }}\n\
+         function check(name: string, args: unknown[], expected: unknown, run: () => unknown): void {{\n\
+         \x20 shadowStats.calls++\n\
+         \x20 let result: unknown\n\
+         \x20 try {{\n\
+         \x20   result = run()\n\
+         \x20 }}\n\
+         \x20 catch (error) {{\n\
+         \x20   return compare(name, args, expected, {{ error: String((error as Error)?.message ?? error) }})\n\
+         \x20 }}\n\
+         \x20 // An async port: compare when it settles; callers never wait for Rust.\n\
+         \x20 if (result && typeof (result as any).then === 'function') {{\n\
+         \x20   (result as Promise<unknown>).then(\n\
+         \x20     value => compare(name, args, expected, {{ ok: enc(value) }}),\n\
+         \x20     error => compare(name, args, expected, {{ error: String(error?.message ?? error) }}),\n\
+         \x20   )\n\
+         \x20   return\n\
+         \x20 }}\n\
+         \x20 compare(name, args, expected, {{ ok: enc(result) }})\n\
          }}\n\
          function call(name: string, legacy: any, args: unknown[]): any {{\n\
          \x20 if (mode === 'old' || !native) return legacy(...args)\n\

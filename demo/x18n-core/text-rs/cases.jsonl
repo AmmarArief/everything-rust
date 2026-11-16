@@ -298,468 +298,606 @@
 {"fn":"diffText","args":["src/a/b.tsa😀b😀c","a:b:c"],"ok":[{"range":{"start":0,"end":16},"text":"a:b:"}]}
 {"fn":"diffText","args":["ΣΊΣΥΦΟΣ","a:b:c"],"ok":[{"range":{"start":0,"end":7},"text":"a:b:c"}]}
 {"fn":"diffText","args":["{name} has {count} items",""],"ok":[{"range":{"start":0,"end":24},"text":""}]}
-{"fn":"applyTextEdits","args":["abc",[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bomtab\tseparated",[{"a":"b"},null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",[]],"ok":"hello world"}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":2,"start":1000000},"text":"é"},{"range":{"end":0.5,"start":1000},"text":"İstanbul"},{"range":{"end":0,"start":{"$num":"-0"}},"text":"日本語のテキスト"}]],"ok":"日本語のテキストabcécİstanbulabcéc"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":-1,"start":42},"text":"ns:key.path"},{"range":{"end":2147483648,"start":{"$num":"Infinity"}},"text":"straße"},{"range":{"end":1000,"start":-1},"text":"😀"}]],"ok":"straßens:key.path😀"}
+{"fn":"applyTextEdits","args":["hello world",0],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["line1\nline2a..b",[]],"ok":"line1\nline2a..b"}
+{"fn":"applyTextEdits","args":["ünïcödé",{"a":"b"}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["ünïcödé",[{"range":{"end":0.5,"start":{"$num":"Infinity"}},"text":"ab"},{"range":{"end":-2.5,"start":10},"text":"ns:key.path"},{"range":{"end":2,"start":9007199254740992},"text":"  padded  emoji 👍🏽 mix"}]],"ok":"ünïcödéabüns:key.pathdé"}
 {"fn":"applyTextEdits","args":["日本語のテキスト",[]],"ok":"日本語のテキスト"}
-{"fn":"applyTextEdits","args":[".leading",[["a",1],0,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["Hello World",[]],"ok":"Hello World"}
-{"fn":"applyTextEdits","args":["straße",[true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[["a",1],0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2a..b",[[],null,0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[".leading",[true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[]],"ok":"a..b"}
-{"fn":"applyTextEdits","args":["ab",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ns:key.path",["x",{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[[],[],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2日本語のテキスト",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["é",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ns:key.path",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[".leading",[]],"ok":".leading"}
-{"fn":"applyTextEdits","args":[".leading",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["é",[["a",1],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a.b.c:",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[".leading",[[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト:",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["Hello World",[{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straße",[{"a":{"b":"c"}},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} items",[]],"ok":"{name} has {count} items"}
-{"fn":"applyTextEdits","args":["trailing.",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",[0,"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b日本語のテキスト",[]],"ok":"a..b日本語のテキスト"}
-{"fn":"applyTextEdits","args":["é",[]],"ok":"é"}
-{"fn":"applyTextEdits","args":["trailing.",[[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:csrc/a/b.ts",[{"a":"b"},"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLO",[]],"ok":"HELLO"}
-{"fn":"applyTextEdits","args":["line1\nline2",[true,"x",{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLO",[{"a":"b"},0,true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.ts",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  ",[]],"ok":"  padded  "}
-{"fn":"applyTextEdits","args":["hello",[[],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[{},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",[]],"ok":"﻿bom"}
-{"fn":"applyTextEdits","args":["a:b:c",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["İstanbul",[]],"ok":"İstanbul"}
-{"fn":"applyTextEdits","args":["a.b.c",[]],"ok":"a.b.c"}
-{"fn":"applyTextEdits","args":["Hello World",[[],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",[]],"ok":""}
-{"fn":"applyTextEdits","args":[".leading",[{"a":"b"},{"a":{"b":"c"}},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abns:key.path",[true,true,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["aa.b.c",[]],"ok":"aa.b.c"}
-{"fn":"applyTextEdits","args":["a.b.c",[{"a":"b"},null,{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["helloa",[0,null,["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[null,"x"]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["  padded  ",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abcünïcödé",[[],{"a":"b"},["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["Hello World",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",[null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト",[0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abca",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",[["a",1],null,0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[true,["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",["x",{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",["x",[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello",[{"a":{"b":"c"}},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ns:key.path",[]],"ok":"ns:key.path"}
-{"fn":"applyTextEdits","args":["😀tab\tseparated",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json",[0,{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",[["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["é",[null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["😀",[null,[]]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["tab\tseparateda.b.c",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json",[true,{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":",[]],"ok":":"}
-{"fn":"applyTextEdits","args":["ünïcödé",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",["x",null,0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ns:key.patha",[{"a":{"b":"c"}},["a",1],{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"a":"b"},true,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.ts",["x",[],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[]],"ok":"a:b:c"}
-{"fn":"applyTextEdits","args":["abc",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",["x",{"a":"b"},null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["éns:key.path",[]],"ok":"éns:key.path"}
-{"fn":"applyTextEdits","args":["é",[{"a":{"b":"c"}},0,["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["Hello World",[[],null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"a":"b"},{"a":"b"},{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[["a",1],"x",{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLOemoji 👍🏽 mix",[{"a":"b"},true,null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[".leading",[[],{"a":"b"},{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[null,0]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト",[{"a":"b"},{},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[]],"ok":"a😀b😀c"}
-{"fn":"applyTextEdits","args":["﻿bom",["x",0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ns:key.patha:b:c",[]],"ok":"ns:key.patha:b:c"}
-{"fn":"applyTextEdits","args":["key_name-1",[true,0,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["İstanbul",[true,null,{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straße",[]],"ok":"straße"}
-{"fn":"applyTextEdits","args":[".leading",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",[]],"ok":"ab"}
-{"fn":"applyTextEdits","args":["",[null,["a",1]]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[{},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":",[true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[null,0]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json😀",[{"a":"b"},true,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["étrailing.",[]],"ok":"étrailing."}
-{"fn":"applyTextEdits","args":["ab",[true,true,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",[[],"x",0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2trailing.",[0,["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} itemsİstanbul",[["a",1],null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello",[]],"ok":"hello"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json",[]],"ok":"./x/**/*.json"}
-{"fn":"applyTextEdits","args":["﻿bom",[{"a":{"b":"c"}},{},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[["a",1],0,"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2",[["a",1],["a",1],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["é",[["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[null,{"a":{"b":"c"}},null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["😀",[["a",1],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a.b.c",[true,[],["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} items",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLO",[["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[true,"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a.b.c",[0,["a",1],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c./x/**/*.json",[]],"ok":"a:b:c./x/**/*.json"}
-{"fn":"applyTextEdits","args":["a..b",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} items",[{},[],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト",[["a",1],{},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",[true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLO",[{"a":"b"},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé  padded  ",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé",[[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",[["a",1],0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2",[[],{"a":{"b":"c"}},"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.ts",[]],"ok":"src/a/b.ts"}
-{"fn":"applyTextEdits","args":["ünïcödéé",[null,"x"]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣkey_name-1",[{"a":"b"},{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["😀a.b.c",[true,0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello",[["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a.b.ca:b:c",[0,"x",{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",[{"a":"b"},null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",["x",null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["trailing.",[]],"ok":"trailing."}
-{"fn":"applyTextEdits","args":["a.b.c",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:csrc/a/b.ts",[]],"ok":"a:b:csrc/a/b.ts"}
-{"fn":"applyTextEdits","args":["line1\nline2:",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["key_name-1",[{"a":"b"},{},"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":",[{"a":{"b":"c"}},null,null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé",[{},["a",1],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":a..b",[]],"ok":":a..b"}
-{"fn":"applyTextEdits","args":["straße",[[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2",[{"a":{"b":"c"}},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["é",[{"a":"b"},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2",[]],"ok":"line1\nline2"}
-{"fn":"applyTextEdits","args":["HELLO",[null,{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["helloa😀b😀c",[]],"ok":"helloa😀b😀c"}
-{"fn":"applyTextEdits","args":["  padded  ",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..bkey_name-1",[]],"ok":"a..bkey_name-1"}
-{"fn":"applyTextEdits","args":["hello",[[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",[[],{"a":{"b":"c"}},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["key_name-1",[{"a":{"b":"c"}},["a",1],0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödéhello",[{},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  İstanbul",[null,{"a":{"b":"c"}}]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a.b.c",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json",[[],{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[]],"ok":"abc"}
-{"fn":"applyTextEdits","args":["HELLO",[{},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト",[["a",1],[],["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé",["x",{},null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLO",[["a",1],{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  ",[0,"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",["x",{"a":{"b":"c"}},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",[{"a":{"b":"c"}},{"a":{"b":"c"}},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[[],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.ts",[[],[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abtab\tseparated",[true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿boma:b:c",[]],"ok":"﻿boma:b:c"}
-{"fn":"applyTextEdits","args":["é",[{"a":"b"},[],null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello worldline1\nline2",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLOtrailing.",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["İstanbul",[[],[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:cΣΊΣΥΦΟΣ",[]],"ok":"a:b:cΣΊΣΥΦΟΣ"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[["a",1],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["key_name-1",[]],"ok":"key_name-1"}
-{"fn":"applyTextEdits","args":["hello world",[0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bom",[null,{},"x"]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["helloab",[{"a":{"b":"c"}},true,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.tshello",[["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b.leading",[]],"ok":"a..b.leading"}
-{"fn":"applyTextEdits","args":["hello world",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straße",[null,true]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["😀./x/**/*.json",[true,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} items",[{},{"a":{"b":"c"}},"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["😀",[null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["😀",[]],"ok":"😀"}
-{"fn":"applyTextEdits","args":["src/a/b.tsa..b",[]],"ok":"src/a/b.tsa..b"}
-{"fn":"applyTextEdits","args":["ünïcödékey_name-1",[0,null,["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[".leading",[0,0,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[["a",1],null,["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[{"a":{"b":"c"}},["a",1],0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["😀key_name-1",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  ",["x",[],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello",[{"a":{"b":"c"}},{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2.leading",[["a",1],[],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[["a",1],["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["key_name-1",["x",[],["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":",[["a",1],["a",1],["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["é",[0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  ",[{"a":"b"},["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[".leading",[{},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["﻿bomHello World",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ab",[true,"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[{"a":{"b":"c"}},{},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello",[true,true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["Hello World",["x",{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straße",[0,"x","x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.ts",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[0,[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json",[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} itemsa",[0,"x",{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",[null,["a",1],0]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mixstraße",[["a",1],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[[],"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["é",true],"error":"edits is not iterable"}
 {"fn":"applyTextEdits","args":["a",[]],"ok":"a"}
-{"fn":"applyTextEdits","args":["日本語のテキスト",[{},{"a":"b"},{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["Hello World",[{"a":{"b":"c"}},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":[":",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",["x",{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[{"a":{"b":"c"}},{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abcemoji 👍🏽 mix",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["trailing.a..b",[[],{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  ",["x","x",{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[null,{"a":{"b":"c"}}]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["straßeHello World",[{},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ns:key.path",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello world",["x",["a",1],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["trailing.",[null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["key_name-1",[null,{"a":{"b":"c"}},{"a":"b"}]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["a:b:c",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["HELLOa😀b😀c",[{},["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀c",[{"a":"b"},{"a":{"b":"c"}},"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[{},true,{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..bhello",[]],"ok":"a..bhello"}
-{"fn":"applyTextEdits","args":["ünïcödé",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["İstanbul",[true,0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödé",[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["  padded  ",[null,{},null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["tab\tseparated",[true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straße",[{"a":{"b":"c"}},["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[null,[]]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["key_name-1",["x",true,null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[["a",1],true]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":1,"start":9007199254740992},"text":".leading"}]],"ok":"ΣΊΣΥΦΟΣ.leadingΊΣΥΦΟΣ"}
+{"fn":"applyTextEdits","args":["",{"a":"b"}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["trailing.",[{"range":{"end":{"$num":"Infinity"},"start":{"$num":"-Infinity"}},"text":"a.b.c:"},{"range":{"end":1000000,"start":100},"text":"日本語のテキスト"}]],"ok":"a.b.c:"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":{"$num":"Infinity"},"start":3},"text":"{name} has {count} items"}]],"ok":"İst{name} has {count} items"}
+{"fn":"applyTextEdits","args":[".leadingHello World",[{"range":{"end":3,"start":{"$num":"NaN"}},"text":"straße"},{"range":{"end":{"$num":"Infinity"},"start":0},"text":"straße"}]],"ok":"straßeaße"}
+{"fn":"applyTextEdits","args":["日本語のテキスト",{"a":{"b":"c"}}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[{"range":{"end":-1,"start":0},"text":"ünïcödé"}]],"ok":"ünïcödén"}
+{"fn":"applyTextEdits","args":["{name} has {count} items",[{"range":{"end":10,"start":{"$num":"Infinity"}},"text":"😀"},{"range":{"end":100,"start":1000},"text":"hello world"}]],"ok":"{name} has {count} items😀 {count} itemshello world"}
+{"fn":"applyTextEdits","args":["é",[{"range":{"end":10,"start":100},"text":"{name} has {count} items"},{"range":{"end":{"$num":"Infinity"},"start":0},"text":"ab"}]],"ok":"ab"}
+{"fn":"applyTextEdits","args":["a..b",[]],"ok":"a..b"}
+{"fn":"applyTextEdits","args":["line1\nline2",[{"range":{"end":10,"start":2},"text":"HELLO"}]],"ok":"liHELLO2"}
+{"fn":"applyTextEdits","args":["﻿bom  padded  ",[]],"ok":"﻿bom  padded  "}
+{"fn":"applyTextEdits","args":["a",[{"range":{"end":-1,"start":2147483648},"text":"  padded  "},{"range":{"end":{"$num":"-0"},"start":0},"text":"key_name-1"},{"range":{"end":2,"start":9007199254740992},"text":"a😀b😀c"}]],"ok":"key_name-1aa😀b😀c  padded  c"}
+{"fn":"applyTextEdits","args":["日本語のテキスト",[{"range":{"end":2,"start":{"$num":"-0"}},"text":"a.b.c"},{"range":{"end":-1,"start":1},"text":"a:b:c"},{"range":{"end":{"$num":"Infinity"},"start":10},"text":"İstanbul"}]],"ok":"a.b.c:b:cl"}
+{"fn":"applyTextEdits","args":["İstanbul",[]],"ok":"İstanbul"}
+{"fn":"applyTextEdits","args":["Hello World",[]],"ok":"Hello World"}
+{"fn":"applyTextEdits","args":["﻿bom",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["abc",true],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":[".leading",{"a":"b"}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":1000000,"start":1000},"text":":"}]],"ok":"emoji 👍🏽 mix:"}
+{"fn":"applyTextEdits","args":["line1\nline2",[{"range":{"end":1,"start":1000},"text":"Hello World"}]],"ok":"line1\nline2Hello Worldine1\nline2"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":{"$num":"-0"},"start":100},"text":"helloa"},{"range":{"end":-1,"start":2},"text":"{name} has {count} items"},{"range":{"end":9007199254740992,"start":1000000},"text":"Hello World"}]],"ok":"a.{name} has {count} itemsd"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":{"$num":"-Infinity"},"start":-2.5},"text":"trailing."}]],"ok":"trailing."}
+{"fn":"applyTextEdits","args":["straße",[{"range":{"end":100,"start":-1},"text":"a"},{"range":{"end":0.5,"start":{"$num":"NaN"}},"text":"src/a/b.ts"},{"range":{"end":9007199254740992,"start":10},"text":"é"}]],"ok":"src/a/b.tsstraßeea"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":-1,"start":{"$num":"-0"}},"text":"tab\tseparated"},{"range":{"end":{"$num":"-Infinity"},"start":2},"text":"a.b.c"},{"range":{"end":0,"start":{"$num":"NaN"}},"text":"{name} has {count} items"}]],"ok":"tab\tseparatedx"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":1,"start":{"$num":"-0"}},"text":"  padded  "}]],"ok":"  padded  ELLO"}
+{"fn":"applyTextEdits","args":["a😀b😀chello world",true],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["ab",[]],"ok":"ab"}
+{"fn":"applyTextEdits","args":["HELLO",[]],"ok":"HELLO"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":2147483648,"start":1000},"text":"ΣΊΣΥΦΟΣ"},{"range":{"end":42,"start":42},"text":"tab\tseparated"},{"range":{"end":{"$num":"NaN"},"start":2},"text":"straßeab"}]],"ok":"  straßeab  padded  ΣΊΣΥΦΟΣtab\tseparated"}
+{"fn":"applyTextEdits","args":["﻿bom",{}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["a😀b😀c:",null],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":{"$num":"-Infinity"},"start":3},"text":"./x/**/*.json"},{"range":{"end":1000,"start":100},"text":"./x/**/*.json"},{"range":{"end":1000,"start":{"$num":"Infinity"}},"text":"hello"}]],"ok":"😀h./x/**/*.json😀hello./x/**/*.json"}
+{"fn":"applyTextEdits","args":["a:b:c",[]],"ok":"a:b:c"}
+{"fn":"applyTextEdits","args":["tab\tseparated",[{"range":{"end":2,"start":9007199254740992},"text":"trailing."},{"range":{"end":{"$num":"-0"},"start":1000},"text":"a"}]],"ok":"tab\tseparatedtrailing.b\tseparatedatab\tseparatedtrailing.b\tseparated"}
+{"fn":"applyTextEdits","args":["tab\tseparated",[{"range":{"end":100,"start":2147483648},"text":"ab"},{"range":{"end":3,"start":{"$num":"Infinity"}},"text":"straße"},{"range":{"end":3,"start":2147483648},"text":"emoji 👍🏽 mix"}]],"ok":"tab\tseparatedstraße\tseparatedabemoji 👍🏽 mix\tseparatedstraße\tseparatedab"}
+{"fn":"applyTextEdits","args":["a:b:cabc",[{"range":{"end":{"$num":"NaN"},"start":1000},"text":".leading"}]],"ok":"a:b:cabc.leadinga:b:cabc"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":0,"start":0.5},"text":":"},{"range":{"end":2,"start":{"$num":"-Infinity"}},"text":"hello world"}]],"ok":"hello worldELLO"}
+{"fn":"applyTextEdits","args":["a😀b😀c",[]],"ok":"a😀b😀c"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":100,"start":1000},"text":"{name} has {count} items"},{"range":{"end":{"$num":"NaN"},"start":{"$num":"NaN"}},"text":"straße"}]],"ok":"straße{name} has {count} items"}
+{"fn":"applyTextEdits","args":["straße",[{"range":{"end":1000,"start":{"$num":"-0"}},"text":"İstanbulHELLO"},{"range":{"end":1000000,"start":0},"text":"{name} has {count} items"}]],"ok":"İstanbulHELLO"}
+{"fn":"applyTextEdits","args":["ünïcödé",[{"range":{"end":3,"start":1000000},"text":"straße"}]],"ok":"ünïcödéstraßecödé"}
+{"fn":"applyTextEdits","args":[":",[]],"ok":":"}
+{"fn":"applyTextEdits","args":["a😀b😀c",[{"range":{"end":{"$num":"-0"},"start":0.5},"text":"trailing."},{"range":{"end":2147483648,"start":100},"text":"﻿bom"},{"range":{"end":2,"start":1},"text":":"}]],"ok":{"$utf16":[116,114,97,105,108,105,110,103,46,97,58,56832,98,55357,56832,99,65279,98,111,109]}}
+{"fn":"applyTextEdits","args":["ns:key.patha:b:c",[{"range":{"end":9007199254740992,"start":2147483648},"text":"😀"},{"range":{"end":-1,"start":9007199254740992},"text":"a..b"}]],"ok":"ns:key.patha:b:ca..bc😀"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":-1,"start":10},"text":".leading"},{"range":{"end":0.5,"start":{"$num":"NaN"}},"text":"ab"},{"range":{"end":42,"start":0},"text":"abc"}]],"ok":"ababc.leadingc"}
+{"fn":"applyTextEdits","args":["ns:key.path",[{"range":{"end":10,"start":3},"text":"HELLO"},{"range":{"end":-1,"start":1000000},"text":"  padded  "}]],"ok":"ns:HELLOh  padded  h"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[]],"ok":"emoji 👍🏽 mix"}
+{"fn":"applyTextEdits","args":["{name} has {count} items",[{"range":{"end":42,"start":1},"text":"tab\tseparated"},{"range":{"end":-1,"start":42},"text":"trailing."}]],"ok":"{tab\tseparated"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":{"$num":"Infinity"},"start":1000},"text":"﻿bom"},{"range":{"end":3,"start":{"$num":"NaN"}},"text":"日本語のテキスト"},{"range":{"end":42,"start":0},"text":"trailing.😀"}]],"ok":"日本語のテキストiling.😀"}
+{"fn":"applyTextEdits","args":["trailing.",[]],"ok":"trailing."}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":10,"start":{"$num":"NaN"}},"text":"a:b:c"},{"range":{"end":1000000,"start":100},"text":"ab"}]],"ok":"a:b:c"}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[{"range":{"end":{"$num":"NaN"},"start":100},"text":"abc"},{"range":{"end":0.5,"start":2},"text":"./x/**/*.json"},{"range":{"end":1,"start":{"$num":"-0"}},"text":"trailing."}]],"ok":"trailing././x/**/*.json./x/**/*.jsonabc./x/**/*.json"}
+{"fn":"applyTextEdits","args":["key_name-1",[{"range":{"end":-2.5,"start":100},"text":"  padded  "}]],"ok":"key_name-1  padded  -1"}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":42,"start":42},"text":""},{"range":{"end":100,"start":9007199254740992},"text":"a😀b😀c"},{"range":{"end":1,"start":1000000},"text":"ns:key.path"}]],"ok":"ΣΊΣΥΦΟΣa😀b😀cns:key.pathΊΣΥΦΟΣa😀b😀c"}
+{"fn":"applyTextEdits","args":["straße",[{"range":{"end":1,"start":{"$num":"-Infinity"}},"text":"straße"},{"range":{"end":{"$num":"Infinity"},"start":0.5},"text":"a😀b😀c"}]],"ok":"straße😀b😀c"}
+{"fn":"applyTextEdits","args":[".leading",[{"range":{"end":-2.5,"start":2},"text":"İstanbulkey_name-1"}]],"ok":".lİstanbulkey_name-1ng"}
+{"fn":"applyTextEdits","args":["{name} has {count} items",[]],"ok":"{name} has {count} items"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":2147483648,"start":2},"text":"日本語のテキストkey_name-1"},{"range":{"end":{"$num":"-Infinity"},"start":1},"text":"﻿boma.b.c"}]],"ok":"H﻿boma.b.cHE日本語のテキストkey_name-1"}
+{"fn":"applyTextEdits","args":["ns:key.path",[{"range":{"end":{"$num":"-Infinity"},"start":{"$num":"-0"}},"text":"ΣΊΣΥΦΟΣ"}]],"ok":"ΣΊΣΥΦΟΣns:key.path"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":10,"start":0},"text":"key_name-1"}]],"ok":"key_name-1"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":9007199254740992,"start":{"$num":"-0"}},"text":"key_name-1"},{"range":{"end":42,"start":{"$num":"-Infinity"}},"text":""},{"range":{"end":-1,"start":2147483648},"text":"key_name-1日本語のテキスト"}]],"ok":""}
+{"fn":"applyTextEdits","args":["hello world",[{"range":{"end":-1,"start":{"$num":"Infinity"}},"text":"a..bΣΊΣΥΦΟΣ"},{"range":{"end":9007199254740992,"start":0.5},"text":"İstanbul"}]],"ok":"İstanbul"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":{"$num":"-Infinity"},"start":2147483648},"text":"straße"},{"range":{"end":{"$num":"-Infinity"},"start":{"$num":"-Infinity"}},"text":":"}]],"ok":":  padded  straße  padded  "}
+{"fn":"applyTextEdits","args":["line1\nline2",[{"range":{"end":2,"start":-2.5},"text":"src/a/b.ts"},{"range":{"end":-1,"start":42},"text":"./x/**/*.json"}]],"ok":"line1\nline2./x/**/*.jsosrc/a/b.tsne1\nline2./x/**/*.json2"}
+{"fn":"applyTextEdits","args":["trailing.",[{"range":{"end":{"$num":"Infinity"},"start":1000000},"text":"ΣΊΣΥΦΟΣkey_name-1"},{"range":{"end":{"$num":"NaN"},"start":1000},"text":"src/a/b.tssrc/a/b.ts"},{"range":{"end":42,"start":-2.5},"text":"İstanbul"}]],"ok":"trailing.ΣΊΣΥΦΟΣkey_name-1src/a/b.tssrc/a/b.tstrailing.ΣΊΣΥΦΟΣkey_nameİstanbulb.tstrailing.ΣΊΣΥΦΟΣkey_name-1"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":-2.5,"start":0.5},"text":""}]],"ok":"lo"}
+{"fn":"applyTextEdits","args":["﻿boma..b",[{"range":{"end":-2.5,"start":{"$num":"NaN"}},"text":"ns:key.pathline1\nline2"},{"range":{"end":{"$num":"-Infinity"},"start":100},"text":"src/a/b.ts"}]],"ok":"ns:key.pathline1\nline2.bsrc/a/b.tsns:key.pathline1\nline2.b"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":{"$num":"NaN"},"start":{"$num":"Infinity"}},"text":"src/a/b.ts"},{"range":{"end":100,"start":-1},"text":"ns:key.path"}]],"ok":"src/a/b.tns:key.path"}
+{"fn":"applyTextEdits","args":["ns:key.path",[{"range":{"end":0.5,"start":3},"text":"line1\nline2:"},{"range":{"end":10,"start":100},"text":"key_name-1"},{"range":{"end":0.5,"start":100},"text":"a.b.c"}]],"ok":"ns:line1\nline2:ns:key.pathkey_name-1ha.b.cns:key.pathkey_name-1h"}
+{"fn":"applyTextEdits","args":[":",[{"range":{"end":100,"start":100},"text":"ünïcödé"}]],"ok":":ünïcödé"}
+{"fn":"applyTextEdits","args":[":a..b",[{"range":{"end":-2.5,"start":{"$num":"-Infinity"}},"text":"hello world"},{"range":{"end":-1,"start":1},"text":"ünïcödé"},{"range":{"end":42,"start":1},"text":"abcΣΊΣΥΦΟΣ"}]],"ok":"hello worldéΣ"}
+{"fn":"applyTextEdits","args":["tab\tseparated",[]],"ok":"tab\tseparated"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":{"$num":"NaN"},"start":0.5},"text":"a..b"},{"range":{"end":{"$num":"Infinity"},"start":2147483648},"text":"line1\nline2"},{"range":{"end":1,"start":{"$num":"Infinity"}},"text":"src/a/b.ts"}]],"ok":"a..bHELLOsrc/a/b.tsELLOline1\nline2"}
+{"fn":"applyTextEdits","args":["  padded  ",0],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":100,"start":-1},"text":"a:b:c"}]],"ok":"aa:b:c"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":-2.5,"start":0},"text":"HELLO"},{"range":{"end":9007199254740992,"start":-2.5},"text":"key_name-1"}]],"ok":"HELLOkey_name-1"}
+{"fn":"applyTextEdits","args":["HELLOtrailing.",[{"range":{"end":{"$num":"Infinity"},"start":{"$num":"Infinity"}},"text":"ünïcödé"},{"range":{"end":-1,"start":1000000},"text":"İstanbul"}]],"ok":"HELLOtrailing.ünïcödéİstanbulé"}
+{"fn":"applyTextEdits","args":["abcHello World",[{"range":{"end":2147483648,"start":100},"text":"a.b.c"}]],"ok":"abcHello Worlda.b.c"}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":3,"start":100},"text":"😀"}]],"ok":"ΣΊΣΥΦΟΣ😀ΥΦΟΣ"}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":{"$num":"Infinity"},"start":3},"text":":"},{"range":{"end":3,"start":1},"text":"a.b.c"},{"range":{"end":0.5,"start":1000},"text":"emoji 👍🏽 mixünïcödé"}]],"ok":"aa.b.c:"}
+{"fn":"applyTextEdits","args":["tab\tseparated",null],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":{"$num":"NaN"},"start":1},"text":"a..b"},{"range":{"end":{"$num":"-Infinity"},"start":1},"text":"HELLO  padded  "},{"range":{"end":0.5,"start":10},"text":"😀"}]],"ok":"hHELLO  padded  ha..bhello😀hello"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":1000,"start":0.5},"text":""},{"range":{"end":1,"start":{"$num":"-Infinity"}},"text":"😀İstanbul"},{"range":{"end":1,"start":{"$num":"NaN"}},"text":"  padded  "}]],"ok":{"$utf16":[32,32,112,97,100,100,101,100,32,32,56832,304,115,116,97,110,98,117,108]}}
+{"fn":"applyTextEdits","args":["ünïcödé",[{"range":{"end":-2.5,"start":3},"text":"abc"},{"range":{"end":1000,"start":9007199254740992},"text":"src/a/b.ts"}]],"ok":"ünïabcts"}
+{"fn":"applyTextEdits","args":["Hello Worldkey_name-1",[{"range":{"end":1,"start":{"$num":"NaN"}},"text":"abtab\tseparated"},{"range":{"end":1000,"start":3},"text":":"},{"range":{"end":100,"start":2},"text":":ünïcödé"}]],"ok":"abtab\tseparatede:ünïcödé"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":3,"start":0.5},"text":"a.b.c"},{"range":{"end":-1,"start":{"$num":"Infinity"}},"text":"a😀b😀ca😀b😀c"},{"range":{"end":3,"start":1000000},"text":"HELLOtrailing."}]],"ok":"a.b.c/a/b.tsa😀b😀ca😀b😀csHELLOtrailing./a/b.tsa😀b😀ca😀b😀cs"}
+{"fn":"applyTextEdits","args":["hello world",true],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["helloa..b",[{"range":{"end":-2.5,"start":3},"text":".leading"},{"range":{"end":1000000,"start":0.5},"text":"a😀b😀c"},{"range":{"end":2147483648,"start":{"$num":"-Infinity"}},"text":"key_name-1"}]],"ok":"key_name-1"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":10,"start":-1},"text":"emoji 👍🏽 mix"}]],"ok":{"$utf16":[55357,101,109,111,106,105,32,55357,56397,55356,57341,32,109,105,120]}}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":100,"start":1000000},"text":"hello world"}]],"ok":"ΣΊΣΥΦΟΣhello world"}
+{"fn":"applyTextEdits","args":["ünïcödé",[{"range":{"end":3,"start":1000},"text":"src/a/b.tshello"},{"range":{"end":{"$num":"-Infinity"},"start":1},"text":"a..b.leading"}]],"ok":"üa..b.leadingünïcödésrc/a/b.tshellocödé"}
+{"fn":"applyTextEdits","args":[":",[{"range":{"end":9007199254740992,"start":10},"text":"hello world"}]],"ok":":hello world"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix😀",[{"range":{"end":1000,"start":-1},"text":"﻿bom"}]],"ok":{"$utf16":[101,109,111,106,105,32,55357,56397,55356,57341,32,109,105,120,55357,65279,98,111,109]}}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":0.5,"start":2},"text":"line1\nline2"}]],"ok":"abline1\nline2abc"}
+{"fn":"applyTextEdits","args":["tab\tseparated",[{"range":{"end":{"$num":"NaN"},"start":1000},"text":"😀"},{"range":{"end":2,"start":0},"text":"./x/**/*.json"}]],"ok":"./x/**/*.jsonb\tseparated😀tab\tseparated"}
+{"fn":"applyTextEdits","args":["src/a/b.tsa..b",[]],"ok":"src/a/b.tsa..b"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":{"$num":"-Infinity"},"start":100},"text":"emoji 👍🏽 mix"}]],"ok":"emoji 👍🏽 mixemoji 👍🏽 mixemoji 👍🏽 mix"}
+{"fn":"applyTextEdits","args":["a.b.c",[]],"ok":"a.b.c"}
+{"fn":"applyTextEdits","args":["straße",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":[":a..b",[{"range":{"end":1000000,"start":2},"text":"abc"},{"range":{"end":-1,"start":42},"text":"😀key_name-1"},{"range":{"end":-2.5,"start":-2.5},"text":"a😀b😀c"}]],"ok":":aaa😀b😀cbc"}
+{"fn":"applyTextEdits","args":["hello worlda..b",[{"range":{"end":1000000,"start":0.5},"text":"src/a/b.ts"},{"range":{"end":{"$num":"Infinity"},"start":3},"text":"ns:key.pathab"}]],"ok":"src/a/b.ts"}
+{"fn":"applyTextEdits","args":["./x/**/*.jsonhello",[{"range":{"end":{"$num":"NaN"},"start":{"$num":"Infinity"}},"text":":"},{"range":{"end":10,"start":1000000},"text":"abc"},{"range":{"end":2147483648,"start":3},"text":"a😀b😀c"}]],"ok":"./xa😀b😀c"}
+{"fn":"applyTextEdits","args":["é",[{"range":{"end":-2.5,"start":3},"text":"line1\nline2"},{"range":{"end":0.5,"start":42},"text":""}]],"ok":"éeline1\nline2é"}
+{"fn":"applyTextEdits","args":["hello world",[{"range":{"end":0,"start":100},"text":"tab\tseparated"},{"range":{"end":{"$num":"Infinity"},"start":{"$num":"-0"}},"text":"ns:key.path"}]],"ok":"ns:key.path"}
+{"fn":"applyTextEdits","args":["Hello Worldns:key.path",{}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[{"range":{"end":1000000,"start":42},"text":"line1\nline2"}]],"ok":"./x/**/*.jsonline1\nline2"}
+{"fn":"applyTextEdits","args":["a😀b😀cab",[{"range":{"end":2147483648,"start":1000},"text":"tab\tseparated"},{"range":{"end":{"$num":"Infinity"},"start":1000000},"text":"tab\tseparated"}]],"ok":"a😀b😀cabtab\tseparatedtab\tseparated"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":{"$num":"-0"},"start":0},"text":"emoji 👍🏽 mix"}]],"ok":"emoji 👍🏽 mixemoji 👍🏽 mix"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":2,"start":3},"text":"emoji 👍🏽 mix"},{"range":{"end":0,"start":{"$num":"-Infinity"}},"text":"straße"},{"range":{"end":1000000,"start":1000000},"text":"a﻿bom"}]],"ok":"straßehelemoji 👍🏽 mixlloa﻿bom"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":2147483648,"start":{"$num":"-Infinity"}},"text":"abc"},{"range":{"end":-1,"start":42},"text":"a"},{"range":{"end":-1,"start":3},"text":"﻿bom"}]],"ok":"abc"}
+{"fn":"applyTextEdits","args":["{name} has {count} itemsa",[{"range":{"end":{"$num":"Infinity"},"start":2147483648},"text":""},{"range":{"end":100,"start":1000000},"text":"abc"}]],"ok":"{name} has {count} itemsaabc"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mixstraße",[{"range":{"end":{"$num":"NaN"},"start":2147483648},"text":"tab\tseparatedline1\nline2"},{"range":{"end":{"$num":"NaN"},"start":2147483648},"text":"line1\nline2"}]],"ok":"emoji 👍🏽 mixstraßetab\tseparatedline1\nline2emoji 👍🏽 mixstraßeline1\nline2emoji 👍🏽 mixstraßetab\tseparatedline1\nline2emoji 👍🏽 mixstraße"}
+{"fn":"applyTextEdits","args":["日本語のテキスト",[{"range":{"end":{"$num":"-0"},"start":{"$num":"NaN"}},"text":"hello world"},{"range":{"end":2,"start":-1},"text":"a😀b😀c"}]],"ok":"hello world日本語のテキスa😀b😀c語のテキスト"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":-1,"start":{"$num":"NaN"}},"text":"emoji 👍🏽 mix"},{"range":{"end":10,"start":1000},"text":"./x/**/*.json"}]],"ok":"emoji 👍🏽 mixn"}
+{"fn":"applyTextEdits","args":["tab\tseparated","x"],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["é",[]],"ok":"é"}
+{"fn":"applyTextEdits","args":["abc",[]],"ok":"abc"}
+{"fn":"applyTextEdits","args":["日本語のテキスト",[{"range":{"end":{"$num":"NaN"},"start":42},"text":"a:b:c"}]],"ok":"日本語のテキストa:b:c日本語のテキスト"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":2,"start":{"$num":"NaN"}},"text":"trailing.a..b"},{"range":{"end":3,"start":2147483648},"text":"emoji 👍🏽 mix"},{"range":{"end":9007199254740992,"start":{"$num":"-0"}},"text":""}]],"ok":"trailing.a..b"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":1000,"start":{"$num":"-Infinity"}},"text":"straße"},{"range":{"end":10,"start":2},"text":"Hello World"},{"range":{"end":1000000,"start":{"$num":"-0"}},"text":"ns:key.path"}]],"ok":"straße"}
+{"fn":"applyTextEdits","args":["ahello world",[{"range":{"end":42,"start":2147483648},"text":"  padded  "},{"range":{"end":-1,"start":-2.5},"text":"trailing."},{"range":{"end":0,"start":{"$num":"-Infinity"}},"text":"key_name-1"}]],"ok":"key_name-1ahello world  paddedtrailing. "}
+{"fn":"applyTextEdits","args":["a:b:c",[{"range":{"end":{"$num":"-0"},"start":2147483648},"text":""},{"range":{"end":1000000,"start":42},"text":"hello"}]],"ok":"a:b:ca:b:chello"}
+{"fn":"applyTextEdits","args":["a:b:ckey_name-1",[]],"ok":"a:b:ckey_name-1"}
+{"fn":"applyTextEdits","args":["a😀b😀c",[{"range":{"end":2147483648,"start":-2.5},"text":"a"}]],"ok":{"$utf16":[97,55357,56832,98,55357,97]}}
+{"fn":"applyTextEdits","args":["﻿bom",[{"range":{"end":0,"start":9007199254740992},"text":"hello"}]],"ok":"﻿bomhello﻿bom"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":42,"start":1000},"text":"ünïcödé"},{"range":{"end":{"$num":"Infinity"},"start":{"$num":"NaN"}},"text":"İstanbul"},{"range":{"end":1000,"start":42},"text":"line1\nline2src/a/b.ts"}]],"ok":"İstanbulünïcödéline1\nline2src/a/b.ts"}
+{"fn":"applyTextEdits","args":["trailing.",[{"range":{"end":3,"start":3},"text":"line1\nline2"},{"range":{"end":-1,"start":2147483648},"text":"key_name-1"},{"range":{"end":1000000,"start":0.5},"text":"  padded  "}]],"ok":"  padded  "}
+{"fn":"applyTextEdits","args":["﻿bom",[]],"ok":"﻿bom"}
+{"fn":"applyTextEdits","args":["tab\tseparated",[{"range":{"end":2,"start":100},"text":"日本語のテキスト"},{"range":{"end":10,"start":{"$num":"-Infinity"}},"text":"😀"},{"range":{"end":3,"start":0},"text":"key_name-1"}]],"ok":"😀\tseparated日本語のテキストb\tseparated"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":2,"start":0},"text":"😀"},{"range":{"end":1000000,"start":1000},"text":"ns:key.path"}]],"ok":"😀LLOns:key.path"}
+{"fn":"applyTextEdits","args":["a﻿bom",[{"range":{"end":-1,"start":9007199254740992},"text":"key_name-1"},{"range":{"end":-1,"start":3},"text":"src/a/b.ts{name} has {count} items"},{"range":{"end":{"$num":"-0"},"start":2147483648},"text":"é"}]],"ok":"a﻿bsrc/a/b.ts{name} has {count} itemsm"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":{"$num":"Infinity"},"start":10},"text":"Hello World"},{"range":{"end":{"$num":"NaN"},"start":3},"text":"tab\tseparated"},{"range":{"end":{"$num":"-Infinity"},"start":1},"text":"a😀b😀c日本語のテキスト"}]],"ok":"aa😀b😀c日本語のテキストa.btab\tseparateda.b.cHello World"}
+{"fn":"applyTextEdits","args":[".leading",[]],"ok":".leading"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":{"$num":"-Infinity"},"start":0},"text":"HELLO"},{"range":{"end":-2.5,"start":-2.5},"text":"é"},{"range":{"end":1,"start":1000000},"text":""}]],"ok":"HELLOemoji 👍🏽 mixmoji 👍🏽 méix"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":-2.5,"start":{"$num":"-0"}},"text":"hello world"}]],"ok":"hello world😀"}
+{"fn":"applyTextEdits","args":[":tab\tseparated",[{"range":{"end":{"$num":"-Infinity"},"start":2},"text":"日本語のテキスト{name} has {count} items"},{"range":{"end":-2.5,"start":{"$num":"-Infinity"}},"text":"src/a/b.ts"}]],"ok":"src/a/b.tsed"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":-2.5,"start":{"$num":"-0"}},"text":"ab"},{"range":{"end":10,"start":{"$num":"-0"}},"text":".leadinghello"},{"range":{"end":2,"start":0.5},"text":"trailing."}]],"ok":"ablo"}
+{"fn":"applyTextEdits","args":["Hello World",[{"range":{"end":1,"start":42},"text":"a:b:c"}]],"ok":"Hello Worlda:b:cello World"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":10,"start":{"$num":"-Infinity"}},"text":"key_name-1"},{"range":{"end":1000000,"start":0.5},"text":"hello world"}]],"ok":"key_name-1d"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":{"$num":"Infinity"},"start":{"$num":"Infinity"}},"text":"./x/**/*.json"},{"range":{"end":9007199254740992,"start":9007199254740992},"text":"line1\nline2"}]],"ok":"  padded  ./x/**/*.jsonline1\nline2"}
+{"fn":"applyTextEdits","args":["straße😀",[{"range":{"end":-1,"start":-1},"text":"straße"},{"range":{"end":3,"start":{"$num":"-0"}},"text":"trailing.😀"},{"range":{"end":2,"start":42},"text":".leading"}]],"ok":{"$utf16":[116,114,97,105,108,105,110,103,46,55357,56832,97,223,101,55357,56832,46,108,101,97,100,105,110,103,114,97,223,101,55357,115,116,114,97,223,101,56832]}}
+{"fn":"applyTextEdits","args":["日本語のテキスト",[{"range":{"end":10,"start":-1},"text":"straße"},{"range":{"end":{"$num":"NaN"},"start":{"$num":"NaN"}},"text":"a..b"}]],"ok":"a..b日本語のテキスstraße"}
+{"fn":"applyTextEdits","args":["Hello World",[{"range":{"end":3,"start":10},"text":""},{"range":{"end":2,"start":9007199254740992},"text":"😀"},{"range":{"end":0.5,"start":{"$num":"-Infinity"}},"text":"HELLOkey_name-1"}]],"ok":"HELLOkey_name-1Hello Worllo World😀llo World"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":100,"start":2147483648},"text":"a:b:c"},{"range":{"end":1000000,"start":100},"text":"HELLOhello"}]],"ok":"İstanbula:b:cHELLOhello"}
+{"fn":"applyTextEdits","args":[".leading./x/**/*.json",[{"range":{"end":0,"start":1},"text":"  padded  "},{"range":{"end":0,"start":3},"text":"tab\tseparated"}]],"ok":".  padded  .letab\tseparated.leading./x/**/*.json"}
+{"fn":"applyTextEdits","args":["src/a/b.tsab",[]],"ok":"src/a/b.tsab"}
+{"fn":"applyTextEdits","args":["a..b",[{"range":{"end":{"$num":"NaN"},"start":42},"text":"a:b:cab"},{"range":{"end":2147483648,"start":9007199254740992},"text":"Hello World"}]],"ok":"a..bHello Worlda:b:caba..bHello World"}
+{"fn":"applyTextEdits","args":["a",[{"range":{"end":0,"start":2147483648},"text":"src/a/b.ts"},{"range":{"end":3,"start":1000},"text":"😀😀"}]],"ok":"asrc/a/b.tsa😀😀c/a/b.tsa"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":{"$num":"-Infinity"},"start":{"$num":"NaN"}},"text":"./x/**/*.json"},{"range":{"end":0.5,"start":1000000},"text":"ab"},{"range":{"end":2,"start":{"$num":"-0"}},"text":"😀"}]],"ok":"./x/**/*.json😀tanbulabİstanbul"}
+{"fn":"applyTextEdits","args":["hellokey_name-1",[{"range":{"end":{"$num":"-0"},"start":10},"text":"src/a/b.ts"},{"range":{"end":9007199254740992,"start":-2.5},"text":"a😀b😀c"},{"range":{"end":{"$num":"-Infinity"},"start":3},"text":"İstanbul"}]],"ok":"helİstanbulhellokey_nsrc/a/b.tshellokey_namea😀b😀c"}
+{"fn":"applyTextEdits","args":["src/a/b.tsΣΊΣΥΦΟΣ",[{"range":{"end":100,"start":10},"text":"trailing."},{"range":{"end":1,"start":{"$num":"Infinity"}},"text":"hello"},{"range":{"end":9007199254740992,"start":-2.5},"text":"a:b:c"}]],"ok":"src/a/b.tstrailina:b:c"}
+{"fn":"applyTextEdits","args":["é",[{"range":{"end":100,"start":10},"text":"é"}]],"ok":"éé"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":3,"start":1},"text":"emoji 👍🏽 mix"},{"range":{"end":-2.5,"start":0},"text":"é日本語のテキスト"},{"range":{"end":-1,"start":42},"text":"hello world"}]],"ok":"é日本語のテキストdb"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":-1,"start":2},"text":"HELLO"}]],"ok":"  HELLO "}
 {"fn":"applyTextEdits","args":["ünïcödé",[]],"ok":"ünïcödé"}
-{"fn":"applyTextEdits","args":["İstanbul",[{},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["abc日本語のテキスト",[{},{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["日本語のテキストa.b.c",[{"a":"b"},{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straßestraße",[null]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["a",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a:b:c",[0,[],true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["line1\nline2HELLO",[]],"ok":"line1\nline2HELLO"}
-{"fn":"applyTextEdits","args":["abcé",[0,true,"x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straße",[null,{"a":{"b":"c"}},{}]],"error":"Cannot read properties of null (reading 'range')"}
-{"fn":"applyTextEdits","args":["a😀b😀csrc/a/b.ts",[]],"ok":"a😀b😀csrc/a/b.ts"}
-{"fn":"applyTextEdits","args":["Hello Worldhello world",["x",["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト{name} has {count} items",[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["src/a/b.ts",[[],{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["😀",[["a",1],null,0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["İstanbultrailing.",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a",[true,{"a":{"b":"c"}},null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["日本語のテキスト",[{}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["{name} has {count} items",[{"a":"b"},["a",1],null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a😀b😀cns:key.path",[{"a":{"b":"c"}},["a",1]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["hello﻿bom",[]],"ok":"hello﻿bom"}
-{"fn":"applyTextEdits","args":["abc",[{"a":{"b":"c"}},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["straßeünïcödé",[{"a":"b"},{},[]]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["trailing.😀",["x",null]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["./x/**/*.json",[{},true]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["ünïcödéhello world",[{},{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["a..b",[{"a":{"b":"c"}},0]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"applyTextEdits","args":["",["x"]],"error":"Cannot read properties of undefined (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":"b"},-1],"ok":false}
-{"fn":"rangeContains","args":[["a",1],2],"ok":false}
-{"fn":"rangeContains","args":[null,10],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{},1000000],"ok":false}
-{"fn":"rangeContains","args":[null,{"$num":"-Infinity"}],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":["x",9007199254740992],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[{},42],"ok":false}
-{"fn":"rangeContains","args":[[],-1],"ok":false}
-{"fn":"rangeContains","args":[["a",1],9007199254740992],"ok":false}
-{"fn":"rangeContains","args":[true,42],"ok":false}
-{"fn":"rangeContains","args":[true,-1],"ok":false}
-{"fn":"rangeContains","args":["x",0.5],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},0],"ok":false}
-{"fn":"rangeContains","args":[{},100],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},2],"ok":false}
-{"fn":"rangeContains","args":[[],2147483648],"ok":false}
-{"fn":"rangeContains","args":["x",1000000],"ok":false}
-{"fn":"rangeContains","args":[0,2147483648],"ok":false}
-{"fn":"rangeContains","args":["x",42],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},9007199254740992],"ok":false}
-{"fn":"rangeContains","args":[["a",1],{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[0,9007199254740992],"ok":false}
-{"fn":"rangeContains","args":[[],100],"ok":false}
-{"fn":"rangeContains","args":[0,0.5],"ok":false}
-{"fn":"rangeContains","args":[{},0],"ok":false}
-{"fn":"rangeContains","args":[true,2],"ok":false}
-{"fn":"rangeContains","args":[{},-2.5],"ok":false}
-{"fn":"rangeContains","args":[{},{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},10],"ok":false}
-{"fn":"rangeContains","args":[[],{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[0,10],"ok":false}
-{"fn":"rangeContains","args":[{},9007199254740992],"ok":false}
-{"fn":"rangeContains","args":[null,{"$num":"-0"}],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":"b"},100],"ok":false}
-{"fn":"rangeContains","args":["x",{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},100],"ok":false}
-{"fn":"rangeContains","args":["x",2147483648],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[null,-2.5],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},9007199254740992],"ok":false}
-{"fn":"rangeContains","args":["x",0],"ok":false}
-{"fn":"rangeContains","args":[null,3],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":["x",100],"ok":false}
-{"fn":"rangeContains","args":[{},2],"ok":false}
-{"fn":"rangeContains","args":[true,9007199254740992],"ok":false}
-{"fn":"rangeContains","args":[true,0.5],"ok":false}
-{"fn":"rangeContains","args":["x",3],"ok":false}
-{"fn":"rangeContains","args":[0,-2.5],"ok":false}
-{"fn":"rangeContains","args":[0,{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},1000000],"ok":false}
-{"fn":"rangeContains","args":[{},2147483648],"ok":false}
-{"fn":"rangeContains","args":[0,{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[true,2147483648],"ok":false}
-{"fn":"rangeContains","args":[{},0.5],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},3],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},1],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},-1],"ok":false}
-{"fn":"rangeContains","args":[["a",1],10],"ok":false}
-{"fn":"rangeContains","args":[true,1000],"ok":false}
-{"fn":"rangeContains","args":[["a",1],100],"ok":false}
+{"fn":"applyTextEdits","args":["a..b日本語のテキスト",{"a":"b"}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":[":",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":[".leading",[{"range":{"end":{"$num":"Infinity"},"start":{"$num":"Infinity"}},"text":".leading"}]],"ok":".leading.leading"}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":9007199254740992,"start":2147483648},"text":""},{"range":{"end":1,"start":0},"text":"trailing..leading"},{"range":{"end":1000,"start":1},"text":"é"}]],"ok":"trailing..leadingé"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":-2.5,"start":{"$num":"-Infinity"}},"text":"tab\tseparated"}]],"ok":"tab\tseparatedLO"}
+{"fn":"applyTextEdits","args":["﻿bom",[{"range":{"end":1000000,"start":-1},"text":"line1\nline2"}]],"ok":"﻿boline1\nline2"}
+{"fn":"applyTextEdits","args":["Hello World",[{"range":{"end":0.5,"start":0},"text":"a..bab"}]],"ok":"a..babHello World"}
+{"fn":"applyTextEdits","args":["日本語のテキスト",[{"range":{"end":3,"start":{"$num":"-Infinity"}},"text":":"},{"range":{"end":42,"start":1000000},"text":"abc"}]],"ok":":のテキストabc"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":1,"start":0.5},"text":"line1\nline2{name} has {count} items"},{"range":{"end":-2.5,"start":{"$num":"Infinity"}},"text":".leading"},{"range":{"end":{"$num":"-0"},"start":0.5},"text":"line1\nline2İstanbul"}]],"ok":"line1\nline2İstanbulline1\nline2{name} has {count} itemsello.leadinglo"}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[]],"ok":"./x/**/*.json"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":0,"start":{"$num":"-0"}},"text":"./x/**/*.json"},{"range":{"end":{"$num":"-Infinity"},"start":{"$num":"Infinity"}},"text":":"},{"range":{"end":42,"start":1000000},"text":"ab"}]],"ok":"./x/**/*.jsonab:abab"}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":{"$num":"-Infinity"},"start":10},"text":"ünïcödé"},{"range":{"end":-1,"start":-1},"text":"ünïcödé"},{"range":{"end":100,"start":42},"text":"  padded  "}]],"ok":"abc  paddeünïcödéabc  padded ünïcödé "}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":9007199254740992,"start":100},"text":"Hello World"},{"range":{"end":-2.5,"start":0.5},"text":"a:b:c"}]],"ok":"a:b:cld"}
+{"fn":"applyTextEdits","args":["straße:",[{"range":{"end":-1,"start":{"$num":"-0"}},"text":"ab"},{"range":{"end":0.5,"start":42},"text":"abc"}]],"ok":"ab:"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":0.5,"start":{"$num":"-0"}},"text":"abca:b:c"},{"range":{"end":42,"start":2147483648},"text":"trailing."}]],"ok":"abca:b:c  padded  trailing."}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":-1,"start":2147483648},"text":".leading"}]],"ok":"emoji 👍🏽 mix.leadingx"}
+{"fn":"applyTextEdits","args":["﻿bom",[{"range":{"end":{"$num":"-0"},"start":10},"text":"  padded  "},{"range":{"end":0,"start":3},"text":"Hello World"},{"range":{"end":10,"start":100},"text":"😀"}]],"ok":"﻿boHello World﻿bom😀  padded  ﻿bom😀"}
+{"fn":"applyTextEdits","args":["﻿bom",[{"range":{"end":{"$num":"-0"},"start":2147483648},"text":"key_name-1"},{"range":{"end":2,"start":3},"text":"tab\tseparatedİstanbul"}]],"ok":"﻿botab\tseparatedİstanbulomkey_name-1﻿bom"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mixstraße",[{"range":{"end":0.5,"start":-2.5},"text":":tab\tseparated"},{"range":{"end":1000,"start":100},"text":"日本語のテキスト"}]],"ok":"emoji 👍🏽 mixstraße日本語のテキ:tab\tseparatedemoji 👍🏽 mixstraße日本語のテキスト"}
+{"fn":"applyTextEdits","args":["tab\tseparated",[{"range":{"end":-2.5,"start":1},"text":"helloab"},{"range":{"end":9007199254740992,"start":1000000},"text":"tab\tseparated"}]],"ok":"thelloabed"}
+{"fn":"applyTextEdits","args":["key_name-1",[]],"ok":"key_name-1"}
+{"fn":"applyTextEdits","args":["é./x/**/*.json",[]],"ok":"é./x/**/*.json"}
+{"fn":"applyTextEdits","args":[".leading",[{"range":{"end":42,"start":{"$num":"-0"}},"text":"ünïcödé"},{"range":{"end":-2.5,"start":{"$num":"Infinity"}},"text":"hello world"}]],"ok":"ünïcödé"}
+{"fn":"applyTextEdits","args":[":HELLO",{}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":[".leading",[{"range":{"end":0,"start":{"$num":"Infinity"}},"text":"HELLO"}]],"ok":".leadingHELLO.leading"}
+{"fn":"applyTextEdits","args":["tab\tseparatedstraße",[{"range":{"end":1000000,"start":{"$num":"NaN"}},"text":"key_name-1"},{"range":{"end":2,"start":-1},"text":"ns:key.path"}]],"ok":"key_name-ns:key.pathy_name-1"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":{"$num":"-0"},"start":100},"text":"a..b"}]],"ok":"src/a/b.tsa..bsrc/a/b.ts"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":42,"start":9007199254740992},"text":"tab\tseparated"}]],"ok":"İstanbultab\tseparated"}
+{"fn":"applyTextEdits","args":["日本語のテキストhello",[{"range":{"end":3,"start":-1},"text":"line1\nline2"},{"range":{"end":{"$num":"-0"},"start":100},"text":".leading"},{"range":{"end":{"$num":"NaN"},"start":2147483648},"text":"😀{name} has {count} items"}]],"ok":"日本語のテキストhello😀{name} has {count} items日本語のテキストhello.leading日本語のテキストhello😀{name} has {count} items日本語のテキストhellline1\nline2のテキストhello😀{name} has {count} items日本語のテキストhello.leading日本語のテキストhello😀{name} has {count} items日本語のテキストhello"}
+{"fn":"applyTextEdits","args":["a..b",[{"range":{"end":42,"start":3},"text":"line1\nline2"},{"range":{"end":1000000,"start":2147483648},"text":"İstanbultrailing."},{"range":{"end":-1,"start":42},"text":"ns:key.patha"}]],"ok":"a..line1\nline2"}
+{"fn":"applyTextEdits","args":["Hello World",[{"range":{"end":1000000,"start":10},"text":"a..b"},{"range":{"end":1000,"start":100},"text":".leading"}]],"ok":"Hello Worla..b"}
+{"fn":"applyTextEdits","args":["{name} has {count} items",[{"range":{"end":{"$num":"Infinity"},"start":9007199254740992},"text":"İstanbul"}]],"ok":"{name} has {count} itemsİstanbul"}
+{"fn":"applyTextEdits","args":["ünïcödéé",[{"range":{"end":-2.5,"start":2},"text":"emoji 👍🏽 mix"},{"range":{"end":42,"start":1000},"text":".leading"},{"range":{"end":0.5,"start":1000},"text":"line1\nline2"}]],"ok":"ünemoji 👍🏽 mixng"}
+{"fn":"applyTextEdits","args":[".leadinga",[]],"ok":".leadinga"}
+{"fn":"applyTextEdits","args":["a😀b😀c",[{"range":{"end":-1,"start":1},"text":"line1\nline2"}]],"ok":"aline1\nline2c"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":2,"start":42},"text":"ns:key.path  padded  "},{"range":{"end":100,"start":-2.5},"text":"a.b.c"}]],"ok":"İstanbulns:key.path  padded  tanba.b.c"}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[]],"ok":"ΣΊΣΥΦΟΣ"}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":{"$num":"NaN"},"start":3},"text":"line1\nline2"},{"range":{"end":9007199254740992,"start":0.5},"text":"ns:key.path"},{"range":{"end":{"$num":"-Infinity"},"start":1000},"text":"tab\tseparated"}]],"ok":"ns:key.path"}
+{"fn":"applyTextEdits","args":["abhello",[{"range":{"end":1000,"start":2147483648},"text":"é"},{"range":{"end":0.5,"start":{"$num":"-0"}},"text":"hello world"}]],"ok":"hello worldabhelloé"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":1000,"start":{"$num":"Infinity"}},"text":"ΣΊΣΥΦΟΣ"}]],"ok":"emoji 👍🏽 mixΣΊΣΥΦΟΣ"}
+{"fn":"applyTextEdits","args":["Hello Worldab",[{"range":{"end":2147483648,"start":0},"text":"😀"},{"range":{"end":0,"start":-2.5},"text":"é"},{"range":{"end":1,"start":1000000},"text":"ab"}]],"ok":"é😀"}
+{"fn":"applyTextEdits","args":["é",[{"range":{"end":3,"start":100},"text":"./x/**/*.json"}]],"ok":"é./x/**/*.json"}
+{"fn":"applyTextEdits","args":["trailing.trailing.",[{"range":{"end":{"$num":"Infinity"},"start":1000},"text":"trailing.straße"}]],"ok":"trailing.trailing.trailing.straße"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":1000,"start":{"$num":"-0"}},"text":"tab\tseparated"},{"range":{"end":10,"start":2147483648},"text":"a😀"}]],"ok":"tab\tseparated"}
+{"fn":"applyTextEdits","args":["abc:",[]],"ok":"abc:"}
+{"fn":"applyTextEdits","args":["abc",[{"range":{"end":-2.5,"start":1000},"text":"line1\nline2"},{"range":{"end":1000000,"start":10},"text":"straße"},{"range":{"end":{"$num":"Infinity"},"start":-2.5},"text":"日本語のテキスト"}]],"ok":"abcline1\nlstra日本語のテキスト"}
+{"fn":"applyTextEdits","args":["😀",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["aba",[{"range":{"end":{"$num":"Infinity"},"start":1000},"text":"hello world"},{"range":{"end":-2.5,"start":2147483648},"text":"a:b:c"},{"range":{"end":-1,"start":1000000},"text":":"}]],"ok":"abaa:b:cba:ahello world"}
+{"fn":"applyTextEdits","args":["straße",[{"range":{"end":42,"start":10},"text":"tab\tseparated"},{"range":{"end":3,"start":10},"text":"  padded  "}]],"ok":"straßetab\t  padded  aßetab\tseparated"}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[{"range":{"end":2147483648,"start":10},"text":"./x/**/*.json"}]],"ok":"./x/**/*.j./x/**/*.json"}
+{"fn":"applyTextEdits","args":["a:b:ca..b",[{"range":{"end":{"$num":"Infinity"},"start":0.5},"text":"HELLO"},{"range":{"end":2,"start":{"$num":"NaN"}},"text":".leading"},{"range":{"end":1000,"start":10},"text":".leading"}]],"ok":".leadingLLO"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":1000000,"start":42},"text":"ab"}]],"ok":"helloab"}
+{"fn":"applyTextEdits","args":["straße",[]],"ok":"straße"}
+{"fn":"applyTextEdits","args":["ünïcödéns:key.path",[]],"ok":"ünïcödéns:key.path"}
+{"fn":"applyTextEdits","args":["trailing.",true],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["a.b.c",[{"range":{"end":10,"start":{"$num":"NaN"}},"text":"hello world"},{"range":{"end":0,"start":-2.5},"text":"a.b.c"},{"range":{"end":10,"start":1000000},"text":"src/a/b.ts"}]],"ok":"hello worldsrc/a/b.ta.b.chello worldsrc/a/b.tsd"}
+{"fn":"applyTextEdits","args":["Hello World",[{"range":{"end":-2.5,"start":{"$num":"NaN"}},"text":"abHello World"},{"range":{"end":0,"start":10},"text":"hello world"},{"range":{"end":{"$num":"-0"},"start":{"$num":"-0"}},"text":"hello"}]],"ok":"abHello Worldld"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":1,"start":-1},"text":"Hello World"}]],"ok":"src/a/b.tHello Worldrc/a/b.ts"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":1000000,"start":100},"text":"ünïcödé"}]],"ok":"helloünïcödé"}
+{"fn":"applyTextEdits","args":["a:b:c",[{"range":{"end":3,"start":2},"text":"hello:"}]],"ok":"a:hello::c"}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[{"range":{"end":100,"start":{"$num":"-Infinity"}},"text":"tab\tseparated"},{"range":{"end":{"$num":"-0"},"start":3},"text":"tab\tseparated"},{"range":{"end":10,"start":10},"text":"a"}]],"ok":"tab\tseparated"}
+{"fn":"applyTextEdits","args":["ns:key.path",[]],"ok":"ns:key.path"}
+{"fn":"applyTextEdits","args":["hello日本語のテキスト",[{"range":{"end":2,"start":1000},"text":".leadingtrailing."}]],"ok":"hello日本語のテキスト.leadingtrailing.llo日本語のテキスト"}
+{"fn":"applyTextEdits","args":[".leading",[{"range":{"end":0,"start":1000000},"text":"emoji 👍🏽 mix.leading"}]],"ok":".leadingemoji 👍🏽 mix.leading.leading"}
+{"fn":"applyTextEdits","args":["a",[{"range":{"end":-1,"start":1000},"text":":"}]],"ok":"a:a"}
+{"fn":"applyTextEdits","args":["hello worldé",[]],"ok":"hello worldé"}
+{"fn":"applyTextEdits","args":["  padded  İstanbul",[]],"ok":"  padded  İstanbul"}
+{"fn":"applyTextEdits","args":["😀a",[{"range":{"end":-2.5,"start":0.5},"text":"hello world"}]],"ok":{"$utf16":[104,101,108,108,111,32,119,111,114,108,100,56832,97]}}
+{"fn":"applyTextEdits","args":[":",[{"range":{"end":42,"start":9007199254740992},"text":"﻿bom"}]],"ok":":﻿bom"}
+{"fn":"applyTextEdits","args":["ab",null],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[]],"ok":"src/a/b.ts"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mix",[{"range":{"end":0.5,"start":{"$num":"NaN"}},"text":".leading"},{"range":{"end":1000,"start":42},"text":"ns:key.path"},{"range":{"end":42,"start":9007199254740992},"text":"a..b"}]],"ok":".leadingemoji 👍🏽 mixa..bns:key.path"}
+{"fn":"applyTextEdits","args":["line1\nline2:",[{"range":{"end":2147483648,"start":100},"text":"a.b.c"},{"range":{"end":0.5,"start":-1},"text":"emoji 👍🏽 mix"}]],"ok":"line1\nline2:a.b.emoji 👍🏽 mixline1\nline2:a.b.c"}
+{"fn":"applyTextEdits","args":["a..b",{}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":{"$num":"-0"},"start":1},"text":"a.b.ca:b:c"},{"range":{"end":{"$num":"NaN"},"start":42},"text":"é"},{"range":{"end":100,"start":-2.5},"text":"Hello Worldsrc/a/b.ts"}]],"ok":"ea.b.ca:b:cHello Worldsrc/a/b.ts"}
+{"fn":"applyTextEdits","args":["﻿bom",[{"range":{"end":9007199254740992,"start":-2.5},"text":"  padded  "}]],"ok":"﻿b  padded  "}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":3,"start":100},"text":"ab"},{"range":{"end":10,"start":{"$num":"NaN"}},"text":"ab"},{"range":{"end":1000000,"start":2147483648},"text":"a:b:c"}]],"ok":"aba:b:cab:b:c"}
+{"fn":"applyTextEdits","args":["tab\tseparated",{"a":{"b":"c"}}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["Hello World",{"a":"b"}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":[":",[{"range":{"end":1,"start":0.5},"text":"﻿bomHELLO"},{"range":{"end":2147483648,"start":0},"text":"hello world"},{"range":{"end":-1,"start":{"$num":"-0"}},"text":"src/a/b.ts"}]],"ok":"src/a/b.tsd"}
+{"fn":"applyTextEdits","args":["😀",[]],"ok":"😀"}
+{"fn":"applyTextEdits","args":[":﻿bom",[{"range":{"end":10,"start":{"$num":"-Infinity"}},"text":"abc"}]],"ok":"abc"}
+{"fn":"applyTextEdits","args":["a.b.cHELLO",[]],"ok":"a.b.cHELLO"}
+{"fn":"applyTextEdits","args":["hello",{}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":10,"start":-2.5},"text":"emoji 👍🏽 mix"},{"range":{"end":9007199254740992,"start":2147483648},"text":"tab\tseparated"},{"range":{"end":{"$num":"-Infinity"},"start":0.5},"text":"straße"}]],"ok":"straße😀tab\tseparatemoji 👍🏽 mixb\tseparated"}
+{"fn":"applyTextEdits","args":["",[{"range":{"end":0.5,"start":{"$num":"-0"}},"text":"key_name-1"},{"range":{"end":42,"start":{"$num":"-Infinity"}},"text":"a😀b😀c"}]],"ok":"a😀b😀c"}
+{"fn":"applyTextEdits","args":["key_name-1",[{"range":{"end":-1,"start":{"$num":"-Infinity"}},"text":"src/a/b.tstrailing."}]],"ok":"src/a/b.tstrailing.1"}
+{"fn":"applyTextEdits","args":["key_name-1",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["straße",[{"range":{"end":{"$num":"-Infinity"},"start":10},"text":"./x/**/*.json"}]],"ok":"straße./x/**/*.jsonstraße"}
+{"fn":"applyTextEdits","args":["a",[{"range":{"end":3,"start":{"$num":"Infinity"}},"text":"tab\tseparated"},{"range":{"end":10,"start":42},"text":":tab\tseparated"},{"range":{"end":2,"start":9007199254740992},"text":"HELLO"}]],"ok":"atab\tseparatedHELLOab\tseparated:tab\tseparatedatedHELLOab\tseparated"}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":{"$num":"-Infinity"},"start":{"$num":"Infinity"}},"text":":"},{"range":{"end":42,"start":0},"text":"emoji 👍🏽 mix"}]],"ok":"emoji 👍🏽 mix"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":1000000,"start":{"$num":"NaN"}},"text":":日本語のテキスト"},{"range":{"end":42,"start":0},"text":"line1\nline2"},{"range":{"end":-1,"start":2},"text":"日本語のテキストünïcödé"}]],"ok":"line1\nline2"}
+{"fn":"applyTextEdits","args":["  padded  ",[{"range":{"end":10,"start":3},"text":"straße"},{"range":{"end":1000000,"start":{"$num":"-0"}},"text":"a:b:c"}]],"ok":"a:b:c"}
+{"fn":"applyTextEdits","args":["é",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["  padded  é",[{"range":{"end":-2.5,"start":9007199254740992},"text":":"},{"range":{"end":{"$num":"Infinity"},"start":1000000},"text":"./x/**/*.json"},{"range":{"end":{"$num":"-0"},"start":1000},"text":"HELLO"}]],"ok":"  padded  é:é./x/**/*.jsonHELLO  padded  é:é./x/**/*.json"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":9007199254740992,"start":100},"text":"HELLOline1\nline2"},{"range":{"end":10,"start":1000},"text":"{name} has {count} items"},{"range":{"end":3,"start":100},"text":"hello"}]],"ok":"hello{name} has {count} itemsHELLOline1\nline2hellolo{name} has {count} itemsHELLOline1\nline2"}
+{"fn":"applyTextEdits","args":[".leading",[{"range":{"end":3,"start":-2.5},"text":"line1\nline2a..b"},{"range":{"end":42,"start":3},"text":"﻿bom"},{"range":{"end":{"$num":"NaN"},"start":42},"text":"﻿bom"}]],"ok":".le﻿bline1\nline2a..b﻿bom"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":{"$num":"-Infinity"},"start":1000},"text":"abc"},{"range":{"end":{"$num":"-Infinity"},"start":100},"text":"emoji 👍🏽 mix"},{"range":{"end":0.5,"start":0.5},"text":"﻿bom日本語のテキスト"}]],"ok":"﻿bom日本語のテキスト😀abc😀emoji 👍🏽 mix😀abc😀"}
+{"fn":"applyTextEdits","args":[".leadingstraße",[{"range":{"end":-1,"start":{"$num":"-Infinity"}},"text":"a:b:c"}]],"ok":"a:b:ce"}
+{"fn":"applyTextEdits","args":["ΣΊΣΥΦΟΣ",[{"range":{"end":42,"start":9007199254740992},"text":"  padded  "},{"range":{"end":2147483648,"start":{"$num":"NaN"}},"text":":"},{"range":{"end":-2.5,"start":3},"text":"hello"}]],"ok":":  hello  "}
+{"fn":"applyTextEdits","args":["a:b:ca😀b😀c",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["HELLO",[{"range":{"end":1,"start":0.5},"text":"a.b.c"},{"range":{"end":{"$num":"NaN"},"start":1000},"text":".leading"}]],"ok":"a.b.cELLO.leadingHELLO"}
+{"fn":"applyTextEdits","args":["hello world",["a",1]],"error":"Cannot read properties of undefined (reading 'start')"}
+{"fn":"applyTextEdits","args":["src/a/b.ts  padded  ",[{"range":{"end":{"$num":"NaN"},"start":-2.5},"text":"src/a/b.ts"}]],"ok":"src/a/b.ts  paddedsrc/a/b.tssrc/a/b.ts  padded  "}
+{"fn":"applyTextEdits","args":["hello world",[{"range":{"end":-1,"start":42},"text":"ab"},{"range":{"end":3,"start":1},"text":"abc"}]],"ok":"habclo worldabd"}
+{"fn":"applyTextEdits","args":["a:b:c",[{"range":{"end":0,"start":{"$num":"Infinity"}},"text":":"},{"range":{"end":{"$num":"Infinity"},"start":100},"text":"a:b:cab"},{"range":{"end":1,"start":0},"text":"./x/**/*.json"}]],"ok":"./x/**/*.json:b:c:a:b:ca:b:cab"}
+{"fn":"applyTextEdits","args":["ünïcödéa😀b😀c",[{"range":{"end":100,"start":1000},"text":"😀"}]],"ok":"ünïcödéa😀b😀c😀"}
+{"fn":"applyTextEdits","args":["ns:key.path",[{"range":{"end":{"$num":"-0"},"start":{"$num":"-0"}},"text":"line1\nline2"},{"range":{"end":10,"start":1},"text":"tab\tseparated"}]],"ok":"line1\nline2ntab\tseparatedh"}
+{"fn":"applyTextEdits","args":["a..ba.b.c",[{"range":{"end":9007199254740992,"start":0.5},"text":"a.b.c"}]],"ok":"a.b.c"}
+{"fn":"applyTextEdits","args":["﻿bomabc",[{"range":{"end":2147483648,"start":{"$num":"Infinity"}},"text":"hello world"}]],"ok":"﻿bomabchello world"}
+{"fn":"applyTextEdits","args":["﻿bom",[{"range":{"end":{"$num":"Infinity"},"start":-2.5},"text":"src/a/b.ts"},{"range":{"end":2147483648,"start":3},"text":"ünïcödé"},{"range":{"end":100,"start":-2.5},"text":"src/a/b.ts"}]],"ok":"﻿boünïcösrc/a/b.src/a/b.ts"}
+{"fn":"applyTextEdits","args":["hello",[{"range":{"end":{"$num":"-0"},"start":{"$num":"Infinity"}},"text":"akey_name-1"},{"range":{"end":0,"start":2147483648},"text":"a:b:c"},{"range":{"end":0,"start":9007199254740992},"text":"é"}]],"ok":"helloakey_name-1helloéhelloakey_name-1helloa:b:chelloakey_name-1helloéhelloakey_name-1hello"}
+{"fn":"applyTextEdits","args":["hello worlda:b:c",[]],"ok":"hello worlda:b:c"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":10,"start":1000},"text":"﻿bom"},{"range":{"end":0.5,"start":100},"text":"ünïcödé"},{"range":{"end":-2.5,"start":0.5},"text":"﻿bom"}]],"ok":"﻿bomom"}
+{"fn":"applyTextEdits","args":["a",[{"range":{"end":{"$num":"-Infinity"},"start":1},"text":"key_name-1İstanbul"}]],"ok":"akey_name-1İstanbula"}
+{"fn":"applyTextEdits","args":["key_name-1",[{"range":{"end":-2.5,"start":42},"text":"key_name-1"},{"range":{"end":{"$num":"-Infinity"},"start":3},"text":":"}]],"ok":"key:key_name-1key_name-1-1"}
+{"fn":"applyTextEdits","args":["src/a/b.ts",[{"range":{"end":1000000,"start":1000},"text":"a.b.c"},{"range":{"end":9007199254740992,"start":1000000},"text":"ünïcödé"}]],"ok":"src/a/b.tsünïcödéa.b.c"}
+{"fn":"applyTextEdits","args":["a..bİstanbul",[{"range":{"end":2147483648,"start":10},"text":"é"}]],"ok":"a..bİstanbé"}
+{"fn":"applyTextEdits","args":["ünïcödé",{"a":{"b":"c"}}],"error":"edits is not iterable"}
+{"fn":"applyTextEdits","args":["é",[{"range":{"end":100,"start":3},"text":"日本語のテキスト"},{"range":{"end":-1,"start":3},"text":"./x/**/*.json"}]],"ok":"é日./x/**/*.jsonト"}
+{"fn":"applyTextEdits","args":["a..b",[{"range":{"end":100,"start":{"$num":"-0"}},"text":"a..b"},{"range":{"end":3,"start":1},"text":"a"},{"range":{"end":2147483648,"start":{"$num":"Infinity"}},"text":"a😀b😀c"}]],"ok":"a..b"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":-1,"start":{"$num":"Infinity"}},"text":"emoji 👍🏽 mix"}]],"ok":"abemoji 👍🏽 mixb"}
+{"fn":"applyTextEdits","args":["emoji 👍🏽 mixtab\tseparated",[{"range":{"end":{"$num":"Infinity"},"start":2147483648},"text":"helloHELLO"}]],"ok":"emoji 👍🏽 mixtab\tseparatedhelloHELLO"}
+{"fn":"applyTextEdits","args":["HELLOHELLO",[]],"ok":"HELLOHELLO"}
+{"fn":"applyTextEdits","args":["﻿bomİstanbul",[{"range":{"end":-2.5,"start":1000000},"text":"Hello World"},{"range":{"end":{"$num":"NaN"},"start":1000000},"text":"tab\tseparatedabc"},{"range":{"end":9007199254740992,"start":100},"text":"trailing."}]],"ok":"﻿bomİstanbulHello Worldultab\tseparatedabc﻿bomİstanbulHello Worldultrailing."}
+{"fn":"applyTextEdits","args":["./x/**/*.json",[{"range":{"end":0.5,"start":1000000},"text":"ns:key.path"},{"range":{"end":9007199254740992,"start":0.5},"text":"a:b:c"}]],"ok":"a:b:c"}
+{"fn":"applyTextEdits","args":["a:b:c./x/**/*.json",[{"range":{"end":1000,"start":2},"text":"Hello World"},{"range":{"end":{"$num":"Infinity"},"start":0},"text":"a.b.c"},{"range":{"end":0.5,"start":{"$num":"NaN"}},"text":"abc"}]],"ok":"abca.b.c"}
+{"fn":"applyTextEdits","args":["İstanbul",[{"range":{"end":1,"start":{"$num":"NaN"}},"text":".leadingstraße"},{"range":{"end":2147483648,"start":3},"text":"﻿bom"},{"range":{"end":-1,"start":1000000},"text":"a"}]],"ok":".leadingstraßest﻿bom"}
+{"fn":"applyTextEdits","args":["a..b",[{"range":{"end":-2.5,"start":0.5},"text":"src/a/b.tsΣΊΣΥΦΟΣ"}]],"ok":"src/a/b.tsΣΊΣΥΦΟΣ.b"}
+{"fn":"applyTextEdits","args":["ab",[{"range":{"end":{"$num":"-0"},"start":2147483648},"text":"ünïcödé"}]],"ok":"abünïcödéab"}
+{"fn":"applyTextEdits","args":["{name} has {count} items",[{"range":{"end":2,"start":9007199254740992},"text":"﻿bom"},{"range":{"end":0,"start":1},"text":"ünïcödé"}]],"ok":"{ünïcödé{name} has {count} items﻿bomame} has {count} items"}
+{"fn":"applyTextEdits","args":["日本語のテキスト日本語のテキスト",[{"range":{"end":1,"start":{"$num":"-0"}},"text":"abc"}]],"ok":"abc本語のテキスト日本語のテキスト"}
+{"fn":"applyTextEdits","args":["😀",[{"range":{"end":1000000,"start":{"$num":"-0"}},"text":"ünïcödéa.b.c"},{"range":{"end":42,"start":-2.5},"text":"﻿bom"},{"range":{"end":-2.5,"start":2},"text":".leading"}]],"ok":"ünïcödéa.b﻿bom"}
+{"fn":"applyTextEdits","args":["a😀b😀c",[{"range":{"end":1,"start":3},"text":"straße"},{"range":{"end":{"$num":"Infinity"},"start":42},"text":"HELLO"},{"range":{"end":1000,"start":{"$num":"NaN"}},"text":"a"}]],"ok":"astraße"}
+{"fn":"rangeContains","args":[{"end":42,"start":-1},2],"ok":true}
+{"fn":"rangeContains","args":[{"end":10,"start":10},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":{"$num":"-Infinity"}},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":{"$num":"-0"}},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":-1},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":42},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":0.5},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":-2.5,"start":100},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2147483648},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2147483648},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":9007199254740992},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":9007199254740992},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":0.5},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2},42],"ok":true}
+{"fn":"rangeContains","args":[{"end":10,"start":-2.5},{"$num":"-0"}],"ok":true}
+{"fn":"rangeContains","args":[{"end":0.5,"start":9007199254740992},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":{"$num":"-Infinity"}},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":-1},2],"ok":true}
+{"fn":"rangeContains","args":[{"end":100,"start":9007199254740992},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":100},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":100},2147483648],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":10},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":-2.5},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":{"$num":"NaN"}},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":0},3],"ok":true}
 {"fn":"rangeContains","args":[[],2],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},1000],"ok":false}
-{"fn":"rangeContains","args":[true,{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[["a",1],{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[[],3],"ok":false}
-{"fn":"rangeContains","args":[["a",1],42],"ok":false}
-{"fn":"rangeContains","args":[0,{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[true,1000000],"ok":false}
-{"fn":"rangeContains","args":[[],{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[null,-1],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[[],1000],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},42],"ok":false}
-{"fn":"rangeContains","args":[0,{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[0,2],"ok":false}
-{"fn":"rangeContains","args":["x",{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":["x",2],"ok":false}
-{"fn":"rangeContains","args":[null,1000],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[["a",1],-1],"ok":false}
-{"fn":"rangeContains","args":[null,0.5],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},1],"ok":false}
-{"fn":"rangeContains","args":[true,{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[[],-2.5],"ok":false}
-{"fn":"rangeContains","args":[["a",1],0.5],"ok":false}
-{"fn":"rangeContains","args":[["a",1],3],"ok":false}
-{"fn":"rangeContains","args":["x",10],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},10],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},0.5],"ok":false}
-{"fn":"rangeContains","args":[[],{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[[],0.5],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"-0"}},1],"ok":true}
+{"fn":"rangeContains","args":[true,0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":3},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":{"$num":"NaN"}},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":1000000},9007199254740992],"ok":false}
 {"fn":"rangeContains","args":[0,1000000],"ok":false}
-{"fn":"rangeContains","args":[{},-1],"ok":false}
-{"fn":"rangeContains","args":["x",-1],"ok":false}
-{"fn":"rangeContains","args":["x",{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[null,9007199254740992],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{},{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[0,42],"ok":false}
-{"fn":"rangeContains","args":[0,100],"ok":false}
-{"fn":"rangeContains","args":[{},3],"ok":false}
-{"fn":"rangeContains","args":[true,0],"ok":false}
-{"fn":"rangeContains","args":[{},10],"ok":false}
-{"fn":"rangeContains","args":[true,10],"ok":false}
-{"fn":"rangeContains","args":[["a",1],2147483648],"ok":false}
-{"fn":"rangeContains","args":[{},1],"ok":false}
-{"fn":"rangeContains","args":[[],10],"ok":false}
-{"fn":"rangeContains","args":[true,100],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},2147483648],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},-2.5],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},0.5],"ok":false}
-{"fn":"rangeContains","args":[null,2],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":"b"},{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[0,1000],"ok":false}
-{"fn":"rangeContains","args":[[],42],"ok":false}
-{"fn":"rangeContains","args":[["a",1],1000000],"ok":false}
-{"fn":"rangeContains","args":[["a",1],-2.5],"ok":false}
-{"fn":"rangeContains","args":[["a",1],{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},3],"ok":false}
-{"fn":"rangeContains","args":[0,-1],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},1000],"ok":false}
-{"fn":"rangeContains","args":[[],1000000],"ok":false}
-{"fn":"rangeContains","args":[[],1],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},2147483648],"ok":false}
-{"fn":"rangeContains","args":[null,{"$num":"Infinity"}],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[true,{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[null,100],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":"b"},1000000],"ok":false}
-{"fn":"rangeContains","args":[["a",1],{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[0,1],"ok":false}
-{"fn":"rangeContains","args":[[],{"$num":"-0"}],"ok":false}
-{"fn":"rangeContains","args":[["a",1],0],"ok":false}
-{"fn":"rangeContains","args":[true,3],"ok":false}
-{"fn":"rangeContains","args":[null,42],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[[],9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":{"$num":"-0"}},10],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":1000000},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":{"$num":"-0"}},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":{"$num":"NaN"}},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":0.5},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":42},1],"ok":false}
+{"fn":"rangeContains","args":[{"a":{"b":"c"}},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":100},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":2},1000],"ok":true}
+{"fn":"rangeContains","args":[{"end":42,"start":{"$num":"-0"}},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":3},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":0},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":100},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":{"$num":"-0"}},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":10},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":1000000},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":-1},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":1000},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":2},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":42},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":3},9007199254740992],"ok":true}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":9007199254740992},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":-2.5},42],"ok":true}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":{"$num":"-Infinity"}},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":{"$num":"Infinity"}},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":9007199254740992},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":{"$num":"-0"}},2],"ok":true}
+{"fn":"rangeContains","args":[{"end":42,"start":1000},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":0.5},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":1},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":{"$num":"-Infinity"}},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":{"$num":"-0"}},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":0.5},3],"ok":false}
+{"fn":"rangeContains","args":["x",2],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":1000000},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":42},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"-Infinity"}},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":-2.5},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":42},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":100},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":{"$num":"-0"}},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":3},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":1000000},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":-2.5},2],"ok":false}
+{"fn":"rangeContains","args":[0,{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":0.5},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":0.5},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":2147483648},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":{"$num":"NaN"}},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":1000},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":42},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":3},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":10},10],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":3},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":{"$num":"-Infinity"}},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":-2.5},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":9007199254740992},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":1},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":10},1000],"ok":true}
+{"fn":"rangeContains","args":[{"end":1000,"start":{"$num":"-0"}},100],"ok":true}
+{"fn":"rangeContains","args":[[],{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":0.5},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":-2.5},100],"ok":true}
+{"fn":"rangeContains","args":[{"end":100,"start":3},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":-1},10],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":-2.5},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":{"$num":"Infinity"}},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":-1},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":{"$num":"-0"}},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":0},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":1000},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":2},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"a":{"b":"c"}},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":{"$num":"Infinity"}},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":3},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":10},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":2},2],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":42},9007199254740992],"ok":true}
+{"fn":"rangeContains","args":[{"end":3,"start":2147483648},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":-2.5},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":100},2],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":{"$num":"-0"}},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":["x",1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":2147483648},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":10},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":1},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":-1},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":{"$num":"-Infinity"}},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":{"$num":"Infinity"}},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":-2.5,"start":3},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},1],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":9007199254740992},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":-1},0],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":{"$num":"-0"}},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":{"$num":"NaN"}},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[["a",1],2],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":-2.5},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":3},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{},100],"ok":false}
 {"fn":"rangeContains","args":[true,{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[["a",1],1000],"ok":false}
-{"fn":"rangeContains","args":[null,1],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[true,-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":1000000},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"-Infinity"}},1],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":0},42],"ok":true}
+{"fn":"rangeContains","args":[{"end":-2.5,"start":9007199254740992},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":-1,"start":1000000},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":9007199254740992},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":10},100],"ok":true}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":100},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":100},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":9007199254740992},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":{"$num":"NaN"}},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":{"$num":"NaN"}},-2.5],"ok":false}
+{"fn":"rangeContains","args":[0,42],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":{"$num":"-0"}},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":{"$num":"Infinity"}},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":1000000},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"a":{"b":"c"}},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":2147483648},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":-1},{"$num":"-0"}],"ok":true}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":1},100],"ok":true}
+{"fn":"rangeContains","args":[{"end":1000000,"start":42},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":2},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"Infinity"}},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":1},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":0},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":42},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":3},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":0},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":2147483648},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":3},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":1000},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":2147483648},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":1000000},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":100},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":{"$num":"-0"}},1000],"ok":true}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":1000},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":1000},1],"ok":false}
+{"fn":"rangeContains","args":[null,3],"error":"Cannot read properties of null (reading 'start')"}
+{"fn":"rangeContains","args":[{"end":3,"start":2147483648},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":{"$num":"-0"}},3],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":1000},-1],"ok":false}
 {"fn":"rangeContains","args":[{},{"$num":"-Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},2],"ok":false}
-{"fn":"rangeContains","args":[null,1000000],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[null,{"$num":"NaN"}],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},-2.5],"ok":false}
-{"fn":"rangeContains","args":[true,1],"ok":false}
-{"fn":"rangeContains","args":[{},1000],"ok":false}
-{"fn":"rangeContains","args":[["a",1],1],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":-2.5,"start":9007199254740992},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":42},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":42},100],"ok":true}
+{"fn":"rangeContains","args":[true,{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":-2.5,"start":1},10],"ok":false}
+{"fn":"rangeContains","args":[["a",1],9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[true,0],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":2147483648},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":["x",42],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"-Infinity"}},{"$num":"-0"}],"ok":true}
+{"fn":"rangeContains","args":[{"end":1,"start":{"$num":"-0"}},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"NaN"}},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":100},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":100},2147483648],"ok":false}
+{"fn":"rangeContains","args":[["a",1],10],"ok":false}
+{"fn":"rangeContains","args":[["a",1],-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":100},1000000],"ok":false}
+{"fn":"rangeContains","args":[null,-1],"error":"Cannot read properties of null (reading 'start')"}
+{"fn":"rangeContains","args":[{"end":100,"start":42},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":1000},1],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":2147483648},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":42},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":1000000},3],"ok":false}
+{"fn":"rangeContains","args":[0,{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":0},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[[],100],"ok":false}
+{"fn":"rangeContains","args":[{"a":{"b":"c"}},100],"ok":false}
+{"fn":"rangeContains","args":[0,1],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":{"$num":"NaN"}},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":-2.5},1],"ok":true}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":0},2],"ok":true}
+{"fn":"rangeContains","args":[{"end":0.5,"start":1},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":{"$num":"-Infinity"}},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":0.5},42],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":1000},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":-2.5},1000000],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":{"$num":"NaN"}},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":3},42],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":2147483648},10],"ok":false}
+{"fn":"rangeContains","args":[{},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":1000000},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":-1},1],"ok":true}
+{"fn":"rangeContains","args":[{"end":1,"start":42},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":-2.5},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":0.5},1],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":9007199254740992},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2147483648},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":42},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":{"$num":"-0"}},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":10},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":10},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":10},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":0,"start":2},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":{"$num":"NaN"}},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":9007199254740992},10],"ok":false}
+{"fn":"rangeContains","args":[null,1000],"error":"Cannot read properties of null (reading 'start')"}
+{"fn":"rangeContains","args":[{"end":-1,"start":{"$num":"-Infinity"}},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":-1},9007199254740992],"ok":true}
+{"fn":"rangeContains","args":[{"end":1000000,"start":2147483648},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":{"$num":"NaN"}},0],"ok":false}
+{"fn":"rangeContains","args":[{},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":10},10],"ok":true}
+{"fn":"rangeContains","args":[{"end":10,"start":{"$num":"NaN"}},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":0.5},3],"ok":true}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":3},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":1000000},1],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":-2.5},0.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":0},-1],"ok":false}
 {"fn":"rangeContains","args":["x",1],"ok":false}
-{"fn":"rangeContains","args":[0,0],"ok":false}
-{"fn":"rangeContains","args":[{"a":{"b":"c"}},{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":[{},{"$num":"Infinity"}],"ok":false}
-{"fn":"rangeContains","args":["x",{"$num":"NaN"}],"ok":false}
-{"fn":"rangeContains","args":[null,0],"error":"Cannot read properties of null (reading 'start')"}
-{"fn":"rangeContains","args":["x",-2.5],"ok":false}
-{"fn":"rangeContains","args":[[],0],"ok":false}
-{"fn":"rangeContains","args":[{"a":"b"},0],"ok":false}
-{"fn":"rangeContains","args":[0,3],"ok":false}
-{"fn":"rangeContains","args":["x",1000],"ok":false}
-{"fn":"rangeContains","args":[null,2147483648],"error":"Cannot read properties of null (reading 'start')"}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":10},-1],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":{"$num":"NaN"}},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":0.5,"start":42},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":{"$num":"Infinity"}},0.5],"ok":false}
+{"fn":"rangeContains","args":[true,-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-Infinity"},"start":9007199254740992},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":0},1],"ok":true}
+{"fn":"rangeContains","args":[{"end":10,"start":-1},10],"ok":true}
+{"fn":"rangeContains","args":[{"end":42,"start":1000},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":100},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":2147483648},1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":{"$num":"-Infinity"}},-1],"ok":true}
+{"fn":"rangeContains","args":[{"end":9007199254740992,"start":3},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":3},3],"ok":true}
+{"fn":"rangeContains","args":[{"end":-2.5,"start":{"$num":"Infinity"}},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{},2],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":100},10],"ok":false}
+{"fn":"rangeContains","args":[null,{"$num":"Infinity"}],"error":"Cannot read properties of null (reading 'start')"}
+{"fn":"rangeContains","args":[true,100],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":{"$num":"-0"}},1],"ok":true}
+{"fn":"rangeContains","args":[{"end":3,"start":3},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"a":"b"},9007199254740992],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":{"$num":"-Infinity"}},100],"ok":false}
+{"fn":"rangeContains","args":[["a",1],1000],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":10},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000,"start":{"$num":"-0"}},{"$num":"Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"-0"},"start":3},0],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":0},-1],"ok":false}
+{"fn":"rangeContains","args":[{"a":{"b":"c"}},{"$num":"-0"}],"ok":false}
+{"fn":"rangeContains","args":["x",{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1,"start":-2.5},1000000],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":1000000},42],"ok":false}
+{"fn":"rangeContains","args":[{"end":2,"start":{"$num":"NaN"}},-2.5],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":{"$num":"Infinity"}},42],"ok":false}
+{"fn":"rangeContains","args":[["a",1],3],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":1000},3],"ok":false}
+{"fn":"rangeContains","args":[{"end":42,"start":{"$num":"-0"}},42],"ok":true}
+{"fn":"rangeContains","args":[{"a":{"b":"c"}},2147483648],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"Infinity"},"start":1000},9007199254740992],"ok":true}
+{"fn":"rangeContains","args":[{"end":1000000,"start":{"$num":"-0"}},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":10,"start":1000},{"$num":"-Infinity"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":-1},10],"ok":false}
+{"fn":"rangeContains","args":[{"end":100,"start":1000000},1],"ok":false}
+{"fn":"rangeContains","args":[{"end":{"$num":"NaN"},"start":-2.5},100],"ok":false}
+{"fn":"rangeContains","args":[{"end":2147483648,"start":2},{"$num":"NaN"}],"ok":false}
+{"fn":"rangeContains","args":[{"end":1000000,"start":-2.5},0.5],"ok":true}
+{"fn":"rangeContains","args":[{"end":1000,"start":{"$num":"NaN"}},1],"ok":false}
+{"fn":"rangeContains","args":[{"end":3,"start":0.5},42],"ok":false}
 {"fn":"hashText","args":["abc"],"ok":"11f9f91ac18c8d"}
 {"fn":"hashText","args":["hello world"],"ok":"b9417d15d1014"}
 {"fn":"hashText","args":["ünïcödé"],"ok":"c4a67588f26ce"}

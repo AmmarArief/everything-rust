@@ -5,13 +5,13 @@
 //! `#[wasm_bindgen]` wrappers, `src/port.rs` holds the port in plain Rust with
 //! `#![forbid(unsafe_code)]`, so it can be tested without a JS runtime.
 
-use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::analyze::{self, Bridge, Status};
+use crate::codegen;
 use crate::risks::Risk;
 use crate::ts::exports::{ExportedFn, LocalType, exported_functions, local_types};
 
@@ -359,7 +359,7 @@ pub fn snake_case(name: &str) -> String {
 }
 
 /// Types declared in `file` and in the files it imports relatively (one level deep).
-fn types_in_scope(root: &Path, file: &str, text: &str) -> Vec<LocalType> {
+pub fn types_in_scope(root: &Path, file: &str, text: &str) -> Vec<LocalType> {
     let mut types = Vec::new();
     let mut seen = std::collections::HashSet::new();
     collect_types(root, file, text, 0, &mut seen, &mut types);
@@ -463,6 +463,72 @@ pub fn resolve_aliases(ts: &str, types: &[LocalType]) -> String {
         }
     }
     out
+}
+
+fn needs_js(fns: &[codegen::PortFn]) -> bool {
+    fns.iter().any(|f| {
+        codegen::wire(&f.ret) == codegen::Wire::Json
+            || f.params
+                .iter()
+                .any(|(_, t)| codegen::wire(t) == codegen::Wire::Json)
+    })
+}
+
+/// Formats the generated Rust, best effort: the gate checks formatting.
+fn format_rust(crate_dir: &Path) {
+    let files: Vec<PathBuf> = std::fs::read_dir(crate_dir.join("src"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "rs"))
+        .collect();
+    let _ = std::process::Command::new("rustfmt")
+        .args(["--edition", "2024"])
+        .args(&files)
+        .output();
+}
+
+/// What `refresh` rewrote.
+#[derive(Debug, Serialize)]
+pub struct Refreshed {
+    pub functions: Vec<String>,
+    pub files: Vec<String>,
+}
+
+/// Regenerates the binding layer (`lib.rs`, `index.cjs`, `js.rs`) from the signatures in
+/// `port.rs`, and adds the dependencies they need to Cargo.toml. Never touches `port.rs`.
+pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
+    let manifest = Manifest::load(crate_dir)?;
+    let port =
+        std::fs::read_to_string(crate_dir.join("src/port.rs")).context("reading src/port.rs")?;
+    let fns = codegen::parse_port(&port);
+    if fns.is_empty() {
+        bail!("src/port.rs has no `pub fn`: nothing to bind");
+    }
+    let modules = codegen::Modules {
+        utf16: crate_dir.join("src/utf16.rs").exists(),
+        js: needs_js(&fns) || crate_dir.join("src/js.rs").exists(),
+    };
+    let mut files = vec![
+        ("src/lib.rs", codegen::lib_rs(&manifest, &fns, &modules)),
+        ("index.cjs", codegen::index_cjs(&manifest, &fns)),
+    ];
+    if modules.js {
+        files.push(("src/js.rs", codegen::JS_RS.to_string()));
+    }
+    let cargo_path = crate_dir.join("Cargo.toml");
+    let cargo = std::fs::read_to_string(&cargo_path).context("reading Cargo.toml")?;
+    let cargo = codegen::ensure_deps(&cargo, manifest.kind, &fns).map_err(anyhow::Error::msg)?;
+    files.push(("Cargo.toml", cargo));
+    for (path, text) in &files {
+        std::fs::write(crate_dir.join(path), text).with_context(|| format!("writing {path}"))?;
+    }
+    format_rust(crate_dir);
+    Ok(Refreshed {
+        functions: fns.iter().map(|f| f.js_name.clone()).collect(),
+        files: files.iter().map(|(p, _)| (*p).to_string()).collect(),
+    })
 }
 
 pub fn bridge(opts: &Options) -> Result<Outcome> {
@@ -588,16 +654,20 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         exports: exports.clone(),
         js_only: js_only.clone(),
     };
-    let json = exports.iter().any(|f| {
-        f.params.iter().any(|p| param_type(p).contains_json())
-            || RType::from_ts(&f.returns).contains_json()
-    });
-
+    let port = codegen::port_rs(&manifest);
+    let fns = codegen::parse_port(&port);
+    let modules = codegen::Modules {
+        utf16,
+        js: needs_js(&fns),
+    };
     let mut files: Vec<(String, String)> = vec![
-        ("Cargo.toml".into(), cargo_toml(&manifest, json)),
-        ("src/lib.rs".into(), lib_rs(&manifest, utf16)),
-        ("src/port.rs".into(), port_rs(&manifest)),
-        ("index.cjs".into(), index_cjs(&manifest)),
+        ("Cargo.toml".into(), codegen::cargo_toml(&manifest, &fns)),
+        (
+            "src/lib.rs".into(),
+            codegen::lib_rs(&manifest, &fns, &modules),
+        ),
+        ("src/port.rs".into(), port),
+        ("index.cjs".into(), codegen::index_cjs(&manifest, &fns)),
         (
             ".gitignore".into(),
             "target/\n*.node\npkg/\n.carcinize/\n".into(),
@@ -617,8 +687,8 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     if utf16 {
         files.push(("src/utf16.rs".into(), UTF16_RS.into()));
     }
-    if json {
-        files.push(("src/js.rs".into(), JS_RS.into()));
+    if modules.js {
+        files.push(("src/js.rs".into(), codegen::JS_RS.into()));
     }
     for (path, text) in &files {
         let target = crate_dir.join(path);
@@ -628,6 +698,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         std::fs::write(&target, text).with_context(|| format!("writing {}", target.display()))?;
     }
 
+    format_rust(&crate_dir);
     let mut notes = vec![format!(
         "Port each function in src/port.rs, then: carcinize record {0} && carcinize build {0} && carcinize diff {0}",
         crate_dir.display()
@@ -641,8 +712,10 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             j.name, j.reason
         ));
     }
-    if exports.iter().any(|f| f.is_async) {
-        notes.push("Some functions are async in TS; the port is synchronous and the bridge returns plain values.".into());
+    if exports.iter().any(codegen::is_async) {
+        notes.push(
+            "Async TS functions are `async fn` in the port; the bindings return promises.".into(),
+        );
     }
     Ok(Outcome {
         crate_dir,
@@ -652,332 +725,6 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         notes,
     })
 }
-
-fn cargo_toml(m: &Manifest, json: bool) -> String {
-    let mut deps = String::new();
-    match m.kind {
-        Kind::Napi => {
-            let features = if json {
-                r#", features = ["serde-json"]"#
-            } else {
-                ""
-            };
-            let _ = writeln!(deps, "napi = {{ version = \"3\"{features} }}");
-            let _ = writeln!(deps, "napi-derive = \"3\"");
-        }
-        Kind::Wasm => {
-            let _ = writeln!(deps, "wasm-bindgen = \"0.2\"");
-            if json {
-                let _ = writeln!(deps, "serde = \"1\"");
-                let _ = writeln!(deps, "serde-wasm-bindgen = \"0.6\"");
-            }
-        }
-    }
-    if json {
-        // JS objects keep insertion order; serde_json sorts keys unless told otherwise.
-        let _ = writeln!(
-            deps,
-            "serde_json = {{ version = \"1\", features = [\"preserve_order\"] }}"
-        );
-    }
-    let build = if m.kind == Kind::Napi {
-        "\n[build-dependencies]\nnapi-build = \"2\"\n"
-    } else {
-        ""
-    };
-    format!(
-        "[package]\nname = \"{}\"\nversion = \"0.1.0\"\nedition = \"2024\"\npublish = false\ndescription = \"Rust port of `{}`, generated by carcinize\"\n\n\
-         [lib]\ncrate-type = [\"cdylib\", \"rlib\"]\n\n[dependencies]\n{deps}{build}\n\
-         [profile.release]\nlto = true\n\n[lints.clippy]\nall = {{ level = \"warn\", priority = -1 }}\n",
-        m.crate_name, m.unit
-    )
-}
-
-fn signature(f: &ExportedFn) -> (String, String) {
-    let params = f
-        .params
-        .iter()
-        .map(|p| format!("{}: {}", snake_case(&p.name), param_type(p).rust()))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let ret = match RType::from_ts(&f.returns) {
-        RType::Unit => String::new(),
-        t => format!(" -> {}", t.rust()),
-    };
-    (params, ret)
-}
-
-fn lib_rs(m: &Manifest, utf16: bool) -> String {
-    let mut out = format!(
-        "//! JS bindings for `{}`: thin wrappers over [`port`]. Generated by carcinize; edit freely.\n\n",
-        m.unit
-    );
-    if m.kind == Kind::Wasm {
-        out.push_str("use wasm_bindgen::prelude::*;\n\n");
-    } else {
-        out.push_str("use napi_derive::napi;\n\n");
-    }
-    out.push_str("pub mod port;\n");
-    if utf16 {
-        out.push_str("pub mod utf16;\n");
-    }
-    if !json_exports(m).is_empty() {
-        out.push_str("pub mod js;\n");
-    }
-    if m.kind == Kind::Napi {
-        out.push_str(NAPI_CATCH_PANIC);
-    }
-    for f in &m.exports {
-        let rust_name = snake_case(&f.name);
-        let ret_type = RType::from_ts(&f.returns);
-        let args: Vec<String> = f.params.iter().map(|p| snake_case(&p.name)).collect();
-        out.push('\n');
-        let _ = writeln!(out, "/// `{}` from `{}:{}`.", f.name, f.file, f.line);
-        match m.kind {
-            Kind::Napi => {
-                let (params, _) = signature(f);
-                let ret = match &ret_type {
-                    RType::Unit => "()".to_string(),
-                    t => t.rust(),
-                };
-                let _ = writeln!(out, "#[napi(js_name = \"{}\")]", f.name);
-                let _ = writeln!(
-                    out,
-                    "pub fn {rust_name}({params}) -> napi::Result<{ret}> {{"
-                );
-                let _ = writeln!(
-                    out,
-                    "    catch_panic(std::panic::AssertUnwindSafe(|| port::{rust_name}({})))",
-                    args.join(", ")
-                );
-                out.push_str("}\n");
-            }
-            Kind::Wasm => {
-                // wasm-bindgen cannot take serde_json::Value: those cross as JsValue.
-                let params = f
-                    .params
-                    .iter()
-                    .map(|p| {
-                        let t = param_type(p);
-                        let ty = if t.contains_json() {
-                            "JsValue".to_string()
-                        } else {
-                            t.rust()
-                        };
-                        format!("{}: {ty}", snake_case(&p.name))
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let json_ret = ret_type.contains_json();
-                let any_json = json_ret || f.params.iter().any(|p| param_type(p).contains_json());
-                let ret = match (&ret_type, any_json) {
-                    (RType::Unit, false) => String::new(),
-                    (RType::Unit, true) => " -> Result<(), JsError>".into(),
-                    (_, false) => format!(" -> {}", ret_type.rust()),
-                    (_, true) if json_ret => " -> Result<JsValue, JsError>".into(),
-                    (t, true) => format!(" -> Result<{}, JsError>", t.rust()),
-                };
-                let _ = writeln!(out, "#[wasm_bindgen(js_name = \"{}\")]", f.name);
-                let _ = writeln!(out, "pub fn {rust_name}({params}){ret} {{");
-                for p in &f.params {
-                    if param_type(p).contains_json() {
-                        let n = snake_case(&p.name);
-                        let _ =
-                            writeln!(out, "    let {n} = serde_wasm_bindgen::from_value({n})?;");
-                    }
-                }
-                let call = format!("port::{rust_name}({})", args.join(", "));
-                if json_ret {
-                    // json_compatible: objects become plain objects (not Maps), null stays null.
-                    let _ = writeln!(
-                        out,
-                        "    Ok(serde::Serialize::serialize(&{call}, &serde_wasm_bindgen::Serializer::json_compatible())?)"
-                    );
-                } else if any_json {
-                    let _ = writeln!(out, "    Ok({call})");
-                } else {
-                    let _ = writeln!(out, "    {call}");
-                }
-                out.push_str("}\n");
-            }
-        }
-    }
-    out
-}
-
-fn port_rs(m: &Manifest) -> String {
-    let mut out = format!(
-        "//! The Rust port of `{}`.\n//!\n//! Replace each `unimplemented!` with the port of the TS function. Keep the signatures in sync\n\
-         //! with `lib.rs`. `carcinize diff` checks the result against recorded TS behavior.\n\n\
-         #![forbid(unsafe_code)]\n",
-        m.unit
-    );
-    for f in &m.exports {
-        let (params, ret) = signature(f);
-        let names: Vec<String> = f.params.iter().map(|p| snake_case(&p.name)).collect();
-        out.push('\n');
-        let _ = writeln!(out, "/// Port of `{}` (`{}:{}`).", f.name, f.file, f.line);
-        let _ = writeln!(out, "pub fn {}({params}){ret} {{", snake_case(&f.name));
-        match names.len() {
-            0 => {}
-            1 => {
-                let _ = writeln!(out, "    let _ = &{};", names[0]);
-            }
-            _ => {
-                let refs: Vec<String> = names.iter().map(|n| format!("&{n}")).collect();
-                let _ = writeln!(out, "    let _ = ({});", refs.join(", "));
-            }
-        }
-        let _ = writeln!(
-            out,
-            "    unimplemented!(\"port `{}` from {}\")",
-            f.name, f.file
-        );
-        out.push_str("}\n");
-    }
-    out
-}
-
-/// Exports whose signature carries JSON: their values go through the `undefined` marker.
-fn json_exports(m: &Manifest) -> Vec<&str> {
-    m.exports
-        .iter()
-        .filter(|f| {
-            f.params.iter().any(|p| param_type(p).contains_json())
-                || RType::from_ts(&f.returns).contains_json()
-        })
-        .map(|f| f.name.as_str())
-        .collect()
-}
-
-fn index_cjs(m: &Manifest) -> String {
-    let load = match m.kind {
-        Kind::Napi => format!(
-            "// Loads the native module built by `carcinize build`.\nconst native = require('./{}.node')\n",
-            m.lib_name()
-        ),
-        Kind::Wasm => format!(
-            "// Loads the wasm-bindgen (nodejs target) output built by `carcinize build`.\nconst native = require('./pkg/{}.js')\n",
-            m.lib_name()
-        ),
-    };
-    let json = json_exports(m);
-    if json.is_empty() {
-        return format!("{load}module.exports = native\n");
-    }
-    let names = m
-        .exports
-        .iter()
-        .filter(|f| json.contains(&f.name.as_str()))
-        .map(|f| {
-            let flags: Vec<&str> = f
-                .params
-                .iter()
-                .map(|p| {
-                    if param_type(p).contains_json() {
-                        "true"
-                    } else {
-                        "false"
-                    }
-                })
-                .collect();
-            format!("{}: [{}]", f.name, flags.join(", "))
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!(
-        "{load}\n\
-         // JSON has no `undefined` or NaN, and Rust strings no lone surrogates. Structured values cross the\n\
-         // bridge with `{{\"$undefined\": true}}` and `{{\"$utf16\": [...]}}` in their place (`js.rs`),\n\
-         // so `{{ a: undefined }}`, `null` and half an emoji all survive.\n\
-         const UNDEFINED = '$undefined'\n\
-         const toNative = v => v === undefined\n\
-         \x20 ? {{ [UNDEFINED]: true }}\n\
-         \x20 : typeof v === 'string' && !v.isWellFormed() ? {{ $utf16: Array.from({{ length: v.length }}, (_, i) => v.charCodeAt(i)) }}\n\
-         \x20 : typeof v === 'number' && (!Number.isFinite(v) || Object.is(v, -0)) ? {{ $num: Object.is(v, -0) ? '-0' : String(v) }}\n\
-         \x20 : Array.isArray(v) ? v.map(toNative)\n\
-         \x20 : v !== null && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toNative(x)]))\n\
-         \x20 : v\n\
-         const fromNative = v => Array.isArray(v) ? v.map(fromNative)\n\
-         \x20 : v !== null && typeof v === 'object' ? (v[UNDEFINED] === true && Object.keys(v).length === 1 ? undefined : Array.isArray(v.$utf16) && Object.keys(v).length === 1 ? String.fromCharCode(...v.$utf16) : typeof v.$num === 'string' && Object.keys(v).length === 1 ? Number(v.$num) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fromNative(x)])))\n\
-         \x20 : v\n\
-         module.exports = {{ ...native }}\n\
-         // Per function: which arguments are structured. Others pass through: an `undefined`\n\
-         // there is an omitted optional argument, an `Option` in Rust.\n\
-         for (const [name, structured] of Object.entries({{ {names} }})) {{\n\
-         \x20 module.exports[name] = (...args) => fromNative(native[name](...Array.from({{ length: Math.max(args.length, structured.length) }}, (_, i) => structured[i] ? toNative(args[i]) : args[i])))\n\
-         }}\n"
-    )
-}
-
-const JS_RS: &str = r#"//! JS values that JSON cannot express.
-
-#![forbid(unsafe_code)]
-
-/// JS `undefined` inside a structured value: `{ a: undefined }` is not `{ a: null }`.
-/// `index.cjs` turns this marker into `undefined` on the way out, and back on the way in.
-pub fn undefined() -> serde_json::Value {
-    serde_json::json!({ "$undefined": true })
-}
-
-/// A JS string from UTF-16 code units: a plain string when well-formed, else a marker that
-/// `index.cjs` turns into the exact JS string, lone surrogates included.
-pub fn utf16_string(units: &[u16]) -> serde_json::Value {
-    match String::from_utf16(units) {
-        Ok(s) => serde_json::Value::String(s),
-        Err(_) => serde_json::json!({ "$utf16": units }),
-    }
-}
-
-/// The UTF-16 code units of a string received from JS, plain or marked.
-pub fn string_units(value: &serde_json::Value) -> Option<Vec<u16>> {
-    match value {
-        serde_json::Value::String(s) => Some(s.encode_utf16().collect()),
-        serde_json::Value::Object(o) if o.len() == 1 => o.get("$utf16")?
-            .as_array()?
-            .iter()
-            .map(|u| u.as_u64().and_then(|u| u16::try_from(u).ok()))
-            .collect(),
-        _ => None,
-    }
-}
-
-/// A JS number inside a structured value. JSON has no NaN, Infinity or -0: those cross as
-/// `{"$num": "NaN"}` and friends, which `index.cjs` turns back into numbers.
-pub fn number(n: f64) -> serde_json::Value {
-    if n.is_nan() {
-        serde_json::json!({ "$num": "NaN" })
-    } else if n.is_infinite() {
-        serde_json::json!({ "$num": if n > 0.0 { "Infinity" } else { "-Infinity" } })
-    } else if n == 0.0 && n.is_sign_negative() {
-        serde_json::json!({ "$num": "-0" })
-    } else if n.fract() == 0.0 && n.abs() < 9_007_199_254_740_992.0 {
-        serde_json::Value::from(n as i64)
-    } else {
-        serde_json::Value::from(n)
-    }
-}
-
-/// A number received from JS inside a structured value, plain or marked.
-pub fn as_number(value: &serde_json::Value) -> Option<f64> {
-    match value {
-        serde_json::Value::Number(n) => n.as_f64(),
-        serde_json::Value::Object(o) if o.len() == 1 => match o.get("$num")?.as_str()? {
-            "NaN" => Some(f64::NAN),
-            "Infinity" => Some(f64::INFINITY),
-            "-Infinity" => Some(f64::NEG_INFINITY),
-            "-0" => Some(-0.0),
-            _ => None,
-        },
-        _ => None,
-    }
-}
-
-/// Whether a structured value received from JS was `undefined`.
-pub fn is_undefined(value: &serde_json::Value) -> bool {
-    value.as_object().is_some_and(|o| o.len() == 1 && o.get("$undefined") == Some(&serde_json::Value::Bool(true)))
-}
-"#;
 
 fn readme(m: &Manifest) -> String {
     let functions: String = m
@@ -998,21 +745,6 @@ fn readme(m: &Manifest) -> String {
         },
     )
 }
-
-/// A panic must not unwind into Node: it would abort the process, and in shadow mode take
-/// the app down. Panics become JS errors instead.
-const NAPI_CATCH_PANIC: &str = r#"
-fn catch_panic<T>(f: impl FnOnce() -> T + std::panic::UnwindSafe) -> napi::Result<T> {
-    std::panic::catch_unwind(f).map_err(|payload| {
-        let message = payload
-            .downcast_ref::<&str>()
-            .map(|s| (*s).to_string())
-            .or_else(|| payload.downcast_ref::<String>().cloned())
-            .unwrap_or_else(|| "unknown panic".into());
-        napi::Error::from_reason(format!("Rust panic: {message}"))
-    })
-}
-"#;
 
 const UTF16_RS: &str = r#"//! JS string indexing in Rust.
 //!

@@ -1,21 +1,21 @@
-{"fn":"isMessageLeaf","args":[null],"ok":true}
 {"fn":"isMessageLeaf","args":[true],"ok":true}
 {"fn":"isMessageLeaf","args":["x"],"ok":true}
 {"fn":"isMessageLeaf","args":[{}],"ok":false}
-{"fn":"isMessageLeaf","args":[{"a":{"b":"c"}}],"ok":false}
 {"fn":"isMessageLeaf","args":[{"a":"b"}],"ok":false}
-{"fn":"isMessageLeaf","args":[[]],"ok":false}
-{"fn":"isMessageLeaf","args":[["a",1]],"ok":false}
 {"fn":"isMessageLeaf","args":[0],"ok":true}
+{"fn":"isMessageLeaf","args":[["a",1]],"ok":false}
+{"fn":"isMessageLeaf","args":[[]],"ok":false}
+{"fn":"isMessageLeaf","args":[null],"ok":true}
+{"fn":"isMessageLeaf","args":[{"a":{"b":"c"}}],"ok":false}
 {"fn":"isMessageTree","args":[0],"ok":false}
-{"fn":"isMessageTree","args":[{}],"ok":true}
 {"fn":"isMessageTree","args":[["a",1]],"ok":false}
 {"fn":"isMessageTree","args":["x"],"ok":false}
+{"fn":"isMessageTree","args":[{}],"ok":true}
 {"fn":"isMessageTree","args":[null],"ok":false}
-{"fn":"isMessageTree","args":[{"a":"b"}],"ok":true}
 {"fn":"isMessageTree","args":[true],"ok":false}
 {"fn":"isMessageTree","args":[[]],"ok":false}
 {"fn":"isMessageTree","args":[{"a":{"b":"c"}}],"ok":true}
+{"fn":"isMessageTree","args":[{"a":"b"}],"ok":true}
 {"fn":"pathId","args":[["line1\nline2","hello","é"]],"ok":"line1\nline2\u0000hello\u0000é"}
 {"fn":"pathId","args":[["","  padded  "]],"ok":"\u0000  padded  "}
 {"fn":"pathId","args":[["日本語のテキスト","line1\nline2"]],"ok":"日本語のテキスト\u0000line1\nline2"}
@@ -316,314 +316,314 @@
 {"fn":"pathId","args":[["./x/**/*.jsonhello"]],"ok":"./x/**/*.jsonhello"}
 {"fn":"pathId","args":[["HELLO","日本語のテキスト"]],"ok":"HELLO\u0000日本語のテキスト"}
 {"fn":"pathId","args":[["HELLOİstanbul","./x/**/*.json"]],"ok":"HELLOİstanbul\u0000./x/**/*.json"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[["a",1],[0,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[]],"ok":{"0":"x"}}
-{"fn":"applyMessageOps","args":["x",[null,{"a":"b"}]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[null,[{"a":"b"}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[]],"ok":{}}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[0,0,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[]],"ok":{"a":"b"}}
-{"fn":"applyMessageOps","args":["x",[null,0,[]]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[[],[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[[],0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[[],"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[]],"ok":{}}
-{"fn":"applyMessageOps","args":[["a",1],[true,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[[],true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":"b"},["a",1],"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{"a":{"b":"c"}},{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[[]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[true,[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[true,{},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},["x",{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},["x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[true,[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"title":false},{"a":{"b":"c"}}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"b":null,"home":{"nav":{"nav":null,"ünï":null},"ünï":"emoji 👍🏽 mix"}},[]],"ok":{"b":null,"home":{"nav":{"nav":null,"ünï":null},"ünï":"emoji 👍🏽 mix"}}}
+{"fn":"applyMessageOps","args":["x",[{"path":[".leading","key_name-1tab\tseparated"],"type":"set","value":2}]],"ok":{"0":"x",".leading":{"key_name-1tab\tseparated":2}}}
+{"fn":"applyMessageOps","args":[{"b":true,"😀":"é"},[]],"ok":{"b":true,"😀":"é"}}
+{"fn":"applyMessageOps","args":[{"10":{"2":false,"10":{}},"nav":false,"ünï":{"home":false,"nav":"a","ünï":"a😀b😀c"}},[{"path":["ünïcödé","hello world","日本語のテキスト"],"type":"set","value":"ünïcödéstraße"}]],"ok":{"10":{"2":false,"10":{}},"nav":false,"ünï":{"home":false,"nav":"a","ünï":"a😀b😀c"},"ünïcödé":{"hello world":{"日本語のテキスト":"ünïcödéstraße"}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":true},{"path":["abcΣΊΣΥΦΟΣ","a..b"],"type":"delete"},{"path":[],"type":"set","value":1000000}]],"ok":{"undefined":1000000}}
+{"fn":"applyMessageOps","args":[{"10":null},[{"path":["😀","a😀b😀c"],"type":"set","value":0}]],"ok":{"10":null,"😀":{"a😀b😀c":0}}}
+{"fn":"applyMessageOps","args":[{"a":false},[]],"ok":{"a":false}}
+{"fn":"applyMessageOps","args":[{"home":false},["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[true,[{"path":["ab"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"10":{"nav":{"a.b":null,"home":null,"nav":null},"😀":{}},"nav":{"2":{"10":null,"a":null},"a":null,"home":true},"😀":"key_name-1"},[{"path":[],"type":"set","value":true},{"path":["tab\tseparated","日本語のテキスト","﻿bom"],"type":"set","value":false}]],"ok":{"10":{"nav":{"a.b":null,"home":null,"nav":null},"😀":{}},"nav":{"2":{"10":null,"a":null},"a":null,"home":true},"😀":"key_name-1","undefined":true,"tab\tseparated":{"日本語のテキスト":{"﻿bom":false}}}}
+{"fn":"applyMessageOps","args":[{"10":"ΣΊΣΥΦΟΣ","a":2147483648},[]],"ok":{"10":"ΣΊΣΥΦΟΣ","a":2147483648}}
+{"fn":"applyMessageOps","args":[{"nav":false},[{"path":["key_name-1","ab",".leading"],"type":"delete"}]],"ok":{"nav":false}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"delete"},{"path":["hello world"],"type":"set","value":""}]],"ok":{"hello world":""}}
+{"fn":"applyMessageOps","args":[{"a":{}},[{"path":["a","Hello World"],"type":"set","value":2},{"path":["ab","ns:key.path","  padded  :"],"type":"set","value":false}]],"ok":{"a":{"Hello World":2},"ab":{"ns:key.path":{"  padded  :":false}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["line1\nline2"],"type":"delete"},{"path":["ünïcödé","abc","﻿bom"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"nav":true},"x"],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"10":{"2":{"10":null},"b":1000}},0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"a":"a.b.c","title":"a..b","😀":"trailing."},[{"path":["İstanbulns:key.path","a.b.cİstanbul","key_name-1line1\nline2"],"type":"set","value":"ns:key.pathtab\tseparated"},{"path":["﻿bom","﻿bom","a😀b😀c"],"type":"delete"}]],"ok":{"a":"a.b.c","title":"a..b","😀":"trailing.","İstanbulns:key.path":{"a.b.cİstanbul":{"key_name-1line1\nline2":"ns:key.pathtab\tseparated"}}}}
+{"fn":"applyMessageOps","args":[{"a.b":"{name} has {count} items","b":{"home":{"2":null,"a":null},"ünï":{"nav":null,"title":null,"ünï":null}},"home":"tab\tseparated"},[{"path":[],"type":"set","value":"tab\tseparated"},{"path":["日本語のテキスト","é"],"type":"delete"},{"path":["trailing.","éa..b","é"],"type":"set","value":null}]],"ok":{"a.b":"{name} has {count} items","b":{"home":{"2":null,"a":null},"ünï":{"nav":null,"title":null,"ünï":null}},"home":"tab\tseparated","undefined":"tab\tseparated","trailing.":{"éa..b":{"é":null}}}}
+{"fn":"applyMessageOps","args":[{"title":{"2":{"😀":null}}},[]],"ok":{"title":{"2":{"😀":null}}}}
+{"fn":"applyMessageOps","args":[{"10":{"10":{"10":null,"ünï":null},"ünï":{}},"b":{"10":null,"nav":{},"😀":"HELLO"},"😀":{"ünï":{"b":null,"title":null},"😀":false}},[{"path":[],"type":"set","value":true},{"path":["  padded  "],"type":"set","value":"emoji 👍🏽 mixa"}]],"ok":{"10":{"10":{"10":null,"ünï":null},"ünï":{}},"b":{"10":null,"nav":{},"😀":"HELLO"},"😀":{"ünï":{"b":null,"title":null},"😀":false},"undefined":true,"  padded  ":"emoji 👍🏽 mixa"}}
+{"fn":"applyMessageOps","args":[{"2":null,"a.b":{"title":{}}},[{"path":[],"type":"delete"}]],"ok":{"2":null,"a.b":{"title":{}}}}
+{"fn":"applyMessageOps","args":[{"10":{"10":10,"home":false,"ünï":{"a.b":null,"ünï":null}},"b":{"$num":"-0"},"ünï":null},[{"path":["hello world","emoji 👍🏽 mix","﻿bom"],"type":"set","value":false}]],"ok":{"10":{"10":10,"home":false,"ünï":{"a.b":null,"ünï":null}},"b":{"$num":"-0"},"ünï":null,"hello world":{"emoji 👍🏽 mix":{"﻿bom":false}}}}
+{"fn":"applyMessageOps","args":[{"a":"  padded  "},"x"],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"a.b":{"home":null,"nav":{}},"title":{"2":{"2":null,"a":null}}},[]],"ok":{"a.b":{"home":null,"nav":{}},"title":{"2":{"2":null,"a":null}}}}
 {"fn":"applyMessageOps","args":[null,[]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{},[{},{},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[]],"ok":{"a":{"b":"c"}}}
-{"fn":"applyMessageOps","args":[0,[{},[],"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[true,[0,{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[{},null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{},["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[[],["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[null]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[["a",1],[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[true,[0,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[[],[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{},null,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[null,["a",1],{"a":{"b":"c"}}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[[],[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[["a",1],0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[null,"x",true]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[[],[["a",1],[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"a.b":{"2":{}},"ünï":false},[{"path":[],"type":"set","value":".leadinga😀b😀c"},{"path":["😀"],"type":"delete"}]],"ok":{"a.b":{"2":{}},"ünï":false,"undefined":".leadinga😀b😀c"}}
+{"fn":"applyMessageOps","args":[{"ünï":{"ünï":false}},[{"path":["a:b:c  padded  ","hello","a😀b😀c"],"type":"delete"},{"path":["line1\nline2"],"type":"set","value":10}]],"ok":{"ünï":{"ünï":false},"line1\nline2":10}}
+{"fn":"applyMessageOps","args":[{"2":false},[{"path":["日本語のテキスト"],"type":"delete"}]],"ok":{"2":false}}
+{"fn":"applyMessageOps","args":[{"a":{"a.b":{"title":null},"b":{}}},[{"path":[],"type":"set","value":null},{"path":["日本語のテキスト","line1\nline2","straße"],"type":"delete"}]],"ok":{"a":{"a.b":{"title":null},"b":{}},"undefined":null}}
+{"fn":"applyMessageOps","args":[{"a.b":{"a":false,"ünï":null,"😀":null}},[{"path":[],"type":"set","value":-2.5},{"path":[],"type":"set","value":false},{"path":["  padded  ","trailing."],"type":"delete"}]],"ok":{"a.b":{"a":false,"ünï":null,"😀":null},"undefined":false}}
+{"fn":"applyMessageOps","args":[{},[{"path":["ΣΊΣΥΦΟΣ","straße"],"type":"delete"}]],"ok":{}}
 {"fn":"applyMessageOps","args":[{},[]],"ok":{}}
-{"fn":"applyMessageOps","args":[0,[{},null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[]],"ok":{"0":"a","1":1}}
-{"fn":"applyMessageOps","args":[0,["x",{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[[],"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[{}]],"error":"Cannot convert undefined or null to object"}
+{"fn":"applyMessageOps","args":[{"10":{},"title":{"2":{"nav":null,"title":null},"home":{"10":null,"b":null}}},[{"path":["a:b:c","﻿bom"],"type":"set","value":-1}]],"ok":{"10":{},"title":{"2":{"nav":null,"title":null},"home":{"10":null,"b":null}},"a:b:c":{"﻿bom":-1}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["日本語のテキスト","İstanbulab"],"type":"set","value":"{name} has {count} itemsa..b"}]],"ok":{"日本語のテキスト":{"İstanbulab":"{name} has {count} itemsa..b"}}}
+{"fn":"applyMessageOps","args":[{"b":null,"title":100},[]],"ok":{"b":null,"title":100}}
+{"fn":"applyMessageOps","args":[{"2":{},"home":"aünïcödé"},[{"path":["日本語のテキスト","日本語のテキスト"],"type":"delete"},{"path":[],"type":"delete"}]],"ok":{"2":{},"home":"aünïcödé"}}
+{"fn":"applyMessageOps","args":[null,[{"path":["key_name-1"],"type":"delete"},{"path":["  padded  "],"type":"delete"}]],"error":"Cannot convert undefined or null to object"}
+{"fn":"applyMessageOps","args":[{"a.b":{"b":"a..b"},"nav":null},[{"path":["a..b"],"type":"delete"}]],"ok":{"a.b":{"b":"a..b"},"nav":null}}
+{"fn":"applyMessageOps","args":[0,[{"path":[],"type":"set","value":"src/a/b.ts"},{"path":["./x/**/*.json","hello"],"type":"delete"},{"path":["ab"],"type":"set","value":null}]],"ok":{"undefined":"src/a/b.ts","ab":null}}
+{"fn":"applyMessageOps","args":[{"a.b":null},[{"path":["emoji 👍🏽 mixHello World"],"type":"delete"},{"path":["key_name-1"],"type":"delete"},{"path":["{name} has {count} items","hello",""],"type":"delete"}]],"ok":{"a.b":null}}
+{"fn":"applyMessageOps","args":[{"10":"a..b","a":false,"home":{"home":true}},[{"path":["ns:key.path","trailing.","ΣΊΣΥΦΟΣline1\nline2"],"type":"delete"},{"path":[],"type":"delete"},{"path":[],"type":"delete"}]],"ok":{"10":"a..b","a":false,"home":{"home":true}}}
+{"fn":"applyMessageOps","args":[{"a":false,"ünï":null},[]],"ok":{"a":false,"ünï":null}}
+{"fn":"applyMessageOps","args":[{"10":3,"b":{"10":{},"home":null}},[{"path":["line1\nline2"],"type":"set","value":"hello world.leading"},{"path":["{name} has {count} items"],"type":"set","value":"trailing."}]],"ok":{"10":3,"b":{"10":{},"home":null},"line1\nline2":"hello world.leading","{name} has {count} items":"trailing."}}
+{"fn":"applyMessageOps","args":[0,[{"path":[],"type":"set","value":false}]],"ok":{"undefined":false}}
+{"fn":"applyMessageOps","args":[{"b":{},"nav":{},"ünï":null},[{"path":[],"type":"delete"}]],"ok":{"b":{},"nav":{},"ünï":null}}
+{"fn":"applyMessageOps","args":[{"10":false,"😀":null},[]],"ok":{"10":false,"😀":null}}
+{"fn":"applyMessageOps","args":[{"b":null,"ünï":1},"x"],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"b":3},[{"path":["é"],"type":"delete"}]],"ok":{"b":3}}
 {"fn":"applyMessageOps","args":[[],[]],"ok":{}}
-{"fn":"applyMessageOps","args":[true,[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":["x",[["a",1],0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},["x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],["x",["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],["x",[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[{},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[{},0,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[true,{},true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[[],[]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[0,["x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":"b"},{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":{"b":"c"}},true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[[],{},true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":"b"},0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[["a",1],{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[null,0]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[true,[{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[true,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{},0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[[],[],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],["x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[["a",1],["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[{"a":"b"},null]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[[],[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":["x",["x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[true,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},["x",[],0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[{"a":{"b":"c"}},null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[["a",1],[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[0,{"a":{"b":"c"}},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[0,null,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":"b"},0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[true,{"a":{"b":"c"}},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[{"a":{"b":"c"}},{"a":"b"}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[[],[{"a":"b"},null,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[null,"x",null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[[],[["a",1],"x",true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{"a":"b"},true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[0,[],{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[null,{},{"a":{"b":"c"}}]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[{"a":{"b":"c"}},0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{},[["a",1],{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[null,0,null]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[[],[{},["a",1],[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],["x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":{"b":"c"}},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[0,[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":{"b":"c"}},null,true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],["x",true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[[],"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[0,"x"]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[["a",1],[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{"a":{"b":"c"}},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{},{"a":"b"},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},{"a":{"b":"c"}},0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":{"b":"c"}},true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[null,true,"x"]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[true,[{"a":"b"},0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[[],true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],["x",0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[null,["a",1],true]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[null,[true,{"a":"b"}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{},[0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,["x",["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[["a",1],{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[["a",1],null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[true,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[null,0]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[null,[["a",1],["a",1]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[true,[0,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},["x",[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},["x",0,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[{"a":{"b":"c"}},true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[0,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[{"a":"b"},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[[],true,["a",1]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[["a",1],[{"a":{"b":"c"}},true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[[],null,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[0,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[true,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[{"a":"b"},{"a":"b"}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[["a",1],[[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[true,"x",{"a":"b"}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":["x",[null,"x",{}]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[[],{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[null,{"a":{"b":"c"}},{"a":{"b":"c"}}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{},[true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[[],"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[[],[],["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{},["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[0,null,{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{"a":"b"},null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":"b"},[],{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[{},["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,["x","x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[true,true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[0,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[0,{},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[true,["a",1],["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[0,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[0,true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[["a",1],{"a":"b"},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[null,true,[]]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[[],[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[[],0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{},0,true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[{"a":{"b":"c"}},[],[]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":["x",[{"a":{"b":"c"}},null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{},null,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[{"a":{"b":"c"}},null,[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},["x",{"a":{"b":"c"}},null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},["a",1],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{"a":{"b":"c"}},0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[true,{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[null,{}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[0,[true,{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},["x",null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[true,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":"b"},true,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[["a",1],true,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],["x",null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[null,0,["a",1]]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":["x",[["a",1],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[true,{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":{"b":"c"}},true,[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":"b"},0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[true,"x",{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[true,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[[],{"a":{"b":"c"}},["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[0,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[0,{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},["x",null,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":"b"},{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[{},true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{},["a",1],{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[[],0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[true,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},[],{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[["a",1],["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[true,{"a":"b"},{}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{},[[],0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,["x",{"a":{"b":"c"}}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{},[true,{"a":"b"},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[["a",1],["a",1],{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,["x",["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[0,{"a":{"b":"c"}}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},["x",0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[null,["a",1]]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[[],[true,{"a":"b"},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[null,{"a":"b"},[]]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":["x",[[],null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,["x",true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[0,0,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[{},0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[[],null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[["a",1],{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[{"a":{"b":"c"}},{"a":"b"},"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[{"a":"b"},"x",[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[{"a":{"b":"c"}},["a",1]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":["x",[0,{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[{"a":{"b":"c"}},[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,["x",[],true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},"x",{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":"b"},{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[["a",1],[0,true,{"a":{"b":"c"}}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[null,{},0]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[true,[true,"x"]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[["a",1],true]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[null,[{"a":{"b":"c"}}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[null,[["a",1]]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[true,[true,{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":["x",[null,[]]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{},[{"a":{"b":"c"}},"x",{"a":"b"}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{},[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[null,[true,0,{}]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{},[0,0]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[0,0,["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[true,[null,[],0]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[null,[true]],"error":"Cannot convert undefined or null to object"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":"b"},[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],["x",{"a":{"b":"c"}},{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[null,{},{"a":{"b":"c"}}]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[{},[0,null]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[0,[["a",1]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[null,"x"]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":["x",["x",0,[]]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],["x",[],{}]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"applyMessageOps","args":[[],[null,null]],"error":"Cannot read properties of null (reading 'type')"}
-{"fn":"applyMessageOps","args":[0,[true]],"error":"Cannot read properties of undefined (reading 'slice')"}
-{"fn":"buildTree","args":[null],"error":"leaves is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":null,"b":{"2":"﻿bom","home":{"b":null},"title":{"$num":"Infinity"}},"ünï":false},[{"path":["ünïcödé","trailing."],"type":"set","value":"ünïcödé"},{"path":["Hello World","ab"],"type":"set","value":true},{"path":["ns:key.path","İstanbul"],"type":"set","value":true}]],"ok":{"10":null,"b":{"2":"﻿bom","home":{"b":null},"title":{"$num":"Infinity"}},"ünï":false,"ünïcödé":{"trailing.":"ünïcödé"},"Hello World":{"ab":true},"ns:key.path":{"İstanbul":true}}}
+{"fn":"applyMessageOps","args":[{"a":false},[{"path":["emoji 👍🏽 mix"],"type":"set","value":false}]],"ok":{"a":false,"emoji 👍🏽 mix":false}}
+{"fn":"applyMessageOps","args":[{"😀":{"😀":{"2":null,"ünï":null}}},[{"path":["ns:key.path"],"type":"delete"},{"path":["./x/**/*.json﻿bom"],"type":"delete"}]],"ok":{"😀":{"😀":{"2":null,"ünï":null}}}}
+{"fn":"applyMessageOps","args":[{"2":{"title":true},"a":9007199254740992},[]],"ok":{"2":{"title":true},"a":9007199254740992}}
+{"fn":"applyMessageOps","args":[{"2":{"😀":"Hello Worlda..b"},"title":null},[{"path":["tab\tseparated"],"type":"delete"}]],"ok":{"2":{"😀":"Hello Worlda..b"},"title":null}}
+{"fn":"applyMessageOps","args":[{"b":1000000,"title":"aba😀b😀c"},[{"path":["key_name-1","trailing."],"type":"set","value":"HELLO"},{"path":["hello world"],"type":"set","value":null},{"path":["HELLOHello World","ab","ünïcödéa.b.c"],"type":"set","value":null}]],"ok":{"b":1000000,"title":"aba😀b😀c","key_name-1":{"trailing.":"HELLO"},"hello world":null,"HELLOHello World":{"ab":{"ünïcödéa.b.c":null}}}}
+{"fn":"applyMessageOps","args":[["a",1],{"a":"b"}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":{},"home":{"a.b":null},"nav":false},[{"path":["ns:key.path","straße"],"type":"delete"},{"path":["  padded  "],"type":"delete"}]],"ok":{"10":{},"home":{"a.b":null},"nav":false}}
+{"fn":"applyMessageOps","args":[{"home":{"title":{"a.b":null},"ünï":42},"title":1000000,"ünï":{"a.b":{}}},[{"path":["line1\nline2","a:b:c","emoji 👍🏽 mix"],"type":"set","value":"﻿bom"},{"path":["straße","src/a/b.ts"],"type":"set","value":false},{"path":["hello world","emoji 👍🏽 mix"],"type":"set","value":false}]],"ok":{"home":{"title":{"a.b":null},"ünï":42},"title":1000000,"ünï":{"a.b":{}},"line1\nline2":{"a:b:c":{"emoji 👍🏽 mix":"﻿bom"}},"straße":{"src/a/b.ts":false},"hello world":{"emoji 👍🏽 mix":false}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":true},{"path":["src/a/b.ts","a{name} has {count} items","ns:key.path"],"type":"delete"}]],"ok":{"undefined":true}}
+{"fn":"applyMessageOps","args":[["a",1],[{"path":["İstanbul","trailing."],"type":"delete"}]],"ok":{"0":"a","1":1}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":null},{"path":[],"type":"set","value":null}]],"ok":{"undefined":null}}
+{"fn":"applyMessageOps","args":[{"title":{"$num":"-0"}},[{"path":["a😀b😀c","😀",":"],"type":"set","value":".leading"},{"path":["HELLO"],"type":"delete"}]],"ok":{"title":{"$num":"-0"},"a😀b😀c":{"😀":{":":".leading"}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["aba..b"],"type":"set","value":{"$num":"-0"}},{"path":["emoji 👍🏽 mix","é"],"type":"delete"},{"path":["a","hello world","a.b.c"],"type":"set","value":1000}]],"ok":{"aba..b":{"$num":"-0"},"a":{"hello world":{"a.b.c":1000}}}}
+{"fn":"applyMessageOps","args":[{"10":"a..b","b":{"title":"é","😀":{"a.b":null,"😀":null}},"nav":null},[{"path":[":"],"type":"delete"},{"path":[],"type":"set","value":42},{"path":["a😀b😀c","HELLO"],"type":"set","value":null}]],"ok":{"10":"a..b","b":{"title":"é","😀":{"a.b":null,"😀":null}},"nav":null,"undefined":42,"a😀b😀c":{"HELLO":null}}}
+{"fn":"applyMessageOps","args":[{"10":{},"ünï":null},["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{},[{"path":["hello world"],"type":"set","value":"hello world"},{"path":["ns:key.pathé","ns:key.path"],"type":"delete"}]],"ok":{"hello world":"hello world"}}
+{"fn":"applyMessageOps","args":[{},[{"path":["tab\tseparatedHELLO"],"type":"set","value":"Hello World"}]],"ok":{"tab\tseparatedHELLO":"Hello World"}}
+{"fn":"applyMessageOps","args":[{},[{"path":["Hello World","straße","abc"],"type":"set","value":null},{"path":["tab\tseparated","{name} has {count} itemsabc"],"type":"set","value":true},{"path":["key_name-1"],"type":"delete"}]],"ok":{"Hello World":{"straße":{"abc":null}},"tab\tseparated":{"{name} has {count} itemsabc":true}}}
+{"fn":"applyMessageOps","args":[{"10":{},"a":{"ünï":{}},"nav":100},[{"path":["a.b.c"],"type":"delete"},{"path":["emoji 👍🏽 mix./x/**/*.json"],"type":"delete"}]],"ok":{"10":{},"a":{"ünï":{}},"nav":100}}
+{"fn":"applyMessageOps","args":[{"10":{}},[]],"ok":{"10":{}}}
+{"fn":"applyMessageOps","args":[{"b":"straße"},[{"path":["ns:key.path",":straße"],"type":"delete"},{"path":["line1\nline2"],"type":"delete"}]],"ok":{"b":"straße"}}
+{"fn":"applyMessageOps","args":[{"10":100,"a.b":-1,"nav":null},[{"path":[],"type":"delete"}]],"ok":{"10":100,"a.b":-1,"nav":null}}
+{"fn":"applyMessageOps","args":[{"10":"line1\nline2a😀b😀c","home":{"😀":{"a.b":null}},"nav":{"2":{"10":null,"a.b":null,"title":null},"a":{"$num":"-Infinity"}}},{"a":{"b":"c"}}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":-2.5,"b":false,"title":null},[{"path":["line1\nline2","hello"],"type":"set","value":{"$num":"-Infinity"}}]],"ok":{"10":-2.5,"b":false,"title":null,"line1\nline2":{"hello":{"$num":"-Infinity"}}}}
+{"fn":"applyMessageOps","args":[{"home":{},"ünï":{"2":null,"10":null}},[{"path":["ns:key.path"],"type":"delete"}]],"ok":{"home":{},"ünï":{"2":null,"10":null}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[":a😀b😀c"],"type":"set","value":":hello"}]],"ok":{":a😀b😀c":":hello"}}
+{"fn":"applyMessageOps","args":[true,[{"path":["a:b:c","ab"],"type":"set","value":null},{"path":["ünïcödéHello World","aba:b:c"],"type":"set","value":false},{"path":["tab\tseparated"],"type":"delete"}]],"ok":{"a:b:c":{"ab":null},"ünïcödéHello World":{"aba:b:c":false}}}
+{"fn":"applyMessageOps","args":[{"title":{"10":null,"😀":{"10":null,"title":null}},"ünï":{}},[{"path":["HELLO"],"type":"delete"},{"path":[],"type":"set","value":"ΣΊΣΥΦΟΣ"},{"path":["ünïcödé"],"type":"delete"}]],"ok":{"title":{"10":null,"😀":{"10":null,"title":null}},"ünï":{},"undefined":"ΣΊΣΥΦΟΣ"}}
+{"fn":"applyMessageOps","args":[{},{}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":"a","😀":9007199254740992},[{"path":["ünïcödé",".leading  padded  ","./x/**/*.json"],"type":"delete"}]],"ok":{"10":"a","😀":9007199254740992}}
+{"fn":"applyMessageOps","args":[{},[{"path":["hello world"],"type":"delete"},{"path":["abc","src/a/b.ts"],"type":"delete"},{"path":["a.b.c😀","tab\tseparated","straße"],"type":"set","value":"hello"}]],"ok":{"a.b.c😀":{"tab\tseparated":{"straße":"hello"}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["key_name-1","a.b.c","./x/**/*.json.leading"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"2":{}},[{"path":["  padded  ","😀"],"type":"set","value":"hello world"},{"path":["line1\nline2key_name-1"],"type":"delete"},{"path":["abc","helloΣΊΣΥΦΟΣ"],"type":"delete"}]],"ok":{"2":{},"  padded  ":{"😀":"hello world"}}}
+{"fn":"applyMessageOps","args":[{"title":{"a.b":1000000,"b":{}}},[{"path":[],"type":"delete"},{"path":["a😀b😀cé","aİstanbul"],"type":"delete"},{"path":["😀"],"type":"set","value":"ab"}]],"ok":{"title":{"a.b":1000000,"b":{}},"😀":"ab"}}
+{"fn":"applyMessageOps","args":[{"a.b":"Hello Worldemoji 👍🏽 mix"},[{"path":["a..b"],"type":"delete"}]],"ok":{"a.b":"Hello Worldemoji 👍🏽 mix"}}
+{"fn":"applyMessageOps","args":[{"2":{"ünï":{}},"10":{"nav":{"a.b":null,"b":null,"home":null}},"home":{"2":0.5,"10":false,"😀":{"ünï":null}}},[{"path":[],"type":"delete"},{"path":["emoji 👍🏽 mix","line1\nline2"],"type":"set","value":"./x/**/*.jsonns:key.path"}]],"ok":{"2":{"ünï":{}},"10":{"nav":{"a.b":null,"b":null,"home":null}},"home":{"2":0.5,"10":false,"😀":{"ünï":null}},"emoji 👍🏽 mix":{"line1\nline2":"./x/**/*.jsonns:key.path"}}}
+{"fn":"applyMessageOps","args":[{"nav":null,"title":1},[]],"ok":{"nav":null,"title":1}}
+{"fn":"applyMessageOps","args":[{"a":"a:b:c"},[]],"ok":{"a":"a:b:c"}}
+{"fn":"applyMessageOps","args":[{"a.b":"tab\tseparated","title":{}},[{"path":["a..b","a😀b😀c./x/**/*.json","a"],"type":"set","value":true}]],"ok":{"a.b":"tab\tseparated","title":{},"a..b":{"a😀b😀c./x/**/*.json":{"a":true}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["key_name-1","hello world"],"type":"set","value":true}]],"ok":{"key_name-1":{"hello world":true}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["a:b:c"],"type":"set","value":0.5},{"path":["ünïcödé","a😀b😀c"],"type":"set","value":"abc"}]],"ok":{"a:b:c":0.5,"ünïcödé":{"a😀b😀c":"abc"}}}
+{"fn":"applyMessageOps","args":[{"10":{"b":{"home":null}},"a.b":-1,"nav":true},true],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":{"$num":"-Infinity"},"home":{"title":{"title":null}}},{}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"b":{"home":{},"😀":{"b":null,"title":null,"ünï":null}},"title":null},[{"path":[],"type":"delete"},{"path":[".leadinga:b:c","a😀b😀cstraße"],"type":"delete"}]],"ok":{"b":{"home":{},"😀":{"b":null,"title":null,"ünï":null}},"title":null}}
+{"fn":"applyMessageOps","args":[{"a":"b"},[{"path":["trailing."],"type":"delete"},{"path":[],"type":"delete"},{"path":["{name} has {count} itemsΣΊΣΥΦΟΣ","a😀b😀c"],"type":"delete"}]],"ok":{"a":"b"}}
+{"fn":"applyMessageOps","args":[{"home":{"a":{"a.b":null,"title":null},"nav":null}},[{"path":["a","İstanbul","😀"],"type":"set","value":null},{"path":[],"type":"delete"},{"path":["trailing."],"type":"set","value":42}]],"ok":{"home":{"a":{"a.b":null,"title":null},"nav":null},"a":{"İstanbul":{"😀":null}},"trailing.":42}}
+{"fn":"applyMessageOps","args":[{"2":{"2":true},"b":{"title":null,"😀":{"😀":null}},"title":"hello"},{"a":"b"}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{},{"a":{"b":"c"}}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":false,"😀":"a😀b😀ca😀b😀c"},true],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{},[{"path":["src/a/b.ts"],"type":"delete"},{"path":["src/a/b.tsns:key.path","line1\nline2"],"type":"delete"},{"path":["line1\nline2","./x/**/*.json"],"type":"set","value":3}]],"ok":{"line1\nline2":{"./x/**/*.json":3}}}
+{"fn":"applyMessageOps","args":[["a",1],true],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"b":".leading"},[]],"ok":{"b":".leading"}}
+{"fn":"applyMessageOps","args":[true,[{"path":[],"type":"delete"},{"path":["HELLO"],"type":"delete"},{"path":["line1\nline2hello"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"nav":false,"title":null},[{"path":[],"type":"set","value":{"$num":"Infinity"}}]],"ok":{"nav":false,"title":null,"undefined":{"$num":"Infinity"}}}
+{"fn":"applyMessageOps","args":[{"10":{"a":{"10":null,"a.b":null,"ünï":null},"nav":false,"title":true},"home":null,"😀":null},[{"path":["  padded  ","日本語のテキストa:b:c"],"type":"delete"}]],"ok":{"10":{"a":{"10":null,"a.b":null,"ünï":null},"nav":false,"title":true},"home":null,"😀":null}}
+{"fn":"applyMessageOps","args":[{"a":null,"😀":1000},[{"path":[":"],"type":"set","value":null},{"path":[],"type":"set","value":10}]],"ok":{"a":null,"😀":1000,":":null,"undefined":10}}
+{"fn":"applyMessageOps","args":[{"😀":{"😀":{"a":null,"😀":null}}},[]],"ok":{"😀":{"😀":{"a":null,"😀":null}}}}
+{"fn":"applyMessageOps","args":[{"10":{"home":{"b":null,"title":null}},"b":null},[{"path":["ab","a"],"type":"set","value":0}]],"ok":{"10":{"home":{"b":null,"title":null}},"b":null,"ab":{"a":0}}}
+{"fn":"applyMessageOps","args":[{"2":{"a":{"10":null},"b":"abc","ünï":{"nav":null}},"10":{"b":false,"title":3},"ünï":""},{"a":{"b":"c"}}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"2":null,"a.b":{"a.b":false,"title":-2.5},"nav":9007199254740992},[{"path":[],"type":"set","value":"a:b:c"}]],"ok":{"2":null,"a.b":{"a.b":false,"title":-2.5},"nav":9007199254740992,"undefined":"a:b:c"}}
+{"fn":"applyMessageOps","args":[{"10":{"b":{},"😀":{"nav":null,"ünï":null,"😀":null}},"a.b":"{name} has {count} items","ünï":10},[{"path":[],"type":"set","value":"line1\nline2"},{"path":["{name} has {count} items"],"type":"set","value":null}]],"ok":{"10":{"b":{},"😀":{"nav":null,"ünï":null,"😀":null}},"a.b":"{name} has {count} items","ünï":10,"undefined":"line1\nline2","{name} has {count} items":null}}
+{"fn":"applyMessageOps","args":[{"a":{"home":true,"nav":{"2":null,"ünï":null}},"a.b":"hello world","nav":false},{}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"a":"b"},0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":"abc","b":{},"title":10},[{"path":["日本語のテキスト","emoji 👍🏽 mixünïcödé","tab\tseparated"],"type":"delete"},{"path":["Hello World"],"type":"set","value":null},{"path":[":","é","İstanbul"],"type":"delete"}]],"ok":{"10":"abc","b":{},"title":10,"Hello World":null}}
+{"fn":"applyMessageOps","args":[{"home":{"home":{"home":null},"ünï":{"10":null,"nav":null}},"title":{"2":{"10":null,"a.b":null,"home":null},"nav":null}},[{"path":["a.b.c"],"type":"delete"},{"path":["ünïcödé"],"type":"delete"}]],"ok":{"home":{"home":{"home":null},"ünï":{"10":null,"nav":null}},"title":{"2":{"10":null,"a.b":null,"home":null},"nav":null}}}
+{"fn":"applyMessageOps","args":[{"a":{"a.b":{"2":null,"😀":null},"b":9007199254740992},"a.b":{"2":{"home":null,"nav":null,"ünï":null},"a.b":false,"nav":{}},"nav":{"a.b":false,"title":{"nav":null}}},[]],"ok":{"a":{"a.b":{"2":null,"😀":null},"b":9007199254740992},"a.b":{"2":{"home":null,"nav":null,"ünï":null},"a.b":false,"nav":{}},"nav":{"a.b":false,"title":{"nav":null}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"delete"},{"path":["hello","HELLO","İstanbulhello world"],"type":"set","value":null},{"path":["日本語のテキスト"],"type":"set","value":"hello worldHELLO"}]],"ok":{"hello":{"HELLO":{"İstanbulhello world":null}},"日本語のテキスト":"hello worldHELLO"}}
+{"fn":"applyMessageOps","args":[{},[{"path":["ünïcödétab\tseparated"],"type":"delete"},{"path":[],"type":"set","value":false},{"path":[],"type":"set","value":true}]],"ok":{"undefined":true}}
+{"fn":"applyMessageOps","args":[{"2":"trailing.ab","title":{"a":100,"nav":{},"title":{"a.b":null,"😀":null}}},0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"b":{"$num":"-0"},"home":"Hello World"},[{"path":["{name} has {count} items"],"type":"set","value":"emoji 👍🏽 mixab"},{"path":["a..bHELLO","aHELLO"],"type":"set","value":false},{"path":[],"type":"delete"}]],"ok":{"b":{"$num":"-0"},"home":"Hello World","{name} has {count} items":"emoji 👍🏽 mixab","a..bHELLO":{"aHELLO":false}}}
+{"fn":"applyMessageOps","args":[{"2":{}},[{"path":["ünïcödé"],"type":"set","value":true}]],"ok":{"2":{},"ünïcödé":true}}
+{"fn":"applyMessageOps","args":[{"10":{"10":{"nav":null}},"b":{"a.b":-1,"title":true}},[]],"ok":{"10":{"10":{"nav":null}},"b":{"a.b":-1,"title":true}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":2},{"path":[],"type":"delete"},{"path":["key_name-1","é",".leading"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"10":{"a":{"home":null}}},[{"path":["ns:key.path","HELLO","hello"],"type":"delete"},{"path":[],"type":"delete"},{"path":["a😀b😀c"],"type":"delete"}]],"ok":{"10":{"a":{"home":null}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":null},{"path":["ab","{name} has {count} items","ab"],"type":"delete"}]],"ok":{"undefined":null}}
+{"fn":"applyMessageOps","args":[{"b":"trailing.","title":false},[{"path":[],"type":"set","value":{"$num":"-0"}},{"path":[".leading"],"type":"set","value":null}]],"ok":{"b":"trailing.","title":false,"undefined":{"$num":"-0"},".leading":null}}
+{"fn":"applyMessageOps","args":[{"10":"./x/**/*.jsona..b","b":{"b":{"ünï":null},"nav":{"ünï":null},"ünï":{}}},[{"path":["ab","tab\tseparatedabc","trailing."],"type":"delete"}]],"ok":{"10":"./x/**/*.jsona..b","b":{"b":{"ünï":null},"nav":{"ünï":null},"ünï":{}}}}
+{"fn":"applyMessageOps","args":[{"2":{"2":false,"a.b":null},"title":{"home":2147483648,"😀":"HELLO"},"ünï":{"2":{},"b":false,"title":{"a":null}}},[]],"ok":{"2":{"2":false,"a.b":null},"title":{"home":2147483648,"😀":"HELLO"},"ünï":{"2":{},"b":false,"title":{"a":null}}}}
+{"fn":"applyMessageOps","args":[null,[{"path":[],"type":"set","value":"src/a/b.tsHELLO"}]],"error":"Cannot convert undefined or null to object"}
+{"fn":"applyMessageOps","args":[{"2":{},"a.b":null},[{"path":["ünïcödé"],"type":"delete"},{"path":["hello"],"type":"delete"}]],"ok":{"2":{},"a.b":null}}
+{"fn":"applyMessageOps","args":[{"a.b":{"10":null},"title":{},"😀":{"a":1000000,"b":{}}},[{"path":["a:b:c","","日本語のテキスト"],"type":"set","value":false},{"path":["line1\nline2abc"],"type":"delete"},{"path":["tab\tseparated",".leading"],"type":"delete"}]],"ok":{"a.b":{"10":null},"title":{},"😀":{"a":1000000,"b":{}},"a:b:c":{"":{"日本語のテキスト":false}}}}
+{"fn":"applyMessageOps","args":[{"ünï":{"😀":""}},[{"path":["Hello World","é"],"type":"set","value":9007199254740992}]],"ok":{"ünï":{"😀":""},"Hello World":{"é":9007199254740992}}}
+{"fn":"applyMessageOps","args":[{"a":false,"nav":null},[{"path":[".leading","a.b.c"],"type":"set","value":"straße"}]],"ok":{"a":false,"nav":null,".leading":{"a.b.c":"straße"}}}
+{"fn":"applyMessageOps","args":[{"b":{}},[{"path":[":","trailing."],"type":"delete"},{"path":["日本語のテキストa:b:c","hello world","abcsrc/a/b.ts"],"type":"set","value":"😀"}]],"ok":{"b":{},"日本語のテキストa:b:c":{"hello world":{"abcsrc/a/b.ts":"😀"}}}}
+{"fn":"applyMessageOps","args":[{"a.b":false},[]],"ok":{"a.b":false}}
+{"fn":"applyMessageOps","args":[0,[]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"2":-2.5,"home":null},[]],"ok":{"2":-2.5,"home":null}}
+{"fn":"applyMessageOps","args":[{},null],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"a":{"😀":{}},"home":"abc","ünï":{"a.b":{"2":null,"😀":null},"home":null}},[]],"ok":{"a":{"😀":{}},"home":"abc","ünï":{"a.b":{"2":null,"😀":null},"home":null}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[":","","HELLOtrailing."],"type":"set","value":-2.5},{"path":[],"type":"delete"}]],"ok":{":":{"":{"HELLOtrailing.":-2.5}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":2}]],"ok":{"undefined":2}}
+{"fn":"applyMessageOps","args":[{"nav":null,"title":{"10":{"2":null,"b":null},"title":{"a":null,"ünï":null},"ünï":{"2":null,"10":null}},"😀":true},[]],"ok":{"nav":null,"title":{"10":{"2":null,"b":null},"title":{"a":null,"ünï":null},"ünï":{"2":null,"10":null}},"😀":true}}
+{"fn":"applyMessageOps","args":[0,[{"path":["Hello World","a..b"],"type":"delete"},{"path":[":","straße","trailing."],"type":"delete"},{"path":[],"type":"set","value":false}]],"ok":{"undefined":false}}
+{"fn":"applyMessageOps","args":[{"a":false},[{"path":["a:b:c","ünïcödé"],"type":"set","value":false},{"path":[],"type":"delete"},{"path":["emoji 👍🏽 mix","ns:key.path",".leading"],"type":"delete"}]],"ok":{"a":false,"a:b:c":{"ünïcödé":false}}}
+{"fn":"applyMessageOps","args":[{"10":1000,"a":{"a":"hello","😀":{"nav":null,"😀":null}}},[{"path":[],"type":"delete"}]],"ok":{"10":1000,"a":{"a":"hello","😀":{"nav":null,"😀":null}}}}
+{"fn":"applyMessageOps","args":[{"10":{"nav":{},"ünï":{"2":null,"10":null}},"b":{"a.b":null,"b":{"$num":"NaN"},"home":{"nav":null}}},["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"2":100,"a.b":{"10":{"a.b":null,"b":null}}},{}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"path":["src/a/b.ts","abc","emoji 👍🏽 mix"],"type":"set","value":0},{"path":[],"type":"delete"}]],"ok":{"a":{"b":"c"},"src/a/b.ts":{"abc":{"emoji 👍🏽 mix":0}}}}
+{"fn":"applyMessageOps","args":[{"a":{}},[{"path":[],"type":"set","value":null},{"path":[],"type":"delete"}]],"ok":{"a":{}}}
+{"fn":"applyMessageOps","args":[{"a":false,"nav":9007199254740992},[]],"ok":{"a":false,"nav":9007199254740992}}
+{"fn":"applyMessageOps","args":[{"2":{"10":null,"nav":{"2":null,"10":null,"😀":null}}},[{"path":[],"type":"delete"},{"path":["line1\nline2",":Hello World","{name} has {count} items"],"type":"set","value":"./x/**/*.json"},{"path":["emoji 👍🏽 mix"],"type":"delete"}]],"ok":{"2":{"10":null,"nav":{"2":null,"10":null,"😀":null}},"line1\nline2":{":Hello World":{"{name} has {count} items":"./x/**/*.json"}}}}
+{"fn":"applyMessageOps","args":[{"10":null,"home":false},[]],"ok":{"10":null,"home":false}}
+{"fn":"applyMessageOps","args":[{"10":"key_name-1straße","😀":null},[{"path":[],"type":"set","value":9007199254740992}]],"ok":{"10":"key_name-1straße","😀":null,"undefined":9007199254740992}}
+{"fn":"applyMessageOps","args":[{"a":"日本語のテキスト","title":{"title":true},"😀":{"nav":{"a":null,"nav":null},"😀":{}}},[{"path":[],"type":"delete"},{"path":[],"type":"set","value":false}]],"ok":{"a":"日本語のテキスト","title":{"title":true},"😀":{"nav":{"a":null,"nav":null},"😀":{}},"undefined":false}}
+{"fn":"applyMessageOps","args":[{"a":"b"},[{"path":[],"type":"delete"},{"path":["{name} has {count} items","a..b","ünïcödéhello world"],"type":"delete"},{"path":["﻿bom"],"type":"set","value":"straße"}]],"ok":{"a":"b","﻿bom":"straße"}}
+{"fn":"applyMessageOps","args":[{"home":{}},[{"path":["﻿bom","İstanbul","a.b.c"],"type":"delete"},{"path":["日本語のテキスト","{name} has {count} items"],"type":"delete"},{"path":[".leading","a",".leading"],"type":"delete"}]],"ok":{"home":{}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["ns:key.path","﻿bom","./x/**/*.json"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[[],[{"path":["ns:key.path","a:b:c","ünïcödé"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"a.b":false,"b":true,"home":"ünïcödé"},[{"path":[],"type":"set","value":null},{"path":["hellokey_name-1",":"],"type":"delete"}]],"ok":{"a.b":false,"b":true,"home":"ünïcödé","undefined":null}}
+{"fn":"applyMessageOps","args":[{"b":{"10":{"ünï":null,"😀":null},"home":{"b":null},"😀":{"10":null,"nav":null}},"😀":-1},0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"nav":{"10":null,"a":{"a.b":null,"ünï":null},"a.b":9007199254740992},"title":42,"😀":{"😀":{"nav":null,"title":null,"ünï":null}}},[{"path":[],"type":"delete"},{"path":[".leading"],"type":"delete"},{"path":["😀"],"type":"delete"}]],"ok":{"nav":{"10":null,"a":{"a.b":null,"ünï":null},"a.b":9007199254740992},"title":42}}
+{"fn":"applyMessageOps","args":[[],"x"],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"b":{"$num":"NaN"},"home":10},[]],"ok":{"b":{"$num":"NaN"},"home":10}}
+{"fn":"applyMessageOps","args":[{"a.b":null,"😀":{"b":{"nav":null,"title":null},"nav":{"2":null,"10":null}}},[{"path":[],"type":"delete"},{"path":["a","ab","hello"],"type":"delete"},{"path":["abc","{name} has {count} items","ΣΊΣΥΦΟΣ"],"type":"set","value":false}]],"ok":{"a.b":null,"😀":{"b":{"nav":null,"title":null},"nav":{"2":null,"10":null}},"abc":{"{name} has {count} items":{"ΣΊΣΥΦΟΣ":false}}}}
+{"fn":"applyMessageOps","args":[{"title":{"title":{}},"ünï":{"nav":{"😀":null}}},[]],"ok":{"title":{"title":{}},"ünï":{"nav":{"😀":null}}}}
+{"fn":"applyMessageOps","args":[{"😀":{"a.b":{"a.b":null,"b":null,"title":null}}},[{"path":[],"type":"delete"},{"path":["src/a/b.ts","hello","ünïcödéabc"],"type":"delete"}]],"ok":{"😀":{"a.b":{"a.b":null,"b":null,"title":null}}}}
+{"fn":"applyMessageOps","args":[{"home":{"b":3,"nav":false,"title":{"a.b":null}},"title":{"2":":","a.b":{},"title":{"ünï":null}},"ünï":"tab\tseparated"},true],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":null}]],"ok":{"undefined":null}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":["x",[{"path":["a"],"type":"set","value":false}]],"ok":{"0":"x","a":false}}
+{"fn":"applyMessageOps","args":[{"ünï":false,"😀":null},[{"path":["ünïcödé"],"type":"set","value":null}]],"ok":{"ünï":false,"😀":null,"ünïcödé":null}}
+{"fn":"applyMessageOps","args":[{"a":{"b":false}},[{"path":["a😀b😀c"],"type":"set","value":null}]],"ok":{"a":{"b":false},"a😀b😀c":null}}
+{"fn":"applyMessageOps","args":[{"nav":"","ünï":false},[]],"ok":{"nav":"","ünï":false}}
+{"fn":"applyMessageOps","args":[{},[{"path":[""],"type":"set","value":3},{"path":[],"type":"delete"}]],"ok":{"":3}}
+{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[{"path":["a.b.c"],"type":"set","value":3}]],"ok":{"a":{"b":"c"},"a.b.c":3}}
+{"fn":"applyMessageOps","args":[{"a":"b"},[]],"ok":{"a":"b"}}
+{"fn":"applyMessageOps","args":[{},[{"path":["line1\nline2"],"type":"delete"},{"path":["tab\tseparated","İstanbul","a:b:c.leading"],"type":"set","value":{"$num":"NaN"}},{"path":[],"type":"delete"}]],"ok":{"tab\tseparated":{"İstanbul":{"a:b:c.leading":{"$num":"NaN"}}}}}
+{"fn":"applyMessageOps","args":[true,[{"path":["日本語のテキストünïcödé","a.b.c","a😀b😀c"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":["x",[]],"ok":{"0":"x"}}
+{"fn":"applyMessageOps","args":[{"a.b":{"b":false,"ünï":true},"ünï":null},[{"path":["line1\nline2","hello world"],"type":"set","value":2147483648},{"path":["a:b:c","é","😀"],"type":"delete"},{"path":["emoji 👍🏽 mixé"],"type":"set","value":true}]],"ok":{"a.b":{"b":false,"ünï":true},"ünï":null,"line1\nline2":{"hello world":2147483648},"emoji 👍🏽 mixé":true}}
+{"fn":"applyMessageOps","args":[{"2":{},"a.b":false},{"a":"b"}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"10":true,"a":{},"a.b":{"a.b":"","b":9007199254740992}},[{"path":[":"],"type":"set","value":null},{"path":[".leading","Hello World"],"type":"delete"}]],"ok":{"10":true,"a":{},"a.b":{"a.b":"","b":9007199254740992},":":null}}
+{"fn":"applyMessageOps","args":[{"a.b":false,"b":{"2":{"10":null},"a":{"ünï":null}}},[{"path":[":straße","é"],"type":"set","value":false},{"path":[],"type":"set","value":true}]],"ok":{"a.b":false,"b":{"2":{"10":null},"a":{"ünï":null}},":straße":{"é":false},"undefined":true}}
+{"fn":"applyMessageOps","args":[{"a":"b"},[{"path":[],"type":"delete"}]],"ok":{"a":"b"}}
+{"fn":"applyMessageOps","args":[{"a.b":{"home":"日本語のテキスト","nav":{"a.b":null,"ünï":null}}},[{"path":["{name} has {count} items","a😀b😀c"],"type":"set","value":{"$num":"Infinity"}}]],"ok":{"a.b":{"home":"日本語のテキスト","nav":{"a.b":null,"ünï":null}},"{name} has {count} items":{"a😀b😀c":{"$num":"Infinity"}}}}
+{"fn":"applyMessageOps","args":[{"nav":{"a":3}},[]],"ok":{"nav":{"a":3}}}
+{"fn":"applyMessageOps","args":[{"10":{"2":{"b":null,"😀":null}},"ünï":"key_name-1"},[]],"ok":{"10":{"2":{"b":null,"😀":null}},"ünï":"key_name-1"}}
+{"fn":"applyMessageOps","args":[{"2":null,"ünï":{"😀":2}},[]],"ok":{"2":null,"ünï":{"😀":2}}}
+{"fn":"applyMessageOps","args":[{"a":0.5},[{"path":["ünïcödé"],"type":"delete"},{"path":["emoji 👍🏽 mix","line1\nline2"],"type":"set","value":{"$num":"NaN"}}]],"ok":{"a":0.5,"emoji 👍🏽 mix":{"line1\nline2":{"$num":"NaN"}}}}
+{"fn":"applyMessageOps","args":[{"a":"key_name-1"},[{"path":["  padded  ΣΊΣΥΦΟΣ"],"type":"delete"}]],"ok":{"a":"key_name-1"}}
+{"fn":"applyMessageOps","args":[{"2":{"ünï":{"10":null,"ünï":null}},"a":null,"ünï":{"2":true}},[{"path":["hello"],"type":"set","value":null}]],"ok":{"2":{"ünï":{"10":null,"ünï":null}},"a":null,"ünï":{"2":true},"hello":null}}
+{"fn":"applyMessageOps","args":[{"10":true,"a.b":{}},null],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"a.b":{},"title":{}},[{"path":[],"type":"set","value":null}]],"ok":{"a.b":{},"title":{},"undefined":null}}
+{"fn":"applyMessageOps","args":[{"b":42,"nav":{"nav":{"10":null}}},[{"path":["emoji 👍🏽 mixtab\tseparated",":","İstanbula:b:c"],"type":"delete"}]],"ok":{"b":42,"nav":{"nav":{"10":null}}}}
+{"fn":"applyMessageOps","args":[{"b":{}},[]],"ok":{"b":{}}}
+{"fn":"applyMessageOps","args":[0,0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[null,[{"path":[],"type":"set","value":true},{"path":["a..bline1\nline2"],"type":"delete"},{"path":["trailing.İstanbul","hellohello"],"type":"delete"}]],"error":"Cannot convert undefined or null to object"}
+{"fn":"applyMessageOps","args":[{},{"a":"b"}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"2":null},["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[[],{"a":"b"}],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"title":0},[]],"ok":{"title":0}}
+{"fn":"applyMessageOps","args":[{"a.b":null,"title":null},[{"path":["hello"],"type":"delete"}]],"ok":{"a.b":null,"title":null}}
+{"fn":"applyMessageOps","args":[{"ünï":false},[{"path":["line1\nline2","a:b:c","a😀b😀c"],"type":"delete"},{"path":[],"type":"set","value":null}]],"ok":{"ünï":false,"undefined":null}}
+{"fn":"applyMessageOps","args":[{"b":false},[]],"ok":{"b":false}}
+{"fn":"applyMessageOps","args":[{"a":{"2":true,"ünï":{"2":null,"nav":null}}},[]],"ok":{"a":{"2":true,"ünï":{"2":null,"nav":null}}}}
+{"fn":"applyMessageOps","args":[{"10":{"a":"a😀b😀cns:key.path","title":1000000,"ünï":{"a":null,"😀":null}},"b":"ünïcödé"},[{"path":["a😀b😀c","﻿bom","src/a/b.ts"],"type":"delete"},{"path":["a😀b😀c","a😀b😀c","İstanbul"],"type":"delete"}]],"ok":{"10":{"a":"a😀b😀cns:key.path","title":1000000,"ünï":{"a":null,"😀":null}},"b":"ünïcödé"}}
+{"fn":"applyMessageOps","args":[{"10":{},"a":{"10":"ab","title":{"10":null}},"😀":{"a":9007199254740992,"b":{"ünï":null},"nav":{"a.b":null}}},[]],"ok":{"10":{},"a":{"10":"ab","title":{"10":null}},"😀":{"a":9007199254740992,"b":{"ünï":null},"nav":{"a.b":null}}}}
+{"fn":"applyMessageOps","args":[{"a.b":"abc","😀":false},[{"path":["a","😀","ns:key.path"],"type":"delete"}]],"ok":{"a.b":"abc","😀":false}}
+{"fn":"applyMessageOps","args":[{"2":false,"😀":{"b":{}}},[{"path":["key_name-1","hello world"],"type":"set","value":true}]],"ok":{"2":false,"😀":{"b":{}},"key_name-1":{"hello world":true}}}
+{"fn":"applyMessageOps","args":[{"a":{"title":"日本語のテキスト"},"b":{"2":null,"a.b":null}},"x"],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"b":{"10":"{name} has {count} items","title":{}}},[{"path":["😀","﻿bom"],"type":"set","value":false},{"path":["ab",":","İstanbul"],"type":"delete"},{"path":["src/a/b.ts"],"type":"delete"}]],"ok":{"b":{"10":"{name} has {count} items","title":{}},"😀":{"﻿bom":false}}}
+{"fn":"applyMessageOps","args":[{"title":{"10":{"10":null,"title":null},"title":"src/a/b.ts","ünï":true}},[]],"ok":{"title":{"10":{"10":null,"title":null},"title":"src/a/b.ts","ünï":true}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["a😀b😀c","{name} has {count} items"],"type":"set","value":null},{"path":[],"type":"delete"}]],"ok":{"a😀b😀c":{"{name} has {count} items":null}}}
+{"fn":"applyMessageOps","args":[{"10":10,"😀":null},[{"path":[],"type":"delete"},{"path":["a:b:c😀","ab"],"type":"delete"},{"path":["{name} has {count} items","﻿bom{name} has {count} items"],"type":"delete"}]],"ok":{"10":10,"😀":null}}
+{"fn":"applyMessageOps","args":[{"a.b":{},"title":"a.b.c:"},[{"path":[],"type":"set","value":null}]],"ok":{"a.b":{},"title":"a.b.c:","undefined":null}}
+{"fn":"applyMessageOps","args":[{"a":"b"},[{"path":["a😀b😀cline1\nline2","./x/**/*.json","  padded  "],"type":"set","value":1000000},{"path":["hello world","straßens:key.path"],"type":"set","value":null},{"path":["line1\nline2","HELLO","ab"],"type":"set","value":null}]],"ok":{"a":"b","a😀b😀cline1\nline2":{"./x/**/*.json":{"  padded  ":1000000}},"hello world":{"straßens:key.path":null},"line1\nline2":{"HELLO":{"ab":null}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":"a.b.ca😀b😀c"},{"path":[".leading"],"type":"delete"}]],"ok":{"undefined":"a.b.ca😀b😀c"}}
+{"fn":"applyMessageOps","args":[{},[{"path":["a:b:c"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"a":"b"},[{"path":["trailing.emoji 👍🏽 mix","key_name-1"],"type":"delete"},{"path":["  padded  "],"type":"set","value":false}]],"ok":{"a":"b","  padded  ":false}}
+{"fn":"applyMessageOps","args":[0,[{"path":["a"],"type":"set","value":true}]],"ok":{"a":true}}
+{"fn":"applyMessageOps","args":[{"10":{"nav":{"b":null,"nav":null,"😀":null},"😀":false},"title":{"ünï":true}},[{"path":["trailing.",".leading","😀"],"type":"set","value":true}]],"ok":{"10":{"nav":{"b":null,"nav":null,"😀":null},"😀":false},"title":{"ünï":true},"trailing.":{".leading":{"😀":true}}}}
+{"fn":"applyMessageOps","args":[{"home":{}},[{"path":["😀"],"type":"set","value":true}]],"ok":{"home":{},"😀":true}}
+{"fn":"applyMessageOps","args":[{"b":false},[{"path":["😀"],"type":"set","value":100}]],"ok":{"b":false,"😀":100}}
+{"fn":"applyMessageOps","args":[{},[{"path":["trailing.","ab","hello"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"2":{"a.b":true,"😀":{}},"b":"😀"},[{"path":["","line1\nline2"],"type":"set","value":10},{"path":[],"type":"delete"},{"path":[],"type":"delete"}]],"ok":{"2":{"a.b":true,"😀":{}},"b":"😀","":{"line1\nline2":10}}}
+{"fn":"applyMessageOps","args":[{"a.b":{},"title":null},[{"path":["hello world",":",".leadingstraße"],"type":"set","value":"key_name-1"},{"path":["a:b:c"],"type":"set","value":2}]],"ok":{"a.b":{},"title":null,"hello world":{":":{".leadingstraße":"key_name-1"}},"a:b:c":2}}
+{"fn":"applyMessageOps","args":[{"a.b":{},"home":{"2":{"nav":null,"title":null,"ünï":null}},"😀":{"a":{},"a.b":"./x/**/*.json  padded  "}},[{"path":[],"type":"set","value":0},{"path":["trailing.","ΣΊΣΥΦΟΣ.leading","a..b"],"type":"set","value":"straße"}]],"ok":{"a.b":{},"home":{"2":{"nav":null,"title":null,"ünï":null}},"😀":{"a":{},"a.b":"./x/**/*.json  padded  "},"undefined":0,"trailing.":{"ΣΊΣΥΦΟΣ.leading":{"a..b":"straße"}}}}
+{"fn":"applyMessageOps","args":[{"b":{"10":0},"nav":true,"😀":{}},[{"path":[],"type":"delete"},{"path":["İstanbul"],"type":"delete"}]],"ok":{"b":{"10":0},"nav":true,"😀":{}}}
+{"fn":"applyMessageOps","args":[{"ünï":{"home":{"ünï":null},"title":false},"😀":{"2":10,"a.b":null,"😀":100}},[{"path":["{name} has {count} items","{name} has {count} items"],"type":"set","value":true},{"path":["tab\tseparated","src/a/b.ts"],"type":"delete"}]],"ok":{"ünï":{"home":{"ünï":null},"title":false},"😀":{"2":10,"a.b":null,"😀":100},"{name} has {count} items":{"{name} has {count} items":true}}}
+{"fn":"applyMessageOps","args":[{"2":{"b":"ΣΊΣΥΦΟΣstraße","home":{}},"nav":1000},[]],"ok":{"2":{"b":"ΣΊΣΥΦΟΣstraße","home":{}},"nav":1000}}
+{"fn":"applyMessageOps","args":[{"home":{},"nav":"trailing.ünïcödé"},[{"path":[],"type":"set","value":"line1\nline2"},{"path":["straße"],"type":"set","value":{"$num":"-Infinity"}}]],"ok":{"home":{},"nav":"trailing.ünïcödé","undefined":"line1\nline2","straße":{"$num":"-Infinity"}}}
+{"fn":"applyMessageOps","args":[{"title":"ab"},[]],"ok":{"title":"ab"}}
+{"fn":"applyMessageOps","args":[{"a":{"a.b":{"a.b":null,"home":null},"b":{"10":null,"a":null,"😀":null},"home":true},"ünï":{"b":"Hello Worldkey_name-1","ünï":{}}},[{"path":[],"type":"delete"},{"path":["aba","emoji 👍🏽 mix","HELLO"],"type":"delete"}]],"ok":{"a":{"a.b":{"a.b":null,"home":null},"b":{"10":null,"a":null,"😀":null},"home":true},"ünï":{"b":"Hello Worldkey_name-1","ünï":{}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["a.b.c","﻿bom"],"type":"set","value":null},{"path":["ns:key.path"],"type":"set","value":null}]],"ok":{"a.b.c":{"﻿bom":null},"ns:key.path":null}}
+{"fn":"applyMessageOps","args":[{},[{"path":["İstanbul"],"type":"set","value":null},{"path":["hello worldstraße"],"type":"delete"},{"path":[],"type":"set","value":null}]],"ok":{"İstanbul":null,"undefined":null}}
+{"fn":"applyMessageOps","args":[{"ünï":"a..b"},[{"path":["HELLO","ünïcödé"],"type":"set","value":false},{"path":["ab","ünïcödé"],"type":"delete"}]],"ok":{"ünï":"a..b","HELLO":{"ünïcödé":false}}}
+{"fn":"applyMessageOps","args":[{"title":{"nav":null,"ünï":0}},["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"2":{"a":true}},[{"path":[],"type":"set","value":{"$num":"Infinity"}}]],"ok":{"2":{"a":true},"undefined":{"$num":"Infinity"}}}
+{"fn":"applyMessageOps","args":[{},["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[{"10":-2.5,"home":null,"😀":{"b":{}}},[{"path":["src/a/b.ts",":"],"type":"set","value":null}]],"ok":{"10":-2.5,"home":null,"😀":{"b":{}},"src/a/b.ts":{":":null}}}
+{"fn":"applyMessageOps","args":[true,[{"path":["hello world","HELLOab","src/a/b.tshello"],"type":"delete"},{"path":["a.b.c","src/a/b.ts"],"type":"set","value":-1},{"path":[],"type":"set","value":"src/a/b.ts.leading"}]],"ok":{"a.b.c":{"src/a/b.ts":-1},"undefined":"src/a/b.ts.leading"}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":"hello{name} has {count} items"}]],"ok":{"undefined":"hello{name} has {count} items"}}
+{"fn":"applyMessageOps","args":[{"b":-2.5,"home":null},[{"path":["hello","tab\tseparated"],"type":"set","value":0.5}]],"ok":{"b":-2.5,"home":null,"hello":{"tab\tseparated":0.5}}}
+{"fn":"applyMessageOps","args":[{"nav":"😀"},[{"path":["a","emoji 👍🏽 mix",".leading"],"type":"delete"},{"path":["日本語のテキストa:b:c","src/a/b.ts"],"type":"set","value":true}]],"ok":{"nav":"😀","日本語のテキストa:b:c":{"src/a/b.ts":true}}}
+{"fn":"applyMessageOps","args":[{"home":null},[]],"ok":{"home":null}}
+{"fn":"applyMessageOps","args":[["a",1],[]],"ok":{"0":"a","1":1}}
+{"fn":"applyMessageOps","args":[{},[{"path":["Hello World","hello worldtab\tseparated"],"type":"set","value":"İstanbul"},{"path":["{name} has {count} items","ünïcödé","İstanbul"],"type":"delete"},{"path":[],"type":"set","value":"Hello Worldline1\nline2"}]],"ok":{"Hello World":{"hello worldtab\tseparated":"İstanbul"},"undefined":"Hello Worldline1\nline2"}}
+{"fn":"applyMessageOps","args":[{},true],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[[],[{"path":["a"],"type":"delete"},{"path":["{name} has {count} itemskey_name-1","straßeemoji 👍🏽 mix"],"type":"set","value":-1}]],"ok":{"{name} has {count} itemskey_name-1":{"straßeemoji 👍🏽 mix":-1}}}
+{"fn":"applyMessageOps","args":[{"2":{"a.b":"  padded  ","home":{"10":null},"title":{"a.b":null,"ünï":null}},"a":1000000},[{"path":["a😀b😀c",""],"type":"set","value":-2.5},{"path":["HELLO.leading","ΣΊΣΥΦΟΣ"],"type":"set","value":1000000}]],"ok":{"2":{"a.b":"  padded  ","home":{"10":null},"title":{"a.b":null,"ünï":null}},"a":1000000,"a😀b😀c":{"":-2.5},"HELLO.leading":{"ΣΊΣΥΦΟΣ":1000000}}}
+{"fn":"applyMessageOps","args":[{"b":{},"nav":{"2":{},"10":{"a":null,"title":null,"ünï":null}}},[{"path":["Hello World","a..b","emoji 👍🏽 mix"],"type":"set","value":-1},{"path":["İstanbul","é"],"type":"set","value":false},{"path":[],"type":"set","value":null}]],"ok":{"b":{},"nav":{"2":{},"10":{"a":null,"title":null,"ünï":null}},"Hello World":{"a..b":{"emoji 👍🏽 mix":-1}},"İstanbul":{"é":false},"undefined":null}}
+{"fn":"applyMessageOps","args":[{"a.b":{"ünï":{"a.b":null,"ünï":null,"😀":null}},"home":{"2":true,"nav":{}}},[{"path":["src/a/b.tsİstanbul","straße"],"type":"delete"},{"path":["key_name-1./x/**/*.json","src/a/b.ts","ΣΊΣΥΦΟΣhello"],"type":"delete"}]],"ok":{"a.b":{"ünï":{"a.b":null,"ünï":null,"😀":null}},"home":{"2":true,"nav":{}}}}
+{"fn":"applyMessageOps","args":[{"10":null,"a":{},"nav":{"10":false}},[{"path":["😀a:b:c","src/a/b.ts","😀"],"type":"set","value":1000000},{"path":["key_name-1"],"type":"set","value":null},{"path":["HELLO"],"type":"set","value":"HELLO"}]],"ok":{"10":null,"a":{},"nav":{"10":false},"😀a:b:c":{"src/a/b.ts":{"😀":1000000}},"key_name-1":null,"HELLO":"HELLO"}}
+{"fn":"applyMessageOps","args":[{"a":null,"nav":{}},[{"path":["key_name-1","trailing.ns:key.path","a"],"type":"set","value":"  padded  {name} has {count} items"}]],"ok":{"a":null,"nav":{},"key_name-1":{"trailing.ns:key.path":{"a":"  padded  {name} has {count} items"}}}}
+{"fn":"applyMessageOps","args":[{"2":"{name} has {count} items﻿bom","a":"hello world","title":"日本語のテキスト"},[{"path":["a"],"type":"delete"}]],"ok":{"2":"{name} has {count} items﻿bom","title":"日本語のテキスト"}}
+{"fn":"applyMessageOps","args":[{"a":{"b":"c"}},[]],"ok":{"a":{"b":"c"}}}
+{"fn":"applyMessageOps","args":[{"2":0,"a.b":2147483648,"😀":false},[{"path":[],"type":"delete"}]],"ok":{"2":0,"a.b":2147483648,"😀":false}}
+{"fn":"applyMessageOps","args":[{"a.b":null},[{"path":["😀emoji 👍🏽 mix","trailing.key_name-1","emoji 👍🏽 mix"],"type":"delete"},{"path":[],"type":"delete"}]],"ok":{"a.b":null}}
+{"fn":"applyMessageOps","args":[{"10":{"a":{"a.b":null,"home":null}}},[{"path":["src/a/b.tsΣΊΣΥΦΟΣ",".leading","src/a/b.ts"],"type":"set","value":"./x/**/*.json"},{"path":["a..b","abc","HELLO"],"type":"delete"},{"path":[".leading","é","a.b.c"],"type":"set","value":null}]],"ok":{"10":{"a":{"a.b":null,"home":null}},"src/a/b.tsΣΊΣΥΦΟΣ":{".leading":{"src/a/b.ts":"./x/**/*.json"}},".leading":{"é":{"a.b.c":null}}}}
+{"fn":"applyMessageOps","args":[{"a.b":{"a.b":true,"ünï":{"2":null,"😀":null}},"nav":"a.b.c"},[]],"ok":{"a.b":{"a.b":true,"ünï":{"2":null,"😀":null}},"nav":"a.b.c"}}
+{"fn":"applyMessageOps","args":[{"2":{"a":{"a":null,"b":null,"home":null},"title":"src/a/b.tssrc/a/b.ts"},"title":{"home":{},"title":42,"ünï":{}}},[{"path":[],"type":"delete"},{"path":["a","./x/**/*.json"],"type":"set","value":-2.5},{"path":["a😀b😀c😀"],"type":"set","value":null}]],"ok":{"2":{"a":{"a":null,"b":null,"home":null},"title":"src/a/b.tssrc/a/b.ts"},"title":{"home":{},"title":42,"ünï":{}},"a":{"./x/**/*.json":-2.5},"a😀b😀c😀":null}}
+{"fn":"applyMessageOps","args":["x",[{"path":["key_name-1","a..bsrc/a/b.ts","abc"],"type":"delete"},{"path":[],"type":"set","value":null}]],"ok":{"0":"x","undefined":null}}
+{"fn":"applyMessageOps","args":[{"a":"src/a/b.ts","😀":"﻿bom"},[{"path":[],"type":"delete"},{"path":[":"],"type":"delete"},{"path":[],"type":"set","value":true}]],"ok":{"a":"src/a/b.ts","😀":"﻿bom","undefined":true}}
+{"fn":"applyMessageOps","args":[{"b":"ns:key.path"},null],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"a.b":9007199254740992},[{"path":[],"type":"delete"}]],"ok":{"a.b":9007199254740992}}
+{"fn":"applyMessageOps","args":[{"a":true},[{"path":["straßetab\tseparated","İstanbul😀","tab\tseparated"],"type":"delete"},{"path":["HELLO","  padded  "],"type":"set","value":null}]],"ok":{"a":true,"HELLO":{"  padded  ":null}}}
+{"fn":"applyMessageOps","args":[{"2":{},"title":"ΣΊΣΥΦΟΣ"},[{"path":["emoji 👍🏽 mix"],"type":"set","value":"emoji 👍🏽 mix"}]],"ok":{"2":{},"title":"ΣΊΣΥΦΟΣ","emoji 👍🏽 mix":"emoji 👍🏽 mix"}}
+{"fn":"applyMessageOps","args":[{"home":true,"title":false},[{"path":["ünïcödé","ab","src/a/b.ts"],"type":"delete"}]],"ok":{"home":true,"title":false}}
+{"fn":"applyMessageOps","args":[{"nav":{"$num":"Infinity"}},[{"path":["HELLO"],"type":"delete"},{"path":["😀"],"type":"delete"},{"path":["﻿bom:"],"type":"set","value":null}]],"ok":{"nav":{"$num":"Infinity"},"﻿bom:":null}}
+{"fn":"applyMessageOps","args":[{"home":false},[{"path":["abc﻿bom","a","abc"],"type":"delete"},{"path":[],"type":"set","value":null},{"path":["key_name-1",":hello"],"type":"set","value":null}]],"ok":{"home":false,"undefined":null,"key_name-1":{":hello":null}}}
+{"fn":"applyMessageOps","args":[{"2":100,"nav":true},[{"path":["","src/a/b.ts","abc"],"type":"set","value":true}]],"ok":{"2":100,"nav":true,"":{"src/a/b.ts":{"abc":true}}}}
+{"fn":"applyMessageOps","args":[{"😀":{"2":{"2":null},"a":{"10":null,"b":null},"ünï":{}}},[{"path":["﻿bomabc","İstanbul","{name} has {count} items"],"type":"delete"},{"path":["tab\tseparated{name} has {count} items"],"type":"delete"}]],"ok":{"😀":{"2":{"2":null},"a":{"10":null,"b":null},"ünï":{}}}}
+{"fn":"applyMessageOps","args":[{"nav":false,"ünï":{}},[{"path":["a😀b😀c"],"type":"set","value":10}]],"ok":{"nav":false,"ünï":{},"a😀b😀c":10}}
+{"fn":"applyMessageOps","args":[{"2":true,"a.b":null,"ünï":{"10":{"home":null,"title":null},"home":false}},0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{"b":null},[{"path":["hello","﻿bom","a..b"],"type":"delete"},{"path":["{name} has {count} items",""],"type":"set","value":null}]],"ok":{"b":null,"{name} has {count} items":{"":null}}}
+{"fn":"applyMessageOps","args":[true,[{"path":[],"type":"set","value":false}]],"ok":{"undefined":false}}
+{"fn":"applyMessageOps","args":[{"2":{"10":null},"home":{"2":"ΣΊΣΥΦΟΣ﻿bom"},"😀":"日本語のテキスト"},[{"path":["a😀b😀c"],"type":"set","value":null},{"path":[],"type":"set","value":1000},{"path":["ünïcödéline1\nline2","./x/**/*.json","a:b:c"],"type":"set","value":null}]],"ok":{"2":{"10":null},"home":{"2":"ΣΊΣΥΦΟΣ﻿bom"},"😀":"日本語のテキスト","a😀b😀c":null,"undefined":1000,"ünïcödéline1\nline2":{"./x/**/*.json":{"a:b:c":null}}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["a:b:c","éİstanbul","ünïcödé"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"a":{"b":{"$num":"-0"},"title":null}},[{"path":["  padded  ","straße"],"type":"set","value":true}]],"ok":{"a":{"b":{"$num":"-0"},"title":null},"  padded  ":{"straße":true}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["a😀b😀c"],"type":"delete"},{"path":[],"type":"set","value":"{name} has {count} items"}]],"ok":{"undefined":"{name} has {count} items"}}
+{"fn":"applyMessageOps","args":[{"a":{"$num":"NaN"},"home":{"b":{}}},[]],"ok":{"a":{"$num":"NaN"},"home":{"b":{}}}}
+{"fn":"applyMessageOps","args":[{"😀":{"a.b":"日本語のテキストline1\nline2","b":"emoji 👍🏽 mix","title":null}},[{"path":[],"type":"delete"},{"path":["😀HELLO","key_name-1"],"type":"set","value":"a..b"}]],"ok":{"😀":{"a.b":"日本語のテキストline1\nline2","b":"emoji 👍🏽 mix","title":null},"😀HELLO":{"key_name-1":"a..b"}}}
+{"fn":"applyMessageOps","args":[{},[{"path":["{name} has {count} items","a","src/a/b.ts"],"type":"delete"},{"path":["日本語のテキスト","İstanbul",".leading"],"type":"set","value":null},{"path":["./x/**/*.jsonhello world"],"type":"set","value":null}]],"ok":{"日本語のテキスト":{"İstanbul":{".leading":null}},"./x/**/*.jsonhello world":null}}
+{"fn":"applyMessageOps","args":[{"10":{"$num":"Infinity"}},0],"error":"ops is not iterable"}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"delete"},{"path":["hello world","abc"],"type":"set","value":"trailing."}]],"ok":{"hello world":{"abc":"trailing."}}}
+{"fn":"applyMessageOps","args":[{"nav":{}},[{"path":["hello worldline1\nline2"],"type":"set","value":true}]],"ok":{"nav":{},"hello worldline1\nline2":true}}
+{"fn":"applyMessageOps","args":[true,["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
+{"fn":"applyMessageOps","args":[[],[{"path":["atab\tseparated","ab","{name} has {count} items"],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[[],[{"path":["emoji 👍🏽 mix",":","a..b"],"type":"delete"},{"path":[],"type":"delete"}]],"ok":{}}
+{"fn":"applyMessageOps","args":[{"b":{},"ünï":{},"😀":2147483648},[{"path":[],"type":"set","value":true},{"path":[],"type":"set","value":null},{"path":[],"type":"delete"}]],"ok":{"b":{},"ünï":{},"😀":2147483648}}
+{"fn":"applyMessageOps","args":[true,[{"path":["straßea.b.c"],"type":"set","value":null}]],"ok":{"straßea.b.c":null}}
+{"fn":"applyMessageOps","args":[{"a.b":1000},[{"path":[],"type":"delete"},{"path":["  padded  ","emoji 👍🏽 mix"],"type":"set","value":false},{"path":[],"type":"delete"}]],"ok":{"a.b":1000,"  padded  ":{"emoji 👍🏽 mix":false}}}
+{"fn":"applyMessageOps","args":[{"home":"abc","nav":{"a.b":true,"b":{"$num":"-0"},"home":{"a.b":null}}},[{"path":["hello world"],"type":"delete"},{"path":["./x/**/*.jsonab","line1\nline2","./x/**/*.json"],"type":"delete"}]],"ok":{"home":"abc","nav":{"a.b":true,"b":{"$num":"-0"},"home":{"a.b":null}}}}
+{"fn":"applyMessageOps","args":[{"2":0,"10":null,"home":"é"},[{"path":["Hello Worldab","ΣΊΣΥΦΟΣ","HELLO"],"type":"delete"},{"path":[],"type":"delete"},{"path":["{name} has {count} items","abc"],"type":"delete"}]],"ok":{"2":0,"10":null,"home":"é"}}
+{"fn":"applyMessageOps","args":[{},[{"path":[],"type":"set","value":"😀a..b"},{"path":["Hello Worldstraße","﻿bomHello World"],"type":"delete"}]],"ok":{"undefined":"😀a..b"}}
+{"fn":"applyMessageOps","args":[{"nav":{},"😀":false},[{"path":["emoji 👍🏽 mix","./x/**/*.json"],"type":"delete"},{"path":["日本語のテキスト"],"type":"delete"},{"path":["abcHELLO","日本語のテキスト"],"type":"delete"}]],"ok":{"nav":{},"😀":false}}
+{"fn":"applyMessageOps","args":[{"a.b":{"a":-1}},[{"path":["./x/**/*.json","trailing."],"type":"set","value":"﻿bom"}]],"ok":{"a.b":{"a":-1},"./x/**/*.json":{"trailing.":"﻿bom"}}}
+{"fn":"applyMessageOps","args":[{"2":{"title":false,"😀":{"2":null,"a":null,"😀":null}}},[{"path":[],"type":"set","value":null},{"path":["  padded  ","hello world"],"type":"delete"},{"path":["İstanbul","Hello World",".leading"],"type":"set","value":3}]],"ok":{"2":{"title":false,"😀":{"2":null,"a":null,"😀":null}},"undefined":null,"İstanbul":{"Hello World":{".leading":3}}}}
 {"fn":"buildTree","args":["x"],"error":"Cannot read properties of undefined (reading 'slice')"}
 {"fn":"buildTree","args":[{}],"error":"leaves is not iterable"}
-{"fn":"buildTree","args":[{"a":{"b":"c"}}],"error":"leaves is not iterable"}
+{"fn":"buildTree","args":[null],"error":"leaves is not iterable"}
 {"fn":"buildTree","args":[{"a":"b"}],"error":"leaves is not iterable"}
-{"fn":"buildTree","args":[0],"error":"leaves is not iterable"}
 {"fn":"buildTree","args":[[]],"ok":{}}
 {"fn":"buildTree","args":[true],"error":"leaves is not iterable"}
+{"fn":"buildTree","args":[0],"error":"leaves is not iterable"}
+{"fn":"buildTree","args":[{"a":{"b":"c"}}],"error":"leaves is not iterable"}
 {"fn":"buildTree","args":[["a",1]],"error":"Cannot read properties of undefined (reading 'slice')"}
 {"fn":"applyMessageOps","args":[{},[{"path":["a"],"type":"set","value":"v"}]],"ok":{"a":"v"}}
 {"fn":"applyMessageOps","args":[{},[{"path":["nav","contact"],"type":"set","value":"Contact"}]],"ok":{"nav":{"contact":"Contact"}}}

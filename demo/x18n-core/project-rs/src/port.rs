@@ -12,12 +12,10 @@ use serde_json::{Map, Value, json};
 
 use crate::js;
 
-type Res<T> = Result<T, String>;
-
 // ---- isOutdated, valueText, sourceHash -------------------------------------------------------
 
 /// Port of `isOutdated` (`project/history.ts:8`): the target changed before its source.
-pub fn is_outdated(source: Value, target: Value) -> Res<bool> {
+pub fn is_outdated(source: Value, target: Value) -> Result<bool, String> {
     if js::is_undefined(&source) || js::is_undefined(&target) {
         return Ok(false);
     }
@@ -35,7 +33,7 @@ pub fn value_text(value: Value) -> Value {
 }
 
 /// Port of `sourceHash` (`project/reviews.ts:15`): `hashText(JSON.stringify(value))`.
-pub fn source_hash(value: Value) -> Res<String> {
+pub fn source_hash(value: Value) -> Result<String, String> {
     let text = json_stringify(&value)
         .ok_or("TypeError: Cannot read properties of undefined (reading 'length')")?;
     Ok(cyrb53(&text))
@@ -44,7 +42,7 @@ pub fn source_hash(value: Value) -> Res<String> {
 // ---- findReview, sortReviews -----------------------------------------------------------------
 
 /// Port of `findReview` (`project/reviews.ts:91`): the comment with `id`, with its key and locale.
-pub fn find_review(data: Value, id: String) -> Res<Value> {
+pub fn find_review(data: Value, id: String) -> Result<Value, String> {
     let threads = prop(&data, "threads")?.unwrap_or_else(js::undefined);
     for (key, by_locale) in object_entries(&threads)? {
         for (locale, comments) in object_entries(&by_locale)? {
@@ -62,13 +60,13 @@ pub fn find_review(data: Value, id: String) -> Res<Value> {
 }
 
 /// Port of `sortReviews` (`project/reviews.ts:115`): keys and locales in code order, empty keys dropped.
-pub fn sort_reviews(data: Value) -> Res<Value> {
+pub fn sort_reviews(data: Value) -> Result<Value, String> {
     let threads = sort_section(&prop(&data, "threads")?.unwrap_or_else(js::undefined))?;
     let sources = sort_section(&prop(&data, "sources")?.unwrap_or_else(js::undefined))?;
     Ok(json!({ "threads": threads, "sources": sources }))
 }
 
-fn sort_section(section: &Value) -> Res<Value> {
+fn sort_section(section: &Value) -> Result<Value, String> {
     let mut entries = Vec::new();
     for (key, by_locale) in object_entries(section)? {
         if !object_entries(&by_locale)?.is_empty() {
@@ -93,7 +91,7 @@ fn by_code(a: &str, b: &str) -> Ordering {
 // ---- prefixMatches, suppressedRanges, categoriesOf -------------------------------------------
 
 /// Port of `prefixMatches` (`project/usages.ts:100`): a `prefix` usage whose key starts `key`.
-pub fn prefix_matches(usage: Value, key: String) -> Res<bool> {
+pub fn prefix_matches(usage: Value, key: String) -> Result<bool, String> {
     if prop(&usage, "dynamic")?.as_ref() != Some(&Value::String("prefix".into())) {
         return Ok(false);
     }
@@ -191,7 +189,7 @@ impl<'t> Utf16Offsets<'t> {
 }
 
 /// Port of `categoriesOf` (`project/usages.ts:136`).
-pub fn categories_of(info: Value, kind: Value) -> Res<Value> {
+pub fn categories_of(info: Value, kind: Value) -> Result<Value, String> {
     let field = if kind == Value::String("ordinal".into()) {
         "ordinalCategories"
     } else {
@@ -203,7 +201,7 @@ pub fn categories_of(info: Value, kind: Value) -> Res<Value> {
 // ---- renderPrompt ----------------------------------------------------------------------------
 
 /// Port of `renderPrompt` (`project/prompt.ts:223`): the Markdown prompt for agents.
-pub fn render_prompt(data: Value) -> Res<Value> {
+pub fn render_prompt(data: Value) -> Result<Value, String> {
     let get = |key: &str| prop(&data, key);
     let to = get("to")?;
     let target: Vec<u16> = match get("targetName")? {
@@ -327,7 +325,7 @@ pub fn render_prompt(data: Value) -> Res<Value> {
     Ok(js::utf16_string(&join(&out)))
 }
 
-fn render_item(item: &Value, to: &[u16]) -> Res<Vec<Vec<u16>>> {
+fn render_item(item: &Value, to: &[u16]) -> Result<Vec<Vec<u16>>, String> {
     let key = to_js_string(&prop(item, "key")?.unwrap_or_else(js::undefined));
     let source = stringify_or_undefined(prop(item, "source")?.as_ref());
     let mut out = vec![
@@ -416,7 +414,7 @@ fn stringify_or_undefined(value: Option<&Value>) -> Vec<u16> {
 }
 
 /// `value[key]`: `None` is `undefined`; reading from null or undefined throws.
-fn prop(value: &Value, key: &str) -> Res<Option<Value>> {
+fn prop(value: &Value, key: &str) -> Result<Option<Value>, String> {
     if value.is_null() || js::is_undefined(value) {
         return Err(format!(
             "TypeError: Cannot read properties of {} (reading '{key}')",
@@ -450,7 +448,7 @@ fn index(key: &str) -> Option<usize> {
 }
 
 /// `value.length` (throws on null or undefined).
-fn length_value(value: Option<&Value>) -> Res<Option<Value>> {
+fn length_value(value: Option<&Value>) -> Result<Option<Value>, String> {
     match value {
         None => Err("TypeError: Cannot read properties of undefined (reading 'length')".into()),
         Some(v) => prop(v, "length"),
@@ -458,12 +456,12 @@ fn length_value(value: Option<&Value>) -> Res<Option<Value>> {
 }
 
 /// `${value.length}`.
-fn length(value: Option<&Value>) -> Res<Vec<u16>> {
+fn length(value: Option<&Value>) -> Result<Vec<u16>, String> {
     Ok(opt_string(length_value(value)?.as_ref()))
 }
 
 /// Elements for `.map` / `.flatMap`: only arrays have them.
-fn array(value: Option<&Value>, name: &str) -> Res<Vec<Value>> {
+fn array(value: Option<&Value>, name: &str) -> Result<Vec<Value>, String> {
     match value {
         Some(Value::Array(items)) => Ok(items.clone()),
         Some(v) if !v.is_null() && !js::is_undefined(v) => {
@@ -476,7 +474,7 @@ fn array(value: Option<&Value>, name: &str) -> Res<Vec<Value>> {
 }
 
 /// Elements for `for...of`: arrays, and strings by code point.
-fn iterate(value: Option<&Value>) -> Res<Vec<Value>> {
+fn iterate(value: Option<&Value>) -> Result<Vec<Value>, String> {
     match value {
         Some(Value::Array(items)) => Ok(items.clone()),
         Some(v) => match js::string_units(v) {
@@ -731,7 +729,7 @@ fn quote(units: &[u16]) -> Vec<u16> {
 }
 
 /// `Object.entries(value)`.
-fn object_entries(value: &Value) -> Res<Vec<(String, Value)>> {
+fn object_entries(value: &Value) -> Result<Vec<(String, Value)>, String> {
     if value.is_null() || js::is_undefined(value) {
         return Err("TypeError: Cannot convert undefined or null to object".into());
     }
