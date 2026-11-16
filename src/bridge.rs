@@ -1018,7 +1018,20 @@ fn c_bindings(m: &Manifest) -> Vec<(String, String)> {
 
 /// The generated layers of a JSON-dispatcher crate: `lib.rs` and the language-side wrapper.
 fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, String)>> {
-    let mut files = vec![("src/lib.rs".to_string(), crate::codegen_ffi::lib_rs(m, api))];
+    let mut files = if m.language == crate::lang::Lang::Ruby {
+        vec![
+            (
+                "src/lib.rs".to_string(),
+                crate::codegen_ruby::lib_rs(m, api),
+            ),
+            (
+                "src/rbconv.rs".to_string(),
+                crate::codegen_ruby::RBCONV_RS.to_string(),
+            ),
+        ]
+    } else {
+        vec![("src/lib.rs".to_string(), crate::codegen_ffi::lib_rs(m, api))]
+    };
     match m.language {
         crate::lang::Lang::Go => {
             files.push(("go/go.mod".into(), crate::harness_go::wrapper_go_mod(m)));
@@ -1058,10 +1071,17 @@ fn bridge_ffi(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<
     let mut files = vec![
         (
             "Cargo.toml".to_string(),
-            crate::codegen_ffi::cargo_toml(manifest),
+            if manifest.language == crate::lang::Lang::Ruby {
+                crate::codegen_ruby::cargo_toml(manifest)
+            } else {
+                crate::codegen_ffi::cargo_toml(manifest)
+            },
         ),
         ("src/port.rs".into(), port),
-        (".gitignore".into(), "target/\n.carcinize/\n".into()),
+        (
+            ".gitignore".into(),
+            "target/\n.carcinize/\nruby/*.so\nruby/*.bundle\n".into(),
+        ),
         ("README.md".into(), readme(manifest)),
         (
             MANIFEST.into(),
@@ -1100,7 +1120,10 @@ fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Ou
             crate::codegen_c::cargo_toml(manifest),
         ),
         ("src/port.rs".into(), crate::codegen_c::port_rs(manifest)),
-        (".gitignore".into(), "target/\n.carcinize/\n".into()),
+        (
+            ".gitignore".into(),
+            "target/\n.carcinize/\nruby/*.so\nruby/*.bundle\n".into(),
+        ),
         ("README.md".into(), readme(manifest)),
         (
             MANIFEST.into(),

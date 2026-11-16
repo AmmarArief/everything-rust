@@ -271,6 +271,9 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
     let manifest = Manifest::load(crate_dir)?;
     match manifest.kind {
         Kind::Pyo3 => crate::harness_py::build(crate_dir, &manifest),
+        Kind::Ffi if manifest.language == crate::lang::Lang::Ruby => {
+            crate::harness_ruby::build(crate_dir, &manifest)
+        }
         Kind::CAbi | Kind::Ffi => crate::harness_c::build(crate_dir, &manifest),
         Kind::Napi => {
             let target = crate_dir.join("target");
