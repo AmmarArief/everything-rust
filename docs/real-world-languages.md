@@ -37,6 +37,11 @@ type: Go's `WordFreq` (a map) went from 5.1 to 1.0 µs, `Midpoint` (a struct) fr
 Java's `frequencies` (a `Map`) from 8.4 to 1.0 µs, and `words` (a `List<String>`) from 6.0 µs to
 0.57 µs, 1.39x faster than Java itself.
 
+TypeScript (x18n core, nine units, 27 functions on the same cases): the binary wire cut the
+bridge cost by a third on average (`rangeContains` 3.6 -> 1.1 µs, `applyTextEdits` 10.4 -> 5.7
+µs, `toWireRange` 5.0 -> 2.6 µs), and `buildTree` went from even to 2.0x faster than TS. The
+other functions are leaves that V8 runs in 15-600 ns: still slower in Rust, as for Go and Java.
+
 What decides it:
 
 - **Interpreted originals (Python, Ruby)**: the call into Rust costs about 100-300 ns and the

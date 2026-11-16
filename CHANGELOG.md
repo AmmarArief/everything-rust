@@ -12,7 +12,7 @@ First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and 
   shadow drop-ins per language.
 - Direct bridges: PyO3 conversion without JSON and `pynum::Num`, a magnus extension for Ruby,
   typed JNI and cgo functions, and a generated binary wire for lists, maps, structs and several
-  results in Go and Java; `bench` times calls in process and ends with a verdict.
+  results in Go and Java, and for TS through napi-rs and wasm-bindgen; `bench` times calls in process and ends with a verdict.
 - Run end to end on Go's `path`, Ruby's `shellwords`, Python's `colorsys`, and JDK and glibc
   behavior; fixes from those runs: exact float parsing, crash isolation, `module_function :name`,
   numeric inference for untyped parameters, ints in Python inputs.

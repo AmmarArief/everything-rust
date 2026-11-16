@@ -63,6 +63,52 @@ pub fn number(n: f64) -> serde_json::Value {
     }
 }
 
+/// JS `Array.prototype.sort(compare)`, as V8 runs it.
+///
+/// With a consistent comparator any stable sort agrees with JS. With one that returns NaN or
+/// contradicts itself, the order depends on the algorithm: under 64 elements this reproduces
+/// V8's TimSort exactly (one run, then binary insertion); longer arrays use Rust's stable sort.
+pub fn sort<T>(items: &mut [T], mut compare: impl FnMut(&T, &T) -> f64) {
+    let n = items.len();
+    if n < 2 {
+        return;
+    }
+    if n >= 64 {
+        items.sort_by(|a, b| {
+            compare(a, b)
+                .partial_cmp(&0.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        return;
+    }
+    // CountAndMakeRun: the leading ascending run, or strictly descending run (reversed).
+    let mut run = 2;
+    let descending = compare(&items[1], &items[0]) < 0.0;
+    while run < n {
+        let order = compare(&items[run], &items[run - 1]);
+        if (descending && order >= 0.0) || (!descending && order < 0.0) {
+            break;
+        }
+        run += 1;
+    }
+    if descending {
+        items[..run].reverse();
+    }
+    // BinaryInsertionSort of the rest.
+    for start in run..n {
+        let (mut left, mut right) = (0, start);
+        while left < right {
+            let mid = left + ((right - left) >> 1);
+            if compare(&items[start], &items[mid]) < 0.0 {
+                right = mid;
+            } else {
+                left = mid + 1;
+            }
+        }
+        items[left..=start].rotate_right(1);
+    }
+}
+
 /// A number received from JS inside a structured value, plain or marked.
 pub fn as_number(value: &serde_json::Value) -> Option<f64> {
     match value {
