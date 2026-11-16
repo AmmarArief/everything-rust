@@ -197,5 +197,19 @@
     }
   ],
   "classes": [],
-  "js_only": []
+  "js_only": [],
+  "batches": [
+    {
+      "function": "slugify",
+      "param": "text"
+    },
+    {
+      "function": "hash",
+      "param": "text"
+    },
+    {
+      "function": "pages",
+      "param": "total"
+    }
+  ]
 }

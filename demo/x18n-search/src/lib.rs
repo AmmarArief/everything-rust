@@ -4,6 +4,11 @@
 use napi_derive::napi;
 
 pub mod port;
+
+/// Batches allocate on all cores at once; mimalloc keeps that from serializing.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub mod utf16;
 
 fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {

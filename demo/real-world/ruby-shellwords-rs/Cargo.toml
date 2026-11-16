@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 magnus = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+rayon = "1"
+mimalloc = "0.1"
 
 [profile.release]
 lto = true

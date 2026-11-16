@@ -7,6 +7,7 @@ pub mod analyze;
 pub mod bridge;
 pub mod codegen;
 pub mod codegen_batch;
+pub mod codegen_batch_native;
 pub mod codegen_c;
 pub mod codegen_ffi;
 pub mod codegen_go;

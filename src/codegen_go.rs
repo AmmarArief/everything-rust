@@ -205,7 +205,7 @@ pub fn wrapper(m: &Manifest, api: &crate::codegen::PortApi) -> String {
          #include <stdbool.h>\n#include <stdint.h>\n#include <stdlib.h>\n\
          char *carcinize_call(const char *name, const char *args);\n\
          void carcinize_free(char *ptr);\n{typed_c}*/\nimport \"C\"\n\n\
-         import (\n\t\"encoding/binary\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"math\"\n\t\"unsafe\"\n)\n\nvar _ = binary.LittleEndian\n",
+         import (\n\t\"encoding/binary\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"math\"\n\t\"runtime\"\n\t\"unsafe\"\n)\n\nvar _ = binary.LittleEndian\nvar _ = runtime.KeepAlive\n",
         pkg = package_name(m),
         unit = m.unit,
         typed_c = typed_prototypes(m, api),
@@ -262,14 +262,11 @@ func carcinizeMust(err error) {
         .filter(|f| typed(m, f).is_some())
         .map(|f| f.js_name.as_str())
         .collect();
-    if !typed_fns.is_empty() {
+    let wired = wire_fns(m, api);
+    if !typed_fns.is_empty() || !wired.is_empty() || !m.batches.is_empty() {
         out.push_str(TYPED_HELPERS_GO);
     }
-    let wired = wire_fns(m, api);
     if !wired.is_empty() {
-        if typed_fns.is_empty() {
-            out.push_str(TYPED_HELPERS_GO);
-        }
         out.push_str(WIRE_HELPERS_GO);
     }
     for f in &m.exports {
@@ -358,6 +355,8 @@ func carcinizeMust(err error) {
             let _ = writeln!(out, "\treturn {}\n}}", r.join(", "));
         }
     }
+    // Validated with the Rust side in `ffi_bindings`.
+    out.push_str(&crate::codegen_batch_native::go_wrapper(m, api).unwrap_or_default());
     out
 }
 
@@ -365,13 +364,13 @@ func carcinizeMust(err error) {
 
 /// A Go type that crosses cgo directly: its C type, the port type it must match, the Rust
 /// parameter type, and how Go converts it back from C.
-struct Typed {
-    c: &'static str,
-    port: &'static str,
-    rust: &'static str,
+pub(crate) struct Typed {
+    pub c: &'static str,
+    pub port: &'static str,
+    pub rust: &'static str,
 }
 
-fn typed_type(go: &str) -> Option<Typed> {
+pub(crate) fn typed_type(go: &str) -> Option<Typed> {
     Some(match go.trim() {
         "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "uint16" | "uint32" | "byte"
         | "rune" => Typed {
@@ -442,6 +441,7 @@ fn typed_prototypes(m: &Manifest, api: &crate::codegen::PortApi) -> String {
         params.push("char **err".into());
         let _ = writeln!(out, "int carcinize_t_{}({});", f.js_name, params.join(", "));
     }
+    out.push_str(&crate::codegen_batch_native::go_prototypes(m, api));
     for (e, ..) in wire_fns(m, api) {
         let _ = writeln!(
             out,

@@ -163,5 +163,19 @@
       "line": 26,
       "reason": "yields to a block"
     }
+  ],
+  "batches": [
+    {
+      "function": "slugify",
+      "param": "text"
+    },
+    {
+      "function": "page_count",
+      "param": "total"
+    },
+    {
+      "function": "word_count",
+      "param": "text"
+    }
   ]
 }

@@ -618,6 +618,24 @@ fn go_packages_bridge_record_and_diff() {
         "{wrapper}"
     );
     assert!(wrapper.contains("type Point struct"), "{wrapper}");
+    // Batches: a map result cannot be batched; the others get a handle type in the package.
+    assert!(bridge::add_batches(&dir, &["WordFreq:text".into()]).is_err());
+    bridge::add_batches(&dir, &["Slugify:s".into(), "ParsePort:s".into()]).unwrap();
+    let wrapper = std::fs::read_to_string(dir.join("go/strkit.go")).unwrap();
+    assert!(
+        wrapper.contains("func NewSlugifyBatch(items []string) *SlugifyBatch {"),
+        "{wrapper}"
+    );
+    assert!(
+        wrapper.contains("func (b *SlugifyBatch) Run(max int) []string {"),
+        "{wrapper}"
+    );
+    assert!(
+        wrapper.contains("func (b *ParsePortBatch) Rank(min float64) ([]int, error) {"),
+        "{wrapper}"
+    );
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(lib.contains("static GLOBAL: mimalloc::MiMalloc"), "{lib}");
     if !go_available() {
         return;
     }
@@ -685,6 +703,18 @@ fn ruby_modules_bridge_record_and_diff() {
         wrapper.contains("def self.slugify(text, sep = \"-\", max: nil)"),
         "{wrapper}"
     );
+    // Batches keep the original's other parameters, defaults and keywords.
+    bridge::add_batches(&dir, &["slugify:text".into(), "page_count:total".into()]).unwrap();
+    let wrapper = std::fs::read_to_string(dir.join("ruby/textkit_rs.rb")).unwrap();
+    assert!(wrapper.contains("class SlugifyBatch"), "{wrapper}");
+    assert!(
+        wrapper.contains("def run(sep = \"-\", max: nil)"),
+        "{wrapper}"
+    );
+    assert!(
+        wrapper.contains("def rank(per_page = 10, min: 0)"),
+        "{wrapper}"
+    );
     if !ruby_available() {
         return;
     }
@@ -750,6 +780,26 @@ fn java_classes_bridge_record_and_diff() {
     assert!(
         wrapper.contains("public static List<String> words(String text)"),
         "{wrapper}"
+    );
+    // Batches: a list result cannot be batched; the others get a class beside the original.
+    assert!(bridge::add_batches(&dir, &["words:text".into()]).is_err());
+    bridge::add_batches(&dir, &["slugify:text".into(), "pages:total".into()]).unwrap();
+    let batch =
+        std::fs::read_to_string(dir.join("java/com/example/text/SlugifyBatch.java")).unwrap();
+    assert!(
+        batch.contains("public final class SlugifyBatch implements AutoCloseable"),
+        "{batch}"
+    );
+    assert!(batch.contains("public String[] run(int max)"), "{batch}");
+    let pages = std::fs::read_to_string(dir.join("java/com/example/text/PagesBatch.java")).unwrap();
+    assert!(
+        pages.contains("public int[] rank(int perPage, double min)"),
+        "{pages}"
+    );
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(
+        lib.contains("fn Java_com_example_text_SlugifyBatch_nRun"),
+        "{lib}"
     );
     if !java_available() {
         return;

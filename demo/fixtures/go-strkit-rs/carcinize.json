@@ -183,5 +183,15 @@
       "line": 90,
       "reason": "is variadic"
     }
+  ],
+  "batches": [
+    {
+      "function": "Slugify",
+      "param": "s"
+    },
+    {
+      "function": "ParsePort",
+      "param": "s"
+    }
   ]
 }

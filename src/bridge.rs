@@ -625,7 +625,7 @@ fn format_wrapper(crate_dir: &Path) {
 
 /// `lib.rs` of a JS crate: the bindings, and the binary wire when functions use it.
 fn js_lib_rs(m: &Manifest, api: &codegen::PortApi, modules: &codegen::Modules) -> Result<String> {
-    let mut lib = codegen::lib_rs(m, api, modules);
+    let mut lib = with_allocator(m, codegen::lib_rs(m, api, modules));
     if m.kind != Kind::Pyo3 && !m.batches.is_empty() {
         lib.push_str(&crate::codegen_batch::js_rs(m, api).map_err(anyhow::Error::msg)?);
     }
@@ -666,7 +666,47 @@ pub fn add_batches(crate_dir: &Path, specs: &[String]) -> Result<Refreshed> {
     })
 }
 
-/// Cargo.toml with rayon when batches run on all cores.
+/// Cargo.toml with the dependencies and library types today's bindings need, for crates
+/// bridged by an older carcinize; versions and features already set are kept.
+fn with_template_deps(cargo: &str, template: &str) -> Result<String> {
+    let mut doc: toml_edit::DocumentMut = cargo.parse().context("Cargo.toml")?;
+    let template: toml_edit::DocumentMut = template.parse().context("Cargo.toml template")?;
+    if let Some(want) = template.get("dependencies").and_then(|d| d.as_table()) {
+        let deps = doc["dependencies"].or_insert(toml_edit::table());
+        for (name, item) in want {
+            if deps.get(name).is_none() {
+                deps[name] = item.clone();
+            }
+        }
+    }
+    if let Some(kinds) = template.get("lib").and_then(|l| l.get("crate-type")) {
+        doc["lib"]["crate-type"] = kinds.clone();
+    }
+    Ok(doc.to_string())
+}
+
+/// Whether the crate allocates with mimalloc: crates with batches, which allocate from all cores
+/// at once (the system allocator serializes them: 1.6x on 4 cores instead of 3.2x). Not wasm,
+/// which runs on one thread. Only Rust code uses this heap; every buffer that crosses the bridge
+/// is copied or freed by Rust.
+fn needs_mimalloc(m: &Manifest) -> bool {
+    !m.batches.is_empty() && m.kind != Kind::Wasm
+}
+
+/// `lib.rs` with mimalloc as the global allocator when [`needs_mimalloc`].
+fn with_allocator(m: &Manifest, lib: String) -> String {
+    if !needs_mimalloc(m) {
+        return lib;
+    }
+    lib.replacen(
+        "pub mod port;",
+        "pub mod port;\n\n/// Batches allocate on all cores at once; mimalloc keeps that from serializing.\n\
+         #[global_allocator]\nstatic GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;\n",
+        1,
+    )
+}
+
+/// Cargo.toml with rayon (and mimalloc) when batches run on all cores.
 fn with_rayon(m: &Manifest, cargo: String) -> Result<String> {
     if !crate::codegen_batch::needs_rayon(m) {
         return Ok(cargo);
@@ -675,6 +715,9 @@ fn with_rayon(m: &Manifest, cargo: String) -> Result<String> {
     let deps = doc["dependencies"].or_insert(toml_edit::table());
     if deps.get("rayon").is_none() {
         deps["rayon"] = toml_edit::value("1");
+    }
+    if needs_mimalloc(m) && deps.get("mimalloc").is_none() {
+        deps["mimalloc"] = toml_edit::value("0.1");
     }
     Ok(doc.to_string())
 }
@@ -732,7 +775,16 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
             .context("reading src/port.rs")?;
         let mut api = codegen::parse_port(&port);
         match_export_names(&manifest, &mut api);
-        let files = ffi_bindings(&manifest, &api)?;
+        let mut files = ffi_bindings(&manifest, &api)?;
+        let cargo =
+            std::fs::read_to_string(crate_dir.join("Cargo.toml")).context("reading Cargo.toml")?;
+        let template = if manifest.language == crate::lang::Lang::Ruby {
+            crate::codegen_ruby::cargo_toml(&manifest)
+        } else {
+            crate::codegen_ffi::cargo_toml(&manifest)
+        };
+        let cargo = with_template_deps(&cargo, &template)?;
+        files.push(("Cargo.toml".into(), with_rayon(&manifest, cargo)?));
         write_files(crate_dir, &files)?;
         format_rust(crate_dir);
         format_wrapper(crate_dir);
@@ -1107,7 +1159,10 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
         vec![
             (
                 "src/lib.rs".to_string(),
-                crate::codegen_ruby::lib_rs(m, api),
+                with_allocator(
+                    m,
+                    crate::codegen_ruby::lib_rs(m, api).map_err(anyhow::Error::msg)?,
+                ),
             ),
             (
                 "src/rbconv.rs".to_string(),
@@ -1122,14 +1177,18 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
         if m.language == crate::lang::Lang::Go {
             lib.push_str(&crate::codegen_go::typed_rs(m, api));
             lib.push_str(&crate::codegen_go::wire_rs(m, api));
+            lib.push_str(&crate::codegen_batch_native::go_rs(m, api).map_err(anyhow::Error::msg)?);
         }
         if m.language == crate::lang::Lang::Java {
             lib.push_str(&crate::codegen_java::wire_rs(m, api));
+            lib.push_str(
+                &crate::codegen_batch_native::java_rs(m, api).map_err(anyhow::Error::msg)?,
+            );
         }
         if matches!(m.language, crate::lang::Lang::Go | crate::lang::Lang::Java) {
             lib = lib.replacen("pub mod port;", "pub mod port;\npub mod wire;", 1);
         }
-        let mut files = vec![("src/lib.rs".to_string(), lib)];
+        let mut files = vec![("src/lib.rs".to_string(), with_allocator(m, lib))];
         if matches!(m.language, crate::lang::Lang::Go | crate::lang::Lang::Java) {
             files.push(("src/wire.rs".to_string(), crate::wire::WIRE_RS.to_string()));
         }
@@ -1146,11 +1205,14 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
         crate::lang::Lang::Ruby => {
             files.push((
                 crate::harness_ruby::wrapper_path(m),
-                crate::codegen_ruby::wrapper(m),
+                crate::codegen_ruby::wrapper(m, api).map_err(anyhow::Error::msg)?,
             ));
         }
         crate::lang::Lang::Java => {
             files.extend(crate::codegen_java::wrappers(m, api));
+            files.extend(
+                crate::codegen_batch_native::java_files(m, api).map_err(anyhow::Error::msg)?,
+            );
             files.push((
                 format!(
                     "java/carcinize/{}.java",
@@ -1182,11 +1244,14 @@ fn bridge_ffi(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<
     let mut files = vec![
         (
             "Cargo.toml".to_string(),
-            if manifest.language == crate::lang::Lang::Ruby {
-                crate::codegen_ruby::cargo_toml(manifest)
-            } else {
-                crate::codegen_ffi::cargo_toml(manifest)
-            },
+            with_rayon(
+                manifest,
+                if manifest.language == crate::lang::Lang::Ruby {
+                    crate::codegen_ruby::cargo_toml(manifest)
+                } else {
+                    crate::codegen_ffi::cargo_toml(manifest)
+                },
+            )?,
         ),
         ("src/port.rs".into(), port),
         (

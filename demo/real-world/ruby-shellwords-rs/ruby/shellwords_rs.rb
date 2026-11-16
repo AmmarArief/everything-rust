@@ -19,3 +19,18 @@ module Shellwords
     CarcinizeNativeShellwordsRs.shelljoin(array)
   end
 end
+
+module Shellwords
+  # `shellescape` over many `str` values kept in Rust: built once, then each `run` maps them all
+  # in one call, on all cores.
+  class ShellescapeBatch
+    def initialize(strs)
+      @native = CarcinizeNativeShellwordsRs::ShellescapeBatch.new(strs.to_a)
+    end
+
+    # The result for every item, in order.
+    def run()
+      @native.run()
+    end
+  end
+end

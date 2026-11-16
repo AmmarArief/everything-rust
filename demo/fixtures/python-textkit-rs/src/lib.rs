@@ -5,6 +5,11 @@ use pyo3::prelude::*;
 
 pub mod js;
 pub mod port;
+
+/// Batches allocate on all cores at once; mimalloc keeps that from serializing.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub mod pyconv;
 pub mod pynum;
 

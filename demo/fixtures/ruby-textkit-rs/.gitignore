@@ -1,2 +1,4 @@
 target/
 .carcinize/
+ruby/*.so
+ruby/*.bundle

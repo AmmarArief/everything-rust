@@ -4,6 +4,11 @@
 use serde_json::{Value, json};
 
 pub mod port;
+
+/// Batches allocate on all cores at once; mimalloc keeps that from serializing.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub mod wire;
 
 /// Argument `i`, decoded from JSON into the port's parameter type.
@@ -415,6 +420,404 @@ pub extern "system" fn Java_carcinize_TextRsNative_w_1frequencies<'local>(
         Ok(bytes) => env
             .byte_array_from_slice(&bytes)
             .map_or(std::ptr::null_mut(), jni::objects::JByteArray::into_raw),
+        Err(message) => {
+            report(&mut env, &slot, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+/// A batch's handle as Java holds it.
+///
+/// # Safety
+///
+/// `handle` comes from a batch's `nNew` and is not freed yet; Java checks it is not 0.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn batch_ref<'a, T>(handle: jni::sys::jlong) -> &'a T {
+    // SAFETY: as documented above.
+    unsafe { &*(handle as *const T) }
+}
+
+/// A Java `String[]` as strings; `None` with a NullPointerException pending for a null element.
+fn batch_strings(env: &mut jni::JNIEnv, items: &jni::objects::JObjectArray) -> Option<Vec<String>> {
+    let n = env.get_array_length(items).ok()?;
+    let mut out = Vec::with_capacity(usize::try_from(n).unwrap_or(0));
+    for i in 0..n {
+        let item = jni::objects::JString::from(env.get_object_array_element(items, i).ok()?);
+        let value = string_arg(env, &item);
+        let _ = env.delete_local_ref(item);
+        out.push(value?);
+    }
+    Some(out)
+}
+
+/// Strings as a Java `String[]`.
+fn batch_string_array(env: &mut jni::JNIEnv, values: &[String]) -> jni::sys::jobjectArray {
+    let n = jni::sys::jsize::try_from(values.len()).unwrap_or(jni::sys::jsize::MAX);
+    let Ok(array) = env.new_object_array(n, "java/lang/String", jni::objects::JObject::null())
+    else {
+        return std::ptr::null_mut();
+    };
+    for (i, v) in (0..n).zip(values) {
+        let Ok(s) = env.new_string(v) else {
+            return std::ptr::null_mut();
+        };
+        let _ = env.set_object_array_element(&array, i, &s);
+        let _ = env.delete_local_ref(s);
+    }
+    array.into_raw()
+}
+
+/// A port's integer as a Java `int`, wrapping like a Java cast.
+#[allow(dead_code)]
+fn batch_jint(v: i64) -> jni::sys::jint {
+    v as jni::sys::jint
+}
+
+/// A Java `boolean`.
+#[allow(dead_code)]
+fn batch_bool(v: jni::sys::jboolean) -> bool {
+    v != 0
+}
+
+/// Indexes as a Java `int[]`.
+fn batch_int_array(env: &mut jni::JNIEnv, order: &[u32]) -> jni::sys::jintArray {
+    let values: Vec<jni::sys::jint> = order
+        .iter()
+        .map(|&i| jni::sys::jint::try_from(i).unwrap_or(jni::sys::jint::MAX))
+        .collect();
+    let n = jni::sys::jsize::try_from(values.len()).unwrap_or(jni::sys::jsize::MAX);
+    match env.new_int_array(n) {
+        Ok(array) => {
+            let _ = env.set_int_array_region(&array, 0, &values);
+            array.into_raw()
+        }
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// The items of `SlugifyBatch` as the port takes them; the port runs per item. Define
+/// `pub struct SlugifyIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct SlugifyDefaultIndex {
+    items: Vec<String>,
+}
+
+impl SlugifyDefaultIndex {
+    pub fn new(items: Vec<String>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self, max: i64) -> Result<Vec<String>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::slugify(item.clone(), max))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// Builds a `SlugifyBatch`: the items cross once; Java keeps the handle.
+// SAFETY: the JNI symbol of `com.example.text.SlugifyBatch.nNew`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_SlugifyBatch_nNew<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    items: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jlong {
+    let Some(items) = batch_strings(&mut env, &items) else {
+        return 0;
+    };
+    match std::panic::catch_unwind(|| SlugifyDefaultIndex::new(items)) {
+        Ok(index) => Box::into_raw(Box::new(index)) as jni::sys::jlong,
+        Err(_) => {
+            let _ = env.throw_new(
+                "java/lang/RuntimeException",
+                "Rust panic building SlugifyBatch",
+            );
+            0
+        }
+    }
+}
+
+/// Frees a `SlugifyBatch`.
+// SAFETY: the JNI symbol of `com.example.text.SlugifyBatch.nFree`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_SlugifyBatch_nFree<'local>(
+    _env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+) {
+    if handle != 0 {
+        // SAFETY: Java frees each handle from `nNew` once (its Cleaner runs once).
+        drop(unsafe { Box::from_raw(handle as *mut SlugifyDefaultIndex) });
+    }
+}
+
+/// `slugify` over every item; errors go to `slot`.
+// SAFETY: the JNI symbol of `com.example.text.SlugifyBatch.nRun`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_SlugifyBatch_nRun<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+    max: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jobjectArray {
+    let max = i64::from(max);
+    // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).
+    let index: &SlugifyDefaultIndex = unsafe { batch_ref(handle) };
+    match run(|| index.run(max)) {
+        Ok(values) => batch_string_array(&mut env, &values),
+        Err(message) => {
+            report(&mut env, &slot, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// The items of `HashBatch` as the port takes them; the port runs per item. Define
+/// `pub struct HashIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct HashDefaultIndex {
+    items: Vec<String>,
+}
+
+impl HashDefaultIndex {
+    pub fn new(items: Vec<String>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self) -> Result<Vec<i64>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::hash(item.clone()))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// Builds a `HashBatch`: the items cross once; Java keeps the handle.
+// SAFETY: the JNI symbol of `com.example.text.HashBatch.nNew`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_HashBatch_nNew<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    items: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jlong {
+    let Some(items) = batch_strings(&mut env, &items) else {
+        return 0;
+    };
+    match std::panic::catch_unwind(|| HashDefaultIndex::new(items)) {
+        Ok(index) => Box::into_raw(Box::new(index)) as jni::sys::jlong,
+        Err(_) => {
+            let _ = env.throw_new(
+                "java/lang/RuntimeException",
+                "Rust panic building HashBatch",
+            );
+            0
+        }
+    }
+}
+
+/// Frees a `HashBatch`.
+// SAFETY: the JNI symbol of `com.example.text.HashBatch.nFree`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_HashBatch_nFree<'local>(
+    _env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+) {
+    if handle != 0 {
+        // SAFETY: Java frees each handle from `nNew` once (its Cleaner runs once).
+        drop(unsafe { Box::from_raw(handle as *mut HashDefaultIndex) });
+    }
+}
+
+/// `hash` over every item; errors go to `slot`.
+// SAFETY: the JNI symbol of `com.example.text.HashBatch.nRun`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_HashBatch_nRun<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+    slot: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jintArray {
+    // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).
+    let index: &HashDefaultIndex = unsafe { batch_ref(handle) };
+    match run(|| index.run()) {
+        Ok(values) => {
+            let raw: Vec<jni::sys::jint> = values.into_iter().map(batch_jint).collect();
+            let n = jni::sys::jsize::try_from(raw.len()).unwrap_or(jni::sys::jsize::MAX);
+            match env.new_int_array(n) {
+                Ok(array) => {
+                    let _ = env.set_int_array_region(&array, 0, &raw);
+                    array.into_raw()
+                }
+                Err(_) => std::ptr::null_mut(),
+            }
+        }
+        Err(message) => {
+            report(&mut env, &slot, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// Indexes of the items whose result is at least `min`, best first.
+// SAFETY: the JNI symbol of `com.example.text.HashBatch.nRank`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_HashBatch_nRank<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+    min: jni::sys::jdouble,
+    slot: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jintArray {
+    // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).
+    let index: &HashDefaultIndex = unsafe { batch_ref(handle) };
+    match run(|| index.run()) {
+        Ok(out) => {
+            let mut hits: Vec<(f64, u32)> = out
+                .into_iter()
+                .enumerate()
+                .map(|(i, r)| (r as f64, u32::try_from(i).unwrap_or(u32::MAX)))
+                .filter(|(r, _)| *r >= min)
+                .collect();
+            // Stable: equal results keep the items' order, as JS `sort` and Python `sorted` do.
+            hits.sort_by(|a, b| b.0.total_cmp(&a.0));
+            let order: Vec<u32> = hits.into_iter().map(|(_, i)| i).collect();
+            batch_int_array(&mut env, &order)
+        }
+        Err(message) => {
+            report(&mut env, &slot, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// The items of `PagesBatch` as the port takes them; the port runs per item. Define
+/// `pub struct PagesIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct PagesDefaultIndex {
+    items: Vec<i64>,
+}
+
+impl PagesDefaultIndex {
+    pub fn new(items: Vec<i64>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self, per_page: i64) -> Result<Vec<i64>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::pages(*item, per_page))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// Builds a `PagesBatch`: the items cross once; Java keeps the handle.
+// SAFETY: the JNI symbol of `com.example.text.PagesBatch.nNew`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_PagesBatch_nNew<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    items: jni::objects::JIntArray<'local>,
+) -> jni::sys::jlong {
+    let n = env.get_array_length(&items).unwrap_or(0);
+    let mut raw: Vec<jni::sys::jint> = vec![Default::default(); usize::try_from(n).unwrap_or(0)];
+    if env.get_int_array_region(&items, 0, &mut raw).is_err() {
+        return 0;
+    }
+    let items: Vec<i64> = raw.into_iter().map(i64::from).collect();
+    match std::panic::catch_unwind(|| PagesDefaultIndex::new(items)) {
+        Ok(index) => Box::into_raw(Box::new(index)) as jni::sys::jlong,
+        Err(_) => {
+            let _ = env.throw_new(
+                "java/lang/RuntimeException",
+                "Rust panic building PagesBatch",
+            );
+            0
+        }
+    }
+}
+
+/// Frees a `PagesBatch`.
+// SAFETY: the JNI symbol of `com.example.text.PagesBatch.nFree`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_PagesBatch_nFree<'local>(
+    _env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+) {
+    if handle != 0 {
+        // SAFETY: Java frees each handle from `nNew` once (its Cleaner runs once).
+        drop(unsafe { Box::from_raw(handle as *mut PagesDefaultIndex) });
+    }
+}
+
+/// `pages` over every item; errors go to `slot`.
+// SAFETY: the JNI symbol of `com.example.text.PagesBatch.nRun`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_PagesBatch_nRun<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+    per_page: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jintArray {
+    let per_page = i64::from(per_page);
+    // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).
+    let index: &PagesDefaultIndex = unsafe { batch_ref(handle) };
+    match run(|| index.run(per_page)) {
+        Ok(values) => {
+            let raw: Vec<jni::sys::jint> = values.into_iter().map(batch_jint).collect();
+            let n = jni::sys::jsize::try_from(raw.len()).unwrap_or(jni::sys::jsize::MAX);
+            match env.new_int_array(n) {
+                Ok(array) => {
+                    let _ = env.set_int_array_region(&array, 0, &raw);
+                    array.into_raw()
+                }
+                Err(_) => std::ptr::null_mut(),
+            }
+        }
+        Err(message) => {
+            report(&mut env, &slot, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// Indexes of the items whose result is at least `min`, best first.
+// SAFETY: the JNI symbol of `com.example.text.PagesBatch.nRank`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_example_text_PagesBatch_nRank<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    handle: jni::sys::jlong,
+    per_page: jni::sys::jint,
+    min: jni::sys::jdouble,
+    slot: jni::objects::JObjectArray<'local>,
+) -> jni::sys::jintArray {
+    let per_page = i64::from(per_page);
+    // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).
+    let index: &PagesDefaultIndex = unsafe { batch_ref(handle) };
+    match run(|| index.run(per_page)) {
+        Ok(out) => {
+            let mut hits: Vec<(f64, u32)> = out
+                .into_iter()
+                .enumerate()
+                .map(|(i, r)| (r as f64, u32::try_from(i).unwrap_or(u32::MAX)))
+                .filter(|(r, _)| *r >= min)
+                .collect();
+            // Stable: equal results keep the items' order, as JS `sort` and Python `sorted` do.
+            hits.sort_by(|a, b| b.0.total_cmp(&a.0));
+            let order: Vec<u32> = hits.into_iter().map(|(_, i)| i).collect();
+            batch_int_array(&mut env, &order)
+        }
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()

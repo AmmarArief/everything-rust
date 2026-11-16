@@ -12,6 +12,14 @@ void carcinize_free(char *ptr);
 int carcinize_t_Slugify(const uint8_t *s_ptr, size_t s_len, int64_t max, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 int carcinize_t_ParsePort(const uint8_t *s_ptr, size_t s_len, int64_t *out, char **err);
 int carcinize_t_Initials(const uint8_t *name_ptr, size_t name_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+void carcinize_b_free_bytes(uint8_t *ptr, size_t len);
+void *carcinize_b_Slugify_new(const uint8_t *bytes, size_t bytes_len, const size_t *lens, size_t count);
+void carcinize_b_Slugify_free(void *h);
+int carcinize_b_Slugify_run(const void *h, int64_t max, uint8_t **out, size_t *out_len, size_t *lens, size_t cap, char **err);
+void *carcinize_b_ParsePort_new(const uint8_t *bytes, size_t bytes_len, const size_t *lens, size_t count);
+void carcinize_b_ParsePort_free(void *h);
+int carcinize_b_ParsePort_run(const void *h, int64_t *out, size_t cap, char **err);
+int carcinize_b_ParsePort_rank(const void *h, double min, uint32_t *order, size_t cap, size_t *n, char **err);
 int carcinize_w_WordFreq(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 int carcinize_w_Mean(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 int carcinize_w_Midpoint(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
@@ -24,10 +32,12 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"runtime"
 	"unsafe"
 )
 
 var _ = binary.LittleEndian
+var _ = runtime.KeepAlive
 
 type Point struct {
 	X float64 `json:"x"`
@@ -357,4 +367,150 @@ func SplitPair(s string, sep string) (string, string, bool) {
 	r1 = cwr.str()
 	r2 = cwr.bool()
 	return r0, r1, r2
+}
+
+// carcinizePtr is a slice's first element for C; nil when empty.
+func carcinizePtr[T any](s []T) *T {
+	if len(s) == 0 {
+		return nil
+	}
+	return &s[0]
+}
+
+// carcinizeBytes is a byte slice for C; nil when empty.
+func carcinizeBytes(b []byte) *C.uint8_t {
+	if len(b) == 0 {
+		return nil
+	}
+	return (*C.uint8_t)(unsafe.Pointer(&b[0]))
+}
+
+// SlugifyBatch runs Slugify over many s values kept in Rust: built once, then each
+// Run maps them all in one call, on all cores. Safe for concurrent Run and Rank; call
+// Close when done (a finalizer frees it otherwise).
+type SlugifyBatch struct {
+	h unsafe.Pointer
+	n int
+}
+
+// NewSlugifyBatch copies the items into Rust.
+func NewSlugifyBatch(items []string) *SlugifyBatch {
+	total := 0
+	for _, s := range items {
+		total += len(s)
+	}
+	bytes := make([]byte, 0, total)
+	lens := make([]C.size_t, len(items))
+	for i, s := range items {
+		bytes = append(bytes, s...)
+		lens[i] = C.size_t(len(s))
+	}
+	h := C.carcinize_b_Slugify_new(carcinizeBytes(bytes), C.size_t(len(bytes)), carcinizePtr(lens), C.size_t(len(items)))
+	if h == nil {
+		panic("carcinize: building SlugifyBatch failed")
+	}
+	b := &SlugifyBatch{h: h, n: len(items)}
+	runtime.SetFinalizer(b, (*SlugifyBatch).Close)
+	return b
+}
+
+// Close frees the items on the Rust side.
+func (b *SlugifyBatch) Close() {
+	if b.h != nil {
+		C.carcinize_b_Slugify_free(b.h)
+		b.h = nil
+	}
+}
+
+// Run returns Slugify's result for every item, in order.
+func (b *SlugifyBatch) Run(max int) []string {
+	var errp *C.char
+	var ptr *C.uint8_t
+	var total C.size_t
+	lens := make([]C.size_t, b.n)
+	status := C.carcinize_b_Slugify_run(b.h, C.int64_t(max), &ptr, &total, carcinizePtr(lens), C.size_t(b.n), &errp)
+	runtime.KeepAlive(b)
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	// One copy into Go memory; each result is a slice of it.
+	all := C.GoStringN((*C.char)(unsafe.Pointer(ptr)), C.int(total))
+	C.carcinize_b_free_bytes(ptr, total)
+	out := make([]string, b.n)
+	at := 0
+	for i, n := range lens {
+		out[i] = string(all[at : at+int(n)])
+		at += int(n)
+	}
+	return out
+}
+
+// ParsePortBatch runs ParsePort over many s values kept in Rust: built once, then each
+// Run maps them all in one call, on all cores. Safe for concurrent Run and Rank; call
+// Close when done (a finalizer frees it otherwise).
+type ParsePortBatch struct {
+	h unsafe.Pointer
+	n int
+}
+
+// NewParsePortBatch copies the items into Rust.
+func NewParsePortBatch(items []string) *ParsePortBatch {
+	total := 0
+	for _, s := range items {
+		total += len(s)
+	}
+	bytes := make([]byte, 0, total)
+	lens := make([]C.size_t, len(items))
+	for i, s := range items {
+		bytes = append(bytes, s...)
+		lens[i] = C.size_t(len(s))
+	}
+	h := C.carcinize_b_ParsePort_new(carcinizeBytes(bytes), C.size_t(len(bytes)), carcinizePtr(lens), C.size_t(len(items)))
+	if h == nil {
+		panic("carcinize: building ParsePortBatch failed")
+	}
+	b := &ParsePortBatch{h: h, n: len(items)}
+	runtime.SetFinalizer(b, (*ParsePortBatch).Close)
+	return b
+}
+
+// Close frees the items on the Rust side.
+func (b *ParsePortBatch) Close() {
+	if b.h != nil {
+		C.carcinize_b_ParsePort_free(b.h)
+		b.h = nil
+	}
+}
+
+// Run returns ParsePort's result for every item, in order.
+func (b *ParsePortBatch) Run() ([]int, error) {
+	var errp *C.char
+	values := make([]C.int64_t, b.n)
+	status := C.carcinize_b_ParsePort_run(b.h, carcinizePtr(values), C.size_t(b.n), &errp)
+	runtime.KeepAlive(b)
+	if status == 1 {
+		return nil, errors.New(carcinizeErr(errp))
+	}
+	out := make([]int, b.n)
+	for i, v := range values {
+		out[i] = int(v)
+	}
+	return out, nil
+}
+
+// Rank returns the indexes of the items whose result is at least min, highest first.
+func (b *ParsePortBatch) Rank(min float64) ([]int, error) {
+	var errp *C.char
+	order := make([]C.uint32_t, b.n)
+	var n C.size_t
+	status := C.carcinize_b_ParsePort_rank(b.h, C.double(min), carcinizePtr(order), C.size_t(b.n), &n, &errp)
+	runtime.KeepAlive(b)
+	if status == 1 {
+		return nil, errors.New(carcinizeErr(errp))
+	}
+	out := make([]int, int(n))
+	for i := range out {
+		out[i] = int(order[i])
+	}
+	return out, nil
 }

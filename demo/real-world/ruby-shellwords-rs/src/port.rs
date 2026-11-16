@@ -102,7 +102,28 @@ fn inspect_str(s: &str) -> String {
         .replace("#@", "\\#@")
 }
 
+/// A Ruby Symbol, which crosses as `{"$sym": name}`.
+fn symbol(v: &Value) -> Option<&str> {
+    match v {
+        Value::Object(map) if map.len() == 1 => map.get("$sym")?.as_str(),
+        _ => None,
+    }
+}
+
 fn inspect(v: &Value) -> String {
+    if let Some(name) = symbol(v) {
+        let mut chars = name.chars();
+        let plain = chars.next().is_some_and(|c| c.is_alphabetic() || c == '_')
+            && name
+                .trim_end_matches(['?', '!', '='])
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_');
+        return if plain {
+            format!(":{name}")
+        } else {
+            format!(":{}", inspect_str(name))
+        };
+    }
     match v {
         Value::String(s) => inspect_str(s),
         Value::Array(items) => format!(
@@ -126,6 +147,9 @@ fn inspect(v: &Value) -> String {
 
 /// Ruby's `to_s`.
 fn to_s(v: &Value) -> String {
+    if let Some(name) = symbol(v) {
+        return name.to_string();
+    }
     match v {
         Value::Null => String::new(),
         Value::Bool(b) => b.to_string(),
@@ -267,4 +291,20 @@ pub fn shelljoin(array: Value) -> Result<Value, String> {
         .map(|v| shellescape(v).map(|e| e.as_str().unwrap_or_default().to_string()))
         .collect();
     Ok(Value::String(escaped?.join(" ")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn symbols_are_their_names() {
+        // `Shellwords.shellescape(:sym)` is "sym"; `[:a].to_s` is "[:a]".
+        assert_eq!(shellescape(json!({ "$sym": "sym" })).unwrap(), json!("sym"));
+        assert_eq!(
+            inspect(&json!([{ "$sym": "a" }, { "$sym": "b c" }])),
+            "[:a, :\"b c\"]"
+        );
+    }
 }

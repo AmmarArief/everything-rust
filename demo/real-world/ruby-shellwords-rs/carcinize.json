@@ -65,5 +65,11 @@
     }
   ],
   "classes": [],
-  "js_only": []
+  "js_only": [],
+  "batches": [
+    {
+      "function": "shellescape",
+      "param": "str"
+    }
+  ]
 }

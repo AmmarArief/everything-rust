@@ -6,6 +6,11 @@ use std::ffi::{CStr, CString, c_char};
 use serde_json::{Value, json};
 
 pub mod port;
+
+/// Batches allocate on all cores at once; mimalloc keeps that from serializing.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub mod wire;
 
 /// Argument `i`, decoded from JSON into the port's parameter type.
@@ -486,6 +491,302 @@ pub unsafe extern "C" fn carcinize_w_SplitPair(
                     return 2;
                 }
                 std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+/// A slice from a pointer and length that may be null and 0.
+///
+/// # Safety
+///
+/// `ptr` points at `len` readable values, or `len` is 0.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn batch_in<'a, T>(ptr: *const T, len: usize) -> &'a [T] {
+    if len == 0 || ptr.is_null() {
+        return &[];
+    }
+    // SAFETY: the caller passes a valid pointer and length (see above).
+    unsafe { std::slice::from_raw_parts(ptr, len) }
+}
+
+/// Strings packed by Go: their bytes, one after another, and each one's length.
+///
+/// # Safety
+///
+/// `bytes` holds `bytes_len` bytes and `lens` holds `count` lengths that sum to at most it.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn batch_strings(
+    bytes: *const u8,
+    bytes_len: usize,
+    lens: *const usize,
+    count: usize,
+) -> Vec<String> {
+    // SAFETY: as documented above.
+    let (bytes, lens) = unsafe { (batch_in(bytes, bytes_len), batch_in(lens, count)) };
+    let mut at = 0;
+    lens.iter()
+        .map(|&n| {
+            let end = (at + n).min(bytes.len());
+            let s = String::from_utf8_lossy(&bytes[at.min(end)..end]).into_owned();
+            at = end;
+            s
+        })
+        .collect()
+}
+
+/// Writes up to `cap` values to a Go slice.
+///
+/// # Safety
+///
+/// `out` points at `cap` writable values, or `cap` is 0.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn batch_out<T: Copy>(out: *mut T, cap: usize, values: &[T]) {
+    if cap == 0 || out.is_null() {
+        return;
+    }
+    // SAFETY: Go passes a slice of `cap` values (see above).
+    let out = unsafe { std::slice::from_raw_parts_mut(out, cap) };
+    for (o, v) in out.iter_mut().zip(values) {
+        *o = *v;
+    }
+}
+
+/// Frees the string results of a batch, after Go copied them.
+///
+/// # Safety
+///
+/// `ptr` and `len` come from a batch's `run`, once.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_free_bytes(ptr: *mut u8, len: usize) {
+    if !ptr.is_null() {
+        // SAFETY: the buffer was a boxed slice of `len` bytes, leaked by `run`.
+        drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len)) });
+    }
+}
+
+/// The items of `SlugifyBatch` as the port takes them; the port runs per item. Define
+/// `pub struct SlugifyIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct SlugifyDefaultIndex {
+    items: Vec<String>,
+}
+
+impl SlugifyDefaultIndex {
+    pub fn new(items: Vec<String>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self, max: i64) -> Result<Vec<String>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::slugify(item.clone(), max))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// Builds a `SlugifyBatch`: the items cross once.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_Slugify_new(
+    bytes: *const u8,
+    bytes_len: usize,
+    lens: *const usize,
+    count: usize,
+) -> *mut SlugifyDefaultIndex {
+    // SAFETY: Go passes its items' memory (see above).
+    let items = unsafe { batch_strings(bytes, bytes_len, lens, count) };
+    std::panic::catch_unwind(|| SlugifyDefaultIndex::new(items))
+        .map_or(std::ptr::null_mut(), |index| Box::into_raw(Box::new(index)))
+}
+
+/// Frees a `SlugifyBatch`.
+///
+/// # Safety
+///
+/// `h` comes from `carcinize_b_Slugify_new`, once.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_Slugify_free(h: *mut SlugifyDefaultIndex) {
+    if !h.is_null() {
+        // SAFETY: `h` was boxed by `_new` and is freed once.
+        drop(unsafe { Box::from_raw(h) });
+    }
+}
+
+/// `Slugify` over every item: 0, or 1 with the error in `err`.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with a live handle and valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_Slugify_run(
+    h: *const SlugifyDefaultIndex,
+    max: i64,
+    out: *mut *mut u8,
+    out_len: *mut usize,
+    lens: *mut usize,
+    cap: usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go keeps the batch alive during the call.
+    let index = unsafe { &*h };
+    match run(|| index.run(max)) {
+        Ok(values) => {
+            let mut bytes = Vec::with_capacity(values.iter().map(String::len).sum());
+            let sizes: Vec<usize> = values
+                .iter()
+                .map(|v| {
+                    bytes.extend_from_slice(v.as_bytes());
+                    v.len()
+                })
+                .collect();
+            let bytes = bytes.into_boxed_slice();
+            // SAFETY: Go passes valid `out`, `out_len` and `lens` of `cap` values; Go frees the
+            // buffer with `carcinize_b_free_bytes`.
+            unsafe {
+                batch_out(lens, cap, &sizes);
+                *out_len = bytes.len();
+                *out = Box::into_raw(bytes).cast::<u8>();
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// The items of `ParsePortBatch` as the port takes them; the port runs per item. Define
+/// `pub struct ParsePortIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct ParsePortDefaultIndex {
+    items: Vec<String>,
+}
+
+impl ParsePortDefaultIndex {
+    pub fn new(items: Vec<String>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self) -> Result<Vec<i64>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::parse_port(item.clone()))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// Builds a `ParsePortBatch`: the items cross once.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_ParsePort_new(
+    bytes: *const u8,
+    bytes_len: usize,
+    lens: *const usize,
+    count: usize,
+) -> *mut ParsePortDefaultIndex {
+    // SAFETY: Go passes its items' memory (see above).
+    let items = unsafe { batch_strings(bytes, bytes_len, lens, count) };
+    std::panic::catch_unwind(|| ParsePortDefaultIndex::new(items))
+        .map_or(std::ptr::null_mut(), |index| Box::into_raw(Box::new(index)))
+}
+
+/// Frees a `ParsePortBatch`.
+///
+/// # Safety
+///
+/// `h` comes from `carcinize_b_ParsePort_new`, once.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_ParsePort_free(h: *mut ParsePortDefaultIndex) {
+    if !h.is_null() {
+        // SAFETY: `h` was boxed by `_new` and is freed once.
+        drop(unsafe { Box::from_raw(h) });
+    }
+}
+
+/// `ParsePort` over every item: 0, or 1 with the error in `err`.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with a live handle and valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_ParsePort_run(
+    h: *const ParsePortDefaultIndex,
+    out: *mut i64,
+    cap: usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go keeps the batch alive during the call.
+    let index = unsafe { &*h };
+    match run(|| index.run()) {
+        Ok(values) => {
+            // SAFETY: Go passes a slice of `cap` values.
+            unsafe { batch_out(out, cap, &values) };
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// Indexes of the items whose result is at least `min`, best first: 0, or 1 with the error.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with a live handle and valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_b_ParsePort_rank(
+    h: *const ParsePortDefaultIndex,
+    min: f64,
+    order_out: *mut u32,
+    cap: usize,
+    n: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go keeps the batch alive during the call.
+    let index = unsafe { &*h };
+    match run(|| index.run()) {
+        Ok(out) => {
+            let mut hits: Vec<(f64, u32)> = out
+                .into_iter()
+                .enumerate()
+                .map(|(i, r)| (r as f64, u32::try_from(i).unwrap_or(u32::MAX)))
+                .filter(|(r, _)| *r >= min)
+                .collect();
+            // Stable: equal results keep the items' order, as JS `sort` and Python `sorted` do.
+            hits.sort_by(|a, b| b.0.total_cmp(&a.0));
+            let order: Vec<u32> = hits.into_iter().map(|(_, i)| i).collect();
+            // SAFETY: Go passes `order_out` of `cap` values and a valid `n`.
+            unsafe {
+                batch_out(order_out, cap, &order);
+                *n = order.len().min(cap);
             }
             0
         }

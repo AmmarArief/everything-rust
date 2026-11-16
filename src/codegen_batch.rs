@@ -52,19 +52,19 @@ pub fn pascal(name: &str) -> String {
 }
 
 /// A batch the port's signature allows.
-struct Spec<'a> {
-    f: &'a PortFn,
-    item: usize,
+pub(crate) struct Spec<'a> {
+    pub f: &'a PortFn,
+    pub item: usize,
     /// The stored item type (`&str` items are stored as `String`).
-    item_ty: String,
-    class: String,
-    index: String,
-    custom: bool,
+    pub item_ty: String,
+    pub class: String,
+    pub index: String,
+    pub custom: bool,
 }
 
 const ITEMS: &[&str] = &["String", "&str", "f64", "i64", "bool"];
 /// Whether a parameter type is `Copy`, so each item's call takes it as is; the rest are cloned.
-fn is_copy(ty: &str) -> bool {
+pub(crate) fn is_copy(ty: &str) -> bool {
     let ty = ty.trim();
     if let Some(inner) = ty.strip_prefix("Option<").and_then(|t| t.strip_suffix('>')) {
         return is_copy(inner);
@@ -98,6 +98,16 @@ const RESULTS: &[&str] = &["f64", "i64", "bool", "String"];
 
 /// Why a batch cannot be generated, or its spec.
 fn spec<'a>(b: &Batch, api: &'a PortApi) -> Result<Spec<'a>, String> {
+    spec_with(b, api, false)
+}
+
+/// The spec; `dynamic` also accepts `serde_json::Value` items and results (Ruby converts them
+/// per item in Rust).
+pub(crate) fn spec_with<'a>(
+    b: &Batch,
+    api: &'a PortApi,
+    dynamic: bool,
+) -> Result<Spec<'a>, String> {
     let f = api
         .functions
         .iter()
@@ -110,7 +120,8 @@ fn spec<'a>(b: &Batch, api: &'a PortApi) -> Result<Spec<'a>, String> {
         .position(|(n, _)| *n == wanted || *n == b.param)
         .ok_or_else(|| format!("`{}` has no parameter `{}`", b.function, b.param))?;
     let ty = f.params[item].1.trim();
-    if !ITEMS.contains(&ty) {
+    let value = |t: &str| dynamic && matches!(t, "Value" | "serde_json::Value");
+    if !ITEMS.contains(&ty) && !value(ty) {
         return Err(format!(
             "batch items must be strings, numbers or booleans; `{}` is `{ty}`",
             b.param
@@ -119,7 +130,7 @@ fn spec<'a>(b: &Batch, api: &'a PortApi) -> Result<Spec<'a>, String> {
     if f.is_async {
         return Err(format!("`{}` is async", b.function));
     }
-    if !RESULTS.contains(&f.ret.trim()) {
+    if !RESULTS.contains(&f.ret.trim()) && !value(f.ret.trim()) {
         return Err(format!(
             "batch results must be numbers, booleans or strings; `{}` returns `{}`",
             b.function, f.ret
@@ -146,7 +157,7 @@ fn spec<'a>(b: &Batch, api: &'a PortApi) -> Result<Spec<'a>, String> {
 }
 
 /// The non-item parameters, as `name: Type` (by value: `&str` becomes `String`).
-fn fixed(s: &Spec) -> Vec<(String, String)> {
+pub(crate) fn fixed(s: &Spec) -> Vec<(String, String)> {
     s.f.params
         .iter()
         .enumerate()
@@ -165,7 +176,7 @@ fn fixed(s: &Spec) -> Vec<(String, String)> {
 }
 
 /// The default index: the items as the port takes them, the port called per item.
-fn default_index(s: &Spec, parallel: bool) -> String {
+pub(crate) fn default_index(s: &Spec, parallel: bool) -> String {
     let fixed = fixed(s);
     let params: Vec<String> = fixed.iter().map(|(n, t)| format!("{n}: {t}")).collect();
     let args: Vec<String> =
@@ -176,8 +187,8 @@ fn default_index(s: &Spec, parallel: bool) -> String {
                 let by_ref = t.trim() == "&str";
                 match (i == s.item, by_ref) {
                     (true, true) => "item.as_str()".to_string(),
-                    (true, false) if s.item_ty == "String" => "item.clone()".into(),
-                    (true, false) => "*item".into(),
+                    (true, false) if is_copy(&s.item_ty) => "*item".into(),
+                    (true, false) => "item.clone()".into(),
                     (false, true) => format!("{n}.as_str()"),
                     (false, false) if is_copy(t) => n.clone(),
                     (false, false) => format!("{n}.clone()"),
@@ -231,7 +242,7 @@ fn napi_out(ret: &str) -> (&'static str, &'static str) {
     }
 }
 
-fn rank_body(ret: &str) -> Option<String> {
+pub(crate) fn rank_body(ret: &str) -> Option<String> {
     let value = match ret {
         "f64" => "r",
         "i64" => "r as f64",
@@ -398,7 +409,7 @@ pub fn py_rs(m: &Manifest, api: &PortApi) -> Result<(String, Vec<String>), Strin
 /// `port.rs` index using it builds for both kinds: without threads, rayon runs on the calling
 /// thread.
 pub fn needs_rayon(m: &Manifest) -> bool {
-    !m.batches.is_empty() && matches!(m.kind, Kind::Napi | Kind::Wasm | Kind::Pyo3)
+    !m.batches.is_empty()
 }
 
 #[cfg(test)]
