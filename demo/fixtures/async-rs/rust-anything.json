@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/async",
+  "root": "../../../tests/fixtures/async",
   "unit": "src/pipeline.ts",
   "kind": "napi",
   "crate_name": "pipeline-rs",

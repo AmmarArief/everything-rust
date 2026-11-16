@@ -37,8 +37,13 @@ pub enum Kind {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     pub schema: String,
-    /// Absolute repository root.
+    /// The repository root: absolute, or relative to the crate folder (so a crate kept inside
+    /// the repository it ports works in any clone). Resolved when the manifest is loaded.
     pub root: PathBuf,
+    /// `root` as written in the file, when it was relative; written back instead of the resolved
+    /// path.
+    #[serde(skip)]
+    pub root_written: Option<PathBuf>,
     pub unit: String,
     #[serde(default)]
     pub language: crate::lang::Lang,
@@ -157,7 +162,14 @@ impl Manifest {
                 path.display()
             )
         })?;
-        serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))
+        let mut manifest: Self =
+            serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        if manifest.root.is_relative() {
+            let resolved = crate_dir.join(&manifest.root);
+            let resolved = resolved.canonicalize().unwrap_or(resolved);
+            manifest.root_written = Some(std::mem::replace(&mut manifest.root, resolved));
+        }
+        Ok(manifest)
     }
 
     /// Rust library name: the crate name with `-` replaced.
@@ -662,6 +674,9 @@ pub fn add_batches(crate_dir: &Path, specs: &[String]) -> Result<Refreshed> {
             manifest.batches.push(b);
         }
     }
+    if let Some(written) = manifest.root_written.clone() {
+        manifest.root = written;
+    }
     std::fs::write(&path, serde_json::to_string_pretty(&manifest)? + "\n")?;
     // A batch the port cannot serve leaves the crate as it was.
     refresh(crate_dir).inspect_err(|_| {
@@ -1047,6 +1062,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     let manifest = Manifest {
         schema: SCHEMA.into(),
         root: root.clone(),
+        root_written: None,
         unit: unit.id.clone(),
         language: lang,
         kind,
@@ -1457,6 +1473,33 @@ mod tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_relative_root_is_resolved_from_the_crate_and_kept_relative() {
+        let base = std::env::temp_dir().join(format!("rust-anything-root-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let crate_dir = base.join("repo/rust/x-rs");
+        std::fs::create_dir_all(&crate_dir).unwrap();
+        std::fs::write(
+            crate_dir.join(MANIFEST),
+            r#"{"schema": "rust-anything/bridge@1", "root": "../..", "unit": "src/x.ts", "kind": "napi", "crate_name": "x-rs", "exports": []}"#,
+        )
+        .unwrap();
+        let m = Manifest::load(&crate_dir).unwrap();
+        assert_eq!(m.root, base.join("repo").canonicalize().unwrap());
+        assert_eq!(m.root_written.as_deref(), Some(Path::new("../..")));
+        // Written back, the file keeps the relative root.
+        let mut back = m.clone();
+        if let Some(w) = back.root_written.clone() {
+            back.root = w;
+        }
+        assert!(
+            serde_json::to_string(&back)
+                .unwrap()
+                .contains(r#""root":"../..""#)
+        );
+        std::fs::remove_dir_all(&base).unwrap();
+    }
 
     #[test]
     fn maps_ts_types() {

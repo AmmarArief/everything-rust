@@ -8,7 +8,8 @@ readme = "README.md"
 rust-version = "1.88"
 keywords = ["migration", "rewrite", "ffi", "napi", "pyo3"]
 categories = ["command-line-utilities", "development-tools", "wasm"]
-# repository and homepage: set once the project has a name and a home.
+repository = "https://github.com/erkamyaman/rust-anything"
+homepage = "https://github.com/erkamyaman/rust-anything"
 exclude = ["demo/", "docs/examples/", "tests/fixtures/**/node_modules"]
 
 [dependencies]

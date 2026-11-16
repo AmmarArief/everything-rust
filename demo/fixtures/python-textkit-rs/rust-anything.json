@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/python",
+  "root": "../../../tests/fixtures/python",
   "unit": "src/textkit/",
   "language": "python",
   "kind": "pyo3",

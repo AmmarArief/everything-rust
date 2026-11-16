@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/ruby",
+  "root": "../../../tests/fixtures/ruby",
   "unit": "lib/textkit/",
   "language": "ruby",
   "kind": "ffi",

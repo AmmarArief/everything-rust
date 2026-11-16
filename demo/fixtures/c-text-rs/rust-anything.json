@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/c",
+  "root": "../../../tests/fixtures/c",
   "unit": "src/text.c",
   "language": "c",
   "kind": "c-abi",

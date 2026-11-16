@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/x18n",
+  "root": "../../../../x18n",
   "unit": "packages/builtins/src/formats/shared/",
   "kind": "wasm",
   "crate_name": "shared-rs",

@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/go",
+  "root": "../../../tests/fixtures/go",
   "unit": "strkit/",
   "language": "go",
   "kind": "ffi",

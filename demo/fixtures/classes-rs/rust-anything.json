@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/classes",
+  "root": "../../../tests/fixtures/classes",
   "unit": "src/stats.ts",
   "kind": "wasm",
   "crate_name": "stats-rs",

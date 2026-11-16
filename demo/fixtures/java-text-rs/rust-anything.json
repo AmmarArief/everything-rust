@@ -1,6 +1,6 @@
 {
   "schema": "rust-anything/bridge@1",
-  "root": "/home/user/rust-anything/tests/fixtures/java",
+  "root": "../../../tests/fixtures/java",
   "unit": "src/main/java/com/example/text/",
   "language": "java",
   "kind": "ffi",
