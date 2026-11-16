@@ -15,6 +15,10 @@ behavior.
 | `Slugify` over 50,000 strings (Go) | 49 ms | **4x faster** |
 | `slugify` over 50,000 strings (Java) | 43 ms | **3x faster** |
 
+<p align="center">
+  <img src="docs/assets/race.gif" alt="Typing user.profile into x18n's search over 50,000 keys: TypeScript spends 143 ms, the rust-anything batch 6.9 ms, with the same results at every keystroke." width="820">
+</p>
+
 Measured on 4 cores; every number has a benchmark in [`demo/`](./demo) that first checks the
 results are identical. Calling Rust once per small function is usually *slower* than a JIT;
 rust-anything finds the loop worth moving, and moves it.
@@ -24,9 +28,25 @@ rust-anything finds the loop worth moving, and moves it.
 
 ## Quick start
 
+Paste this into Claude Code, Codex, Cursor or Gemini CLI and let your agent install it:
+
+```text
+Install rust-anything: run `cargo install --git https://github.com/erkamyaman/rust-anything`,
+then `rust-anything setup`. Tell me when to restart you.
+```
+
+Or yourself:
+
 ```sh
-cargo install --path .        # from a clone; crates.io and prebuilt binaries are coming
+cargo install --git https://github.com/erkamyaman/rust-anything
 rust-anything setup           # registers it with Claude Code, Codex, Cursor and Gemini CLI
+```
+
+In Claude Code you can also install it as a plugin (the MCP server and the skill; the CLI above
+must be on your `PATH`):
+
+```text
+/plugin install rust-anything --marketplace erkamyaman/rust-anything
 ```
 
 `setup` adds the MCP server to each agent it finds and installs the workflow skill where the agent
@@ -50,6 +70,11 @@ Then ask your agent, for example:
 Before changing a file that exists, `setup` saves a copy beside it (`<file>.rust-anything.bak`).
 
 Or run the steps yourself:
+
+<p align="center">
+  <img src="docs/assets/terminal.gif" alt="rust-anything profile finds fuzzyScore in a loop, bridge --batch generates the Rust crate, gate passes with 2000/2000 recorded cases, and the benchmark shows 20.7x faster than TS." width="820">
+</p>
+
 
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
@@ -280,6 +305,17 @@ cargo fmt
 
 Design choices and their reasons: [DECISIONS.md](./DECISIONS.md).
 
+
+## Update or remove
+
+```sh
+cargo install --git https://github.com/erkamyaman/rust-anything --force   # update
+rust-anything setup                                                       # refresh agent settings
+rust-anything setup --remove && cargo uninstall rust-anything             # remove
+```
+
+`setup --remove` takes out only rust-anything's entries; the copies it saved
+(`<file>.rust-anything.bak`) stay until you delete them.
 
 ## FAQ
 

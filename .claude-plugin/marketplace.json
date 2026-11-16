@@ -1,0 +1,14 @@
+{
+  "name": "rust-anything",
+  "owner": {
+    "name": "rust-anything authors"
+  },
+  "description": "rust-anything: find the hot loop in your TypeScript, Python, C, Go, Ruby or Java code, move it to Rust, and prove nothing else changed.",
+  "plugins": [
+    {
+      "name": "rust-anything",
+      "source": "./",
+      "description": "Make the slow part of your app fast in Rust without rewriting the app. Needs the rust-anything CLI on PATH (cargo install --git https://github.com/erkamyaman/rust-anything)."
+    }
+  ]
+}

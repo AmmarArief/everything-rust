@@ -14,6 +14,9 @@ TS, PyO3, a C ABI, cgo, a magnus extension, JNI), and the original's callers kee
 
 Tools: the `rust-anything` CLI, or the same steps as MCP tools (`rust-anything mcp`): `profile`,
 `analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`.
+If the MCP tools are not available, use the CLI; if `rust-anything` is not installed, ask the user
+to install it (`cargo install --git https://github.com/erkamyaman/rust-anything`) and run
+`rust-anything setup`, then restart the agent.
 
 ## 0. Profile: find what is worth moving
 
