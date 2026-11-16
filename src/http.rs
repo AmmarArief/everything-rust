@@ -881,10 +881,11 @@ pub(crate) fn replay(
     norm: &Normalizers,
     command: &[String],
     port: Option<u16>,
+    case: Option<&str>,
     timeout: Duration,
 ) -> Result<ReplayOutcome> {
     let dir = app::cases_dir(repo);
-    let specs = load_specs(&dir.join(HTTP_DIR))?;
+    let specs = app::only_case(load_specs(&dir.join(HTTP_DIR))?, case, |s| &s.name)?;
     let port = match port.or(config.http.as_ref().and_then(|h| h.port)) {
         Some(p) => p,
         None => free_port()?,

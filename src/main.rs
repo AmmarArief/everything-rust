@@ -262,6 +262,10 @@ enum AppCmd {
         /// PORT and `{port}`.
         #[arg(long)]
         port: Option<u16>,
+        /// Replay only this case, by the name the report gives it (a library: only this unit).
+        /// The fast, repeatable loop for fixing one mismatch.
+        #[arg(long)]
+        case: Option<String>,
         #[arg(long)]
         json: bool,
     },
@@ -707,6 +711,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             build,
             timeout,
             port,
+            case,
             json,
         } => {
             let outcome = app::replay(&app::ReplayOptions {
@@ -714,6 +719,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 build: build.as_deref(),
                 timeout_secs: timeout,
                 port,
+                case: case.as_deref(),
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);

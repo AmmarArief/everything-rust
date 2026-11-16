@@ -489,10 +489,11 @@ pub(crate) fn cargo_build(app_dir: &Path, target_dir: Option<&Path>) -> Result<P
 fn build_and_replay(repo: &Path, state: &State) -> Result<ReplayOutcome> {
     if state.kind == AppKind::Library {
         crate::library::cargo_build_lib(&repo.join(APP_DIR), None)?;
-        return crate::library::replay(repo, state);
+        return crate::library::replay(repo, state, None);
     }
     let exe = cargo_build(&repo.join(APP_DIR), None)?;
     app::replay(&ReplayOptions {
+        case: None,
         repo,
         build: Some(&app::shell_quote(&exe.to_string_lossy())),
         timeout_secs: None,

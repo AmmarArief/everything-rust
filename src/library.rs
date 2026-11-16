@@ -198,7 +198,7 @@ pub(crate) fn pending(state: &State) -> Vec<String> {
 
 /// The recorded cases of every wired unit, through its bindings (`diff`), and the share of the
 /// API still answered by the original.
-pub(crate) fn replay(repo: &Path, state: &State) -> Result<ReplayOutcome> {
+pub(crate) fn replay(repo: &Path, state: &State, unit: Option<&str>) -> Result<ReplayOutcome> {
     let app_dir = repo.join(APP_DIR);
     let mut outcome = ReplayOutcome {
         build: vec!["the units' bindings".to_string()],
@@ -209,7 +209,8 @@ pub(crate) fn replay(repo: &Path, state: &State) -> Result<ReplayOutcome> {
         fallback: None,
         report: app_dir.join(crate::app::REPORT_FILE),
     };
-    for unit in &state.units {
+    let units = crate::app::only_case(state.units.iter().collect(), unit, |u| &u.name)?;
+    for unit in units {
         let crate_dir = app_dir.join(&unit.path);
         match crate::harness::diff(&crate::harness::DiffOptions {
             crate_dir: &crate_dir,

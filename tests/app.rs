@@ -112,6 +112,7 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
     assert!(read("example-007-nope.stderr").starts_with("usage: tcli"));
 
     let original = app::replay(&ReplayOptions {
+        case: None,
         repo,
         build: None,
         timeout_secs: None,
@@ -128,6 +129,7 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
     assert!(original.fallback.is_none());
 
     let bug = app::replay(&ReplayOptions {
+        case: None,
         repo,
         build: Some(buggy),
         timeout_secs: None,
@@ -143,6 +145,24 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
     let report = std::fs::read_to_string(&bug.report).unwrap();
     assert!(report.contains("- error: division by zero"), "{report}");
     assert!(report.contains("+ error: divide by zero"), "{report}");
+
+    let one = app::replay(&ReplayOptions {
+        case: Some(&bug.failures[0].case),
+        repo,
+        build: Some(buggy),
+        timeout_secs: None,
+        port: None,
+    })
+    .unwrap();
+    assert_eq!((one.total, one.failures.len()), (1, 1));
+    let missing = app::replay(&ReplayOptions {
+        case: Some("no-such-case"),
+        repo,
+        build: None,
+        timeout_secs: None,
+        port: None,
+    });
+    assert!(missing.unwrap_err().to_string().contains("no case named"));
 
     front_door_then_wire(repo);
     std::fs::remove_dir_all(repo).unwrap();
@@ -684,6 +704,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
     let hidden = repo.join(format!("{original}.hidden"));
     std::fs::rename(repo.join(original), &hidden).unwrap();
     let pure = app::replay(&ReplayOptions {
+        case: None,
         repo,
         build: Some(&lifted.binary.as_ref().unwrap().to_string_lossy()),
         timeout_secs: None,

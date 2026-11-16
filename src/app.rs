@@ -1554,6 +1554,26 @@ pub struct ReplayOptions<'a> {
     pub timeout_secs: Option<u64>,
     /// Servers: the port the build listens on, when it is fixed.
     pub port: Option<u16>,
+    /// Replay only this case (a library: only this unit).
+    pub case: Option<&'a str>,
+}
+
+pub(crate) fn only_case<T>(
+    items: Vec<T>,
+    case: Option<&str>,
+    name: impl Fn(&T) -> &str,
+) -> Result<Vec<T>> {
+    let Some(case) = case else {
+        return Ok(items);
+    };
+    let names: Vec<String> = items.iter().map(|i| name(i).to_string()).collect();
+    let kept: Vec<T> = items.into_iter().filter(|i| name(i) == case).collect();
+    ensure!(
+        !kept.is_empty(),
+        "no case named {case}; the cases are: {}",
+        names.join(", ")
+    );
+    Ok(kept)
 }
 
 #[derive(Debug, Serialize)]
@@ -1749,7 +1769,7 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
             "{} is a library: its cases replay through each unit's bindings, so --build does not apply",
             state.name
         );
-        return crate::library::replay(&repo, &state);
+        return crate::library::replay(&repo, &state, opts.case);
     }
     let command = match (opts.build, &config) {
         (Some(build), _) => shell_split(build)?,
@@ -1773,9 +1793,11 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
     let norm = Normalizers::new(&config)?;
     let timeout = Duration::from_secs(opts.timeout_secs.unwrap_or(config.timeout_secs));
     if config.http.is_some() {
-        return crate::http::replay(&repo, &config, &norm, &command, opts.port, timeout);
+        return crate::http::replay(
+            &repo, &config, &norm, &command, opts.port, opts.case, timeout,
+        );
     }
-    let specs = load_specs(&dir)?;
+    let specs = only_case(load_specs(&dir)?, opts.case, |s| &s.name)?;
     let results = par_map(&specs, |spec| {
         if matches!(spec.status, Expect::Skip) {
             return Ok((Vec::new(), None));

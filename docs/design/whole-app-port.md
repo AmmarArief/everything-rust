@@ -52,11 +52,12 @@ Runs the original on app-level cases and stores them in `rust/app-cases/`.
 - Runs the original **twice**. Fields that differ between the two runs are marked as noise and
   normalized (Diffy's idea). The user can add normalizers by name (timestamps, uuids, key order).
 
-### `rust-anything app replay <repo> [--build <command>]`
+### `rust-anything app replay <repo> [--build <command>] [--case <name>]`
 
 Runs any build (the original, the front door, the final binary) against `rust/app-cases/` and
 prints `passed/total` and the **fallback rate** (cases still answered by the original). It writes a
 report with a diff per failing case. Exit code non-zero on any mismatch, so CI can run it.
+`--case` reruns one case (for a library, one unit): the fast loop for fixing one mismatch.
 
 ### `rust-anything app front-door <repo>`
 
@@ -100,7 +101,11 @@ Only when the fallback rate is zero and every unit passes `gate`:
 
 ```
 rust/
-  DECISIONS.md        decisions from the grilling round, with reasons (the agent writes it)
+  MAP.md              goal, ADR index, every unit with its state and claim, open questions
+  DECISIONS.md        one ADR per decision from the grilling round (the agent writes it)
+  GLOSSARY.md         the original's terms and their Rust names
+  HANDOFF.md          where the port stands, for the next session (at each checkpoint)
+  cutover.sh          interactive steps only the user can do at cutover
   research/           one cited file per dependency or risk (the agent writes them)
   app-cases/          recorded app-level cases, normalizers, last replay report
   app/                the front door, later the whole Rust app
@@ -221,6 +226,20 @@ Taken while building, without a question to the user (the conventional option, w
 40. **A PyO3 unit gets a `.cargo/config.toml` in `rust/app`** that lets macOS link its `cdylib` with
     Python's symbols left to load time (PyO3's documented setting); the lift removes it with the
     bindings.
+41. **The port is carried across sessions by `rust/MAP.md`** (after Matt Pocock's `wayfinder`
+    skill): a session claims one unit before it starts, so parallel sessions never take the same
+    one. The agent writes it; the tool does not parse it.
+42. **`DECISIONS.md` holds one numbered ADR per decision** (Status, Context, Decision,
+    Consequences), superseded rather than edited, and `GLOSSARY.md` maps the original's terms to
+    Rust names (after `grill-with-docs` and `domain-modeling`). One file keeps the targets `lift`
+    reads where they were.
+43. **A red replay is fixed one case at a time** with `app replay --case <name>` (after
+    `diagnosing-bugs`): a fast, repeatable failing test before any fix.
+44. **Each checkpoint writes `rust/HANDOFF.md`** (after `handoff`): pointers, not copies.
+45. **A wave can be ported in parallel by subagents** (after `chief-of-staff`), wired one at a time
+    by the coordinator; every mistake becomes an ADR, glossary entry or test.
+46. **Cutover steps only the user can do go in `rust/cutover.sh`** (after `wizard`), an interactive
+    script with a way back at each step.
 
 ## Draft pitch
 

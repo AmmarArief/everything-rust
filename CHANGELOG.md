@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 (2026-11-16)
 
 Whole-app ports: rust-anything now takes a TypeScript/JavaScript, Python, C, Go, Ruby or Java app
-all the way to a pure Rust app, proving at every step that it still behaves the same. CLIs, HTTP
-servers and libraries, in all six languages; every `app` command is also an MCP tool
-(`app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`).
+all the way to a pure Rust app, proving at every step that it still behaves the same. CLIs and HTTP
+servers in all six languages, and libraries (proven end to end in TypeScript, Python and C so
+far); every `app` command is also an MCP tool (`app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`).
 
 - Plan: `analyze --whole-app` gives the app's shape (CLI, server or library) and entry points,
   every external dependency (imported, or declared in package.json, pyproject or
@@ -23,7 +23,8 @@ servers and libraries, in all six languages; every `app` command is also an MCP 
 - Replay: `app replay` runs any build (the original, the front door, the final binary) against
   the cases, prints `passed/total` and the fallback rate, writes a report with a diff per failing
   case, and exits non-zero on any mismatch, so CI can run it. Any build can report its fallbacks
-  through the file named by `RUST_ANYTHING_FALLBACK_LOG`.
+  through the file named by `RUST_ANYTHING_FALLBACK_LOG`. `--case <name>` reruns one
+  failing case, the fast loop for fixing a mismatch.
 - Front door: `app front-door` scaffolds `rust/app`, which owns the entry point from day one and
   hands what is not ported yet to the original, counting every fallback: for a CLI a clap binary
   that runs the original with the same argv, stdin and environment; for a server an axum app that
@@ -51,6 +52,13 @@ servers and libraries, in all six languages; every `app` command is also an MCP 
 - Proved end to end on a small CLI and a small HTTP server written in each of the six languages,
   replayed with the original moved away, and on libraries (a C library lifted to one pure Rust
   crate; TypeScript and Python libraries moved unit by unit).
+- The skill gains a whole-app guide (`whole-app.md`, installed by `setup`): it grills the user in
+  rounds with a recommended answer for each question, researches dependencies against primary
+  sources, and keeps the port going across sessions with `rust/MAP.md` (claim one unit at a
+  time), ADRs in `rust/DECISIONS.md`, `rust/GLOSSARY.md` and a `rust/HANDOFF.md` at each
+  checkpoint. It fixes red replays one case at a time, can port a wave in parallel with
+  subagents, and ends with `rust/cutover.sh` for the steps only the user can do. Grilling,
+  research and these practices are adapted from Matt Pocock's agent skills.
 - The pitch is now rewriting a whole app in Rust; making the slow part fast stays as a smaller use
   of the same tool.
 

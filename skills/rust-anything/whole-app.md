@@ -6,9 +6,21 @@ and hands whatever is not ported yet to the original, units move to Rust one at 
 steps 1 to 5 of [SKILL.md](SKILL.md), and the **lift** at the end removes the fallback. The user
 makes the decisions; you find the facts.
 
-Everything you write for the port lives in `<repo>/rust/`: `DECISIONS.md`, `research/`,
-`app-cases/`, the unit crates, and the `app/` crate. Why this shape, with sources:
+Everything you write for the port lives in `<repo>/rust/`: `MAP.md`, `DECISIONS.md`,
+`GLOSSARY.md`, `HANDOFF.md`, `research/`, `app-cases/`, the unit crates, and the `app/` crate.
+Why this shape, with sources:
 https://github.com/erkamyaman/rust-anything/blob/main/docs/research/whole-app-port.md
+
+## The map
+
+A whole-app port outlasts one session, so `rust/MAP.md` carries it between sessions: the goal,
+an index of the ADRs in `DECISIONS.md`, every unit of the plan with its state (`open`,
+`claimed by <session> <date>`, `done`), open questions, and what is out of scope. Write it after
+the grilling and keep it current; it points to the other files and never copies them.
+
+A session **claims** one unit in the map before it starts, ports that unit, and marks it `done`
+with its gate and replay results. A claimed unit belongs to its session: pick another. A new
+session starts by reading `MAP.md`, then `HANDOFF.md` when there is one.
 
 ## 1. Grill the user
 
@@ -48,8 +60,20 @@ Seed branches (the tree grows from the answers):
 - **Cutover**: switch at once, or run the Rust app beside the original first.
 
 Done when the frontier is empty and the user confirms you share one understanding. Write every
-decision with its reason to `rust/DECISIONS.md`; it is the source of truth for the rest of the
-port.
+decision to `rust/DECISIONS.md` as a short ADR, one section each, numbered in order and never
+renumbered; it is the source of truth for the rest of the port:
+
+```
+## ADR-007: Keep the config file format
+Status: accepted (2026-11-16)   (later: superseded by ADR-012)
+Context: <the facts that forced the choice>
+Decision: <what we do>
+Consequences: <what it rules in and out>
+```
+
+A changed decision gets a new ADR that supersedes the old one. Start `rust/GLOSSARY.md` beside it:
+each of the original's domain terms, its meaning, and its name in Rust (type, module, function),
+so every unit names the same thing the same way. Add to it as units bring new terms.
 
 ## 2. Research, in the background
 
@@ -108,8 +132,8 @@ scaffolded: `front-door` never overwrites it.
 ## 5. Port every unit
 
 Follow the plan's waves, lowest first, so every unit's dependencies are already Rust; take a
-tangled core in one large piece rather than writing glue around it. Each unit goes through steps 1
-to 5 of SKILL.md, then:
+tangled core in one large piece rather than writing glue around it. Claim the unit in `MAP.md`.
+Each unit goes through steps 1 to 5 of SKILL.md, then:
 
 1. Wire the unit into the front door, and stop falling back for what it covers:
    `rust-anything app wire <repo> <unit> --command <name>` (the app's own name as the command
@@ -125,6 +149,18 @@ to 5 of SKILL.md, then:
 3. Keep the **kill switch** `wire` adds: `RUST_ANYTHING_UNIT_<NAME>=original` sends the unit back
    to the original, until the lift (a C library's shadow switches at build time instead).
 
+When `replay` goes red, fix one case at a time: `rust-anything app replay <repo> --build <build>
+--case <name>` reruns only the case the report names (a library: only that unit), in seconds and
+the same way every time. Read its diff, form one hypothesis, change the port, rerun that case
+until it is green, then run the full `replay` so the fix broke nothing else.
+
+Units in one wave do not depend on each other, so a wave can go **in parallel**: you coordinate,
+and give each unit to its own subagent with the unit id, the `MAP.md` claim, and the files to read
+(`DECISIONS.md`, `GLOSSARY.md`, the unit's research). Each runs steps 1 to 5 of SKILL.md and
+returns its gate and diff results; you wire the units one at a time and replay after each. Turn
+every mistake a subagent made into a rule for the next: an ADR, a glossary entry, or a test, so
+the next unit cannot make it again.
+
 Translate faithfully first, with the original's structure, types and error paths; make it
 idiomatic only after `replay` passes, and run `replay` again. Where the original returns or throws
 an error, return an error: `unwrap`, `expect` and `panic!` are for states the original also
@@ -132,7 +168,10 @@ treats as impossible, marked `// INFALLIBLE: <why>`; `gate` fails on any other i
 original returns an error, and on an error path no recorded case reaches.
 
 Stop at the checkpoints from `DECISIONS.md`, and report the units done, gate results, `replay`
-results, the fallback rate and what is left.
+results, the fallback rate and what is left. At each checkpoint, update `MAP.md` and write
+`rust/HANDOFF.md` for a fresh session: where the port stands (fallback rate, the wave, the next
+unit), what is in progress or broken, and links to `MAP.md`, the ADRs that matter now and the last
+replay report, plus the skill to load next (this one). Point to files; copy nothing from them.
 
 ## 6. Lift to a pure Rust app
 
@@ -170,3 +209,10 @@ change a case only with the user's approval, and record why in `DECISIONS.md`.
 Report to the user: replay results, gate results for every crate, speed against the original, and
 every known behavior difference. The user decides the cutover. Leave the original in place as
 reference until they say otherwise.
+
+Do every cutover step you can yourself. For the steps only the user can do (deploys, DNS, secrets,
+store listings, switching production traffic, retiring the original), write `rust/cutover.sh`: an
+interactive bash script that walks them through one step at a time, says what to do and where,
+waits for Enter, checks the result where a command can (the new binary answers, a health route is
+up), and offers the way back at each step (the original kept beside the new app). Tell the user
+to run it.

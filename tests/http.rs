@@ -78,6 +78,7 @@ fn record(repo: &Path, run: &str, traps: bool) -> app::RecordOutcome {
 
 fn replay(repo: &Path, build: Option<&str>) -> app::ReplayOutcome {
     app::replay(&ReplayOptions {
+        case: None,
         repo,
         build,
         timeout_secs: None,

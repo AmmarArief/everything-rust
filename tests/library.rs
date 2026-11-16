@@ -201,6 +201,7 @@ fn a_ts_library_moves_unit_by_unit() {
 
     std::fs::write(dir.join("index.cjs"), STAND_IN.replace("+ '!'", "+ '?'")).unwrap();
     let broken = rust_anything::app::replay(&rust_anything::app::ReplayOptions {
+        case: None,
         repo: &repo,
         build: None,
         timeout_secs: None,

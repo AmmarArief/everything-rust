@@ -178,6 +178,7 @@ fn tools() -> Value {
                 "repo": { "type": "string", "description": "Repository root." },
                 "build": { "type": "string", "description": "Command line of the build to test; the original when omitted." },
                 "port": { "type": "integer", "description": "Servers: the port the build always listens on; otherwise it gets a free one through PORT and {port}." },
+                "case": { "type": "string", "description": "Replay only this case, by the name the report gives it (a library: only this unit): the fast loop for fixing one mismatch." },
             }, "required": ["repo"] },
         },
         {
@@ -346,6 +347,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 build: args["build"].as_str(),
                 timeout_secs: None,
                 port: args["port"].as_u64().and_then(|p| u16::try_from(p).ok()),
+                case: args["case"].as_str(),
             })?)?
         }
         "app_front_door" => {

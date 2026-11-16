@@ -642,10 +642,11 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
     let target_dir = app_dir.join("target");
     let before = if library {
         crate::library::cargo_build_lib(&app_dir, Some(&target_dir))
-            .and_then(|()| crate::library::replay(&repo, &state))
+            .and_then(|()| crate::library::replay(&repo, &state, None))
     } else {
         front_door::cargo_build(&app_dir, Some(&target_dir)).and_then(|exe| {
             app::replay(&ReplayOptions {
+                case: None,
                 repo: &repo,
                 build: Some(&app::shell_quote(&exe.to_string_lossy())),
                 timeout_secs: None,
@@ -830,6 +831,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
         }
         Ok(exe) => {
             let replay = app::replay(&ReplayOptions {
+                case: None,
                 repo: &repo,
                 build: Some(&app::shell_quote(&exe.to_string_lossy())),
                 timeout_secs: None,
