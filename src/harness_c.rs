@@ -209,30 +209,239 @@ pub fn diff(crate_dir: &Path, manifest: &Manifest) -> Result<DiffOutcome> {
 }
 
 pub fn bench(crate_dir: &Path, manifest: &Manifest, min_ms: u64) -> Result<Vec<BenchRow>> {
-    let cases = crate_dir.join(CASES);
-    if !cases.exists() {
+    let cases_path = crate_dir.join(CASES);
+    if !cases_path.exists() {
         bail!(
             "no {CASES} in {} (run `carcinize record` first)",
             crate_dir.display()
         );
     }
-    let original = build_original(crate_dir, manifest)?;
-    let rust = built_library(crate_dir, manifest)?;
-    let (driver, sigs) = driver(crate_dir, manifest)?;
-    let out = crate_dir.join(WORK_DIR).join("bench.json");
-    run(
-        python()
-            .arg(&driver)
-            .arg("bench")
-            .arg(&original)
-            .arg(&rust)
-            .arg(&sigs)
-            .arg(&cases)
-            .arg(&out)
-            .arg(min_ms.to_string()),
-        "python (ctypes)",
-    )?;
-    Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
+    let rust = built_library(crate_dir, manifest)?.canonicalize()?;
+    let work = crate_dir.canonicalize()?.join(WORK_DIR);
+    std::fs::create_dir_all(&work)?;
+    let cases: Vec<Value> = std::fs::read_to_string(&cases_path)?
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(serde_json::from_str)
+        .collect::<Result<_, _>>()?;
+    let source = work.join("bench.c");
+    std::fs::write(&source, bench_c(manifest, &cases, min_ms))?;
+    // The original, its functions renamed `<name>__original`, and the Rust library, whose
+    // `carcinize_<name>` aliases are the port: both called directly from one C program.
+    let (sources, include_dirs) = original_sources(manifest)?;
+    let bin = work.join("bench");
+    let mut cmd = Command::new(compiler());
+    cmd.args(["-O2", "-w", "-o"]).arg(&bin).arg(&source);
+    for f in crate::codegen_c::shadow_flags(manifest).split_whitespace() {
+        cmd.arg(f);
+    }
+    for dir in &include_dirs {
+        cmd.arg(format!("-I{}", dir.display()));
+    }
+    cmd.args(&sources)
+        .arg(&rust)
+        .arg(format!(
+            "-Wl,-rpath,{}",
+            rust.parent()
+                .map_or_else(String::new, |p| p.display().to_string())
+        ))
+        .arg("-lm");
+    run(&mut cmd, "cc (bench)")?;
+    let out = work.join("bench.json");
+    run(Command::new(&bin).arg(&out), "bench")?;
+    let timings: serde_json::Map<String, Value> =
+        serde_json::from_str(&std::fs::read_to_string(&out)?)?;
+    Ok(manifest
+        .exports
+        .iter()
+        .filter_map(|f| {
+            let t = timings.get(&f.name)?;
+            let (o, n) = (t["original_ns"].as_f64()?, t["rust_ns"].as_f64()?);
+            Some(BenchRow {
+                name: f.name.clone(),
+                cases: usize::try_from(t["cases"].as_u64().unwrap_or(0)).unwrap_or(0),
+                original_ns: o,
+                rust_ns: n,
+                speedup: o / n,
+            })
+        })
+        .collect())
+}
+
+/// The project's C sources without `main`, and the folders with headers.
+fn original_sources(
+    manifest: &Manifest,
+) -> Result<(Vec<PathBuf>, std::collections::BTreeSet<PathBuf>)> {
+    let ws = crate::lang::c::discover(&manifest.root)?;
+    let mut sources = Vec::new();
+    let mut include_dirs = std::collections::BTreeSet::new();
+    include_dirs.insert(manifest.root.clone());
+    for file in ws
+        .files
+        .iter()
+        .filter(|f| f.kind == crate::ts::discover::FileKind::Source)
+    {
+        let path = manifest.root.join(&file.path);
+        if let Some(dir) = path.parent() {
+            include_dirs.insert(dir.to_path_buf());
+        }
+        if file.path.ends_with(".c")
+            && !defines_main(&std::fs::read_to_string(&path).unwrap_or_default())
+        {
+            sources.push(path);
+        }
+    }
+    for entry in ignore::WalkBuilder::new(&manifest.root)
+        .require_git(false)
+        .build()
+        .flatten()
+    {
+        if entry.path().extension().is_some_and(|e| e == "h")
+            && let Some(dir) = entry.path().parent()
+        {
+            include_dirs.insert(dir.to_path_buf());
+        }
+    }
+    Ok((sources, include_dirs))
+}
+
+/// A C string literal for `s`, byte by byte.
+fn c_literal(s: &str) -> String {
+    let mut out = String::from("\"");
+    for b in s.bytes() {
+        match b {
+            b'"' => out.push_str("\\\""),
+            b'\\' => out.push_str("\\\\"),
+            0x20..=0x7e if b != b'?' => out.push(b as char),
+            _ => out.push_str(&format!("\\{b:03o}")),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// A C expression for a recorded argument of C type `c_type`; `None` when it has no C value.
+fn c_arg(v: &Value, c_type: &str, is_string: bool) -> Option<String> {
+    if is_string {
+        return match v {
+            Value::String(s) => Some(c_literal(s)),
+            Value::Null => Some("NULL".into()),
+            _ => None,
+        };
+    }
+    let float = matches!(
+        c_type.trim_start_matches("const ").trim(),
+        "double" | "float" | "long double"
+    );
+    match v {
+        Value::Number(n) if float => n
+            .as_f64()
+            .map(|x| format!("({c_type})carcinize_f({}ULL)", x.to_bits())),
+        Value::Object(o) if float => {
+            let x = match o.get("$num")?.as_str()? {
+                "NaN" => f64::NAN,
+                "Infinity" => f64::INFINITY,
+                "-Infinity" => f64::NEG_INFINITY,
+                _ => -0.0,
+            };
+            Some(format!("({c_type})carcinize_f({}ULL)", x.to_bits()))
+        }
+        Value::Number(n) => n
+            .as_i64()
+            .map(|i| format!("({c_type}){i}LL"))
+            .or_else(|| n.as_u64().map(|u| format!("({c_type}){u}ULL"))),
+        Value::Bool(b) => Some(format!("({c_type}){}", i32::from(*b))),
+        _ => None,
+    }
+}
+
+/// A C program that times each function's recorded calls on the original and on the port.
+fn bench_c(m: &Manifest, cases: &[Value], min_ms: u64) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::from(
+        "#include <stdbool.h>\n#include <stddef.h>\n#include <stdint.h>\n#include <stdio.h>\n#include <string.h>\n\
+         #include <sys/types.h>\n#include <time.h>\n\n\
+         static double carcinize_f(uint64_t bits) { double d; memcpy(&d, &bits, sizeof d); return d; }\n\
+         static double now_ns(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e9 + t.tv_nsec; }\n\
+         static volatile uint64_t sink;\n\n",
+    );
+    let mut rows = Vec::new();
+    for f in &m.exports {
+        let prototype = f.prototype.as_deref().unwrap_or(&f.name);
+        let original = prototype.replacen(
+            &format!("{}(", f.name),
+            &format!("{}__original(", f.name),
+            1,
+        );
+        let rust = prototype.replacen(
+            &format!("{}(", f.name),
+            &format!("carcinize_{}(", f.name),
+            1,
+        );
+        let _ = writeln!(out, "{original};\n{rust};");
+        let mut calls = Vec::new();
+        for c in cases
+            .iter()
+            .filter(|c| c["fn"] == f.name.as_str() && c.get("error").is_none())
+        {
+            let args = c["args"].as_array().cloned().unwrap_or_default();
+            let exprs: Option<Vec<String>> = f
+                .params
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    c_arg(
+                        args.get(i).unwrap_or(&Value::Null),
+                        p.native_type.as_deref().unwrap_or("int"),
+                        p.ts_type == "string",
+                    )
+                })
+                .collect();
+            if let Some(exprs) = exprs {
+                calls.push(exprs.join(", "));
+            }
+        }
+        if calls.is_empty() {
+            continue;
+        }
+        let void = f.native_return.as_deref() == Some("void");
+        let body = |target: &str| -> String {
+            calls
+                .iter()
+                .map(|a| {
+                    if void {
+                        format!("    {target}({a});\n")
+                    } else {
+                        format!("    sink += (uint64_t){target}({a});\n")
+                    }
+                })
+                .collect()
+        };
+        let _ = writeln!(
+            out,
+            "static void pass_{n}_original(void) {{\n{}}}\nstatic void pass_{n}_rust(void) {{\n{}}}\n",
+            body(&format!("{}__original", f.name)),
+            body(&format!("carcinize_{}", f.name)),
+            n = f.name
+        );
+        rows.push((f.name.clone(), calls.len()));
+    }
+    let _ = writeln!(
+        out,
+        "static double timed(void (*pass)(void), int calls) {{\n    pass();\n    double start = now_ns(), elapsed;\n    long passes = 0;\n\
+         \x20   do {{ pass(); passes++; elapsed = now_ns() - start; }} while (elapsed < {min_ms} * 1e6);\n    return elapsed / ((double)passes * calls);\n}}\n\n\
+         int main(int argc, char **argv) {{\n    FILE *out = fopen(argv[1], \"w\");\n    fputs(\"{{\", out);"
+    );
+    for (i, (name, n)) in rows.iter().enumerate() {
+        let _ = writeln!(
+            out,
+            "    fprintf(out, \"{}\\\"{name}\\\": {{\\\"cases\\\": {n}, \\\"original_ns\\\": %f, \\\"rust_ns\\\": %f}}\", \
+             timed(pass_{name}_original, {n}), timed(pass_{name}_rust, {n}));",
+            if i == 0 { "" } else { "," }
+        );
+    }
+    out.push_str("    fputs(\"}\", out);\n    fclose(out);\n    return 0;\n}\n");
+    out
 }
 
 const DRIVER_C_PY: &str = r#"

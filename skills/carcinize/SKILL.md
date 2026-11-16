@@ -44,6 +44,9 @@ Write the port in `src/port.rs` only; `src/lib.rs` is the thin binding layer.
 
 - Read each risk the plan lists for the unit, at its `file:line`, before writing code.
 - String offsets: use `src/utf16.rs`. JS indexes UTF-16 code units, Rust UTF-8 bytes.
+- Speed: run `carcinize bench` and follow its verdict. In Go and Java, a call into Rust costs more
+  than a small function's work: port the function with its callers, not alone. In Python ports,
+  use `crate::pynum::Num` for numbers that may be int or float, not `serde_json::Value`.
 - Errors: return `Err("TypeName: message")` (Python, Ruby, Java exception types; Go `error` text).
 - Dynamic languages: inputs that are ints in Python or Ruby must come back as ints where the
   original passes them through; `diff` shows where. C: inputs recorded as `crash:` are undefined

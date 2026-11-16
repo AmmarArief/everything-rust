@@ -8,20 +8,40 @@ and glibc themselves serve as the oracle behind a thin facade.
 
 The ports, recorded cases and extra inputs are in [`demo/real-world`](../demo/real-world/README.md).
 
-| Language | Code | Functions | Recorded cases | Result | Speed, bridge included |
-| --- | --- | ---: | ---: | --- | --- |
-| Go | `path` from Go 1.24's standard library | 7 (+1 kept) | 2,642 (542 from Go's own test tables) | 2,642/2,642, gate passes | 0.13-0.23x |
-| Ruby | `shellwords.rb` from Ruby 3.3 | 3 | 1,617 (446 raise) | 1,617/1,617, gate passes | 0.49-0.88x |
-| Python | `colorsys.py` from CPython 3.13 | 6 | 2,400 | 2,400/2,400, gate passes | 0.34-0.45x |
-| Java | JDK 21 behind a facade (`Integer`, `Long`, `Math`, `Double.toString`, `URLEncoder`, `Base64`, `toUpperCase`) | 11 | 4,492 (226 throw) | 4,492/4,492, gate passes | 0.05-0.41x |
-| C | glibc behind a facade (`strtol`, `atoi`, `strtod`, `strspn`, `strcmp`, ctype) | 9 | 1,860 (6 crash) | 1,859/1,859 after dropping one undefined-behavior case, gate passes | about 1x (see below) |
-| C | aklomp/base64 (vendored in mypyc's runtime) | 0 of 7 | - | plan only: every function takes output buffers or a state struct | - |
+| Language | Code | Functions | Recorded cases | Result |
+| --- | --- | ---: | ---: | --- |
+| Go | `path` from Go 1.24's standard library | 7 (+1 kept) | 2,642 (542 from Go's own test tables) | 2,642/2,642, gate passes |
+| Ruby | `shellwords.rb` from Ruby 3.3 | 3 | 1,617 (446 raise) | 1,617/1,617, gate passes |
+| Python | `colorsys.py` from CPython 3.13 | 6 | 2,400 | 2,400/2,400, gate passes |
+| Java | JDK 21 behind a facade (`Integer`, `Long`, `Math`, `Double.toString`, `URLEncoder`, `Base64`, `toUpperCase`) | 11 | 4,492 (226 throw) | 4,492/4,492, gate passes |
+| C | glibc behind a facade (`strtol`, `atoi`, `strtod`, `strspn`, `strcmp`, ctype) | 9 | 1,860 (6 crash) | 1,859/1,859 after dropping one undefined-behavior case, gate passes |
+| C | aklomp/base64 (vendored in mypyc's runtime) | 0 of 7 | - | plan only: every function takes output buffers or a state struct |
 
-Speed below 1x means the Rust port, called the way the original's callers call it, is slower.
-For these small functions the bridge (cgo, Fiddle, JNI or PyO3 plus JSON) costs more than the
-work. That matches the x18n result for TypeScript: move whole hot paths, not leaf functions. The
-C numbers go through Python's ctypes on both sides, which dominates; they do not measure C
-against Rust.
+## Speed
+
+The first bridges for Python, Go, Ruby and Java sent every argument and result through JSON
+text, which cost 10-50x more than the work in these functions. They were rebuilt to convert
+values directly. `bench` now times only the calls (arguments decoded once, in process) and says
+whether to ship.
+
+| Language | Per call before | Per call now | Rust vs the original (`bench`, geometric mean) | Verdict |
+| --- | ---: | ---: | --- | --- |
+| Ruby | 6.9-9.5 µs (Fiddle + JSON) | 0.36-1.15 µs (magnus extension) | **4.4x faster** (3.6-7x per function) | ship |
+| Python | 11.7 µs (JSON) | about 0.3 µs (direct PyO3 conversion) | **1.35x faster** (1.5-1.9x on most calls) | ship |
+| C | - | no crossing: linked directly | 0.87x: ctype 1.1-1.4x faster, glibc's tuned `strtod`, `strspn`, `strcmp` 0.5-0.7x | optimize or keep the slower ones |
+| Java | about 1.7 µs (JNI + JSON) | 30-800 ns (typed JNI) | 0.18x | port bigger units |
+| Go | 2.6 µs (cgo + JSON) | 0.11-0.42 µs (typed cgo) | 0.04x | port bigger units |
+
+What decides it:
+
+- **Interpreted originals (Python, Ruby)**: the call into Rust costs about 100-300 ns and the
+  Rust code is much faster than the interpreter, so even small functions win.
+- **Compiled originals (Go, Java after the JIT)**: the original leaf function takes 4-90 ns; one
+  cgo call alone costs about 80 ns, a JNI call with strings more. No bridge can make a 5 ns
+  function faster. These languages gain only when one call does a lot of work: port a function
+  together with its callers. `bench` says so.
+- **C**: there is no crossing; the Rust code is compared with the C code directly, and the result
+  is a property of the port.
 
 ## What the runs found
 

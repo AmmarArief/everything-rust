@@ -758,21 +758,56 @@ public final class CarcinizeDriver {
             Map<String, Object> result = new LinkedHashMap<>();
             for (Map.Entry<String, List<Map<String, Object>>> g : groups.entrySet()) {
                 List<Map<String, Object>> cases = g.getValue();
+                // Arguments are converted once: only the calls are timed.
+                Method m = METHODS.get(g.getKey());
+                if (m == null) {
+                    continue;
+                }
+                Type[] types = m.getGenericParameterTypes();
+                List<Object[]> prepared = new ArrayList<>();
                 for (Map<String, Object> c : cases) {
-                    call(c);
+                    List<Object> args = (List<Object>) c.get("args");
+                    Object[] values = new Object[types.length];
+                    try {
+                        for (int i = 0; i < types.length; i++) {
+                            Object raw = i < args.size() ? args.get(i) : null;
+                            if (raw instanceof Map && ((Map<?, ?>) raw).containsKey("$undefined")) {
+                                raw = null;
+                            }
+                            values[i] = CarcinizeJson.convert(raw, types[i]);
+                        }
+                        prepared.add(values);
+                    } catch (CarcinizeJson.Mismatch e) {
+                        // not a valid call
+                    }
+                }
+                if (prepared.isEmpty()) {
+                    continue;
+                }
+                Runnable pass = () -> {
+                    for (Object[] values : prepared) {
+                        try {
+                            m.invoke(null, values);
+                        } catch (ReflectiveOperationException | RuntimeException e) {
+                            // errors count as calls
+                        }
+                    }
+                };
+                // Warm up the JIT before timing.
+                long warm = System.nanoTime();
+                while (System.nanoTime() - warm < minMs * 1_000_000L / 2) {
+                    pass.run();
                 }
                 long passes = 0;
                 long start = System.nanoTime();
                 while (true) {
-                    for (Map<String, Object> c : cases) {
-                        call(c);
-                    }
+                    pass.run();
                     passes++;
                     long elapsed = System.nanoTime() - start;
                     if (elapsed / 1_000_000 >= minMs) {
                         Map<String, Object> row = new LinkedHashMap<>();
-                        row.put("cases", cases.size());
-                        row.put("ns", (double) elapsed / (passes * cases.size()));
+                        row.put("cases", prepared.size());
+                        row.put("ns", (double) elapsed / (passes * prepared.size()));
                         result.put(g.getKey(), row);
                         break;
                     }

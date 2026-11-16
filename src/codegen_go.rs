@@ -693,6 +693,7 @@ unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
 /// A `main` package that calls `import_path`'s functions by name: record, diff and bench.
 pub fn driver(m: &Manifest, import_path: &str) -> String {
     let mut cases = String::new();
+    let mut prepares = String::new();
     for f in &m.exports {
         let (results, fallible) = results(f);
         let _ = writeln!(cases, "\tcase \"{}\":", f.name);
@@ -705,6 +706,20 @@ pub fn driver(m: &Manifest, import_path: &str) -> String {
             );
             args.push(format!("a{i}"));
         }
+        let _ = writeln!(prepares, "\tcase \"{}\":", f.name);
+        for (i, p) in f.params.iter().enumerate() {
+            let t = qualify(p.native_type.as_deref().unwrap_or("any"));
+            let _ = writeln!(
+                prepares,
+                "\t\tvar a{i} {t}\n\t\tif carcinizeDecode(argAt(args, {i}), &a{i}) != nil {{\n\t\t\treturn nil\n\t\t}}"
+            );
+        }
+        let _ = writeln!(
+            prepares,
+            "\t\treturn func() {{ pkg.{}({}) }}",
+            f.name,
+            args.join(", ")
+        );
         let mut lhs: Vec<String> = (0..results.len()).map(|i| format!("r{i}")).collect();
         if fallible {
             lhs.push("err".into());
@@ -736,6 +751,7 @@ pub fn driver(m: &Manifest, import_path: &str) -> String {
     DRIVER_GO
         .replace("IMPORT_PATH", import_path)
         .replace("// CASES\n", &cases)
+        .replace("// PREPARES\n", &prepares)
         .replace("// HELPERS\n", HELPERS_GO)
 }
 
@@ -778,6 +794,14 @@ func call(name string, args []json.RawMessage) (out map[string]any) {
 	// CASES
 	}
 	return map[string]any{"missing": name}
+}
+
+// prepare decodes a case's arguments once and returns the bare call; nil if they do not fit.
+func prepare(name string, args []json.RawMessage) func() {
+	switch name {
+	// PREPARES
+	}
+	return nil
 }
 
 type input struct {
@@ -916,10 +940,22 @@ func bench(cases, out string, minMs int) {
 	}
 	result := map[string]any{}
 	for _, name := range order {
-		calls := groups[name]
+		// Arguments are decoded once: only the calls are timed.
+		var calls []func()
+		for _, args := range groups[name] {
+			if f := prepare(name, args); f != nil {
+				calls = append(calls, f)
+			}
+		}
+		if len(calls) == 0 {
+			continue
+		}
 		once := func() {
-			for _, args := range calls {
-				call(name, args)
+			for _, f := range calls {
+				func() {
+					defer func() { recover() }()
+					f()
+				}()
 			}
 		}
 		once()

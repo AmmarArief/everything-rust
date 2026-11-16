@@ -53,7 +53,9 @@ shipping a port.
 Go's `path`, Ruby's `shellwords`, Python's `colorsys`, JDK and glibc behavior behind small
 facades: every port passes its gate, 13,010 recorded cases in all. The runs found and fixed
 bugs in carcinize (floats off by one ULP through `serde_json`, C crashes during recording,
-untyped code getting garbage inputs) and showed where the bridges cost more than the work.
+untyped code getting garbage inputs). With direct bridges, the Ruby port runs 4.4x faster than
+Ruby and the Python port 1.35x faster than CPython; Go and Java leaf functions stay faster in
+their own language, and `bench` says to port bigger units there.
 Report: [`docs/real-world-languages.md`](./docs/real-world-languages.md).
 
 ## Example: a real module from x18n

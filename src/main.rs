@@ -342,9 +342,17 @@ fn run() -> Result<ExitCode> {
                         r.speedup
                     );
                 }
+                let lang = bridge::Manifest::load(&crate_dir)
+                    .map(|m| m.language)
+                    .unwrap_or_default();
+                let v = harness::verdict(&rows, lang);
                 say!(
-                    "Bridge included. Below 1x, Rust is slower than the original as its callers call it."
+                    "\nTimed as callers call it, crossing included. Overall {:.2}x (geometric mean); {} of {} functions at least 1.1x faster.",
+                    v.speedup,
+                    v.faster.len(),
+                    rows.len()
                 );
+                say!("{}", v.advice);
             }
         }
         Cmd::Shadow { crate_dir, out } => {

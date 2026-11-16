@@ -355,6 +355,62 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
 }
 
 /// Per-function timing of the original against the Rust module.
+/// What `bench` concludes: the geometric-mean speedup and what to do.
+#[derive(Debug, Serialize)]
+pub struct Verdict {
+    pub speedup: f64,
+    pub faster: Vec<String>,
+    pub slower: Vec<String>,
+    pub advice: String,
+}
+
+/// Faster means at least 1.1x, slower below 0.9x; between is a tie (timing noise).
+pub fn verdict(rows: &[BenchRow], lang: crate::lang::Lang) -> Verdict {
+    let faster: Vec<String> = rows
+        .iter()
+        .filter(|r| r.speedup >= 1.1)
+        .map(|r| r.name.clone())
+        .collect();
+    let slower: Vec<String> = rows
+        .iter()
+        .filter(|r| r.speedup < 0.9)
+        .map(|r| r.name.clone())
+        .collect();
+    let speedup = if rows.is_empty() {
+        1.0
+    } else {
+        (rows.iter().map(|r| r.speedup.max(1e-9).ln()).sum::<f64>() / rows.len() as f64).exp()
+    };
+    let advice = if rows.is_empty() {
+        "Nothing to compare: record cases that do not throw first.".to_string()
+    } else if slower.is_empty() && faster.len() == rows.len() {
+        "Ship it: every function is faster in Rust, call included.".to_string()
+    } else if slower.is_empty() {
+        "Ship it: no function is slower in Rust; some only tie.".to_string()
+    } else if lang == crate::lang::Lang::C {
+        // C links the port directly: there is no crossing to blame.
+        format!(
+            "No call overhead in C: these are slower as Rust code. Profile and optimize them, or keep them in C: {}.",
+            slower.join(", ")
+        )
+    } else if speedup >= 1.1 {
+        format!(
+            "Ship the faster functions. Keep the slower ones in the original (`bridge --keep`) or move their callers to Rust too: {}.",
+            slower.join(", ")
+        )
+    } else {
+        "Do not ship this unit for speed: calling across costs more than the work these functions do. \
+         Port a bigger unit (these functions together with their callers), so one call does more work."
+            .to_string()
+    };
+    Verdict {
+        speedup,
+        faster,
+        slower,
+        advice,
+    }
+}
+
 /// Rows from two `{ name: { cases, ns } }` timing maps: the original's and the port's.
 pub fn bench_rows(
     m: &Manifest,
@@ -1365,5 +1421,47 @@ mod tests {
         let cases = generate(&f(&[("n", "number")]), 18, &[]);
         let text = serde_json::to_string(&cases).unwrap();
         assert!(text.contains("NaN") && text.contains("-0"));
+    }
+}
+
+#[cfg(test)]
+mod verdict_tests {
+    use super::*;
+
+    fn row(name: &str, speedup: f64) -> BenchRow {
+        BenchRow {
+            name: name.into(),
+            cases: 1,
+            original_ns: speedup,
+            rust_ns: 1.0,
+            speedup,
+        }
+    }
+
+    #[test]
+    fn advice_follows_the_numbers() {
+        let ts = crate::lang::Lang::Ts;
+        assert!(
+            verdict(&[row("a", 3.0), row("b", 2.0)], ts)
+                .advice
+                .starts_with("Ship it: every")
+        );
+        assert!(
+            verdict(&[row("a", 3.0), row("b", 1.0)], ts)
+                .advice
+                .starts_with("Ship it: no function")
+        );
+        let mixed = verdict(&[row("a", 4.0), row("b", 0.5)], ts);
+        assert!(mixed.advice.contains("Keep the slower ones") && mixed.advice.ends_with("b."));
+        assert!(
+            verdict(&[row("a", 0.2), row("b", 0.3)], ts)
+                .advice
+                .starts_with("Do not ship")
+        );
+        assert!(
+            verdict(&[row("a", 0.5)], crate::lang::Lang::C)
+                .advice
+                .starts_with("No call overhead")
+        );
     }
 }

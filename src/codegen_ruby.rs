@@ -274,7 +274,21 @@ when "bench"
   groups = lines(cases_path).group_by { |c| c["fn"] }
   result = {}
   groups.each do |name, cases|
-    once = -> { cases.each { |c| call(c) } }
+    # Arguments are decoded once, the method looked up once: only the calls are timed.
+    recv, meth = TARGETS.fetch(name)
+    target = Object.const_get(recv).method(meth)
+    prepared = cases.map do |c|
+      args = (c["args"] || []).dup
+      args.pop while args.any? && args.last.is_a?(Hash) && args.last.key?("$undefined")
+      [CarcinizeCodec.dec(args), CarcinizeCodec.dec(c["kwargs"] || {}).transform_keys(&:to_sym)]
+    end
+    once = lambda do
+      prepared.each do |args, kwargs|
+        target.call(*args, **kwargs)
+      rescue StandardError
+        nil
+      end
+    end
     once.call
     passes = 0
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)

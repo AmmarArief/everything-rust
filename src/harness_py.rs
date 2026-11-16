@@ -375,9 +375,21 @@ def bench(cases_path, out_path, package_dir, name, modules_path, min_ms):
         old = load(sources[key])
 
         def timed(mod):
-            def once():
-                for c in cases:
-                    run_case(mod, c)
+            if cases[0].get("class"):
+                def once():
+                    for c in cases:
+                        run_case(mod, c)
+            else:
+                # Arguments are decoded once: only the calls are timed.
+                fn = getattr(mod, key)
+                prepared = [(call_args(c["args"]), {k: dec(v) for k, v in c.get("kwargs", {}).items()}) for c in cases]
+
+                def once():
+                    for args, kwargs in prepared:
+                        try:
+                            fn(*args, **kwargs)
+                        except Exception:  # noqa: BLE001
+                            pass
             once()
             passes, start = 0, time.perf_counter()
             while True:

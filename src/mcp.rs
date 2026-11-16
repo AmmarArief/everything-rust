@@ -125,7 +125,7 @@ fn tools() -> Value {
         },
         {
             "name": "bench",
-            "description": "Time the recorded cases on the original and on the built Rust module, bridge included; speedup below 1 means the port is slower as its callers call it.",
+            "description": "Time the recorded cases on the original and on the built Rust module, bridge included; speedup below 1 means the port is slower as its callers call it. Returns the rows and a verdict with advice: ship, keep the slower functions, or port a bigger unit.",
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "resolve_from": { "type": "string" },
@@ -210,12 +210,17 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         "bench" => {
             let crate_dir = path("crate")?;
             let resolve_from = opt_path("resolve_from");
-            serde_json::to_value(harness::bench(&harness::BenchOptions {
+            let rows = harness::bench(&harness::BenchOptions {
                 crate_dir: &crate_dir,
                 min_ms: 200,
                 resolve_from: resolve_from.as_deref(),
                 node_args: &no_node_args,
-            })?)?
+            })?;
+            let lang = bridge::Manifest::load(&crate_dir)
+                .map(|m| m.language)
+                .unwrap_or_default();
+            let verdict = harness::verdict(&rows, lang);
+            serde_json::json!({ "rows": rows, "verdict": verdict })
         }
         "shadow" => {
             let out = opt_path("out");

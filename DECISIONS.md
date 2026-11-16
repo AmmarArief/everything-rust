@@ -69,6 +69,15 @@ Choices made so far, with reasons. Each one can be revisited.
 | M9 | `serde_json` runs with `float_roundtrip` in carcinize and in every generated crate. | The default parser can be one ULP off; Java's `Double.toString` exposed it in 43 cases. |
 | M10 | Shadow per language: a Go package, a Ruby file that `prepend`s, `<Class>Shadow` Java classes, a C file with `-D` renames and a `shadow` crate feature. | Each is the least invasive drop-in that language allows. |
 
+## Speed
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| S1 | No JSON text on the hot path: Python converts objects in Rust (`pyconv.rs`), Ruby is a magnus extension, Java and Go get typed JNI and cgo functions for numbers, booleans and strings; JSON remains the fallback for other types in Java and Go. | JSON cost 10-50x the work: the colorsys port took 11.7 µs per call, CPython 0.5 µs. |
+| S2 | Ports of untyped Python can use `pynum::Num`, Python's int-or-float, instead of `serde_json::Value`. | A `Value` per number cost about 600 ns per call in colorsys; `Num` keeps ints as ints at native speed. |
+| S3 | `bench` decodes arguments once and times only the calls, in the original's process; C benchmarks link the original (renamed with `-D`) and the port into one C program. | Decoding per call, or calling through ctypes, hid the difference being measured. |
+| S4 | `bench` ends with a verdict: ship, keep the slower functions, port a bigger unit, or (for C) optimize the port. Faster is 1.1x or more, slower under 0.9x. | Numbers alone left the decision to the reader; Go and Java leaf functions cannot win per call, and the tool should say so. |
+
 ## Known limits
 
 - Tests that import a package by name credit the package, not a unit.
@@ -89,5 +98,8 @@ Choices made so far, with reasons. Each one can be revisited.
   needs Maven dependencies on the classpath cannot be recorded yet.
 - No way yet to mark a recorded case as undefined behavior that does not crash (`ispunct(1000)`);
   remove it from `cases.jsonl` by hand.
-- The JSON bridges cost about 2-10 µs per call; leaf functions are slower in Rust as called from
-  the original language. Measure with `bench`.
+- Go and Java: multiple results, structs, collections and boxed types still cross as JSON
+  (about 2-5 µs per call). Leaf functions in Go and Java are faster in their own language;
+  `bench` recommends porting bigger units there.
+- Ruby: aliases made with `alias` copy the original method, so shadow mode does not see calls
+  through them.
