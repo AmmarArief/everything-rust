@@ -55,17 +55,32 @@
 <body>
   <div class="card">
     <div class="icon" aria-hidden="true">
-      <!-- A code window (any language) with its hot path struck through in orange. -->
-      <svg width="150" height="150" viewBox="0 0 150 150" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="14" y="22" width="96" height="106" rx="15" stroke="#ececec" stroke-width="7"/>
-        <line x1="31" y1="47" x2="72" y2="47" stroke="#9a9fa7" stroke-width="7"/>
-        <line x1="31" y1="67" x2="84" y2="67" stroke="#9a9fa7" stroke-width="7"/>
-        <line x1="31" y1="87" x2="64" y2="87" stroke="#9a9fa7" stroke-width="7"/>
-        <line x1="31" y1="107" x2="52" y2="107" stroke="#9a9fa7" stroke-width="7"/>
-        <!-- The bolt, with a cut-out border in the tile's colour so it sits cleanly on the edge. -->
-        <path id="bolt" d="M118 30 L96 80 H116 L104 124 L140 70 H120 L132 30 Z"/>
-        <use href="#bolt" stroke="#15181d" stroke-width="19" fill="#15181d"/>
-        <use href="#bolt" stroke="#e8892f" stroke-width="7" fill="#15181d"/>
+      <!-- A crab (Ferris-style, drawn for this project) climbing out of a code window. -->
+      <svg width="164" height="164" viewBox="0 0 164 164" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="16" y="14" width="96" height="92" rx="15" stroke="#ececec" stroke-width="7"/>
+        <line x1="33" y1="38" x2="70" y2="38" stroke="#9a9fa7" stroke-width="7"/>
+        <line x1="33" y1="57" x2="82" y2="57" stroke="#9a9fa7" stroke-width="7"/>
+        <line x1="33" y1="76" x2="58" y2="76" stroke="#9a9fa7" stroke-width="7"/>
+        <g id="crab">
+          <!-- legs -->
+          <path d="M66 118 L52 128 L50 140 M70 124 L60 136 L60 148 M126 118 L140 128 L142 140 M122 124 L132 136 L132 148" stroke="#f26a1b" stroke-width="6"/>
+          <!-- claws -->
+          <path d="M66 104 L50 92" stroke="#f26a1b" stroke-width="7"/>
+          <path d="M40 78 C30 86 36 102 50 100 L54 92 L44 92 L48 84 Z" fill="#f26a1b" stroke="#f26a1b" stroke-width="4"/>
+          <path d="M126 104 L142 92" stroke="#f26a1b" stroke-width="7"/>
+          <path d="M152 78 C162 86 156 102 142 100 L138 92 L148 92 L144 84 Z" fill="#f26a1b" stroke="#f26a1b" stroke-width="4"/>
+          <!-- body -->
+          <path d="M60 116 C60 96 76 88 96 88 C116 88 132 96 132 116 C132 128 116 132 96 132 C76 132 60 128 60 116 Z" fill="#f26a1b" stroke="#15181d" stroke-width="6"/>
+          <!-- eyes -->
+          <line x1="86" y1="96" x2="84" y2="82" stroke="#f26a1b" stroke-width="5"/>
+          <line x1="106" y1="96" x2="108" y2="82" stroke="#f26a1b" stroke-width="5"/>
+          <circle cx="84" cy="80" r="7" fill="#ffffff"/>
+          <circle cx="108" cy="80" r="7" fill="#ffffff"/>
+          <circle cx="85" cy="81" r="3.5" fill="#15181d"/>
+          <circle cx="107" cy="81" r="3.5" fill="#15181d"/>
+          <!-- smile -->
+          <path d="M88 116 Q96 122 104 116" stroke="#15181d" stroke-width="4"/>
+        </g>
       </svg>
     </div>
     <h1>rust-anything</h1>
