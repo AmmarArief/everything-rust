@@ -1,12 +1,18 @@
 ---
 name: rust-anything
-description: Migrate a TypeScript/JavaScript, Python, C, Go, Ruby or Java codebase to Rust incrementally with the rust-anything CLI or MCP tools - profile, plan, bridge one unit at a time, record the original's behavior, port, diff, bench, shadow and gate; batch hot loops so they run in Rust on all cores. Use when asked to rewrite, port or migrate code to Rust, to plan such a migration, or to make slow code faster with Rust.
+description: Port TypeScript/JavaScript, Python, C, Go, Ruby or Java to Rust with the rust-anything CLI or MCP tools, from one hot function up to a whole app rewritten as a pure Rust app - profile, plan, bridge one unit at a time, record the original's behavior, port, diff, bench, shadow and gate; batch hot loops so they run in Rust on all cores. Use when asked to rewrite, port or migrate code or an app to Rust, to plan such a migration, or to make slow code faster with Rust.
 ---
 
-# Incremental migration to Rust with rust-anything
+# Migration to Rust with rust-anything
 
-rust-anything gives you ground truth; you write the Rust. Never port a whole codebase at once, and never
-call a port done before `gate` passes.
+rust-anything gives you ground truth; you write the Rust. Port one unit at a time, even when the
+goal is the whole app, and call a port done only when `gate` passes.
+
+**Whole app to a pure Rust app** (the user wants the app rewritten in Rust, with the original kept
+only as reference): read [whole-app.md](whole-app.md) first and follow it. It grills the user on
+the decisions, researches the dependencies, records the whole app, puts a Rust front door in front
+of the original, runs the steps below for every unit, then lifts the app to a standalone Rust
+binary.
 
 Languages: TypeScript/JavaScript, Python, C, Go, Ruby, Java. The language is detected; `--lang`
 overrides it. The steps are the same everywhere; only the bridge differs (napi-rs or wasm for

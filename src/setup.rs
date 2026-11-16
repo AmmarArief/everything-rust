@@ -16,6 +16,13 @@ pub const NAME: &str = "rust-anything";
 
 /// The workflow skill, as shipped in `skills/rust-anything/SKILL.md`.
 pub const SKILL: &str = include_str!("../skills/rust-anything/SKILL.md");
+const SKILL_FILES: &[(&str, &str)] = &[
+    ("SKILL.md", SKILL),
+    (
+        "whole-app.md",
+        include_str!("../skills/rust-anything/whole-app.md"),
+    ),
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -332,36 +339,47 @@ fn codex_server(agent: Agent, path: &Path, command: &str, opts: &Options) -> Res
 
 /// The workflow skill in an agent's skills folder.
 fn skill(agent: Agent, dir: &Path, opts: &Options) -> Result<Change> {
-    let path = dir.join("SKILL.md");
-    let current = std::fs::read_to_string(&path).ok();
+    let current: Vec<Option<String>> = SKILL_FILES
+        .iter()
+        .map(|(name, _)| std::fs::read_to_string(dir.join(name)).ok())
+        .collect();
     let action = if opts.remove {
-        if current.is_some() {
+        if current.iter().any(Option::is_some) {
             "removed"
         } else {
             "absent"
         }
+    } else if current.iter().all(Option::is_none) {
+        "added"
+    } else if current
+        .iter()
+        .zip(SKILL_FILES)
+        .all(|(have, (_, want))| have.as_deref() == Some(*want))
+    {
+        "unchanged"
     } else {
-        match current.as_deref() {
-            Some(text) if text == SKILL => "unchanged",
-            Some(_) => "updated",
-            None => "added",
-        }
+        "updated"
     };
     if !opts.dry_run {
-        match action {
-            "added" | "updated" => write(&path, SKILL)?,
-            "removed" => {
-                std::fs::remove_file(&path)
-                    .with_context(|| format!("removing {}", path.display()))?;
-                // The folder is ours; leave it only if someone put other files in it.
-                let _ = std::fs::remove_dir(dir);
+        for (name, text) in SKILL_FILES {
+            let path = dir.join(name);
+            match action {
+                "added" | "updated" => write(&path, text)?,
+                "removed" if path.exists() => {
+                    std::fs::remove_file(&path)
+                        .with_context(|| format!("removing {}", path.display()))?;
+                }
+                _ => {}
             }
-            _ => {}
+        }
+        if action == "removed" {
+            // The folder is ours; leave it only if someone put other files in it.
+            let _ = std::fs::remove_dir(dir);
         }
     }
     Ok(Change {
         agent,
-        file: path,
+        file: dir.join("SKILL.md"),
         action,
         backup: None,
     })
@@ -472,6 +490,10 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(home.join(".claude/skills/rust-anything/SKILL.md")).unwrap(),
             SKILL
+        );
+        assert!(
+            home.join(".codex/skills/rust-anything/whole-app.md")
+                .exists()
         );
         let cursor: Value =
             serde_json::from_str(&std::fs::read_to_string(home.join(".cursor/mcp.json")).unwrap())
