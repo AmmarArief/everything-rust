@@ -120,7 +120,11 @@ fn body(read: &str) -> String {
 
 /// A schema as an argument: `&S` for a static, `S.inner()` (already a reference) as is.
 fn schema_ref(schema: &str) -> String {
-    if schema.ends_with(')') { schema.to_string() } else { format!("&{schema}") }
+    if schema.ends_with(')') {
+        schema.to_string()
+    } else {
+        format!("&{schema}")
+    }
 }
 
 /// Rust code reading a value of `t` into the port type `rust` from reader `r`; `None` when the
@@ -130,6 +134,13 @@ pub fn rust_read(t: &Ty, rust: &str, schema: &str) -> Option<String> {
         return Some(format!("wire::read_value(r, {})?", schema_ref(schema)));
     }
     let rust = rust.trim();
+    if *t == Ty::Dyn {
+        // Any JS value into a typed port parameter: through a tagged value and serde.
+        return Some(
+            "serde_json::from_value(wire::read_dyn(r)?).map_err(|e| format!(\"TypeError: {e}\"))?"
+                .into(),
+        );
+    }
     let structural = rust_read_structural(t, rust, schema);
     if structural.is_none() && rust.contains("Value") {
         return Some(format!(
@@ -200,7 +211,15 @@ fn rust_read_structural(t: &Ty, rust: &str, schema: &str) -> Option<String> {
 /// Rust statements writing `expr` (a reference to the port type `rust`) as `t` into writer `w`.
 pub fn rust_write(t: &Ty, rust: &str, expr: &str, schema: &str, depth: usize) -> Option<String> {
     if is_value(rust) {
-        return Some(format!("wire::write_value(w, {expr}, {})?;", schema_ref(schema)));
+        return Some(format!(
+            "wire::write_value(w, {expr}, {})?;",
+            schema_ref(schema)
+        ));
+    }
+    if *t == Ty::Dyn {
+        return Some(format!(
+            "wire::write_dyn(w, &serde_json::to_value({expr}).map_err(|e| e.to_string())?);"
+        ));
     }
     if rust.contains("Value") {
         if let Some(code) = rust_write_structural(t, rust, expr, schema, depth) {
@@ -759,8 +778,12 @@ pub fn write_dyn(w: &mut Writer, v: &Value) {
     }
 }
 
+/// The start of the error a result of the wrong shape raises; JS bridges answer it by running
+/// the call through JSON instead.
+pub const MISMATCH: &str = "TypeError: the port returned ";
+
 fn mismatch(schema: &str, v: &Value) -> String {
-    format!("TypeError: the port returned {v} where the original returns {schema}")
+    format!("{MISMATCH}{v} where the original returns {schema}")
 }
 
 /// Writes a JSON value as `schema`; the port's value must fit the original's type.

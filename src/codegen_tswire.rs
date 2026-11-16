@@ -130,11 +130,22 @@ fn js_enc(x: &str, t: &Ty, d: usize) -> String {
             js_enc(&format!("v{d}"), value, d + 1)
         ),
         Ty::Obj(fields) => {
-            let mut out = format!(
-                "if ({x} === null || typeof {x} !== 'object' || Array.isArray({x})) return false\n{{\nlet c{d} = 0\nfor (const _ in {x}) c{d}++\nconst at{d} = at\nwU8(0)\nlet n{d} = 0\n"
-            );
+            // Keys in the object's own order (a port may pass the object through); a key the
+            // type does not list sends the call through JSON.
+            let required = fields
+                .iter()
+                .filter(|(_, ft)| {
+                    !(matches!(
+                        ft,
+                        Ty::OptJs {
+                            undefinable: true,
+                            ..
+                        }
+                    ) || *ft == Ty::Dyn)
+                })
+                .count();
+            let mut cases = String::new();
             for (i, (key, ft)) in fields.iter().enumerate() {
-                let k = js_key(key);
                 let optional = matches!(
                     ft,
                     Ty::OptJs {
@@ -143,17 +154,22 @@ fn js_enc(x: &str, t: &Ty, d: usize) -> String {
                     }
                 ) || *ft == Ty::Dyn;
                 let _ = write!(
-                    out,
-                    "if ({k} in {x}) {{\nwU8({i})\nn{d}++\nconst f{d}_{i} = {x}[{k}]\n{}}}{}\n",
-                    js_enc(&format!("f{d}_{i}"), ft, d + 1),
-                    if optional { "" } else { " else return false" }
+                    cases,
+                    "case {}: {{\nwU8({i})\n{}const f{d} = {x}[k{d}]\n{}break\n}}\n",
+                    js_key(key),
+                    if optional {
+                        String::new()
+                    } else {
+                        format!("r{d}++\n")
+                    },
+                    js_enc(&format!("f{d}"), ft, d + 1)
                 );
             }
-            let _ = write!(
-                out,
-                "if (n{d} !== c{d}) return false\niv.setUint8(at{d}, n{d})\n}}\n"
-            );
-            out
+            format!(
+                "if ({x} === null || typeof {x} !== 'object' || Array.isArray({x})) return false\n{{\n\
+                 const at{d} = at\nwU8(0)\nlet n{d} = 0, r{d} = 0\nfor (const k{d} in {x}) {{\nswitch (k{d}) {{\n{cases}default: return false\n}}\n\
+                 if (++n{d} > 255) return false\n}}\nif (r{d} !== {required}) return false\niv.setUint8(at{d}, n{d})\n}}\n"
+            )
         }
         _ => "return false\n".into(),
     }
@@ -197,19 +213,61 @@ fn js_dec(target: &str, t: &Ty, d: usize) -> String {
 }
 
 /// The JS runtime: registered buffers, writers, readers, tagged values.
-const WIRE_CJS: &str = r#"
+const WIRE_NAPI_CJS: &str = r#"
 // The binary wire (see carcinize's `wire.rs`): arguments are written into `wIn`, results read
-// from `wOut`; both are registered with the Rust module once.
+// from `wOut`; both are registered with the native module once.
 let wIn = new Uint8Array(1 << 16), wOut = new Uint8Array(1 << 16)
 let iv = new DataView(wIn.buffer), ov = new DataView(wOut.buffer), at = 0, p = 0
 native.carcinizeWireInit(wIn, wOut)
+const regrow = () => native.carcinizeWireInit(wIn, wOut)
+// Runs a wire function; a result larger than `wOut` is fetched once `wOut` has grown.
+const wireCall = fn => {
+  const n = fn(at)
+  if (Number.isNaN(n)) return false
+  if (n < 0) {
+    wOut = new Uint8Array(Math.max(wOut.length * 2, -n))
+    ov = new DataView(wOut.buffer)
+    native.carcinizeWireInit(wIn, wOut)
+    native.carcinizeWireFlush()
+  }
+  p = 0
+  return true
+}
+"#;
+
+const WIRE_WASM_CJS: &str = r#"
+// The binary wire (see carcinize's `wire.rs`): arguments are written into `wIn` and copied into
+// wasm memory in one step; results are read where the Rust side left them.
+let wIn = new Uint8Array(1 << 16), iv = new DataView(wIn.buffer), at = 0, p = 0
+const mem = native.carcinizeWireMemory()
+let wOut = new Uint8Array(mem.buffer), ov = new DataView(mem.buffer)
+const regrow = () => {}
+// Growing wasm memory replaces its buffer: views are made again when that happened.
+const views = () => {
+  if (wOut.buffer !== mem.buffer) {
+    wOut = new Uint8Array(mem.buffer)
+    ov = new DataView(mem.buffer)
+  }
+}
+const wireCall = fn => {
+  const ptr = native.carcinizeWireIn(at)
+  views()
+  wOut.set(wIn.subarray(0, at), ptr)
+  if (fn(at) === 0xFFFFFFFF) return false
+  views()
+  p = native.carcinizeWireOut()
+  return true
+}
+"#;
+
+const WIRE_CJS: &str = r#"
 const need = n => {
   if (at + n <= wIn.length) return
   const grown = new Uint8Array(Math.max(wIn.length * 2, at + n))
   grown.set(wIn)
   wIn = grown
   iv = new DataView(wIn.buffer)
-  native.carcinizeWireInit(wIn, wOut)
+  regrow()
 }
 const wU8 = v => { need(1); iv.setUint8(at++, v) }
 const wU32 = v => { need(4); iv.setUint32(at, v, true); at += 4 }
@@ -274,17 +332,6 @@ const rDyn = () => {
     case 7: { const n = rU32(); const o = {}; for (let i = 0; i < n; i++) { const k = rUnits(false); o[k] = rDyn() } return o }
   }
 }
-// Runs a wire function; a result larger than `wOut` is fetched once `wOut` has grown.
-const wireCall = fn => {
-  const n = fn(at)
-  if (n < 0) {
-    wOut = new Uint8Array(Math.max(wOut.length * 2, -n))
-    ov = new DataView(wOut.buffer)
-    native.carcinizeWireInit(wIn, wOut)
-    native.carcinizeWireFlush()
-  }
-  p = 0
-}
 "#;
 
 /// The napi side: buffer registration and the call helper.
@@ -330,7 +377,11 @@ fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Res
         };
         let len = (len as usize).min(input.len());
         let mut w = wire::Writer::default();
-        run(|| f(&mut wire::Reader::new(&input[..len]), &mut w))?;
+        match run(|| f(&mut wire::Reader::new(&input[..len]), &mut w)) {
+            // A result of another shape than the TS type: JS runs the call through JSON.
+            Err(e) if e.reason.starts_with(wire::MISMATCH) => return Ok(f64::NAN),
+            other => other?,
+        }
         // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
         let out = unsafe { output.as_mut() };
         let n = w.0.len();
@@ -341,6 +392,54 @@ fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Res
         out[..n].copy_from_slice(&w.0);
         Ok(n as f64)
     })
+}
+"#;
+
+/// The wasm side: buffers in wasm memory, and the call helper.
+const WIRE_WASM_RS: &str = r#"
+// ---- the binary wire ------------------------------------------------------------------------
+
+thread_local! {
+    static WIRE_IN: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+    static WIRE_OUT: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// This module's memory, where `index.cjs` reads and writes the wire buffers.
+#[wasm_bindgen(js_name = "carcinizeWireMemory")]
+pub fn carcinize_wire_memory() -> JsValue {
+    wasm_bindgen::memory()
+}
+
+/// The address of an argument buffer of `len` bytes.
+#[wasm_bindgen(js_name = "carcinizeWireIn")]
+pub fn carcinize_wire_in(len: u32) -> u32 {
+    WIRE_IN.with(|b| {
+        let mut b = b.borrow_mut();
+        b.resize(len as usize, 0);
+        b.as_mut_ptr() as usize as u32
+    })
+}
+
+/// The address of the last result.
+#[wasm_bindgen(js_name = "carcinizeWireOut")]
+pub fn carcinize_wire_out() -> u32 {
+    WIRE_OUT.with(|b| b.borrow().as_ptr() as usize as u32)
+}
+
+/// Reads `len` argument bytes, runs `f`, and keeps its result for `carcinizeWireOut`.
+fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Result<(), String>) -> Result<u32, JsError> {
+    let input = WIRE_IN.with(|b| std::mem::take(&mut *b.borrow_mut()));
+    let mut w = wire::Writer::default();
+    let result = f(&mut wire::Reader::new(&input[..(len as usize).min(input.len())]), &mut w);
+    WIRE_IN.with(|b| *b.borrow_mut() = input);
+    match result {
+        // A result of another shape than the TS type: JS runs the call through JSON.
+        Err(e) if e.starts_with(wire::MISMATCH) => return Ok(u32::MAX),
+        other => other.map_err(|e| JsError::new(&e))?,
+    }
+    let n = w.0.len();
+    WIRE_OUT.with(|b| *b.borrow_mut() = w.0);
+    Ok(u32::try_from(n).unwrap_or(u32::MAX))
 }
 "#;
 
@@ -440,8 +539,13 @@ fn wire_fns<'m>(m: &'m Manifest, api: &'m PortApi) -> Vec<WireFn<'m>> {
                 format!("        let out = &{call};\n        {w}\n")
             }
         };
+        let (attr, ret) = if m.kind == crate::bridge::Kind::Wasm {
+            ("wasm_bindgen", "Result<u32, JsError>")
+        } else {
+            ("napi", "napi::Result<f64>")
+        };
         let rust = format!(
-            "\n{statics}\n/// `{js}` over the binary wire.\n#[napi(js_name = \"{js}Wire\")]\npub fn {name}_wire(len: u32) -> napi::Result<f64> {{\n    \
+            "\n{statics}\n/// `{js}` over the binary wire.\n#[{attr}(js_name = \"{js}Wire\")]\npub fn {name}_wire(len: u32) -> {ret} {{\n    \
              wire_io(len, |r, w| {{\n{reads}{write}        Ok(())\n    }})\n}}\n",
             js = f.js_name,
             name = f.rust_name.trim_start_matches("r#"),
@@ -464,7 +568,11 @@ pub fn napi_rs(m: &Manifest, api: &PortApi) -> String {
     if fns.is_empty() {
         return String::new();
     }
-    let mut out = String::from(WIRE_NAPI_RS);
+    let mut out = String::from(if m.kind == crate::bridge::Kind::Wasm {
+        WIRE_WASM_RS
+    } else {
+        WIRE_NAPI_RS
+    });
     for f in fns {
         out.push_str(&f.rust);
     }
@@ -473,7 +581,10 @@ pub fn napi_rs(m: &Manifest, api: &PortApi) -> String {
 
 /// Whether the crate has wire functions (and needs `src/wire.rs`).
 pub fn uses_wire(m: &Manifest, api: &PortApi) -> bool {
-    m.kind == crate::bridge::Kind::Napi && !wire_fns(m, api).is_empty()
+    matches!(
+        m.kind,
+        crate::bridge::Kind::Napi | crate::bridge::Kind::Wasm
+    ) && !wire_fns(m, api).is_empty()
 }
 
 /// JS for `index.cjs`, after the exports are set: the runtime, and each wire function in front
@@ -483,7 +594,12 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
     if fns.is_empty() {
         return String::new();
     }
-    let mut out = String::from(WIRE_CJS);
+    let mut out = String::from(if m.kind == crate::bridge::Kind::Wasm {
+        WIRE_WASM_CJS
+    } else {
+        WIRE_NAPI_CJS
+    });
+    out.push_str(WIRE_CJS);
     for f in &fns {
         let n = f.params.len();
         let names: Vec<String> = (0..n).map(|i| format!("a{i}")).collect();
@@ -502,7 +618,7 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
              const json = module.exports.{js}\nconst call = native.{js}Wire\n\
              const encode = ({args}) => {{\nat = 0\n{enc}return true\n}}\n\
              const decode = () => {{\nlet t\n{dec}return t\n}}\n\
-             module.exports.{js} = function {js} (...a) {{\n  if (a.length <= {n} && encode({spread})) {{\n    wireCall(call)\n    return decode()\n  }}\n  return json(...a)\n}}\n}}\n",
+             module.exports.{js} = function {js} (...a) {{\n  if (a.length <= {n} && encode({spread}) && wireCall(call)) {{\n    return decode()\n  }}\n  return json(...a)\n}}\n}}\n",
             args = names.join(", "),
             spread = (0..n)
                 .map(|i| format!("a[{i}]"))
