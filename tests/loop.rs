@@ -330,3 +330,41 @@ fn classes_are_bridged_recorded_and_replayed() {
     assert!(diff.mismatches.iter().all(|m| m["fn"] == "LruCache"));
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn tsconfig_aliases_are_followed() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aliases");
+    let report = carcinize::analyze::analyze(&root).unwrap();
+    let greet = report
+        .units
+        .iter()
+        .find(|u| u.id == "src/greet.ts")
+        .unwrap();
+    assert_eq!(greet.internal_deps, ["src/lib/", "src/util/"]);
+    if !node_available() {
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("carcinize-alias-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/greet.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+    })
+    .unwrap();
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 5,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert_eq!((recorded.cases, recorded.errors), (5, 0));
+    std::fs::remove_dir_all(&dir).unwrap();
+}

@@ -5,6 +5,7 @@ pub mod discover;
 pub mod exports;
 pub mod scan;
 pub mod shape;
+pub mod tsconfig;
 
 /// The code of a file as TS: the file itself, or only the `<script>` blocks of a
 /// `.vue`/`.svelte`/`.astro` component. Text outside scripts becomes blank lines so

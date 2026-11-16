@@ -181,11 +181,13 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let register = work.canonicalize()?.join("register.mjs");
     let mut node_args = vec![format!("--import={}", file_url(&register))];
     node_args.extend(opts.node_args.iter().cloned());
+    let aliases = alias_env(&manifest);
     let mut cmd = Command::new("node");
     cmd.args(&node_args)
         .arg(&script)
         .arg(&inputs_path)
-        .arg(&out);
+        .arg(&out)
+        .env("CARCINIZE_PATHS", &aliases);
     if let Some(dir) = opts.resolve_from {
         let dir = dir
             .canonicalize()
@@ -204,7 +206,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .args(&node_args)
             .arg(&script)
             .arg(&inputs_path)
-            .arg(&out);
+            .arg(&out)
+            .env("CARCINIZE_PATHS", &aliases);
         if let Some(dir) = opts.resolve_from {
             retry.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
         }
@@ -393,7 +396,8 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
         .arg(&native)
         .arg(&cases)
         .arg(&out)
-        .arg(opts.min_ms.to_string());
+        .arg(opts.min_ms.to_string())
+        .env("CARCINIZE_PATHS", alias_env(&manifest));
     if let Some(dir) = opts.resolve_from {
         cmd.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
     }
@@ -745,6 +749,31 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
     Ok(())
 }
 
+/// The tsconfig `paths` of the unit's files, as JSON for the resolve hook: `[[pattern, [absolute targets]]]`.
+fn alias_env(manifest: &Manifest) -> String {
+    let mut entries: Vec<(String, Vec<String>)> = Vec::new();
+    let files = manifest
+        .exports
+        .iter()
+        .map(|f| &f.file)
+        .chain(manifest.classes.iter().map(|c| &c.file));
+    for file in files {
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        for (pattern, targets) in
+            crate::ts::tsconfig::PathAliases::nearest(&manifest.root, dir).entries
+        {
+            if entries.iter().all(|(p, _)| *p != pattern) {
+                let absolute = targets
+                    .iter()
+                    .map(|t| manifest.root.join(t).to_string_lossy().into_owned())
+                    .collect();
+                entries.push((pattern, absolute));
+            }
+        }
+    }
+    serde_json::to_string(&entries).unwrap_or_else(|_| "[]".into())
+}
+
 fn file_url(path: &Path) -> String {
     let text = path.to_string_lossy().replace('\\', "/");
     if text.starts_with('/') {
@@ -764,10 +793,32 @@ import { existsSync, statSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const extra = process.env.CARCINIZE_RESOLVE_FROM
+// tsconfig `paths`: [[pattern, [absolute targets]]], longest prefix first.
+const aliases = JSON.parse(process.env.CARCINIZE_PATHS || '[]')
+  .sort(([a], [b]) => b.split('*')[0].length - a.split('*')[0].length)
+const aliasTargets = (specifier) => {
+  for (const [pattern, targets] of aliases) {
+    const [prefix, suffix = ''] = pattern.split('*')
+    const exact = !pattern.includes('*')
+    if (exact ? specifier === pattern : specifier.startsWith(prefix) && specifier.endsWith(suffix) && specifier.length >= prefix.length + suffix.length) {
+      const star = exact ? '' : specifier.slice(prefix.length, specifier.length - suffix.length)
+      return targets.map(t => t.replace('*', star))
+    }
+  }
+  return []
+}
 const suffixes = ['.ts', '.tsx', '.mts', '.js', '.mjs', '/index.ts', '/index.mts', '/index.js']
 const isFile = p => existsSync(p) && statSync(p).isFile()
 
 export async function resolve(specifier, context, next) {
+  // Aliases first: `@/x` is not even a valid package name for Node.
+  for (const target of aliasTargets(specifier)) {
+    const stem = target.replace(/\.js$/, '')
+    for (const suffix of ['', ...suffixes]) {
+      if (isFile(stem + suffix))
+        return next(pathToFileURL(stem + suffix).href, context)
+    }
+  }
   try {
     return await next(specifier, context)
   }

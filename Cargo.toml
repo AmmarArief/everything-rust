@@ -9,6 +9,7 @@ license = "MIT"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 ignore = "0.4"
+json5 = "0.4"
 oxc_allocator = "0.158"
 oxc_ast = "0.158"
 oxc_ast_visit = "0.158"

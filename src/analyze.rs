@@ -181,10 +181,10 @@ pub fn analyze(root: &Path) -> Result<Report> {
             Some(scan::scan(parse_as, &code))
         })
         .collect();
-    Ok(build(&ws, &facts))
+    Ok(build(root, &ws, &facts))
 }
 
-fn build(ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
+fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
     let file_index: HashMap<&str, usize> = ws
         .files
         .iter()
@@ -192,6 +192,8 @@ fn build(ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
         .map(|(i, f)| (f.path.as_str(), i))
         .collect();
     let workspace_names: HashSet<&str> = ws.packages.iter().map(|p| p.name.as_str()).collect();
+    let alias_cache: std::cell::RefCell<HashMap<String, crate::ts::tsconfig::PathAliases>> =
+        std::cell::RefCell::new(HashMap::new());
     let classify = |from: &str, spec: &str| -> Target {
         if spec.starts_with("./") || spec.starts_with("../") || spec == "." || spec == ".." {
             return resolve_relative(from, spec, &file_index)
@@ -199,6 +201,20 @@ fn build(ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
         }
         if scan::platform_of(spec).is_some() {
             return Target::Platform;
+        }
+        // tsconfig `paths` (`~/utils`, `@/lib`), from the tsconfig nearest the importing file.
+        let dir = from.rsplit_once('/').map_or("", |(d, _)| d);
+        let aliases = alias_cache
+            .borrow_mut()
+            .entry(dir.to_string())
+            .or_insert_with(|| crate::ts::tsconfig::PathAliases::nearest(root, dir))
+            .clone();
+        let candidates = aliases.candidates(spec);
+        if !candidates.is_empty() {
+            return candidates
+                .iter()
+                .find_map(|base| resolve_base(base, &file_index))
+                .map_or(Target::Unresolved, Target::File);
         }
         if spec.starts_with('#')
             || spec.starts_with('~')
@@ -740,7 +756,12 @@ fn unit_id(package: &Package, path: &str) -> String {
 /// Resolves `./x`, `../x.js` and folder imports the way TS bundler resolution does.
 fn resolve_relative(from: &str, spec: &str, index: &HashMap<&str, usize>) -> Option<usize> {
     let dir = from.rsplit_once('/').map_or("", |(d, _)| d);
-    let base = normalize(&discover::join(dir, spec))?;
+    resolve_base(&normalize(&discover::join(dir, spec))?, index)
+}
+
+/// A root-relative import target, with the extensions and index files bundlers try.
+fn resolve_base(base: &str, index: &HashMap<&str, usize>) -> Option<usize> {
+    let base = base.to_string();
     let mut candidates = vec![base.clone()];
     for (js, ts) in [
         (".js", ".ts"),
