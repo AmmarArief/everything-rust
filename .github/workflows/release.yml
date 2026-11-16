@@ -91,15 +91,12 @@ jobs:
         with:
           pattern: npm-*
           path: npm-bin
-      - run: node scripts/npm-packages.mjs "${GITHUB_REF_NAME#v}" npm-bin npm-out > publish-order.txt
       - name: Publish to npm (trusted publishing)
         run: |
           version="${GITHUB_REF_NAME#v}"
-          while read -r dir; do
-            name=$(node -p "require('$dir/package.json').name")
-            if npm view "$name@$version" version > /dev/null 2>&1; then
-              echo "$name@$version is already on npm"
-            else
-              npm publish "$dir" --access public
-            fi
-          done < publish-order.txt
+          dir=$(node scripts/npm-packages.mjs "$version" npm-bin npm-out)
+          if npm view "rust-anything@$version" version > /dev/null 2>&1; then
+            echo "rust-anything@$version is already on npm"
+          else
+            npm publish "$dir" --access public
+          fi

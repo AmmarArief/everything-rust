@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 (2026-11-16)
+
+- npm: one `rust-anything` package that carries the binaries for macOS, Linux and Windows.
+
 ## 1.0.0 (2026-11-16)
 
 First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and Java.

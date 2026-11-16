@@ -12,7 +12,7 @@
   "bin": {
     "rust-anything": "bin/rust-anything.js"
   },
-  "files": ["bin"],
+  "files": ["bin", "binaries"],
   "engines": {
     "node": ">=18"
   }
