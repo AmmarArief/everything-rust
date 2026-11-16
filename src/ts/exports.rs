@@ -37,6 +37,154 @@ pub struct ExportedFn {
     pub uses_instanceof: bool,
 }
 
+/// An exported class: its constructor and public instance methods, or why it must stay in TS.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExportedClass {
+    pub name: String,
+    pub file: String,
+    pub line: u32,
+    pub constructor: Vec<Param>,
+    pub methods: Vec<ExportedFn>,
+    /// Set when the class cannot cross a bridge as it is (inheritance, public fields, ...).
+    pub blocker: Option<String>,
+}
+
+/// Top-level `export class` declarations.
+pub fn exported_classes(path: &str, source: &str) -> Vec<ExportedClass> {
+    use oxc_ast::ast::{ClassElement, MethodDefinitionKind, TSAccessibility};
+    let source_type = SourceType::from_path(path).unwrap_or_else(|_| SourceType::ts());
+    let allocator = Allocator::default();
+    let ret = Parser::new(&allocator, source, source_type).parse();
+    let text = |span: oxc_span::Span| source[span.start as usize..span.end as usize].to_string();
+    let line = |offset: u32| {
+        u32::try_from(source[..offset as usize].matches('\n').count() + 1).unwrap_or(u32::MAX)
+    };
+    let annotation = |ann: Option<&TSTypeAnnotation>| {
+        ann.map_or_else(|| "unknown".to_string(), |a| text(a.type_annotation.span()))
+    };
+    let params_of = |params: &FormalParameters| -> Vec<Param> {
+        params
+            .items
+            .iter()
+            .enumerate()
+            .map(|(i, p)| Param {
+                name: binding_name(&p.pattern).unwrap_or_else(|| format!("arg{i}")),
+                ts_type: annotation(p.type_annotation.as_deref()),
+                optional: p.optional || p.initializer.is_some(),
+                rest: false,
+            })
+            .collect()
+    };
+    let mut out = Vec::new();
+    for statement in &ret.program.body {
+        let Statement::ExportDeclaration(export) = statement else {
+            continue;
+        };
+        let Declaration::ClassDeclaration(class) = &export.declaration else {
+            continue;
+        };
+        let Some(id) = &class.id else { continue };
+        let mut blockers: Vec<String> = Vec::new();
+        if class.heritage.is_some() {
+            blockers.push("extends another class".into());
+        }
+        let mut constructor = Vec::new();
+        let mut methods = Vec::new();
+        for element in &class.body.body {
+            match element {
+                ClassElement::MethodDefinition(m) => {
+                    let hidden = m.key.is_private_identifier()
+                        || matches!(
+                            m.accessibility,
+                            Some(TSAccessibility::Private | TSAccessibility::Protected)
+                        );
+                    let name = m
+                        .key
+                        .static_name()
+                        .and_then(|n| n.as_str().map(str::to_string));
+                    match m.kind {
+                        MethodDefinitionKind::Constructor => {
+                            constructor = params_of(&m.value.params);
+                            // `constructor(public data)`: a parameter property is a public field.
+                            if m.value.params.items.iter().any(|p| {
+                                matches!(p.accessibility, Some(TSAccessibility::Public))
+                                    || (p.readonly && p.accessibility.is_none())
+                            }) {
+                                blockers.push("public parameter properties".into());
+                            }
+                        }
+                        _ if hidden => {}
+                        MethodDefinitionKind::Get | MethodDefinitionKind::Set => {
+                            blockers.push(format!("accessor `{}`", name.unwrap_or_default()));
+                        }
+                        MethodDefinitionKind::Method if m.r#static => {
+                            blockers.push(format!("static method `{}`", name.unwrap_or_default()));
+                        }
+                        MethodDefinitionKind::Method => {
+                            let Some(name) = name else {
+                                blockers.push("computed method name".into());
+                                continue;
+                            };
+                            let f = &m.value;
+                            methods.push(ExportedFn {
+                                name,
+                                file: path.to_string(),
+                                line: line(m.span.start),
+                                params: params_of(&f.params),
+                                returns: annotation(f.return_type.as_deref()),
+                                is_async: f.r#async,
+                                is_generator: f.generator,
+                                type_params: Vec::new(),
+                                uses_instanceof: uses_instanceof(&text(m.span)),
+                            });
+                        }
+                    }
+                }
+                ClassElement::PropertyDefinition(p) => {
+                    let hidden = p.key.is_private_identifier()
+                        || matches!(
+                            p.accessibility,
+                            Some(TSAccessibility::Private | TSAccessibility::Protected)
+                        );
+                    if !hidden {
+                        let name = p
+                            .key
+                            .static_name()
+                            .and_then(|n| n.as_str().map(str::to_string))
+                            .unwrap_or_default();
+                        blockers.push(format!("public field `{name}`"));
+                    }
+                }
+                ClassElement::AccessorProperty(_) => blockers.push("accessor property".into()),
+                ClassElement::StaticBlock(_) => blockers.push("static block".into()),
+                ClassElement::TSIndexSignature(_) => {}
+            }
+        }
+        let name = id.name.as_str().to_string();
+        for m in &methods {
+            if m.is_async || m.is_generator {
+                blockers.push(format!("async or generator method `{}`", m.name));
+            }
+            let returns_self = m
+                .returns
+                .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+                .any(|w| w == name || w == "this");
+            if returns_self {
+                blockers.push(format!("method `{}` returns an instance", m.name));
+            }
+        }
+        out.push(ExportedClass {
+            name,
+            file: path.to_string(),
+            line: line(class.span.start),
+            constructor,
+            methods,
+            blocker: (!blockers.is_empty()).then(|| blockers.join(", ")),
+        });
+    }
+    out
+}
+
 /// Top-level `export function f()` and `export const f = () => ...` declarations.
 pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
     let source_type = SourceType::from_path(path).unwrap_or_else(|_| SourceType::ts());
@@ -253,6 +401,41 @@ mod tests {
             ("boolean", true)
         );
         assert_eq!(found[2].returns, "unknown");
+    }
+
+    #[test]
+    fn reads_classes() {
+        let classes = exported_classes(
+            "a.ts",
+            "export class Counter {\n  private lines: string[] = []\n  #seen = 0\n  constructor(initial: string, private readonly sep = '\\n') {}\n\
+             add(text: string): number { return 1 }\n  private hidden(): void {}\n  values(): string[] { return [] }\n}\n\
+             export class Box extends Counter { get size(): number { return 1 } static of(): Box { return new Box('') } }\n\
+             export class Point { x = 1\n  constructor(public y: number) {}\n  clone(): Point { return this } }\n",
+        );
+        assert_eq!(classes.len(), 3);
+        let counter = &classes[0];
+        assert_eq!(counter.blocker, None);
+        assert_eq!(counter.constructor.len(), 2);
+        assert_eq!(
+            counter
+                .methods
+                .iter()
+                .map(|m| m.name.as_str())
+                .collect::<Vec<_>>(),
+            ["add", "values"]
+        );
+        let blocked = classes[1].blocker.as_deref().unwrap();
+        assert!(
+            blocked.contains("extends")
+                && blocked.contains("accessor")
+                && blocked.contains("static")
+        );
+        let point = classes[2].blocker.as_deref().unwrap();
+        assert!(
+            point.contains("public field `x`")
+                && point.contains("parameter properties")
+                && point.contains("returns an instance")
+        );
     }
 
     #[test]

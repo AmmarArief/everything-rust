@@ -28,6 +28,7 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
         .iter()
         .map(|f| f.file.as_str())
         .chain(manifest.js_only.iter().map(|j| j.file.as_str()))
+        .chain(manifest.classes.iter().map(|c| c.file.as_str()))
         .collect();
     files.sort_unstable();
     files.dedup();
@@ -133,6 +134,44 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
             name = f.name
         ));
     }
+    for c in &manifest.classes {
+        let i = files.iter().position(|file| *file == c.file).unwrap_or(0);
+        let methods: String = c
+            .methods
+            .iter()
+            .map(|m| format!("  {name}(...args: any[]): any {{\n    return this.#call('{name}', args)\n  }}\n", name = m.name))
+            .collect();
+        code.push_str(&format!(
+            "\n/** `{name}`: a TS instance and a Rust instance side by side; callers get the TS results. */\n\
+             export class {name} {{\n\
+             \x20 #legacy: any = null\n\
+             \x20 #native: any = null\n\
+             \x20 constructor(...args: any[]) {{\n\
+             \x20   if (mode === 'new' && native) {{\n\
+             \x20     this.#native = new native.{name}(...args)\n\
+             \x20     return\n\
+             \x20   }}\n\
+             \x20   this.#legacy = new (legacy{i} as any).{name}(...args)\n\
+             \x20   if (mode === 'old' || !native) return\n\
+             \x20   try {{\n\
+             \x20     this.#native = new native.{name}(...args)\n\
+             \x20   }}\n\
+             \x20   catch (error) {{\n\
+             \x20     shadowStats.mismatches++\n\
+             \x20     report({{ fn: '{name} constructor', args, expected: {{ ok: true }}, actual: {{ error: String((error as Error)?.message ?? error) }} }})\n\
+             \x20   }}\n\
+             \x20 }}\n\
+             {methods}             \x20 #call(method: string, args: unknown[]): any {{\n\
+             \x20   if (!this.#legacy) return this.#native[method](...args)\n\
+             \x20   if (!this.#native) return this.#legacy[method](...args)\n\
+             \x20   const expected = this.#legacy[method](...args)\n\
+             \x20   check(`{name}.${{method}}`, args, expected, () => this.#native[method](...args))\n\
+             \x20   return expected\n\
+             \x20 }}\n\
+             }}\n",
+            name = c.name
+        ));
+    }
     for j in &manifest.js_only {
         let i = files.iter().position(|file| *file == j.file).unwrap_or(0);
         code.push_str(&format!(
@@ -144,7 +183,12 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
     std::fs::write(&path, code).with_context(|| format!("writing {}", path.display()))?;
     Ok(ShadowOutcome {
         path,
-        exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+        exports: manifest
+            .exports
+            .iter()
+            .map(|f| f.name.clone())
+            .chain(manifest.classes.iter().map(|c| format!("class {}", c.name)))
+            .collect(),
     })
 }
 

@@ -144,7 +144,8 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
                             manifest
                                 .exports
                                 .iter()
-                                .map(|f| f.name.as_str())
+                                .map(|f| f.name.clone())
+                                .chain(manifest.classes.iter().map(|c| format!("class {}", c.name)))
                                 .collect::<Vec<_>>()
                                 .join(", ")
                         )

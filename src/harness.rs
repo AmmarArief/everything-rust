@@ -117,6 +117,15 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             cases.push(json!({ "fn": f.name, "module": module, "args": args }));
         }
     }
+    for class in &manifest.classes {
+        let module = module_for(&class.file)?;
+        let text = std::fs::read_to_string(manifest.root.join(&class.file)).unwrap_or_default();
+        let types = crate::bridge::types_in_scope(&manifest.root, &class.file, &text);
+        for mut scenario in scenarios(class, opts.count.max(20), &types) {
+            scenario["module"] = Value::String(module.clone());
+            cases.push(scenario);
+        }
+    }
     if let Some(path) = opts.inputs {
         let text =
             std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
@@ -133,6 +142,18 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
                     i + 1
                 )
             })?;
+            if let Some(class) = case["class"].as_str() {
+                let Some(c) = manifest.classes.iter().find(|c| c.name == class) else {
+                    bail!(
+                        "{}:{}: `{class}` is not a ported class of this unit",
+                        path.display(),
+                        i + 1
+                    );
+                };
+                case["module"] = Value::String(module_for(&c.file)?);
+                cases.push(case);
+                continue;
+            }
             let name = case["fn"].as_str().unwrap_or_default().to_string();
             let Some(f) = manifest.exports.iter().find(|f| f.name == name) else {
                 bail!(
@@ -197,10 +218,15 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     for line in text.lines().filter(|l| !l.is_empty()) {
         let case: Value = serde_json::from_str(line)?;
         count += 1;
-        errors += usize::from(case.get("error").is_some());
-        *per_function
-            .entry(case["fn"].as_str().unwrap_or_default().to_string())
-            .or_default() += 1;
+        let class_error = case["results"]
+            .as_array()
+            .is_some_and(|r| r.iter().any(|x| x.get("error").is_some()));
+        errors += usize::from(case.get("error").is_some() || class_error);
+        let name = case["fn"]
+            .as_str()
+            .or_else(|| case["class"].as_str())
+            .unwrap_or_default();
+        *per_function.entry(name.to_string()).or_default() += 1;
     }
     Ok(RecordOutcome {
         path: out,
@@ -337,8 +363,21 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     std::fs::create_dir_all(&work)?;
     std::fs::write(work.join("resolve.mjs"), RESOLVE_JS)?;
     std::fs::write(work.join("register.mjs"), REGISTER_JS)?;
+    let class_modules: BTreeMap<String, String> = manifest
+        .classes
+        .iter()
+        .map(|c| {
+            (
+                c.name.clone(),
+                manifest.root.join(&c.file).to_string_lossy().into_owned(),
+            )
+        })
+        .collect();
     let modules_path = work.join("bench-modules.json");
-    std::fs::write(&modules_path, serde_json::to_string(&modules)?)?;
+    std::fs::write(
+        &modules_path,
+        serde_json::to_string(&json!({ "functions": modules, "classes": class_modules }))?,
+    )?;
     let script = work.join("bench.mjs");
     std::fs::write(&script, format!("{CODEC_JS}\n{BENCH_JS}"))?;
     let out = work.join("bench.json");
@@ -440,65 +479,116 @@ pub fn generate(
     let mut attempts = 0;
     while out.len() < count && attempts < count * 20 {
         attempts += 1;
-        let mut args: Vec<Value> = Vec::new();
-        for p in &f.params {
-            let t = param_type(p);
-            // Structured parameters: values that fit the TS type, and now and then a value
-            // that does not, so error paths get recorded too.
-            let structured = |rng: &mut Rng| {
-                if rng.below(100) < 15 {
-                    value(&RType::Json, rng)
-                } else {
-                    shaped(&shape::parse(&p.ts_type), types, rng, 0)
-                }
-            };
-            if p.rest {
-                let inner = match t {
-                    RType::Vec(inner) => *inner,
-                    other => other,
-                };
-                for _ in 0..rng.below(3) {
-                    args.push(value(&inner, &mut rng));
-                }
-            } else if t.contains_json() {
-                let v = structured(&mut rng);
-                args.push(if p.optional && rng.below(5) == 0 {
-                    json!({ "$undefined": true })
-                } else {
-                    v
-                });
-            } else {
-                args.push(value(&t, &mut rng));
-            }
-        }
-        // Search-like functions rarely hit on random text: often derive one string from another.
-        let strings: Vec<usize> = (0..args.len()).filter(|&i| args[i].is_string()).collect();
-        if strings.len() >= 2 && rng.below(10) < 5 {
-            let from = strings[rng.below(strings.len())];
-            let to = strings[rng.below(strings.len())];
-            if from != to {
-                let source: Vec<char> = args[from].as_str().unwrap_or_default().chars().collect();
-                if !source.is_empty() {
-                    let start = rng.below(source.len());
-                    let end = start + 1 + rng.below(source.len() - start);
-                    let mut piece: String = source[start..end].iter().collect();
-                    if rng.below(4) == 0 {
-                        piece = piece.to_uppercase();
-                    }
-                    args[to] = Value::String(piece);
-                }
-            }
-        }
-        // Trailing optional arguments: sometimes omit them, the way JS callers do.
-        while args.last().is_some_and(|a| a.get("$undefined").is_some()) && rng.below(2) == 0 {
-            args.pop();
-        }
+        let args = args_for(&f.params, types, &mut rng);
         let key = serde_json::to_string(&args).unwrap_or_default();
         if seen.insert(key) {
             out.push(Value::Array(args));
         }
     }
     out
+}
+
+/// One argument list for `params`: values that fit, edge cases, and sometimes omitted optionals.
+fn args_for(
+    params: &[crate::ts::exports::Param],
+    types: &[LocalType],
+    rng: &mut Rng,
+) -> Vec<Value> {
+    let mut args: Vec<Value> = Vec::new();
+    for p in params {
+        let t = param_type(p);
+        // Structured parameters: values that fit the TS type, and now and then a value
+        // that does not, so error paths get recorded too.
+        let structured = |rng: &mut Rng| {
+            if rng.below(100) < 15 {
+                value(&RType::Json, rng)
+            } else {
+                shaped(&shape::parse(&p.ts_type), types, rng, 0)
+            }
+        };
+        if p.rest {
+            let inner = match t {
+                RType::Vec(inner) => *inner,
+                other => other,
+            };
+            for _ in 0..rng.below(3) {
+                args.push(value(&inner, rng));
+            }
+        } else if t.contains_json() {
+            let v = structured(rng);
+            args.push(if p.optional && rng.below(5) == 0 {
+                json!({ "$undefined": true })
+            } else {
+                v
+            });
+        } else {
+            args.push(value(&t, rng));
+        }
+    }
+    // Search-like functions rarely hit on random text: often derive one string from another.
+    let strings: Vec<usize> = (0..args.len()).filter(|&i| args[i].is_string()).collect();
+    if strings.len() >= 2 && rng.below(10) < 5 {
+        let from = strings[rng.below(strings.len())];
+        let to = strings[rng.below(strings.len())];
+        if from != to {
+            let source: Vec<char> = args[from].as_str().unwrap_or_default().chars().collect();
+            if !source.is_empty() {
+                let start = rng.below(source.len());
+                let end = start + 1 + rng.below(source.len() - start);
+                let mut piece: String = source[start..end].iter().collect();
+                if rng.below(4) == 0 {
+                    piece = piece.to_uppercase();
+                }
+                args[to] = Value::String(piece);
+            }
+        }
+    }
+    // Trailing optional arguments: sometimes omit them, the way JS callers do.
+    while args.last().is_some_and(|a| a.get("$undefined").is_some()) && rng.below(2) == 0 {
+        args.pop();
+    }
+    args
+}
+
+/// Class scenarios: construct, then call a random sequence of methods.
+pub fn scenarios(
+    class: &crate::ts::exports::ExportedClass,
+    count: usize,
+    types: &[LocalType],
+) -> Vec<Value> {
+    let mut rng = Rng::new(class.name.bytes().fold(0x2545_F491_4F6C_DD1D, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
+    }));
+    (0..count)
+        .map(|_| {
+            let ctor = args_for(&class.constructor, types, &mut rng);
+            let steps = if class.methods.is_empty() {
+                0
+            } else {
+                1 + rng.below(12)
+            };
+            // Stateful classes need calls that meet again (`set(k)` then `get(k)`): string
+            // arguments often reuse a string seen earlier in the scenario.
+            let mut seen: Vec<Value> = ctor.iter().filter(|v| v.is_string()).cloned().collect();
+            let calls: Vec<Value> = (0..steps)
+                .map(|_| {
+                    let m = &class.methods[rng.below(class.methods.len())];
+                    let mut args = args_for(&m.params, types, &mut rng);
+                    for arg in &mut args {
+                        if arg.is_string() {
+                            if !seen.is_empty() && rng.below(2) == 0 {
+                                *arg = seen[rng.below(seen.len())].clone();
+                            } else {
+                                seen.push(arg.clone());
+                            }
+                        }
+                    }
+                    json!({ "method": m.name, "args": args })
+                })
+                .collect();
+            json!({ "class": class.name, "ctor": ctor, "calls": calls })
+        })
+        .collect()
 }
 
 /// Property names for generated objects: plain, nested-looking, integer-like (JS orders those
@@ -763,11 +853,42 @@ const [inputsPath, outPath] = process.argv.slice(2)
 const inputs = JSON.parse(readFileSync(inputsPath, 'utf8'))
 const modules = new Map()
 const lines = []
+// A class scenario: construct, then call each method in turn; every step's result is recorded.
+const runScenario = async (Class, c) => {
+  const results = []
+  let instance
+  try {
+    instance = new Class(...c.ctor.map(dec))
+    results.push({ ok: true })
+  }
+  catch (error) {
+    results.push({ error: String(error?.message ?? error) })
+    return results
+  }
+  for (const call of c.calls) {
+    try {
+      results.push({ ok: enc(await instance[call.method](...call.args.map(dec))) })
+    }
+    catch (error) {
+      results.push({ error: String(error?.message ?? error) })
+    }
+  }
+  return results
+}
 for (const c of inputs) {
   let mod = modules.get(c.module)
   if (!mod) {
     mod = await import(pathToFileURL(c.module).href)
     modules.set(c.module, mod)
+  }
+  if (c.class) {
+    const Class = mod[c.class] ?? mod.default?.[c.class]
+    if (typeof Class !== 'function') {
+      console.error(`${c.class} is not a class exported by ${c.module}`)
+      process.exit(2)
+    }
+    lines.push(JSON.stringify({ class: c.class, ctor: c.ctor, calls: c.calls, results: await runScenario(Class, c) }))
+    continue
   }
   const fn = mod[c.fn] ?? mod.default?.[c.fn]
   if (typeof fn !== 'function') {
@@ -790,12 +911,17 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
 const [modulesPath, nativePath, casesPath, outPath, minMs] = process.argv.slice(2)
-const modules = JSON.parse(readFileSync(modulesPath, 'utf8'))
+const { functions: modules, classes: classModules } = JSON.parse(readFileSync(modulesPath, 'utf8'))
 const loaded = await import(pathToFileURL(nativePath).href)
 const native = { ...(loaded.default && typeof loaded.default === 'object' ? loaded.default : {}), ...loaded }
 const cases = readFileSync(casesPath, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
 const byFn = new Map()
-for (const c of cases) {
+const scenarios = new Map()
+for (const c of cases.filter(c => c.class)) {
+  if (!scenarios.has(c.class)) scenarios.set(c.class, [])
+  scenarios.get(c.class).push(c)
+}
+for (const c of cases.filter(c => !c.class)) {
   if (!byFn.has(c.fn)) byFn.set(c.fn, [])
   byFn.get(c.fn).push(c.args.map(dec))
 }
@@ -821,6 +947,32 @@ for (const [name, argsList] of byFn) {
   const rustNs = time(rust, argsList)
   rows.push({ fn: name, cases: argsList.length, original_ns: originalNs, rust_ns: rustNs, speedup: originalNs / rustNs })
 }
+// Classes: time whole scenarios (construct, then every call).
+const play = (Class, list) => () => {
+  for (const c of list) {
+    try {
+      const instance = new Class(...c.ctor.map(dec))
+      for (const call of c.calls) {
+        try { instance[call.method](...call.args.map(dec)) } catch {}
+      }
+    } catch {}
+  }
+}
+for (const [name, list] of scenarios) {
+  const original = (await import(pathToFileURL(classModules[name]).href))[name]
+  const rust = native[name]
+  if (typeof original !== 'function' || typeof rust !== 'function') continue
+  const timeAll = (fn) => {
+    fn()
+    let passes = 0
+    const start = performance.now()
+    do { fn(); passes++ } while (performance.now() - start < Number(minMs))
+    return (performance.now() - start) * 1e6 / (passes * list.length)
+  }
+  const originalNs = timeAll(play(original, list))
+  const rustNs = timeAll(play(rust, list))
+  rows.push({ fn: `class ${name}`, cases: list.length, original_ns: originalNs, rust_ns: rustNs, speedup: originalNs / rustNs })
+}
 writeFileSync(outPath, JSON.stringify(rows))
 "#;
 
@@ -833,7 +985,47 @@ const loaded = await import(pathToFileURL(modulePath).href)
 const mod = { ...(loaded.default && typeof loaded.default === 'object' ? loaded.default : {}), ...loaded }
 const cases = readFileSync(casesPath, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
 const summary = { total: cases.length, passed: 0, failed: 0, missing: [], mismatches: [] }
+const scenario = async (Class, c) => {
+  const results = []
+  let instance
+  try {
+    instance = new Class(...c.ctor.map(dec))
+    results.push({ ok: true })
+  }
+  catch (error) {
+    results.push({ error: String(error?.message ?? error) })
+    return results
+  }
+  for (const call of c.calls) {
+    try {
+      results.push({ ok: enc(await instance[call.method](...call.args.map(dec))) })
+    }
+    catch (error) {
+      results.push({ error: String(error?.message ?? error) })
+    }
+  }
+  return results
+}
+const stepsMatch = (want, got) => want.length === got.length && want.every((w, i) =>
+  ('error' in w && 'error' in got[i]) || ('ok' in w && 'ok' in got[i] && same(w.ok, got[i].ok, keyOrder === 'sort')))
 for (const c of cases) {
+  if (c.class) {
+    const Class = mod[c.class]
+    if (typeof Class !== 'function') {
+      if (!summary.missing.includes(c.class)) summary.missing.push(c.class)
+      summary.failed++
+      continue
+    }
+    const got = await scenario(Class, c)
+    if (stepsMatch(c.results, got)) {
+      summary.passed++
+    }
+    else {
+      summary.failed++
+      if (summary.mismatches.length < 20) summary.mismatches.push({ fn: c.class, args: [c.ctor, c.calls], expected: c.results, actual: got })
+    }
+    continue
+  }
   const fn = mod[c.fn]
   let actual
   if (typeof fn !== 'function') {

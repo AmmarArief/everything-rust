@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 use crate::analyze::{self, Bridge, Status};
 use crate::codegen;
 use crate::risks::Risk;
-use crate::ts::exports::{ExportedFn, LocalType, exported_functions, local_types};
+use crate::ts::exports::{
+    ExportedClass, ExportedFn, LocalType, exported_classes, exported_functions, local_types,
+};
 
 pub const MANIFEST: &str = "carcinize.json";
 pub const SCHEMA: &str = "carcinize/bridge@1";
@@ -36,6 +38,9 @@ pub struct Manifest {
     pub crate_name: String,
     /// Exports ported to Rust.
     pub exports: Vec<ExportedFn>,
+    /// Exported classes ported to Rust: a struct with `new` and methods.
+    #[serde(default)]
+    pub classes: Vec<ExportedClass>,
     /// Exports that cannot cross the bridge as they are; they stay in TS and the shadow module
     /// re-exports them from the original.
     #[serde(default)]
@@ -465,12 +470,23 @@ pub fn resolve_aliases(ts: &str, types: &[LocalType]) -> String {
     out
 }
 
-fn needs_js(fns: &[codegen::PortFn]) -> bool {
-    fns.iter().any(|f| {
-        codegen::wire(&f.ret) == codegen::Wire::Json
-            || f.params
-                .iter()
-                .any(|(_, t)| codegen::wire(t) == codegen::Wire::Json)
+fn needs_js(api: &codegen::PortApi) -> bool {
+    api.needs_json()
+}
+
+/// The reason given with `--keep name` or `--keep "name: reason"`, if `name` is kept.
+fn keep_reason(keep: &[String], name: &str) -> Option<String> {
+    keep.iter().find_map(|k| {
+        let (kept, reason) = k
+            .split_once(':')
+            .map_or((k.as_str(), ""), |(n, r)| (n.trim(), r.trim()));
+        (kept == name).then(|| {
+            if reason.is_empty() {
+                "kept in TS on request".to_string()
+            } else {
+                reason.to_string()
+            }
+        })
     })
 }
 
@@ -503,8 +519,8 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     let port =
         std::fs::read_to_string(crate_dir.join("src/port.rs")).context("reading src/port.rs")?;
     let fns = codegen::parse_port(&port);
-    if fns.is_empty() {
-        bail!("src/port.rs has no `pub fn`: nothing to bind");
+    if fns.functions.is_empty() && fns.classes.is_empty() {
+        bail!("src/port.rs has no `pub fn` or ported class: nothing to bind");
     }
     let modules = codegen::Modules {
         utf16: crate_dir.join("src/utf16.rs").exists(),
@@ -526,7 +542,12 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     }
     format_rust(crate_dir);
     Ok(Refreshed {
-        functions: fns.iter().map(|f| f.js_name.clone()).collect(),
+        functions: fns
+            .functions
+            .iter()
+            .map(|f| f.js_name.clone())
+            .chain(fns.classes.iter().map(|c| format!("class {}", c.js_name)))
+            .collect(),
         files: files.iter().map(|(p, _)| (*p).to_string()).collect(),
     })
 }
@@ -557,6 +578,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     });
 
     let mut exports = Vec::new();
+    let mut classes = Vec::new();
     let mut js_only = Vec::new();
     for file in &unit.files {
         if file.ends_with(".vue") || file.ends_with(".svelte") || file.ends_with(".astro") {
@@ -565,23 +587,49 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         let text =
             std::fs::read_to_string(root.join(file)).with_context(|| format!("reading {file}"))?;
         let types = types_in_scope(&root, file, &text);
+        for mut class in exported_classes(file, &text) {
+            let kept = keep_reason(&opts.keep, &class.name);
+            let constructor = ExportedFn {
+                name: format!("{} constructor", class.name),
+                file: class.file.clone(),
+                line: class.line,
+                params: class.constructor.clone(),
+                returns: "void".into(),
+                is_async: false,
+                is_generator: false,
+                type_params: Vec::new(),
+                uses_instanceof: false,
+            };
+            let method_reason = std::iter::once(&constructor)
+                .chain(&class.methods)
+                .find_map(|m| js_only_reason(m, &types).map(|r| format!("`{}`: {r}", m.name)));
+            match kept.or_else(|| class.blocker.clone()).or(method_reason) {
+                Some(reason) => js_only.push(JsOnly {
+                    name: class.name,
+                    file: class.file,
+                    line: class.line,
+                    reason: format!("class: {reason}"),
+                }),
+                None => {
+                    for p in &mut class.constructor {
+                        p.ts_type = resolve_aliases(&p.ts_type, &types);
+                    }
+                    for m in &mut class.methods {
+                        for p in &mut m.params {
+                            p.ts_type = resolve_aliases(&p.ts_type, &types);
+                        }
+                        m.returns = resolve_aliases(&m.returns, &types);
+                    }
+                    classes.push(class);
+                }
+            }
+        }
         for mut f in exported_functions(file, &text) {
             for p in &mut f.params {
                 p.ts_type = resolve_aliases(&p.ts_type, &types);
             }
             f.returns = resolve_aliases(&f.returns, &types);
-            let kept = opts.keep.iter().find_map(|k| {
-                let (name, reason) = k
-                    .split_once(':')
-                    .map_or((k.as_str(), ""), |(n, r)| (n.trim(), r.trim()));
-                (name == f.name).then(|| {
-                    if reason.is_empty() {
-                        "kept in TS on request".to_string()
-                    } else {
-                        reason.to_string()
-                    }
-                })
-            });
+            let kept = keep_reason(&opts.keep, &f.name);
             match kept.or_else(|| js_only_reason(&f, &types)) {
                 Some(reason) => js_only.push(JsOnly {
                     name: f.name,
@@ -593,7 +641,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             }
         }
     }
-    if exports.is_empty() && !js_only.is_empty() {
+    if exports.is_empty() && classes.is_empty() && !js_only.is_empty() {
         bail!(
             "every export of `{}` must stay in JS: {}",
             unit.id,
@@ -604,7 +652,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
                 .join(", ")
         );
     }
-    if exports.is_empty() {
+    if exports.is_empty() && classes.is_empty() {
         bail!(
             "unit `{}` exports no functions; bridge a unit with an exported function API",
             unit.id
@@ -652,6 +700,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         kind,
         crate_name: crate_name.clone(),
         exports: exports.clone(),
+        classes: classes.clone(),
         js_only: js_only.clone(),
     };
     let port = codegen::port_rs(&manifest);
@@ -721,7 +770,11 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         crate_dir,
         kind,
         files: files.into_iter().map(|(p, _)| p).collect(),
-        exports: exports.iter().map(|f| f.name.clone()).collect(),
+        exports: exports
+            .iter()
+            .map(|f| f.name.clone())
+            .chain(classes.iter().map(|c| format!("class {}", c.name)))
+            .collect(),
         notes,
     })
 }

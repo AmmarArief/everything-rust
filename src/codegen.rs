@@ -27,6 +27,39 @@ pub struct PortFn {
     pub is_async: bool,
 }
 
+/// A port class: a struct with `new` and methods taking `&self` or `&mut self`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PortClass {
+    pub js_name: String,
+    pub rust_name: String,
+    pub constructor: PortFn,
+    pub methods: Vec<(PortFn, bool)>,
+}
+
+/// What `port.rs` offers to JS. `methods` pairs each method with whether it takes `&mut self`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PortApi {
+    pub functions: Vec<PortFn>,
+    pub classes: Vec<PortClass>,
+}
+
+impl PortApi {
+    /// Every function and method, for dependency and wire checks.
+    pub fn all(&self) -> impl Iterator<Item = &PortFn> {
+        self.functions.iter().chain(
+            self.classes.iter().flat_map(|c| {
+                std::iter::once(&c.constructor).chain(c.methods.iter().map(|(m, _)| m))
+            }),
+        )
+    }
+
+    pub fn needs_json(&self) -> bool {
+        self.all().any(|f| {
+            wire(&f.ret) == Wire::Json || f.params.iter().any(|(_, t)| wire(t) == Wire::Json)
+        })
+    }
+}
+
 /// How a Rust type crosses the bridge.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Wire {
@@ -94,7 +127,77 @@ pub fn port_rs(m: &Manifest) -> String {
         );
         out.push_str("}\n");
     }
+    for c in &m.classes {
+        let _ = writeln!(
+            out,
+            "\n/// Port of class `{}` (`{}:{}`): holds the instance state.",
+            c.name, c.file, c.line
+        );
+        let _ = writeln!(out, "pub struct {} {{}}\n", c.name);
+        let _ = writeln!(out, "impl {} {{", c.name);
+        let ctor = stub_params(&c.constructor);
+        let _ = writeln!(
+            out,
+            "    /// Port of `{}` constructor (`{}:{}`).",
+            c.name, c.file, c.line
+        );
+        let _ = writeln!(out, "    pub fn new({}) -> Result<Self, String> {{", ctor.0);
+        let _ = write!(out, "{}", ctor.1);
+        let _ = writeln!(
+            out,
+            "        unimplemented!(\"port the `{}` constructor\")\n    }}",
+            c.name
+        );
+        for f in &c.methods {
+            let (params, unused) = stub_params(&f.params);
+            let ret = match RType::from_ts(&f.returns) {
+                RType::Unit => "()".to_string(),
+                t => t.rust(),
+            };
+            let receiver = if params.is_empty() {
+                "&mut self".to_string()
+            } else {
+                format!("&mut self, {params}")
+            };
+            let _ = writeln!(
+                out,
+                "\n    /// Port of `{}.{}` (`{}:{}`).",
+                c.name, f.name, f.file, f.line
+            );
+            let _ = writeln!(
+                out,
+                "    pub fn {}({receiver}) -> Result<{ret}, String> {{",
+                snake_case(&f.name)
+            );
+            let _ = write!(out, "{unused}");
+            let _ = writeln!(
+                out,
+                "        unimplemented!(\"port `{}.{}`\")\n    }}",
+                c.name, f.name
+            );
+        }
+        out.push_str("}\n");
+    }
     out
+}
+
+/// Parameters of a method stub, and a line marking them used.
+fn stub_params(params: &[crate::ts::exports::Param]) -> (String, String) {
+    let list = params
+        .iter()
+        .map(|p| format!("{}: {}", snake_case(&p.name), param_type(p).rust()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let names: Vec<String> = params
+        .iter()
+        .map(|p| format!("&{}", snake_case(&p.name)))
+        .collect();
+    let unused = match names.len() {
+        0 => String::new(),
+        1 => format!("        let _ = {};\n", names[0]),
+        _ => format!("        let _ = ({});\n", names.join(", ")),
+    };
+    (list, unused)
 }
 
 pub fn is_async(f: &ExportedFn) -> bool {
@@ -103,14 +206,94 @@ pub fn is_async(f: &ExportedFn) -> bool {
 
 // ---- reading port.rs -------------------------------------------------------------------------
 
-/// The `pub fn` items at the top level of `port.rs`. The JS name comes from the
-/// `/// Port of `name`` doc line, else from the Rust name in camelCase.
-pub fn parse_port(source: &str) -> Vec<PortFn> {
-    let mut out = Vec::new();
+/// The functions and classes `port.rs` offers. A function's JS name comes from its
+/// `/// Port of `name`` doc line (else its Rust name in camelCase); a class is a `pub struct`
+/// documented `/// Port of class `Name``, with an `impl` holding `new` and its methods.
+pub fn parse_port(source: &str) -> PortApi {
     let lines: Vec<&str> = source.lines().collect();
+    let mut api = PortApi {
+        functions: functions_in(&lines, ""),
+        classes: Vec::new(),
+    };
+    for (i, line) in lines.iter().enumerate() {
+        let Some(rest) = line.strip_prefix("pub struct ") else {
+            continue;
+        };
+        let rust_name: String = rest
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        let Some(js_name) = doc_name(&lines[..i], "Port of class `") else {
+            continue;
+        };
+        // The `impl Name {` block, up to its closing `}` at column 0.
+        let Some(start) = lines
+            .iter()
+            .position(|l| l.trim_end() == format!("impl {rust_name} {{"))
+        else {
+            continue;
+        };
+        let end = lines[start..]
+            .iter()
+            .position(|l| *l == "}")
+            .map_or(lines.len(), |e| start + e);
+        let block = &lines[start + 1..end];
+        let mut constructor = None;
+        let mut methods = Vec::new();
+        for f in functions_in(block, "    ") {
+            if f.rust_name == "new" {
+                constructor = Some(f);
+            } else {
+                let signature_line = block
+                    .iter()
+                    .find(|l| l.contains(&format!("fn {}(", f.rust_name)))
+                    .copied()
+                    .unwrap_or("");
+                let block_text = block.join("\n");
+                let mutable = signature_line.contains("&mut self") || {
+                    let at = block_text
+                        .find(&format!("fn {}(", f.rust_name))
+                        .unwrap_or(0);
+                    block_text[at..]
+                        .split('{')
+                        .next()
+                        .unwrap_or("")
+                        .contains("&mut self")
+                };
+                methods.push((f, mutable));
+            }
+        }
+        if let Some(constructor) = constructor {
+            api.classes.push(PortClass {
+                js_name,
+                rust_name,
+                constructor,
+                methods,
+            });
+        }
+    }
+    api
+}
+
+fn doc_name(before: &[&str], prefix: &str) -> Option<String> {
+    before
+        .iter()
+        .rev()
+        .take_while(|l| l.trim_start().starts_with("///") || l.trim_start().starts_with("#["))
+        .find_map(|l| {
+            let doc = l.trim_start().strip_prefix("///")?.trim();
+            let rest = doc.strip_prefix(prefix)?;
+            Some(rest.split('`').next()?.to_string())
+        })
+}
+
+/// `pub fn` items at one indentation level. In an `impl`, `Port of `Class.method`` names the
+/// method `method`.
+fn functions_in(lines: &[&str], indent: &str) -> Vec<PortFn> {
+    let mut out = Vec::new();
     let mut i = 0;
     while i < lines.len() {
-        let line = lines[i];
+        let line = lines[i].strip_prefix(indent).unwrap_or("");
         let (is_async, rest) = if let Some(rest) = line.strip_prefix("pub async fn ") {
             (true, rest)
         } else if let Some(rest) = line.strip_prefix("pub fn ") {
@@ -127,15 +310,8 @@ pub fn parse_port(source: &str) -> Vec<PortFn> {
             signature.push(' ');
             signature.push_str(lines[j].trim());
         }
-        let js_name = lines[..i]
-            .iter()
-            .rev()
-            .take_while(|l| l.trim_start().starts_with("///") || l.trim_start().starts_with("#["))
-            .find_map(|l| {
-                let doc = l.trim_start().strip_prefix("///")?.trim();
-                let rest = doc.strip_prefix("Port of `")?;
-                Some(rest.split('`').next()?.to_string())
-            });
+        let js_name = doc_name(&lines[..i], "Port of `")
+            .map(|n| n.rsplit('.').next().unwrap_or(&n).to_string());
         if let Some(f) = parse_signature(&signature, is_async, js_name) {
             out.push(f);
         }
@@ -263,7 +439,7 @@ pub struct Modules {
     pub js: bool,
 }
 
-pub fn lib_rs(m: &Manifest, fns: &[PortFn], modules: &Modules) -> String {
+pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
     let mut out = format!(
         "//! JS bindings for `{}`: generated from the signatures in `port.rs` by carcinize.\n\
          //! Regenerate with `carcinize refresh` after changing them.\n\n",
@@ -280,32 +456,25 @@ pub fn lib_rs(m: &Manifest, fns: &[PortFn], modules: &Modules) -> String {
     if modules.utf16 {
         out.push_str("pub mod utf16;\n");
     }
-    out.push_str(match m.kind {
-        Kind::Napi => NAPI_RUN,
-        Kind::Wasm => "",
-    });
-    for f in fns {
+    if m.kind == Kind::Napi {
+        out.push_str(NAPI_RUN);
+        if api.all().any(|f| f.is_async) {
+            out.push_str(NAPI_RUN_ASYNC);
+        }
+    }
+    for f in &api.functions {
         out.push('\n');
         let _ = writeln!(out, "/// `{}`.", f.js_name);
         bind(&mut out, m.kind, f);
     }
+    for c in &api.classes {
+        bind_class(&mut out, m.kind, c);
+    }
     out
 }
 
-fn bind(out: &mut String, kind: Kind, f: &PortFn) {
-    let params: Vec<String> = f
-        .params
-        .iter()
-        .map(|(n, t)| match wire(t) {
-            Wire::Json => format!("{n}: String"),
-            _ => format!("{n}: {t}"),
-        })
-        .collect();
-    let ret = match (wire(&f.ret), kind) {
-        (Wire::Json, _) => "String".to_string(),
-        (Wire::Units, Kind::Napi) => "napi::bindgen_prelude::Uint16Array".to_string(),
-        _ => f.ret.clone(),
-    };
+/// The body of a binding: decode structured arguments, call, encode the result.
+fn body(f: &PortFn, target: &str, kind: Kind, constructor: bool) -> String {
     let mut body = String::new();
     for (n, t) in &f.params {
         // The port's own type names may only resolve inside `port.rs`: let inference pick the type.
@@ -315,28 +484,227 @@ fn bind(out: &mut String, kind: Kind, f: &PortFn) {
     }
     let args: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
     let call = format!(
-        "port::{}({}){}{}",
-        f.rust_name,
+        "{target}({}){}{}",
         args.join(", "),
         if f.is_async { ".await" } else { "" },
         if f.fallible { "?" } else { "" }
     );
+    // A unit result: call it, then return `()` (`let out = ()` is a clippy error).
+    if !constructor && f.ret.trim() == "()" {
+        let _ = writeln!(body, "        {call};\n        Ok(())");
+        return body;
+    }
     let _ = writeln!(body, "        let out = {call};");
-    let result = match (wire(&f.ret), kind) {
-        (Wire::Json, _) => "crate::js::to_json(&out)",
-        (Wire::Units, Kind::Napi) => "Ok(napi::bindgen_prelude::Uint16Array::new(out))",
+    let result = match (constructor, wire(&f.ret), kind) {
+        (true, _, Kind::Napi) => "Ok(Self { inner: out })",
+        (true, _, Kind::Wasm) => "Ok(out)",
+        (false, Wire::Json, _) => "crate::js::to_json(&out)",
+        (false, Wire::Units, Kind::Napi) => "Ok(napi::bindgen_prelude::Uint16Array::new(out))",
+        (false, Wire::Native, Kind::Napi) if option_inner(&f.ret).is_some() => {
+            "Ok(out.map_or(napi::bindgen_prelude::Either::B(()), napi::bindgen_prelude::Either::A))"
+        }
         _ => "Ok(out)",
     };
     let _ = writeln!(body, "        {result}");
+    body
+}
+
+fn binding_params(f: &PortFn) -> Vec<String> {
+    f.params
+        .iter()
+        .map(|(n, t)| match wire(t) {
+            Wire::Json => format!("{n}: String"),
+            _ => format!("{n}: {t}"),
+        })
+        .collect()
+}
+
+fn binding_ret(f: &PortFn, kind: Kind) -> String {
+    match (wire(&f.ret), kind) {
+        (Wire::Json, _) => "String".to_string(),
+        (Wire::Units, Kind::Napi) => "napi::bindgen_prelude::Uint16Array".to_string(),
+        // napi turns `None` into `null`; JS code returning nothing gives `undefined`.
+        (Wire::Native, Kind::Napi) if option_inner(&f.ret).is_some() => {
+            format!(
+                "napi::bindgen_prelude::Either<{}, ()>",
+                option_inner(&f.ret).unwrap_or_default()
+            )
+        }
+        _ => f.ret.clone(),
+    }
+}
+
+/// `T` of `Option<T>`.
+fn option_inner(ty: &str) -> Option<String> {
+    let ty: String = ty.chars().filter(|c| !c.is_whitespace()).collect();
+    ty.strip_prefix("Option<")?
+        .strip_suffix('>')
+        .map(str::to_string)
+}
+
+fn bind_class(out: &mut String, kind: Kind, c: &PortClass) {
+    let (name, js) = (&c.rust_name, &c.js_name);
+    let snake = snake_case(name);
+    let ctor_params = binding_params(&c.constructor).join(", ");
+    let ctor_args: Vec<&str> = c
+        .constructor
+        .params
+        .iter()
+        .map(|(n, _)| n.as_str())
+        .collect();
+    match kind {
+        Kind::Napi => {
+            let _ = writeln!(
+                out,
+                "\n/// Class `{js}`.\n#[napi(js_name = \"{js}\")]\npub struct {name} {{\n    inner: port::{name},\n}}\n"
+            );
+            let _ = writeln!(out, "#[napi]\nimpl {name} {{");
+            let _ = writeln!(
+                out,
+                "    #[napi(constructor)]\n    pub fn new({ctor_params}) -> napi::Result<Self> {{"
+            );
+            let _ = writeln!(
+                out,
+                "        run(move || {{\n{}        }})\n    }}",
+                indent(&body(
+                    &c.constructor,
+                    &format!("port::{name}::new"),
+                    kind,
+                    true
+                ))
+            );
+            for (m, mutable) in &c.methods {
+                let receiver = if *mutable { "&mut self" } else { "&self" };
+                let params = binding_params(m);
+                let sig = if params.is_empty() {
+                    receiver.to_string()
+                } else {
+                    format!("{receiver}, {}", params.join(", "))
+                };
+                let _ = writeln!(out, "\n    #[napi(js_name = \"{}\")]", m.js_name);
+                let _ = writeln!(
+                    out,
+                    "    pub fn {}({sig}) -> napi::Result<{}> {{",
+                    m.rust_name,
+                    binding_ret(m, kind)
+                );
+                let borrow = if *mutable {
+                    "&mut self.inner"
+                } else {
+                    "&self.inner"
+                };
+                let _ = writeln!(out, "        let inner = {borrow};");
+                let _ = writeln!(
+                    out,
+                    "        run(move || {{\n{}        }})\n    }}",
+                    indent(&body(m, &format!("inner.{}", m.rust_name), kind, false))
+                );
+            }
+            out.push_str("}\n");
+        }
+        Kind::Wasm => {
+            let _ = writeln!(
+                out,
+                "\nfn {snake}_new_inner({ctor_params}) -> Result<port::{name}, String> {{\n{}}}",
+                dedent(&body(
+                    &c.constructor,
+                    &format!("port::{name}::new"),
+                    kind,
+                    true
+                ))
+            );
+            for (m, mutable) in &c.methods {
+                let params = binding_params(m);
+                let receiver = if *mutable {
+                    format!("inner: &mut port::{name}")
+                } else {
+                    format!("inner: &port::{name}")
+                };
+                let sig = std::iter::once(receiver)
+                    .chain(params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let _ = writeln!(
+                    out,
+                    "\nfn {snake}_{}_inner({sig}) -> Result<{}, String> {{\n{}}}",
+                    m.rust_name.trim_start_matches("r#"),
+                    binding_ret(m, kind),
+                    dedent(&body(m, &format!("inner.{}", m.rust_name), kind, false))
+                );
+            }
+            let _ = writeln!(
+                out,
+                "\n/// Class `{js}`.\n#[wasm_bindgen(js_name = \"{js}\")]\npub struct {name} {{\n    inner: port::{name},\n}}\n"
+            );
+            let _ = writeln!(out, "#[wasm_bindgen(js_class = \"{js}\")]\nimpl {name} {{");
+            let _ = writeln!(
+                out,
+                "    #[wasm_bindgen(constructor)]\n    pub fn new({ctor_params}) -> Result<{name}, JsError> {{"
+            );
+            let _ = writeln!(
+                out,
+                "        let inner = {snake}_new_inner({}).map_err(|e| JsError::new(&e))?;\n        Ok(Self {{ inner }})\n    }}",
+                ctor_args.join(", ")
+            );
+            for (m, mutable) in &c.methods {
+                let receiver = if *mutable { "&mut self" } else { "&self" };
+                let params = binding_params(m);
+                let sig = if params.is_empty() {
+                    receiver.to_string()
+                } else {
+                    format!("{receiver}, {}", params.join(", "))
+                };
+                let args: Vec<&str> = m.params.iter().map(|(n, _)| n.as_str()).collect();
+                let borrow = if *mutable {
+                    "&mut self.inner"
+                } else {
+                    "&self.inner"
+                };
+                let call_args = std::iter::once(borrow)
+                    .chain(args)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let _ = writeln!(out, "\n    #[wasm_bindgen(js_name = \"{}\")]", m.js_name);
+                let _ = writeln!(
+                    out,
+                    "    pub fn {}({sig}) -> Result<{}, JsError> {{",
+                    m.rust_name,
+                    binding_ret(m, kind)
+                );
+                let _ = writeln!(
+                    out,
+                    "        {snake}_{}_inner({call_args}).map_err(|e| JsError::new(&e))\n    }}",
+                    m.rust_name.trim_start_matches("r#")
+                );
+            }
+            out.push_str("}\n");
+        }
+    }
+}
+
+fn indent(text: &str) -> String {
+    text.lines().map(|l| format!("    {l}\n")).collect()
+}
+
+fn dedent(text: &str) -> String {
+    text.lines()
+        .map(|l| format!("{}\n", l.strip_prefix("    ").unwrap_or(l)))
+        .collect()
+}
+
+fn bind(out: &mut String, kind: Kind, f: &PortFn) {
+    let params = binding_params(f).join(", ");
+    let ret = binding_ret(f, kind);
+    let body = body(f, &format!("port::{}", f.rust_name), kind, false);
+    let args: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
     let asyncness = if f.is_async { "async " } else { "" };
     match kind {
         Kind::Napi => {
             let _ = writeln!(out, "#[napi(js_name = \"{}\")]", f.js_name);
             let _ = writeln!(
                 out,
-                "pub {asyncness}fn {}({}) -> napi::Result<{ret}> {{",
-                f.rust_name,
-                params.join(", ")
+                "pub {asyncness}fn {}({params}) -> napi::Result<{ret}> {{",
+                f.rust_name
             );
             if f.is_async {
                 let _ = writeln!(
@@ -353,17 +721,14 @@ fn bind(out: &mut String, kind: Kind, f: &PortFn) {
             let inner = format!("{}_inner", f.rust_name.trim_start_matches("r#"));
             let _ = writeln!(
                 out,
-                "{asyncness}fn {inner}({}) -> Result<{ret}, String> {{\n{}}}\n",
-                params.join(", "),
-                body.replace("\n        ", "\n    ")
-                    .replacen("        ", "    ", 1)
+                "{asyncness}fn {inner}({params}) -> Result<{ret}, String> {{\n{}}}\n",
+                dedent(&body)
             );
             let _ = writeln!(out, "#[wasm_bindgen(js_name = \"{}\")]", f.js_name);
             let _ = writeln!(
                 out,
-                "pub {asyncness}fn {}({}) -> Result<{ret}, JsError> {{",
-                f.rust_name,
-                params.join(", ")
+                "pub {asyncness}fn {}({params}) -> Result<{ret}, JsError> {{",
+                f.rust_name
             );
             let _ = writeln!(
                 out,
@@ -395,6 +760,9 @@ fn run<T>(f: impl FnOnce() -> Result<T, String>) -> napi::Result<T> {
     }
 }
 
+"#;
+
+const NAPI_RUN_ASYNC: &str = r#"
 #[allow(dead_code)]
 async fn run_async<T>(f: impl std::future::Future<Output = Result<T, String>>) -> napi::Result<T> {
     use futures::FutureExt as _;
@@ -407,7 +775,25 @@ async fn run_async<T>(f: impl std::future::Future<Output = Result<T, String>>) -
 
 // ---- index.cjs -------------------------------------------------------------------------------
 
-pub fn index_cjs(m: &Manifest, fns: &[PortFn]) -> String {
+fn spec(f: &PortFn) -> (String, &'static str) {
+    let args: Vec<&str> = f
+        .params
+        .iter()
+        .map(|(_, t)| if wire(t) == Wire::Json { "1" } else { "0" })
+        .collect();
+    let ret = match wire(&f.ret) {
+        Wire::Json => "'json'",
+        Wire::Units => "'units'",
+        Wire::Native => "'raw'",
+    };
+    (format!("[{}]", args.join(", ")), ret)
+}
+
+fn needs_wrap(f: &PortFn) -> bool {
+    wire(&f.ret) != Wire::Native || f.params.iter().any(|(_, t)| wire(t) == Wire::Json)
+}
+
+pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
     let load = match m.kind {
         Kind::Napi => format!(
             "// Loads the native module built by `carcinize build`.\nconst native = require('./{}.node')\n",
@@ -418,36 +804,43 @@ pub fn index_cjs(m: &Manifest, fns: &[PortFn]) -> String {
             m.lib_name()
         ),
     };
-    let specs: Vec<String> = fns
+    let functions: Vec<String> = api
+        .functions
         .iter()
-        .filter(|f| {
-            wire(&f.ret) != Wire::Native || f.params.iter().any(|(_, t)| wire(t) == Wire::Json)
-        })
+        .filter(|f| needs_wrap(f))
         .map(|f| {
-            let args: Vec<&str> = f
-                .params
+            let (args, ret) = spec(f);
+            format!("  {}: [{args}, {ret}, {}],", f.js_name, f.is_async)
+        })
+        .collect();
+    let classes: Vec<String> = api
+        .classes
+        .iter()
+        .filter(|c| needs_wrap(&c.constructor) || c.methods.iter().any(|(m, _)| needs_wrap(m)))
+        .map(|c| {
+            let methods: Vec<String> = c
+                .methods
                 .iter()
-                .map(|(_, t)| if wire(t) == Wire::Json { "1" } else { "0" })
+                .map(|(m, _)| {
+                    let (args, ret) = spec(m);
+                    format!("{}: [{args}, {ret}]", m.js_name)
+                })
                 .collect();
-            let ret = match wire(&f.ret) {
-                Wire::Json => "'json'",
-                Wire::Units => "'units'",
-                Wire::Native => "'raw'",
-            };
             format!(
-                "  {}: [[{}], {ret}, {}],",
-                f.js_name,
-                args.join(", "),
-                f.is_async
+                "  {}: [{}, {{ {} }}],",
+                c.js_name,
+                spec(&c.constructor).0,
+                methods.join(", ")
             )
         })
         .collect();
-    if specs.is_empty() {
+    if functions.is_empty() && classes.is_empty() {
         return format!("{load}module.exports = native\n");
     }
     format!(
-        "{load}{CODEC_CJS}\nmodule.exports = {{ ...native }}\nconst specs = {{\n{}\n}}\n{WRAP_CJS}",
-        specs.join("\n")
+        "{load}{CODEC_CJS}\nmodule.exports = {{ ...native }}\nconst specs = {{\n{}\n}}\nconst classes = {{\n{}\n}}\n{WRAP_CJS}",
+        functions.join("\n"),
+        classes.join("\n")
     )
 }
 
@@ -481,15 +874,27 @@ const fromUnits = (units) => {
 }
 "#;
 
-const WRAP_CJS: &str = r#"// Per function: [structured arguments, result kind, async].
+const WRAP_CJS: &str = r#"const convert = result => result === 'json' ? decode : result === 'units' ? fromUnits : x => x
+// An omitted structured argument is `undefined`, not a missing value.
+const prepare = (a, structured) => Array.from({ length: Math.max(a.length, structured.length) }, (_, i) => structured[i] ? encode(a[i]) : a[i])
+// Functions: [structured arguments, result kind, async].
 for (const [name, [structured, result, isAsync]] of Object.entries(specs)) {
   const call = native[name]
-  const out = result === 'json' ? decode : result === 'units' ? fromUnits : x => x
-  // An omitted structured argument is `undefined`, not a missing value.
-  const args = a => Array.from({ length: Math.max(a.length, structured.length) }, (_, i) => structured[i] ? encode(a[i]) : a[i])
+  const out = convert(result)
   module.exports[name] = isAsync
-    ? async (...a) => out(await call(...args(a)))
-    : (...a) => out(call(...args(a)))
+    ? async (...a) => out(await call(...prepare(a, structured)))
+    : (...a) => out(call(...prepare(a, structured)))
+}
+// Classes: a JS class around the native one, converting arguments and results.
+const INNER = Symbol('native')
+for (const [name, [ctor, methods]] of Object.entries(classes)) {
+  const Native = native[name]
+  const Wrapped = { [name]: class { constructor(...a) { this[INNER] = new Native(...prepare(a, ctor)) } } }[name]
+  for (const [method, [structured, result]] of Object.entries(methods)) {
+    const out = convert(result)
+    Wrapped.prototype[method] = function (...a) { return out(this[INNER][method](...prepare(a, structured))) }
+  }
+  module.exports[name] = Wrapped
 }
 "#;
 
@@ -621,11 +1026,9 @@ pub fn as_number(value: &serde_json::Value) -> Option<f64> {
 // ---- Cargo.toml ------------------------------------------------------------------------------
 
 /// Dependencies the bindings need, as `(name, TOML value)`.
-pub fn required_deps(kind: Kind, fns: &[PortFn]) -> Vec<(&'static str, String)> {
-    let json = fns
-        .iter()
-        .any(|f| wire(&f.ret) == Wire::Json || f.params.iter().any(|(_, t)| wire(t) == Wire::Json));
-    let any_async = fns.iter().any(|f| f.is_async);
+pub fn required_deps(kind: Kind, api: &PortApi) -> Vec<(&'static str, String)> {
+    let json = api.needs_json();
+    let any_async = api.all().any(|f| f.is_async);
     let mut deps = Vec::new();
     match kind {
         Kind::Napi => {
@@ -660,8 +1063,8 @@ pub fn required_deps(kind: Kind, fns: &[PortFn]) -> Vec<(&'static str, String)> 
     deps
 }
 
-pub fn cargo_toml(m: &Manifest, fns: &[PortFn]) -> String {
-    let deps: String = required_deps(m.kind, fns)
+pub fn cargo_toml(m: &Manifest, api: &PortApi) -> String {
+    let deps: String = required_deps(m.kind, api)
         .iter()
         .map(|(name, value)| format!("{name} = {value}\n"))
         .collect();
@@ -679,14 +1082,14 @@ pub fn cargo_toml(m: &Manifest, fns: &[PortFn]) -> String {
 }
 
 /// Adds missing required dependencies to an existing Cargo.toml, keeping everything else.
-pub fn ensure_deps(cargo: &str, kind: Kind, fns: &[PortFn]) -> Result<String, String> {
+pub fn ensure_deps(cargo: &str, kind: Kind, api: &PortApi) -> Result<String, String> {
     let mut doc: toml_edit::DocumentMut = cargo.parse().map_err(|e| format!("Cargo.toml: {e}"))?;
     let deps = doc
         .entry("dependencies")
         .or_insert_with(|| toml_edit::Item::Table(toml_edit::Table::new()))
         .as_table_mut()
         .ok_or("Cargo.toml: [dependencies] is not a table")?;
-    for (name, value) in required_deps(kind, fns) {
+    for (name, value) in required_deps(kind, api) {
         let wanted: toml_edit::Item = format!("x = {value}")
             .parse::<toml_edit::DocumentMut>()
             .map_err(|e| e.to_string())?["x"]
@@ -715,7 +1118,7 @@ mod tests {
             pub fn fuzzy_score(query: String, text: String) -> Result<f64, String> {\n    Ok(1.0)\n}\n\n\
             /// Port of `load` (`a.ts:9`).\npub async fn load(\n    path: Option<String>,\n    data: Vec<serde_json::Value>,\n) -> Result<serde_json::Value, String> {\n    todo!()\n}\n\n\
             fn helper(x: Vec<u8>) -> u8 { 0 }\n\npub fn plain_name(a: f64) -> Vec<u16> {\n    vec![]\n}\n";
-        let fns = parse_port(source);
+        let fns = parse_port(source).functions;
         assert_eq!(fns.len(), 3);
         assert_eq!(fns[0].js_name, "fuzzyScore");
         assert_eq!(

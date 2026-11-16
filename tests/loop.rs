@@ -261,3 +261,72 @@ fn async_functions_get_async_bindings() {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }
+
+#[test]
+fn classes_are_bridged_recorded_and_replayed() {
+    if !node_available() {
+        eprintln!("skipped: node not found");
+        return;
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/classes");
+    let dir = std::env::temp_dir().join(format!("carcinize-classes-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/stats.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+    })
+    .unwrap();
+    assert_eq!(outcome.exports, ["class TextStats", "class LruCache"]);
+    let manifest = Manifest::load(&dir).unwrap();
+    assert!(
+        manifest
+            .js_only
+            .iter()
+            .any(|j| j.name == "Blocked" && j.reason.contains("extends"))
+    );
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    assert!(port.contains("pub fn new(capacity: f64) -> Result<Self, String>"));
+    assert!(port.contains("pub fn get(&mut self, key: String) -> Result<Option<String>, String>"));
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(lib.contains("#[napi(constructor)]") && lib.contains("inner: port::LruCache"));
+
+    // Record scenarios (the TS uses parameter properties: Node needs to transform it).
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 150,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert_eq!(recorded.cases, 300);
+    // A JS stand-in with an LRU bug: `get` does not refresh recency.
+    std::fs::write(
+        dir.join("index.cjs"),
+        "class TextStats { constructor(s = '\\n') { this.s = s; this.w = 0; this.l = 0; this.long = '' }\n\
+         add(t) { const p = t.split(this.s); this.l += p.length; for (const x of p) for (const w of x.split(/\\s+/).filter(Boolean)) { this.w++; if (w.length > this.long.length) this.long = w } return this.w }\n\
+         stats() { return { words: this.w, lines: this.l } } longestWord() { return this.long } reset() { this.w = 0; this.l = 0; this.long = '' } }\n\
+         class LruCache { constructor(c) { if (!(c >= 1)) throw new RangeError('x'); this.c = c; this.m = new Map() }\n\
+         get(k) { return this.m.get(k) }\n\
+         set(k, v) { this.m.delete(k); this.m.set(k, v); const e = []; while (this.m.size > this.c) { const o = this.m.keys().next().value; this.m.delete(o); e.push(o) } return e }\n\
+         keys() { return [...this.m.keys()] } }\n\
+         module.exports = { TextStats, LruCache }\n",
+    )
+    .unwrap();
+    let diff = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(diff.failed > 0, "the recency bug must show up");
+    assert!(diff.mismatches.iter().all(|m| m["fn"] == "LruCache"));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
