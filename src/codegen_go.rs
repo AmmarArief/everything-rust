@@ -193,7 +193,7 @@ func carcinizeEncode(v any) any {
 "#;
 
 /// The wrapper package: the original package's API, each function calling the Rust library.
-pub fn wrapper(m: &Manifest) -> String {
+pub fn wrapper(m: &Manifest, api: &crate::codegen::PortApi) -> String {
     let lib = m.lib_name();
     let sources = unit_sources(m);
     let types = crate::lang::go::type_decls(&sources, &used_types(m));
@@ -202,12 +202,13 @@ pub fn wrapper(m: &Manifest) -> String {
          // function calling the Rust library. Regenerate with `carcinize refresh`.\n\
          package {pkg}\n\n\
          /*\n#cgo LDFLAGS: -L${{SRCDIR}}/../target/release -l{lib} -Wl,-rpath,${{SRCDIR}}/../target/release\n\
-         #include <stdlib.h>\n\
+         #include <stdbool.h>\n#include <stdint.h>\n#include <stdlib.h>\n\
          char *carcinize_call(const char *name, const char *args);\n\
-         void carcinize_free(char *ptr);\n*/\nimport \"C\"\n\n\
+         void carcinize_free(char *ptr);\n{typed_c}*/\nimport \"C\"\n\n\
          import (\n\t\"encoding/json\"\n\t\"errors\"\n\t\"math\"\n\t\"unsafe\"\n)\n",
         pkg = package_name(m),
         unit = m.unit,
+        typed_c = typed_prototypes(m, api),
     );
     for t in types {
         let _ = write!(out, "\n{t}\n");
@@ -255,7 +256,20 @@ func carcinizeMust(err error) {
 }
 "#,
     );
+    let typed_fns: Vec<&str> = api
+        .functions
+        .iter()
+        .filter(|f| typed(m, f).is_some())
+        .map(|f| f.js_name.as_str())
+        .collect();
+    if !typed_fns.is_empty() {
+        out.push_str(TYPED_HELPERS_GO);
+    }
     for f in &m.exports {
+        if typed_fns.contains(&f.name.as_str()) {
+            out.push_str(&typed_go(f));
+            continue;
+        }
         let (results, fallible) = results(f);
         let params: Vec<String> = f
             .params
@@ -332,6 +346,346 @@ func carcinizeMust(err error) {
         } else {
             let _ = writeln!(out, "\treturn {}\n}}", r.join(", "));
         }
+    }
+    out
+}
+
+// ---- typed calls: numbers, booleans and strings cross cgo without JSON ----------------------
+
+/// A Go type that crosses cgo directly: its C type, the port type it must match, the Rust
+/// parameter type, and how Go converts it back from C.
+struct Typed {
+    c: &'static str,
+    port: &'static str,
+    rust: &'static str,
+}
+
+fn typed_type(go: &str) -> Option<Typed> {
+    Some(match go.trim() {
+        "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "uint16" | "uint32" | "byte"
+        | "rune" => Typed {
+            c: "int64_t",
+            port: "i64",
+            rust: "i64",
+        },
+        "float64" | "float32" => Typed {
+            c: "double",
+            port: "f64",
+            rust: "f64",
+        },
+        "bool" => Typed {
+            c: "bool",
+            port: "bool",
+            rust: "bool",
+        },
+        "string" => Typed {
+            c: "string",
+            port: "String",
+            rust: "String",
+        },
+        _ => return None,
+    })
+}
+
+/// Whether a function crosses as a typed cgo call: typed parameters, and no result, one typed
+/// result, or one with a trailing `error`; the port kept the matching Rust types.
+fn typed<'m>(m: &'m Manifest, f: &crate::codegen::PortFn) -> Option<&'m ExportedFn> {
+    let e = m.exports.iter().find(|e| e.name == f.js_name)?;
+    if e.params.len() != f.params.len() {
+        return None;
+    }
+    for (p, (_, port)) in e.params.iter().zip(&f.params) {
+        if typed_type(p.native_type.as_deref()?)?.port != port {
+            return None;
+        }
+    }
+    let (results, _) = results(e);
+    match results.as_slice() {
+        [] => (f.ret == "()").then_some(e),
+        [r] => (typed_type(r)?.port == f.ret).then_some(e),
+        _ => None,
+    }
+}
+
+/// C prototypes of the typed functions, for the cgo preamble.
+fn typed_prototypes(m: &Manifest, api: &crate::codegen::PortApi) -> String {
+    let mut out = String::new();
+    for f in &api.functions {
+        let Some(e) = typed(m, f) else { continue };
+        let mut params: Vec<String> = Vec::new();
+        for p in &e.params {
+            let t = typed_type(p.native_type.as_deref().unwrap_or_default()).expect("typed");
+            if t.c == "string" {
+                params.push(format!("const uint8_t *{0}_ptr, size_t {0}_len", p.name));
+            } else {
+                params.push(format!("{} {}", t.c, p.name));
+            }
+        }
+        match results(e).0.first().and_then(|r| typed_type(r)) {
+            Some(t) if t.c == "string" => {
+                params.push("uint8_t *out, size_t out_cap, size_t *out_len".into())
+            }
+            Some(t) => params.push(format!("{} *out", t.c)),
+            None => {}
+        }
+        params.push("char **err".into());
+        let _ = writeln!(out, "int carcinize_t_{}({});", f.js_name, params.join(", "));
+    }
+    out
+}
+
+const TYPED_HELPERS_GO: &str = r#"
+// carcinizeStr is a string's bytes for C, without copying; nil for "".
+func carcinizeStr(s string) *C.uint8_t {
+	if len(s) == 0 {
+		return nil
+	}
+	return (*C.uint8_t)(unsafe.Pointer(unsafe.StringData(s)))
+}
+
+// carcinizeErr takes the error message the Rust side allocated.
+func carcinizeErr(p *C.char) string {
+	msg := C.GoString(p)
+	C.carcinize_free(p)
+	return msg
+}
+"#;
+
+/// The Go wrapper function of a typed export: one cgo call, retried once with a bigger buffer
+/// when a string result does not fit.
+fn typed_go(e: &ExportedFn) -> String {
+    let (results, fallible) = results(e);
+    let result = results.first().cloned();
+    let params: Vec<String> = e
+        .params
+        .iter()
+        .map(|p| {
+            format!(
+                "{} {}",
+                p.name,
+                p.native_type.as_deref().unwrap_or_default()
+            )
+        })
+        .collect();
+    let mut sig_results: Vec<String> = result.iter().cloned().collect();
+    if fallible {
+        sig_results.push("error".into());
+    }
+    let ret = match sig_results.len() {
+        0 => String::new(),
+        1 => format!(" {}", sig_results[0]),
+        _ => format!(" ({})", sig_results.join(", ")),
+    };
+    let mut args: Vec<String> = Vec::new();
+    for p in &e.params {
+        let t = typed_type(p.native_type.as_deref().unwrap_or_default()).expect("typed");
+        match t.c {
+            "string" => {
+                args.push(format!("carcinizeStr({})", p.name));
+                args.push(format!("C.size_t(len({}))", p.name));
+            }
+            "int64_t" => args.push(format!("C.int64_t({})", p.name)),
+            "double" => args.push(format!("C.double({})", p.name)),
+            _ => args.push(format!("C.bool({})", p.name)),
+        }
+    }
+    let rt = result.as_deref().and_then(typed_type);
+    let mut body = String::new();
+    let zero = match (&result, rt.as_ref().map(|t| t.c)) {
+        (_, Some("string")) => "\"\"".to_string(),
+        (_, Some("bool")) => "false".to_string(),
+        (Some(_), _) => "0".to_string(),
+        _ => String::new(),
+    };
+    let fail = |body: &mut String| {
+        if fallible {
+            let ret = if zero.is_empty() {
+                "errors.New(carcinizeErr(errp))".to_string()
+            } else {
+                format!("{zero}, errors.New(carcinizeErr(errp))")
+            };
+            let _ = writeln!(body, "\tif status == 1 {{\n\t\treturn {ret}\n\t}}");
+        } else {
+            let _ = writeln!(
+                body,
+                "\tif status == 1 {{\n\t\tpanic(carcinizeErr(errp))\n\t}}"
+            );
+        }
+    };
+    body.push_str("\tvar errp *C.char\n");
+    let ok_tail = if fallible { ", nil" } else { "" };
+    match rt.as_ref().map(|t| t.c) {
+        Some("string") => {
+            let call = |buf: &str| {
+                let mut a = args.clone();
+                a.push(format!("(*C.uint8_t)(unsafe.Pointer(&{buf}[0]))"));
+                a.push(format!("C.size_t(len({buf}))"));
+                a.push("&n".into());
+                a.push("&errp".into());
+                format!("C.carcinize_t_{}({})", e.name, a.join(", "))
+            };
+            let _ = writeln!(
+                body,
+                "\tvar stack [256]byte\n\tbuf := stack[:]\n\tvar n C.size_t\n\tstatus := {}",
+                call("buf")
+            );
+            let _ = writeln!(
+                body,
+                "\tif status == 2 {{\n\t\tbuf = make([]byte, int(n))\n\t\tstatus = {}\n\t}}",
+                call("buf")
+            );
+            fail(&mut body);
+            let _ = writeln!(body, "\treturn string(buf[:n]){ok_tail}");
+        }
+        Some(c) => {
+            let ty = match c {
+                "int64_t" => "C.int64_t",
+                "double" => "C.double",
+                _ => "C.bool",
+            };
+            let mut a = args.clone();
+            a.push("&out".into());
+            a.push("&errp".into());
+            let _ = writeln!(
+                body,
+                "\tvar out {ty}\n\tstatus := C.carcinize_t_{}({})",
+                e.name,
+                a.join(", ")
+            );
+            fail(&mut body);
+            let _ = writeln!(
+                body,
+                "\treturn {}(out){ok_tail}",
+                result.as_deref().unwrap_or_default()
+            );
+        }
+        None => {
+            let mut a = args.clone();
+            a.push("&errp".into());
+            let _ = writeln!(
+                body,
+                "\tstatus := C.carcinize_t_{}({})",
+                e.name,
+                a.join(", ")
+            );
+            fail(&mut body);
+            if fallible {
+                body.push_str("\treturn nil\n");
+            }
+        }
+    }
+    format!(
+        "\n// {} is the Rust port of `{}` (`{}:{}`): a typed call, no JSON.\nfunc {}({}){ret} {{\n{body}}}\n",
+        e.name,
+        e.prototype.as_deref().unwrap_or(&e.name),
+        e.file,
+        e.line,
+        e.name,
+        params.join(", ")
+    )
+}
+
+/// The typed `extern "C"` functions for `lib.rs`. Status: 0 ok, 1 error (message in `err`,
+/// freed with `carcinize_free`), 2 the string result needs `*out_len` bytes.
+pub fn typed_rs(m: &Manifest, api: &crate::codegen::PortApi) -> String {
+    let mut out = String::from(
+        r#"
+/// The port's result, or its error message; a panic becomes an error.
+fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
+        let text = panic
+            .downcast_ref::<&str>()
+            .map(ToString::to_string)
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        Err(format!("Rust panic: {text}"))
+    })
+}
+
+/// A Go string argument.
+///
+/// # Safety
+///
+/// `ptr` points at `len` readable bytes, or `len` is 0.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn go_str(ptr: *const u8, len: usize) -> String {
+    if len == 0 {
+        return String::new();
+    }
+    // SAFETY: the caller passes a Go string's bytes and its length (see above).
+    String::from_utf8_lossy(unsafe { std::slice::from_raw_parts(ptr, len) }).into_owned()
+}
+
+/// Reports an error through `err`.
+///
+/// # Safety
+///
+/// `err` is a valid pointer to write to.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
+    let message = CString::new(message.replace('\0', " ")).unwrap_or_default();
+    // SAFETY: `err` is a valid out-pointer (see above).
+    unsafe { *err = message.into_raw() };
+    1
+}
+"#,
+    );
+    for f in &api.functions {
+        let Some(e) = typed(m, f) else { continue };
+        let mut params = Vec::new();
+        let mut convert = String::new();
+        let mut args = Vec::new();
+        for (p, (name, _)) in e.params.iter().zip(&f.params) {
+            let t = typed_type(p.native_type.as_deref().unwrap_or_default()).expect("typed");
+            if t.c == "string" {
+                params.push(format!("{name}_ptr: *const u8, {name}_len: usize"));
+                let _ = writeln!(
+                    convert,
+                    "    // SAFETY: Go passes the string's bytes and length.\n    let {name} = unsafe {{ go_str({name}_ptr, {name}_len) }};"
+                );
+            } else {
+                params.push(format!("{name}: {}", t.rust));
+            }
+            args.push(name.clone());
+        }
+        let rt = results(e).0.first().and_then(|r| typed_type(r));
+        match rt.as_ref().map(|t| t.c) {
+            Some("string") => {
+                params.push("out: *mut u8, out_cap: usize, out_len: *mut usize".into())
+            }
+            Some(_) => params.push(format!(
+                "out: *mut {}",
+                rt.as_ref().map_or("i64", |t| t.rust)
+            )),
+            None => {}
+        }
+        params.push("err: *mut *mut c_char".into());
+        let call = format!("port::{}({})", f.rust_name, args.join(", "));
+        let call = if f.fallible {
+            call
+        } else {
+            format!("Ok({call})")
+        };
+        let ok = match rt.as_ref().map(|t| t.c) {
+            Some("string") => "{\n            let bytes = value.as_bytes();\n            \
+                // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.\n            \
+                unsafe {\n                *out_len = bytes.len();\n                if bytes.len() > out_cap {\n                    \
+                return 2;\n                }\n                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());\n            }\n            0\n        }".to_string(),
+            Some(_) => "{\n            // SAFETY: Go passes a valid `out`.\n            unsafe { *out = value };\n            0\n        }".to_string(),
+            None => "{\n            let () = value;\n            0\n        }".to_string(),
+        };
+        let _ = writeln!(
+            out,
+            "\n/// `{proto}`: a typed call.\n///\n/// # Safety\n///\n/// Called by the generated Go wrapper with valid pointers.\n\
+             // SAFETY: exported unmangled under a name only carcinize defines.\n#[unsafe(no_mangle)]\n\
+             // SAFETY: callers uphold the contract under `# Safety`.\n\
+             pub unsafe extern \"C\" fn carcinize_t_{name}({params}) -> i32 {{\n{convert}    \
+             match run(|| {call}) {{\n        Ok(value) => {ok}\n        \
+             // SAFETY: Go passes a valid `err`.\n        Err(message) => unsafe {{ fail(err, message) }},\n    }}\n}}",
+            proto = e.prototype.as_deref().unwrap_or(&e.name),
+            name = f.js_name,
+            params = params.join(", "),
+        );
     }
     out
 }

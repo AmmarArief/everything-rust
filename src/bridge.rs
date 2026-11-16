@@ -1050,6 +1050,9 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
         if m.language == crate::lang::Lang::Java {
             lib.push_str(&crate::codegen_java::typed_rs(m, api));
         }
+        if m.language == crate::lang::Lang::Go {
+            lib.push_str(&crate::codegen_go::typed_rs(m, api));
+        }
         vec![("src/lib.rs".to_string(), lib)]
     };
     match m.language {
@@ -1057,7 +1060,7 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
             files.push(("go/go.mod".into(), crate::harness_go::wrapper_go_mod(m)));
             files.push((
                 format!("go/{}.go", crate::codegen_go::package_name(m)),
-                crate::codegen_go::wrapper(m),
+                crate::codegen_go::wrapper(m, api),
             ));
         }
         crate::lang::Lang::Ruby => {

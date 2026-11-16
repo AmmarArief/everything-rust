@@ -4,9 +4,17 @@ package path
 
 /*
 #cgo LDFLAGS: -L${SRCDIR}/../target/release -lpath_rs -Wl,-rpath,${SRCDIR}/../target/release
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 char *carcinize_call(const char *name, const char *args);
 void carcinize_free(char *ptr);
+int carcinize_t_Match(const uint8_t *pattern_ptr, size_t pattern_len, const uint8_t *name_ptr, size_t name_len, bool *out, char **err);
+int carcinize_t_Clean(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_t_Ext(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_t_Base(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_t_IsAbs(const uint8_t *path_ptr, size_t path_len, bool *out, char **err);
+int carcinize_t_Dir(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 */
 import "C"
 
@@ -107,25 +115,47 @@ func carcinizeMust(err error) {
 	}
 }
 
-// Match is the Rust port of `func Match(pattern, name string) (matched bool, err error)` (`path/match.go:37`).
-func Match(pattern string, name string) (bool, error) {
-	raw, err := carcinizeCall("Match", pattern, name)
-	if err != nil {
-		var r0 bool
-		return r0, err
+// carcinizeStr is a string's bytes for C, without copying; nil for "".
+func carcinizeStr(s string) *C.uint8_t {
+	if len(s) == 0 {
+		return nil
 	}
-	var r0 bool
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0, nil
+	return (*C.uint8_t)(unsafe.Pointer(unsafe.StringData(s)))
 }
 
-// Clean is the Rust port of `func Clean(path string) string` (`path/path.go:72`).
+// carcinizeErr takes the error message the Rust side allocated.
+func carcinizeErr(p *C.char) string {
+	msg := C.GoString(p)
+	C.carcinize_free(p)
+	return msg
+}
+
+// Match is the Rust port of `func Match(pattern, name string) (matched bool, err error)` (`path/match.go:37`): a typed call, no JSON.
+func Match(pattern string, name string) (bool, error) {
+	var errp *C.char
+	var out C.bool
+	status := C.carcinize_t_Match(carcinizeStr(pattern), C.size_t(len(pattern)), carcinizeStr(name), C.size_t(len(name)), &out, &errp)
+	if status == 1 {
+		return false, errors.New(carcinizeErr(errp))
+	}
+	return bool(out), nil
+}
+
+// Clean is the Rust port of `func Clean(path string) string` (`path/path.go:72`): a typed call, no JSON.
 func Clean(path string) string {
-	raw, err := carcinizeCall("Clean", path)
-	carcinizeMust(err)
-	var r0 string
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
+	var errp *C.char
+	var stack [256]byte
+	buf := stack[:]
+	var n C.size_t
+	status := C.carcinize_t_Clean(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	if status == 2 {
+		buf = make([]byte, int(n))
+		status = C.carcinize_t_Clean(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return string(buf[:n])
 }
 
 // Split is the Rust port of `func Split(path string) (dir, file string)` (`path/path.go:145`).
@@ -144,38 +174,64 @@ func Split(path string) (string, string) {
 	return r0, r1
 }
 
-// Ext is the Rust port of `func Ext(path string) string` (`path/path.go:179`).
+// Ext is the Rust port of `func Ext(path string) string` (`path/path.go:179`): a typed call, no JSON.
 func Ext(path string) string {
-	raw, err := carcinizeCall("Ext", path)
-	carcinizeMust(err)
-	var r0 string
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
+	var errp *C.char
+	var stack [256]byte
+	buf := stack[:]
+	var n C.size_t
+	status := C.carcinize_t_Ext(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	if status == 2 {
+		buf = make([]byte, int(n))
+		status = C.carcinize_t_Ext(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return string(buf[:n])
 }
 
-// Base is the Rust port of `func Base(path string) string` (`path/path.go:192`).
+// Base is the Rust port of `func Base(path string) string` (`path/path.go:192`): a typed call, no JSON.
 func Base(path string) string {
-	raw, err := carcinizeCall("Base", path)
-	carcinizeMust(err)
-	var r0 string
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
+	var errp *C.char
+	var stack [256]byte
+	buf := stack[:]
+	var n C.size_t
+	status := C.carcinize_t_Base(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	if status == 2 {
+		buf = make([]byte, int(n))
+		status = C.carcinize_t_Base(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return string(buf[:n])
 }
 
-// IsAbs is the Rust port of `func IsAbs(path string) bool` (`path/path.go:212`).
+// IsAbs is the Rust port of `func IsAbs(path string) bool` (`path/path.go:212`): a typed call, no JSON.
 func IsAbs(path string) bool {
-	raw, err := carcinizeCall("IsAbs", path)
-	carcinizeMust(err)
-	var r0 bool
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
+	var errp *C.char
+	var out C.bool
+	status := C.carcinize_t_IsAbs(carcinizeStr(path), C.size_t(len(path)), &out, &errp)
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return bool(out)
 }
 
-// Dir is the Rust port of `func Dir(path string) string` (`path/path.go:223`).
+// Dir is the Rust port of `func Dir(path string) string` (`path/path.go:223`): a typed call, no JSON.
 func Dir(path string) string {
-	raw, err := carcinizeCall("Dir", path)
-	carcinizeMust(err)
-	var r0 string
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
+	var errp *C.char
+	var stack [256]byte
+	buf := stack[:]
+	var n C.size_t
+	status := C.carcinize_t_Dir(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	if status == 2 {
+		buf = make([]byte, int(n))
+		status = C.carcinize_t_Dir(carcinizeStr(path), C.size_t(len(path)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return string(buf[:n])
 }

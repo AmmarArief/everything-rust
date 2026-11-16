@@ -150,3 +150,244 @@ pub unsafe extern "C" fn carcinize_free(ptr: *mut c_char) {
         drop(unsafe { CString::from_raw(ptr) });
     }
 }
+
+/// The port's result, or its error message; a panic becomes an error.
+fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
+        let text = panic
+            .downcast_ref::<&str>()
+            .map(ToString::to_string)
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        Err(format!("Rust panic: {text}"))
+    })
+}
+
+/// A Go string argument.
+///
+/// # Safety
+///
+/// `ptr` points at `len` readable bytes, or `len` is 0.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn go_str(ptr: *const u8, len: usize) -> String {
+    if len == 0 {
+        return String::new();
+    }
+    // SAFETY: the caller passes a Go string's bytes and its length (see above).
+    String::from_utf8_lossy(unsafe { std::slice::from_raw_parts(ptr, len) }).into_owned()
+}
+
+/// Reports an error through `err`.
+///
+/// # Safety
+///
+/// `err` is a valid pointer to write to.
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
+    let message = CString::new(message.replace('\0', " ")).unwrap_or_default();
+    // SAFETY: `err` is a valid out-pointer (see above).
+    unsafe { *err = message.into_raw() };
+    1
+}
+
+/// `func Match(pattern, name string) (matched bool, err error)`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Match(
+    pattern_ptr: *const u8,
+    pattern_len: usize,
+    name_ptr: *const u8,
+    name_len: usize,
+    out: *mut bool,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let pattern = unsafe { go_str(pattern_ptr, pattern_len) };
+    // SAFETY: Go passes the string's bytes and length.
+    let name = unsafe { go_str(name_ptr, name_len) };
+    match run(|| port::r#match(pattern, name)) {
+        Ok(value) => {
+            // SAFETY: Go passes a valid `out`.
+            unsafe { *out = value };
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func Clean(path string) string`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Clean(
+    path_ptr: *const u8,
+    path_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let path = unsafe { go_str(path_ptr, path_len) };
+    match run(|| port::clean(path)) {
+        Ok(value) => {
+            let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func Ext(path string) string`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Ext(
+    path_ptr: *const u8,
+    path_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let path = unsafe { go_str(path_ptr, path_len) };
+    match run(|| port::ext(path)) {
+        Ok(value) => {
+            let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func Base(path string) string`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Base(
+    path_ptr: *const u8,
+    path_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let path = unsafe { go_str(path_ptr, path_len) };
+    match run(|| port::base(path)) {
+        Ok(value) => {
+            let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func IsAbs(path string) bool`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_IsAbs(
+    path_ptr: *const u8,
+    path_len: usize,
+    out: *mut bool,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let path = unsafe { go_str(path_ptr, path_len) };
+    match run(|| port::is_abs(path)) {
+        Ok(value) => {
+            // SAFETY: Go passes a valid `out`.
+            unsafe { *out = value };
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func Dir(path string) string`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Dir(
+    path_ptr: *const u8,
+    path_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let path = unsafe { go_str(path_ptr, path_len) };
+    match run(|| port::dir(path)) {
+        Ok(value) => {
+            let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
