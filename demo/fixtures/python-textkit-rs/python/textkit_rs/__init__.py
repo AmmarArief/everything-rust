@@ -88,19 +88,12 @@ def _method(name, positions, names, json_result):
     return call
 
 slugify = _native.slugify
-word_counts = _wrap(_native.word_counts, (), (), True)
-chunk = _wrap(_native.chunk, (), (), True)
+word_counts = _native.word_counts
+chunk = _native.chunk
 page_count = _native.page_count
 mean = _native.mean
+Stack = _native.Stack
+SlugifyBatch = _native.SlugifyBatch
+PageCountBatch = _native.PageCountBatch
 
-class Stack:
-    def __init__(self, *args, **kwargs):
-        args, kwargs = _encode_args(args, kwargs, (), ())
-        self._inner = _native.Stack(*args, **kwargs)
-    push = _method('push', (), (), False)
-    pop = _method('pop', (), (), False)
-    peek = _method('peek', (), (), False)
-    size = _method('size', (), (), False)
-
-
-__all__ = ['slugify', 'word_counts', 'chunk', 'page_count', 'mean', 'Stack']
+__all__ = ['slugify', 'word_counts', 'chunk', 'page_count', 'mean', 'Stack', 'SlugifyBatch', 'PageCountBatch']

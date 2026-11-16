@@ -5,6 +5,11 @@ use pyo3::prelude::*;
 
 pub mod js;
 pub mod port;
+pub mod pyconv;
+pub mod pynum;
+
+#[allow(unused_imports)]
+use pynum::Num;
 
 fn error(message: String) -> PyErr {
     use pyo3::exceptions as e;
@@ -43,28 +48,32 @@ fn slugify(text: String, sep: Option<String>, max_length: Option<i64>) -> PyResu
     slugify_inner(text, sep, max_length).map_err(error)
 }
 
-fn word_counts_inner(text: String, min_length: i64) -> Result<String, String> {
+fn word_counts_inner(text: String, min_length: i64) -> Result<serde_json::Value, String> {
     let out = port::word_counts(text, min_length)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `word_counts`.
 #[pyfunction]
 #[pyo3(name = "word_counts", signature = (text, min_length=1))]
-fn word_counts(text: String, min_length: i64) -> PyResult<String> {
-    word_counts_inner(text, min_length).map_err(error)
+fn word_counts(py: Python<'_>, text: String, min_length: i64) -> PyResult<Py<PyAny>> {
+    word_counts_inner(text, min_length)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
-fn chunk_inner(items: Vec<i64>, size: i64) -> Result<String, String> {
+fn chunk_inner(items: Vec<i64>, size: i64) -> Result<Vec<Vec<i64>>, String> {
     let out = port::chunk(items, size)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `chunk`.
 #[pyfunction]
 #[pyo3(name = "chunk", signature = (items, size))]
-fn chunk(items: Vec<i64>, size: i64) -> PyResult<String> {
-    chunk_inner(items, size).map_err(error)
+fn chunk(py: Python<'_>, items: Vec<i64>, size: i64) -> PyResult<Py<PyAny>> {
+    chunk_inner(items, size)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
 fn page_count_inner(total: i64, per_page: i64) -> Result<i64, String> {
@@ -153,6 +162,114 @@ impl Stack {
     }
 }
 
+/// The items of `SlugifyBatch` as the port takes them; the port runs per item. Define
+/// `pub struct SlugifyIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct SlugifyDefaultIndex {
+    items: Vec<String>,
+}
+
+impl SlugifyDefaultIndex {
+    pub fn new(items: Vec<String>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self, sep: Option<String>, max_length: Option<i64>) -> Result<Vec<String>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::slugify(item.clone(), sep.clone(), max_length))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// `slugify` over many `text` values kept in Rust: `run` maps them all in one call, on all
+/// cores, without the GIL; `rank` returns the indexes of results >= `min`, best first.
+#[pyclass(name = "SlugifyBatch")]
+pub struct SlugifyBatch {
+    inner: SlugifyDefaultIndex,
+}
+
+#[pymethods]
+impl SlugifyBatch {
+    #[new]
+    fn new(items: Vec<String>) -> Self {
+        Self {
+            inner: SlugifyDefaultIndex::new(items),
+        }
+    }
+
+    /// The result for every item, in order.
+    fn run(
+        &self,
+        py: Python<'_>,
+        sep: Option<String>,
+        max_length: Option<i64>,
+    ) -> PyResult<Vec<String>> {
+        py.detach(|| self.inner.run(sep, max_length)).map_err(error)
+    }
+}
+
+/// The items of `PageCountBatch` as the port takes them; the port runs per item. Define
+/// `pub struct PageCountIndex` in `port.rs` (with `new` and `run`) to prepare items once.
+pub struct PageCountDefaultIndex {
+    items: Vec<i64>,
+}
+
+impl PageCountDefaultIndex {
+    pub fn new(items: Vec<i64>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self, per_page: i64) -> Result<Vec<i64>, String> {
+        use rayon::prelude::*;
+        self.items
+            .par_iter()
+            .map(|item| port::page_count(*item, per_page))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// `page_count` over many `total` values kept in Rust: `run` maps them all in one call, on all
+/// cores, without the GIL; `rank` returns the indexes of results >= `min`, best first.
+#[pyclass(name = "PageCountBatch")]
+pub struct PageCountBatch {
+    inner: PageCountDefaultIndex,
+}
+
+#[pymethods]
+impl PageCountBatch {
+    #[new]
+    fn new(items: Vec<i64>) -> Self {
+        Self {
+            inner: PageCountDefaultIndex::new(items),
+        }
+    }
+
+    /// The result for every item, in order.
+    fn run(&self, py: Python<'_>, per_page: i64) -> PyResult<Vec<i64>> {
+        py.detach(|| self.inner.run(per_page)).map_err(error)
+    }
+
+    /// Indexes of the items whose result is at least `min`, highest result first.
+    fn rank(&self, py: Python<'_>, per_page: i64, min: f64) -> PyResult<Vec<u32>> {
+        let out = py.detach(|| self.inner.run(per_page)).map_err(error)?;
+        let mut hits: Vec<(f64, u32)> = out
+            .into_iter()
+            .enumerate()
+            .map(|(i, r)| (r as f64, u32::try_from(i).unwrap_or(u32::MAX)))
+            .filter(|(r, _)| *r >= min)
+            .collect();
+        // Stable: equal results keep the items' order, as JS `sort` and Python `sorted` do.
+        hits.sort_by(|a, b| b.0.total_cmp(&a.0));
+        let order: Vec<u32> = hits.into_iter().map(|(_, i)| i).collect();
+        Ok(order)
+    }
+}
+
 #[pymodule]
 #[pyo3(name = "_native")]
 fn native_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -162,5 +279,7 @@ fn native_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(page_count, m)?)?;
     m.add_function(wrap_pyfunction!(mean, m)?)?;
     m.add_class::<Stack>()?;
+    m.add_class::<SlugifyBatch>()?;
+    m.add_class::<PageCountBatch>()?;
     Ok(())
 }

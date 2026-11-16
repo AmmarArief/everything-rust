@@ -53,6 +53,26 @@ What decides it:
 - **C**: there is no crossing; the Rust code is compared with the C code directly, and the result
   is a property of the port.
 
+### Batches: x18n's search
+
+The leaf ports above are measured per call. On x18n's sidebar search (50,000 keys, typed letter
+by letter), `carcinize profile` showed `fuzzyScore` at about a quarter of the run, called once per key by
+`matched`, and suggested `--batch fuzzyScore:text`. The generated `FuzzyScoreBatch` keeps the
+keys in Rust; a `FuzzyScoreIndex` in `port.rs` lowercases them to UTF-16 once and keeps a 64-bit
+mask of the code units in each key, so most keys that cannot match are skipped unread. Results
+are identical to the TS pipeline for every query:
+
+| | ms per query | vs TS |
+| --- | ---: | ---: |
+| TS pipeline | 8.5 | 1x |
+| Batch, default index (port per item, 4 cores) | 5.1 | 1.7x |
+| Batch with `FuzzyScoreIndex`, napi, 4 cores | 1.2 | 7.0x |
+| Batch with `FuzzyScoreIndex`, wasm, 1 thread | 3.0 | 2.9x |
+
+Of the 1.2 ms, 0.4 ms is JS turning the returned indexes back into keys; the Rust ranking alone is
+10x faster than the TS pipeline. A Python batch over the fixture's `slugify` is 14.5x faster
+than calling it per item, raising the same exceptions.
+
 ## What the runs found
 
 ### Bugs in carcinize, fixed

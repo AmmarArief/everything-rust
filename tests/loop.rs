@@ -34,6 +34,7 @@ fn bridged(name: &str) -> PathBuf {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     dir
@@ -81,6 +82,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     });
     assert!(again.unwrap_err().to_string().contains("never overwrites"));
     let blocked = bridge::bridge(&bridge::Options {
@@ -92,6 +94,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     });
     assert!(blocked.unwrap_err().to_string().contains("Blocked"));
     std::fs::remove_dir_all(&dir).unwrap();
@@ -207,6 +210,7 @@ fn record_follows_bundler_style_imports() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -239,6 +243,7 @@ fn async_functions_get_async_bindings() {
             force: false,
             keep: Vec::new(),
             lang: None,
+            batch: Vec::new(),
         })
         .unwrap();
         let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -286,6 +291,7 @@ fn classes_are_bridged_recorded_and_replayed() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.exports, ["class TextStats", "class LruCache"]);
@@ -362,6 +368,7 @@ fn tsconfig_aliases_are_followed() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -395,6 +402,7 @@ fn record_resolves_workspace_packages_to_source() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -431,6 +439,7 @@ fn python_modules_bridge_record_and_diff() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Pyo3);
@@ -514,6 +523,7 @@ fn c_units_bridge_record_and_diff() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::CAbi);
@@ -590,6 +600,7 @@ fn go_packages_bridge_record_and_diff() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -656,6 +667,7 @@ fn ruby_modules_bridge_record_and_diff() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -723,6 +735,7 @@ fn java_classes_bridge_record_and_diff() {
         force: false,
         keep: Vec::new(),
         lang: None,
+        batch: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -765,4 +778,51 @@ fn java_classes_bridge_record_and_diff() {
     assert_eq!(diff.passed, 0, "{diff:?}");
     assert_eq!(diff.total, recorded.cases);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn batches_keep_items_in_rust() {
+    let dir = bridged("batch");
+    std::fs::write(
+        dir.join("src/port.rs"),
+        "pub fn range_of(text: String, word: String) -> Result<serde_json::Value, String> { let _ = (text, word); Ok(serde_json::Value::Null) }\n\
+         pub fn words(text: String) -> Vec<String> { vec![text] }\n\
+         pub fn count(text: String) -> f64 { text.matches(' ').count() as f64 }\n",
+    )
+    .unwrap();
+    // Structured results cannot be batched, and a refused batch leaves the crate as it was.
+    let refused = bridge::add_batches(&dir, &["rangeOf:text".into()]).unwrap_err();
+    assert!(
+        format!("{refused:#}").contains("numbers, booleans or strings"),
+        "{refused:#}"
+    );
+    assert!(Manifest::load(&dir).unwrap().batches.is_empty());
+    assert!(bridge::add_batches(&dir, &["count:nope".into()]).is_err());
+
+    bridge::add_batches(&dir, &["count:text".into()]).unwrap();
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(lib.contains("#[napi(js_name = \"CountBatch\")]"), "{lib}");
+    assert!(lib.contains("pub struct CountDefaultIndex"));
+    assert!(lib.contains("par_iter()"), "napi batches run on all cores");
+    assert!(
+        lib.contains("Float64Array"),
+        "number results cross as one typed array"
+    );
+    assert!(lib.contains("pub fn rank("));
+    let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
+    assert!(cargo.contains("rayon"));
+
+    // An index in port.rs replaces the default one.
+    let mut port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    port.push_str(
+        "pub struct CountIndex(Vec<String>);\n\
+         impl CountIndex {\n    pub fn new(items: Vec<String>) -> Self { Self(items) }\n    \
+         pub fn run(&self) -> Result<Vec<f64>, String> { Ok(self.0.iter().map(|t| count(t.clone())).collect()) }\n}\n",
+    );
+    std::fs::write(dir.join("src/port.rs"), port).unwrap();
+    bridge::refresh(&dir).unwrap();
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(lib.contains("inner: port::CountIndex,"));
+    assert!(!lib.contains("CountDefaultIndex"));
+    std::fs::remove_dir_all(&dir).unwrap();
 }

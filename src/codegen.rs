@@ -41,6 +41,8 @@ pub struct PortClass {
 pub struct PortApi {
     pub functions: Vec<PortFn>,
     pub classes: Vec<PortClass>,
+    /// Every `pub struct` of `port.rs` (a batch uses `<Name>Index` when the port defines one).
+    pub structs: Vec<String>,
 }
 
 impl PortApi {
@@ -237,6 +239,15 @@ pub fn parse_port(source: &str) -> PortApi {
     let mut api = PortApi {
         functions: functions_in(&lines, ""),
         classes: Vec::new(),
+        structs: lines
+            .iter()
+            .filter_map(|l| l.trim_start().strip_prefix("pub struct "))
+            .map(|r| {
+                r.chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect()
+            })
+            .collect(),
     };
     for (i, line) in lines.iter().enumerate() {
         let Some(rest) = line.strip_prefix("pub struct ") else {

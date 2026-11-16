@@ -375,6 +375,19 @@ pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
         out.push_str("}\n");
         registrations.push(format!("    m.add_class::<{name}>()?;"));
     }
+    if !m.batches.is_empty() {
+        match crate::codegen_batch::py_rs(m, api) {
+            Ok((code, classes)) => {
+                out.push_str(&code);
+                for c in classes {
+                    registrations.push(format!("    m.add_class::<{c}>()?;"));
+                }
+            }
+            Err(e) => {
+                let _ = writeln!(out, "\ncompile_error!({e:?});");
+            }
+        }
+    }
     let _ = writeln!(
         out,
         "\n#[pymodule]\n#[pyo3(name = \"_native\")]\nfn native_module(m: &Bound<'_, PyModule>) -> PyResult<()> {{\n{}\n    Ok(())\n}}",
@@ -474,6 +487,11 @@ pub fn package_init(m: &Manifest, api: &PortApi) -> String {
             );
         }
         names.push(c.js_name.clone());
+    }
+    for b in &m.batches {
+        let class = format!("{}Batch", crate::codegen_batch::pascal(&b.function));
+        let _ = writeln!(out, "{class} = _native.{class}");
+        names.push(class);
     }
     let _ = writeln!(
         out,

@@ -79,15 +79,19 @@ Choices made so far, with reasons. Each one can be revisited.
 | S5 | Go and Java: types beyond numbers, booleans and strings (lists, arrays, maps, structs, boxed and optional values, several results) cross as a compact binary wire, with encoders and decoders generated per type on both sides; the JSON dispatcher is only the fallback for types the wire cannot express. | `encoding/json` and the Java JSON codec cost 5-8 µs per call; the wire costs 0.4-1 µs, and a Java `List<String>` function became faster than Java. |
 | S6 | Java ports report errors through a per-thread `String[2]` slot passed with each call; the generated Java throws the exception (constructors cached as method handles). Native code throws only for null arguments. | An exception raised from JNI costs about 1.5 µs more than one thrown in Java: the JVM unwinds the calling compiled frame on a slow path. A throwing `parseRadix` went from 3.0 to 1.8 µs; calls that succeed cost the same. |
 | S7 | TS (napi-rs and wasm-bindgen): synchronous functions with structured arguments or results get generated JS encoders and decoders over two buffers registered once (napi) or wasm memory (wasm). Objects travel by field index in the caller's key order, strings as UTF-16, unmodeled types as tagged values. Arguments of another shape, and port results that do not fit the TS type, send that call through JSON. | napi's own object conversion is 2-3x slower than JSON (one napi call per property); a hand-written wire prototype was 6-7x faster. Across the nine x18n core units the bridge cost fell by a third on average and `buildTree` became 2x faster than TS; the other leaf functions stay slower than V8's JIT. |
+| S8 | `profile` runs a real workload under the language's own profiler (`node --cpu-prof`, `cProfile`) and ranks the repository's functions by inclusive time, with callers and the argument that varies per call. | Which code to port is a property of how it is called, not of the code: x18n's `fuzzyScore` is a leaf (slower in Rust per call) but a quarter of a search, called 50,000 times by one loop. |
+| S9 | Batch classes (`--batch fn:param`): the items cross once, then `run` maps the function over all of them and `rank` returns the indexes of results above a minimum, best first (stable, like JS `sort`). Items and results are scalars or strings; numbers come back as typed arrays. | Research and a prototype agreed: the gains come from keeping data on the Rust side and using all cores, not from faster crossings. Indexes, not strings, cross back: the caller already holds the items. |
+| S10 | A `<Function>Index` struct in `port.rs` (`new(items)`, `run(fixed args)`) replaces the default per-item loop; every crate with batches depends on rayon, wasm included, where it runs on one thread. | Preparing items once (lowercasing, masks) was the second 4x on x18n search; one `port.rs` then builds for napi and wasm. |
 | S4 | `bench` ends with a verdict: ship, keep the slower functions, port a bigger unit, or (for C) optimize the port. Faster is 1.1x or more, slower under 0.9x. | Numbers alone left the decision to the reader; Go and Java leaf functions cannot win per call, and the tool should say so. |
 
 ## Known limits
 
 - Tests that import a package by name credit the package, not a unit.
-- No runtime profiling yet: "compute-heavy" is a static guess from loops and string work.
+- `analyze` still guesses "compute-heavy" from loops and string work; `profile` measures, for TS and
+  Python workloads only.
 - The bridge copies strings and structured values on every call. For fine-grained functions this
-  dominates: measure with `bench`. A JSON-free fast path (typed arrays, flat results) is not
-  generated yet.
+  dominates: measure with `bench`, and batch the loop around them. Batches are for TS (napi-rs,
+  wasm-bindgen) and Python, over one scalar or string parameter, with scalar or string results.
 - Shadow mode compares synchronous Rust results; functions that mutate their arguments are run on
   already-mutated input by the second implementation.
 - C: only scalar and `const char *` APIs cross the bridge; output buffers (`char *out, size_t *len`)

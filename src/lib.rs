@@ -6,6 +6,7 @@
 pub mod analyze;
 pub mod bridge;
 pub mod codegen;
+pub mod codegen_batch;
 pub mod codegen_c;
 pub mod codegen_ffi;
 pub mod codegen_go;
@@ -22,6 +23,7 @@ pub mod harness_py;
 pub mod harness_ruby;
 pub mod lang;
 pub mod mcp;
+pub mod profile;
 pub mod report;
 pub mod risks;
 pub mod shadow;

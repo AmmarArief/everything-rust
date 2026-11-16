@@ -30,8 +30,9 @@ used as numbers are inferred as numbers.
 
 | Step | Command | What it does |
 | --- | --- | --- |
+| 0. Profile | `carcinize profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler: hot functions by inclusive time, their callers, and which loops to batch |
 | 1. Plan | `carcinize analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, dependency-to-crate fit, best first ports |
-| 2. Bridge | `carcinize bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`) |
+| 2. Bridge | `carcinize bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`); `--batch fn:param` adds a class that keeps many `param` values in Rust |
 | 3. Record | `carcinize record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and saves `cases.jsonl` |
 | 3. Build | `carcinize build <crate>` | Builds the Rust side: `.node`, wasm package, Python extension or shared library |
 | 3. Diff | `carcinize diff <crate>` | Replays the recorded cases against Rust, called the way the original's callers call it; lists mismatches |
@@ -47,6 +48,38 @@ every gate passes and 7,925 recorded cases match exactly. `carcinize bench` then
 are slower than the TS as called from JS, because the bridge costs more than the work. Full report:
 [`demo/x18n-core`](./demo/x18n-core/README.md). The lesson is built in: measure with `bench` before
 shipping a port.
+
+## Hot paths: keep the data in Rust
+
+A port called once per item pays the bridge once per item, and loses to a JIT. What wins is
+moving the loop: `profile` finds it, and `--batch` generates a class that takes the items once
+and runs the function over all of them per call, on all cores, with typed-array results.
+
+```sh
+carcinize profile ../x18n -- node --experimental-strip-types $PWD/demo/x18n-search/search.ts .
+# -> fuzzyScore: a quarter of the run, called per key by `matched`: batch it
+carcinize bridge ../x18n packages/core/src/fuzzy.ts --batch fuzzyScore:text
+```
+
+```js
+const search = new FuzzyScoreBatch(keys)          // once
+const order = search.rank(query, 0)               // per keystroke: indexes, best first
+```
+
+A `FuzzyScoreIndex` struct in `port.rs` replaces the default loop with one that prepares the
+items once (lowercased UTF-16 and a character mask per key). On x18n's sidebar search over
+50,000 keys, with identical results, compared with the TS pipeline:
+
+| | Per query | vs TS |
+| --- | ---: | ---: |
+| TS: `map(fuzzyScore)`, filter, sort | 8.5 ms | 1x |
+| The same port, called per key | - | 0.2-0.4x |
+| `FuzzyScoreBatch`, default index (4 cores) | 5.1 ms | 1.7x |
+| `FuzzyScoreBatch` with `FuzzyScoreIndex` (napi, 4 cores) | 1.2 ms | **7.0x** |
+| The same with wasm (one thread) | 3.0 ms | 2.9x |
+
+Python batches gain more, since the original is interpreted: `SlugifyBatch` runs 14.5x faster
+than calling `slugify` per item. Demo: [`demo/x18n-search`](./demo/x18n-search/README.md).
 
 ## Real code in six languages
 

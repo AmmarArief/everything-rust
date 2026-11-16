@@ -2,3 +2,6 @@ target/
 *.node
 pkg/
 .carcinize/
+*.so
+*.pyd
+__pycache__/

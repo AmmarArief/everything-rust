@@ -220,5 +220,15 @@
       "line": 59,
       "reason": "takes `**kwargs`"
     }
+  ],
+  "batches": [
+    {
+      "function": "slugify",
+      "param": "text"
+    },
+    {
+      "function": "page_count",
+      "param": "total"
+    }
   ]
 }

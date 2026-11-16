@@ -75,11 +75,19 @@ enum Cmd {
         /// Keep an export in TS: `name` or `"name: reason"`. Repeatable.
         #[arg(long)]
         keep: Vec<String>,
+        /// Add a batch class: `function:param` runs `function` over many `param` values kept in
+        /// Rust, on all cores (what `profile` recommends for leaves called in loops).
+        #[arg(long)]
+        batch: Vec<String>,
     },
     /// 2b. Regenerate the bindings (`lib.rs`, `index.cjs`, `js.rs`) from the signatures in `port.rs`.
     Refresh {
         #[arg(default_value = ".")]
         crate_dir: PathBuf,
+        /// Add a batch class: `function:param` runs `function` over many `param` values kept in
+        /// Rust, on all cores. Repeat for more.
+        #[arg(long)]
+        batch: Vec<String>,
     },
     /// 3a. Record what the TS functions return on generated and given inputs.
     Record {
@@ -136,6 +144,20 @@ enum Cmd {
         json: bool,
         #[arg(long = "node-arg", allow_hyphen_values = true)]
         node_args: Vec<String>,
+    },
+    /// Run a real workload under the language's profiler and say what to port: hot functions,
+    /// their callers, and loops to batch. `carcinize profile <repo> -- node bench.mjs`
+    Profile {
+        /// Repository root.
+        root: PathBuf,
+        #[arg(long)]
+        json: bool,
+        /// Source language; detected from the repository when omitted.
+        #[arg(long, value_enum)]
+        lang: Option<carcinize::lang::Lang>,
+        /// The workload, after `--`.
+        #[arg(last = true, required = true)]
+        command: Vec<String>,
     },
     /// 4. Generate a drop-in module that runs TS and Rust side by side.
     Shadow {
@@ -203,6 +225,7 @@ fn run() -> Result<ExitCode> {
             name,
             force,
             keep,
+            batch,
         } => {
             let outcome = bridge::bridge(&bridge::Options {
                 root: &root,
@@ -216,6 +239,7 @@ fn run() -> Result<ExitCode> {
                 force,
                 keep,
                 lang: None,
+                batch,
             })?;
             say!(
                 "Created {} ({:?}) for {}",
@@ -256,8 +280,12 @@ fn run() -> Result<ExitCode> {
                 say!("  {name}: {n}");
             }
         }
-        Cmd::Refresh { crate_dir } => {
-            let r = bridge::refresh(&crate_dir)?;
+        Cmd::Refresh { crate_dir, batch } => {
+            let r = if batch.is_empty() {
+                bridge::refresh(&crate_dir)?
+            } else {
+                bridge::add_batches(&crate_dir, &batch)?
+            };
             say!(
                 "Regenerated {} for {}",
                 r.files.join(", "),
@@ -353,6 +381,19 @@ fn run() -> Result<ExitCode> {
                     rows.len()
                 );
                 say!("{}", v.advice);
+            }
+        }
+        Cmd::Profile {
+            root,
+            json,
+            lang,
+            command,
+        } => {
+            let report = carcinize::profile::profile(&root, &command, lang)?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                say!("{}", carcinize::profile::markdown(&report));
             }
         }
         Cmd::Shadow { crate_dir, out } => {

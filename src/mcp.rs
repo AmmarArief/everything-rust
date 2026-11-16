@@ -92,12 +92,16 @@ fn tools() -> Value {
                 "out": { "type": "string", "description": "Crate folder; defaults to <root>/rust/<name>." },
                 "force": { "type": "boolean", "description": "Bridge a unit the plan marks blocked or keep." },
                 "keep": { "type": "array", "items": { "type": "string" }, "description": "Exports to keep in the source language: `name` or `name: reason`." },
+                "batch": { "type": "array", "items": { "type": "string" }, "description": "Batch classes, `function:param`: the function runs over many `param` values kept in Rust, on all cores, in one call. A `<Function>Index` struct in port.rs replaces the default per-item loop." },
             }, "required": ["root", "unit"] },
         },
         {
             "name": "refresh",
-            "description": "Regenerate a crate's bindings (lib.rs, index.cjs, js.rs) from the signatures in src/port.rs, after changing them. Never touches port.rs.",
-            "inputSchema": { "type": "object", "properties": { "crate": crate_dir }, "required": ["crate"] },
+            "description": "Regenerate a crate's bindings (lib.rs, index.cjs, js.rs) from the signatures in src/port.rs, after changing them, adding any new batch classes. Never touches port.rs.",
+            "inputSchema": { "type": "object", "properties": {
+                "crate": crate_dir,
+                "batch": { "type": "array", "items": { "type": "string" }, "description": "Batch classes to add, `function:param`: the function runs over many `param` values kept in Rust, on all cores, in one call. A `<Function>Index` struct in port.rs replaces the default per-item loop." },
+            }, "required": ["crate"] },
         },
         {
             "name": "record",
@@ -122,6 +126,15 @@ fn tools() -> Value {
                 "crate": crate_dir,
                 "ignore_key_order": { "type": "boolean" },
             }, "required": ["crate"] },
+        },
+        {
+            "name": "profile",
+            "description": "Run a real workload (a command: node script, python3 script) under the language's profiler and rank the repository's hot functions by inclusive time, with their callers, call counts and advice: what to port together, and which loops to batch (`bridge` with `batch`). Profile before porting: leaf functions called one at a time are slower in Rust.",
+            "inputSchema": { "type": "object", "properties": {
+                "root": { "type": "string" },
+                "command": { "type": "array", "items": { "type": "string" }, "description": "The workload, run in root: [\"node\", \"bench.mjs\"]." },
+                "lang": { "type": "string", "enum": ["ts", "python"], "description": "Detected from the repository when omitted." },
+            }, "required": ["root", "command"] },
         },
         {
             "name": "bench",
@@ -152,6 +165,16 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             .with_context(|| format!("missing `{key}`"))
     };
     let opt_path = |key: &str| args[key].as_str().map(PathBuf::from);
+    let strings = |key: &str| -> Vec<String> {
+        args[key]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
     let no_node_args: [String; 0] = [];
     Ok(match name {
         "analyze" => serde_json::to_value(analyze::analyze(&path("root")?)?)?,
@@ -169,15 +192,9 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 out: opt_path("out"),
                 name: None,
                 force: args["force"].as_bool().unwrap_or(false),
-                keep: args["keep"]
-                    .as_array()
-                    .map(|a| {
-                        a.iter()
-                            .filter_map(|v| v.as_str().map(str::to_string))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
+                keep: strings("keep"),
                 lang: None,
+                batch: strings("batch"),
             })?)?
         }
         "record" => {
@@ -196,7 +213,26 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 node_args: &no_node_args,
             })?)?
         }
-        "refresh" => serde_json::to_value(bridge::refresh(&path("crate")?)?)?,
+        "refresh" => {
+            let batch = strings("batch");
+            let crate_dir = path("crate")?;
+            serde_json::to_value(if batch.is_empty() {
+                bridge::refresh(&crate_dir)?
+            } else {
+                bridge::add_batches(&crate_dir, &batch)?
+            })?
+        }
+        "profile" => {
+            let command = strings("command");
+            anyhow::ensure!(!command.is_empty(), "missing `command`");
+            let lang = match args.get("lang") {
+                Some(v) if !v.is_null() => {
+                    Some(serde_json::from_value(v.clone()).context("`lang`")?)
+                }
+                _ => None,
+            };
+            serde_json::to_value(crate::profile::profile(&path("root")?, &command, lang)?)?
+        }
         "build" => json!({ "artifact": harness::build(&path("crate")?)? }),
         "diff" => {
             let crate_dir = path("crate")?;
@@ -252,8 +288,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                "analyze", "bridge", "refresh", "record", "build", "diff", "bench", "shadow",
-                "gate"
+                "analyze", "bridge", "refresh", "record", "build", "diff", "profile", "bench",
+                "shadow", "gate"
             ]
         );
         let bad = handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "gate", "arguments": {} } })).unwrap();

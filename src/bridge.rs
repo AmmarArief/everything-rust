@@ -53,6 +53,9 @@ pub struct Manifest {
     /// re-exports them from the original.
     #[serde(default)]
     pub js_only: Vec<JsOnly>,
+    /// Functions run over many items kept in Rust (`--batch function:param`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub batches: Vec<crate::codegen_batch::Batch>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -172,6 +175,8 @@ pub struct Options<'a> {
     pub keep: Vec<String>,
     /// Source language; detected from the repository when `None`.
     pub lang: Option<crate::lang::Lang>,
+    /// `function:param` pairs: batch classes running `function` over many `param` values.
+    pub batch: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -619,16 +624,59 @@ fn format_wrapper(crate_dir: &Path) {
 }
 
 /// `lib.rs` of a JS crate: the bindings, and the binary wire when functions use it.
-fn js_lib_rs(m: &Manifest, api: &codegen::PortApi, modules: &codegen::Modules) -> String {
-    let lib = codegen::lib_rs(m, api, modules);
-    if !crate::codegen_tswire::uses_wire(m, api) {
-        return lib;
+fn js_lib_rs(m: &Manifest, api: &codegen::PortApi, modules: &codegen::Modules) -> Result<String> {
+    let mut lib = codegen::lib_rs(m, api, modules);
+    if m.kind != Kind::Pyo3 && !m.batches.is_empty() {
+        lib.push_str(&crate::codegen_batch::js_rs(m, api).map_err(anyhow::Error::msg)?);
     }
-    lib.replacen(
+    if !crate::codegen_tswire::uses_wire(m, api) {
+        return Ok(lib);
+    }
+    Ok(lib.replacen(
         "pub mod port;",
         "pub mod port;\npub mod wire;\n\n#[allow(unused_imports)]\nuse serde_json::Value;",
         1,
-    ) + &crate::codegen_tswire::napi_rs(m, api)
+    ) + &crate::codegen_tswire::napi_rs(m, api))
+}
+
+fn parse_batches(specs: &[String]) -> Result<Vec<crate::codegen_batch::Batch>> {
+    specs
+        .iter()
+        .map(|s| {
+            crate::codegen_batch::Batch::parse(s)
+                .with_context(|| format!("`--batch {s}`: write it as function:param"))
+        })
+        .collect()
+}
+
+/// Adds batch classes to a bridged crate, then regenerates its bindings.
+pub fn add_batches(crate_dir: &Path, specs: &[String]) -> Result<Refreshed> {
+    let path = crate_dir.join(MANIFEST);
+    let before = std::fs::read_to_string(&path).with_context(|| format!("{}", path.display()))?;
+    let mut manifest = Manifest::load(crate_dir)?;
+    for b in parse_batches(specs)? {
+        if !manifest.batches.contains(&b) {
+            manifest.batches.push(b);
+        }
+    }
+    std::fs::write(&path, serde_json::to_string_pretty(&manifest)? + "\n")?;
+    // A batch the port cannot serve leaves the crate as it was.
+    refresh(crate_dir).inspect_err(|_| {
+        let _ = std::fs::write(&path, &before);
+    })
+}
+
+/// Cargo.toml with rayon when batches run on all cores.
+fn with_rayon(m: &Manifest, cargo: String) -> Result<String> {
+    if !crate::codegen_batch::needs_rayon(m) {
+        return Ok(cargo);
+    }
+    let mut doc: toml_edit::DocumentMut = cargo.parse().context("Cargo.toml")?;
+    let deps = doc["dependencies"].or_insert(toml_edit::table());
+    if deps.get("rayon").is_none() {
+        deps["rayon"] = toml_edit::value("1");
+    }
+    Ok(doc.to_string())
 }
 
 /// The language-side loader: `index.cjs` for JS, the wrapper package for Python.
@@ -705,7 +753,7 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
         js: needs_js(&fns) || crate_dir.join("src/js.rs").exists(),
     };
     let mut files: Vec<(String, String)> = vec![
-        ("src/lib.rs".into(), js_lib_rs(&manifest, &fns, &modules)),
+        ("src/lib.rs".into(), js_lib_rs(&manifest, &fns, &modules)?),
         loader_file(&manifest, &fns),
     ];
     if modules.js {
@@ -721,6 +769,7 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     let cargo_path = crate_dir.join("Cargo.toml");
     let cargo = std::fs::read_to_string(&cargo_path).context("reading Cargo.toml")?;
     let cargo = codegen::ensure_deps(&cargo, manifest.kind, &fns).map_err(anyhow::Error::msg)?;
+    let cargo = with_rayon(&manifest, cargo)?;
     files.push(("Cargo.toml".into(), cargo));
     for (path, text) in &files {
         let target = crate_dir.join(path);
@@ -936,6 +985,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         exports: exports.clone(),
         classes: classes.clone(),
         js_only: js_only.clone(),
+        batches: parse_batches(&opts.batch)?,
     };
     if kind == Kind::CAbi {
         return bridge_c(&manifest, &crate_dir, &js_only);
@@ -950,13 +1000,16 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         js: needs_js(&fns),
     };
     let mut files: Vec<(String, String)> = vec![
-        ("Cargo.toml".into(), codegen::cargo_toml(&manifest, &fns)),
-        ("src/lib.rs".into(), js_lib_rs(&manifest, &fns, &modules)),
+        (
+            "Cargo.toml".into(),
+            with_rayon(&manifest, codegen::cargo_toml(&manifest, &fns))?,
+        ),
+        ("src/lib.rs".into(), js_lib_rs(&manifest, &fns, &modules)?),
         ("src/port.rs".into(), port),
         loader_file(&manifest, &fns),
         (
             ".gitignore".into(),
-            "target/\n*.node\npkg/\n.carcinize/\n".into(),
+            "target/\n*.node\npkg/\n.carcinize/\n*.so\n*.pyd\n__pycache__/\n".into(),
         ),
         ("README.md".into(), readme(&manifest)),
         (
