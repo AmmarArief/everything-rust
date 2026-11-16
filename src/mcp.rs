@@ -91,6 +91,7 @@ fn tools() -> Value {
                 "kind": { "type": "string", "enum": ["napi", "wasm"], "description": "Defaults to the plan's bridge." },
                 "out": { "type": "string", "description": "Crate folder; defaults to <root>/rust/<name>." },
                 "force": { "type": "boolean", "description": "Bridge a unit the plan marks blocked or keep." },
+                "keep": { "type": "array", "items": { "type": "string" }, "description": "Exports to keep in TS: `name` or `name: reason`." },
             }, "required": ["root", "unit"] },
         },
         {
@@ -101,6 +102,7 @@ fn tools() -> Value {
                 "count": { "type": "integer", "description": "Generated cases per function (default 200)." },
                 "inputs": { "type": "string", "description": "JSONL file of extra cases: {\"fn\": name, \"args\": [...]}." },
                 "module": { "type": "string", "description": "Import the original from this JS module instead of the TS source." },
+                "resolve_from": { "type": "string", "description": "Resolve npm packages from this folder's node_modules." },
             }, "required": ["crate"] },
         },
         {
@@ -114,6 +116,14 @@ fn tools() -> Value {
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "ignore_key_order": { "type": "boolean" },
+            }, "required": ["crate"] },
+        },
+        {
+            "name": "bench",
+            "description": "Time the recorded cases on the TS original and on the built Rust module, bridge included; speedup below 1 means the port is slower as called from JS.",
+            "inputSchema": { "type": "object", "properties": {
+                "crate": crate_dir,
+                "resolve_from": { "type": "string" },
             }, "required": ["crate"] },
         },
         {
@@ -154,12 +164,21 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 out: opt_path("out"),
                 name: None,
                 force: args["force"].as_bool().unwrap_or(false),
+                keep: args["keep"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|v| v.as_str().map(str::to_string))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
             })?)?
         }
         "record" => {
             let crate_dir = path("crate")?;
             let inputs = opt_path("inputs");
             let module = opt_path("module");
+            let resolve_from = opt_path("resolve_from");
             serde_json::to_value(harness::record(&harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count: args["count"]
@@ -167,6 +186,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                     .map_or(200, |n| usize::try_from(n).unwrap_or(200)),
                 inputs: inputs.as_deref(),
                 module: module.as_deref(),
+                resolve_from: resolve_from.as_deref(),
                 node_args: &no_node_args,
             })?)?
         }
@@ -177,6 +197,16 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 crate_dir: &crate_dir,
                 module: None,
                 ignore_key_order: args["ignore_key_order"].as_bool().unwrap_or(false),
+                node_args: &no_node_args,
+            })?)?
+        }
+        "bench" => {
+            let crate_dir = path("crate")?;
+            let resolve_from = opt_path("resolve_from");
+            serde_json::to_value(harness::bench(&harness::BenchOptions {
+                crate_dir: &crate_dir,
+                min_ms: 200,
+                resolve_from: resolve_from.as_deref(),
                 node_args: &no_node_args,
             })?)?
         }
@@ -210,7 +240,7 @@ mod tests {
         assert_eq!(
             names,
             [
-                "analyze", "bridge", "record", "build", "diff", "shadow", "gate"
+                "analyze", "bridge", "record", "build", "diff", "bench", "shadow", "gate"
             ]
         );
         let bad = handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "gate", "arguments": {} } })).unwrap();

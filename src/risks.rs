@@ -100,7 +100,8 @@ impl Risk {
             }
             Self::OrderedCollections => {
                 "JS Map, Set and object keys keep insertion order. `HashMap` does not: use \
-                 `indexmap` wherever order reaches output."
+                 `indexmap` wherever order reaches output. With serde_json's `preserve_order`, \
+                 `Map::remove` swaps the last key into the hole: use `shift_remove` for JS `delete`."
             }
             Self::Exceptions => {
                 "Thrown errors become `Result`. Errors crossing the bridge must map back to the \

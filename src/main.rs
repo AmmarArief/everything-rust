@@ -1,5 +1,19 @@
+use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
+
+/// `println!` that stops quietly when stdout is closed (`carcinize ... | head`).
+macro_rules! say {
+    ($($arg:tt)*) => {{
+        let _ = writeln!(std::io::stdout().lock(), $($arg)*);
+    }};
+}
+
+macro_rules! say_raw {
+    ($($arg:tt)*) => {{
+        let _ = write!(std::io::stdout().lock(), $($arg)*);
+    }};
+}
 
 use anyhow::{Context, Result};
 use carcinize::{analyze, bridge, gate, harness, mcp, report, shadow};
@@ -55,6 +69,9 @@ enum Cmd {
         /// Bridge a unit the plan marks blocked or keep.
         #[arg(long)]
         force: bool,
+        /// Keep an export in TS: `name` or `"name: reason"`. Repeatable.
+        #[arg(long)]
+        keep: Vec<String>,
     },
     /// 3a. Record what the TS functions return on generated and given inputs.
     Record {
@@ -70,6 +87,9 @@ enum Cmd {
         /// Import the original from this JS module (e.g. built output) instead of the TS source.
         #[arg(long)]
         module: Option<PathBuf>,
+        /// Resolve npm packages from this folder's `node_modules` (when the repo has none installed).
+        #[arg(long)]
+        resolve_from: Option<PathBuf>,
         /// Extra arguments for node, e.g. `--node-arg=--import=tsx`.
         #[arg(long = "node-arg", allow_hyphen_values = true)]
         node_args: Vec<String>,
@@ -89,6 +109,21 @@ enum Cmd {
         /// Compare objects regardless of key order.
         #[arg(long)]
         ignore_key_order: bool,
+        #[arg(long)]
+        json: bool,
+        #[arg(long = "node-arg", allow_hyphen_values = true)]
+        node_args: Vec<String>,
+    },
+    /// 3d. Time the recorded cases on the TS original and on Rust, bridge included.
+    Bench {
+        #[arg(default_value = ".")]
+        crate_dir: PathBuf,
+        /// Minimum measured time per function and side, in milliseconds.
+        #[arg(long, default_value_t = 200)]
+        min_ms: u64,
+        /// Resolve npm packages the original imports from this folder's `node_modules`.
+        #[arg(long)]
+        resolve_from: Option<PathBuf>,
         #[arg(long)]
         json: bool,
         #[arg(long = "node-arg", allow_hyphen_values = true)]
@@ -143,7 +178,7 @@ fn run() -> Result<ExitCode> {
             match out {
                 Some(path) => std::fs::write(&path, text)
                     .with_context(|| format!("writing {}", path.display()))?,
-                None => print!("{text}"),
+                None => say_raw!("{text}"),
             }
         }
         Cmd::Bridge {
@@ -153,6 +188,7 @@ fn run() -> Result<ExitCode> {
             out,
             name,
             force,
+            keep,
         } => {
             let outcome = bridge::bridge(&bridge::Options {
                 root: &root,
@@ -164,18 +200,19 @@ fn run() -> Result<ExitCode> {
                 out,
                 name,
                 force,
+                keep,
             })?;
-            println!(
+            say!(
                 "Created {} ({:?}) for {}",
                 outcome.crate_dir.display(),
                 outcome.kind,
                 outcome.exports.join(", ")
             );
             for file in &outcome.files {
-                println!("  {file}");
+                say!("  {file}");
             }
             for note in &outcome.notes {
-                println!("- {note}");
+                say!("- {note}");
             }
         }
         Cmd::Record {
@@ -183,6 +220,7 @@ fn run() -> Result<ExitCode> {
             count,
             inputs,
             module,
+            resolve_from,
             node_args,
         } => {
             let outcome = harness::record(&harness::RecordOptions {
@@ -190,20 +228,21 @@ fn run() -> Result<ExitCode> {
                 count,
                 inputs: inputs.as_deref(),
                 module: module.as_deref(),
+                resolve_from: resolve_from.as_deref(),
                 node_args: &node_args,
             })?;
-            println!(
+            say!(
                 "Recorded {} cases ({} threw) in {}",
                 outcome.cases,
                 outcome.errors,
                 outcome.path.display()
             );
             for (name, n) in &outcome.per_function {
-                println!("  {name}: {n}");
+                say!("  {name}: {n}");
             }
         }
         Cmd::Build { crate_dir } => {
-            println!("Built {}", harness::build(&crate_dir)?.display());
+            say!("Built {}", harness::build(&crate_dir)?.display());
         }
         Cmd::Diff {
             crate_dir,
@@ -219,14 +258,14 @@ fn run() -> Result<ExitCode> {
                 node_args: &node_args,
             })?;
             if json {
-                println!("{}", serde_json::to_string_pretty(&d)?);
+                say!("{}", serde_json::to_string_pretty(&d)?);
             } else {
-                println!("{}/{} cases match", d.passed, d.total);
+                say!("{}/{} cases match", d.passed, d.total);
                 if !d.missing.is_empty() {
-                    println!("Missing exports: {}", d.missing.join(", "));
+                    say!("Missing exports: {}", d.missing.join(", "));
                 }
                 for m in &d.mismatches {
-                    println!(
+                    say!(
                         "- {}({}): expected {}, got {}",
                         m["fn"].as_str().unwrap_or_default(),
                         m["args"]
@@ -246,14 +285,53 @@ fn run() -> Result<ExitCode> {
                 return Ok(ExitCode::FAILURE);
             }
         }
+        Cmd::Bench {
+            crate_dir,
+            min_ms,
+            resolve_from,
+            json,
+            node_args,
+        } => {
+            let rows = harness::bench(&harness::BenchOptions {
+                crate_dir: &crate_dir,
+                min_ms,
+                resolve_from: resolve_from.as_deref(),
+                node_args: &node_args,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&rows)?);
+            } else {
+                say!(
+                    "{:<24} {:>6} {:>12} {:>12} {:>9}",
+                    "function",
+                    "cases",
+                    "TS ns/call",
+                    "Rust ns/call",
+                    "speedup"
+                );
+                for r in &rows {
+                    say!(
+                        "{:<24} {:>6} {:>12.0} {:>12.0} {:>8.2}x",
+                        r.name,
+                        r.cases,
+                        r.original_ns,
+                        r.rust_ns,
+                        r.speedup
+                    );
+                }
+                say!(
+                    "Bridge included. Below 1x, Rust is slower than the original as called from JS."
+                );
+            }
+        }
         Cmd::Shadow { crate_dir, out } => {
             let outcome = shadow::shadow(&crate_dir, out.as_deref())?;
-            println!(
+            say!(
                 "Wrote {} ({})",
                 outcome.path.display(),
                 outcome.exports.join(", ")
             );
-            println!(
+            say!(
                 "Import it in place of the original. CARCINIZE_MODE=old|shadow|new switches at runtime."
             );
         }
@@ -264,19 +342,19 @@ fn run() -> Result<ExitCode> {
         } => {
             let outcome = gate::gate(&crate_dir, &node_args)?;
             if json {
-                println!("{}", serde_json::to_string_pretty(&outcome)?);
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
                 for check in &outcome.checks {
                     let mark = if check.passed { "pass" } else { "FAIL" };
                     let first = check.detail.lines().next().unwrap_or_default();
-                    println!("{mark}  {:<10} {first}", check.name);
+                    say!("{mark}  {:<10} {first}", check.name);
                     if !check.passed {
                         for line in check.detail.lines().skip(1) {
-                            println!("            {line}");
+                            say!("            {line}");
                         }
                     }
                 }
-                println!(
+                say!(
                     "{}",
                     if outcome.passed {
                         "Gate passed."

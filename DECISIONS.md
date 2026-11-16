@@ -43,6 +43,17 @@ Choices made so far, with reasons. Each one can be revisited.
 | L9 | Shadow mode returns the original's result, runs Rust second, and never lets Rust errors reach callers. | Shipping shadow code must not change behavior; only the report sees Rust. |
 | L10 | The MCP server is a small hand-written JSON-RPC loop on serde_json. | The stdio transport needs four methods; an SDK would add churn for no gain. |
 
+## Learned from porting x18n's core
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| X1 | `bridge` keeps exports in TS when their types hold functions (followed through imports, re-exports and `extends`), when they are generic, iterators, RegExp, or use `instanceof`; `--keep` adds more by hand. | 26 of x18n core's 55 exports are of this kind; ported, they would have changed the public API or broken silently. |
+| X2 | Structured values cross with markers for `undefined`, NaN/Infinity/-0 and lone surrogates; the loader pads omitted structured arguments with `undefined`. | Each one produced real mismatches: `splitKey`'s `namespace: undefined`, `toWireRange` with NaN, `diffText` splitting an emoji, `isOutdated(change)` with one argument. |
+| X3 | Overload signatures (no body) are skipped; type predicates map to `bool`; aliases resolve through imports; untyped defaults take the default's type. | `definePlugin` was listed twice; `isMessageLeaf` returned JSON; `KeyString` became JSON instead of `String`. |
+| X4 | `record` installs a resolve hook, takes `--resolve-from`, and retries with `--experimental-transform-types`. | x18n's sources import without extensions, need `valibot` and `nostics`, and use parameter properties. |
+| X5 | `bench` is a separate step, not part of `gate`. | Speed is not correctness, but it decides whether a port should ship: every x18n core port was correct and slower. |
+| X6 | Risk guidance names `shift_remove` and UTF-16 string ordering. | `serde_json::Map::remove` reorders keys under `preserve_order`; JS `<` on strings compares UTF-16 units. |
+
 ## Known limits
 
 - tsconfig `paths` aliases (`~/`, `@/`, `#`) are not followed; they are counted per unit.
@@ -50,8 +61,11 @@ Choices made so far, with reasons. Each one can be revisited.
 - No runtime profiling yet: "compute-heavy" is a static guess from loops and string work.
 - `record` generates inputs for strings, numbers, booleans, arrays and optionals; structured
   arguments need `--inputs` with real cases.
-- TS sources must be runnable by Node's type stripping (explicit `.ts` or no imports), or recorded
-  from built output (`--module`) or with a loader (`--node-arg=--import=tsx`).
+- TS path aliases (`~/`, `@/`) are not resolved by the record hook; record from built output
+  (`--module`) or with a loader (`--node-arg=--import=tsx`).
+- The bridge copies strings and structured values on every call. For fine-grained functions this
+  dominates: measure with `bench`. A JSON-free fast path (typed arrays, flat results) is not
+  generated yet.
 - Shadow mode compares synchronous Rust results; functions that mutate their arguments are run on
   already-mutated input by the second implementation.
 - Only TS/JS sources so far; the core is shaped for more language plugins.

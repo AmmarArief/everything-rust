@@ -30,6 +30,14 @@ const STRINGS: &[&str] = &[
     "HELLO",
     "  padded  ",
     "a.b.c",
+    "ns:key.path",
+    "a:b:c",
+    ":",
+    ".leading",
+    "trailing.",
+    "a..b",
+    "src/a/b.ts",
+    "./x/**/*.json",
     "key_name-1",
     "{name} has {count} items",
     "line1\nline2",
@@ -75,6 +83,8 @@ pub struct RecordOptions<'a> {
     pub inputs: Option<&'a Path>,
     /// Import the original from this JS module instead of the TS source files.
     pub module: Option<&'a Path>,
+    /// Resolve npm packages the original imports from this folder's `node_modules`.
+    pub resolve_from: Option<&'a Path>,
     pub node_args: &'a [String],
 }
 
@@ -104,8 +114,14 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .enumerate()
             .filter(|(_, l)| !l.trim().is_empty())
         {
-            let mut case: Value = serde_json::from_str(line)
-                .with_context(|| format!("{}:{}", path.display(), i + 1))?;
+            let mut case: Value = serde_json::from_str(line).with_context(|| {
+                format!(
+                    "{}:{} (values use the record codec: {{\"$undefined\": true}}, {{\"$num\": \"NaN\"}}, \
+                     and {{\"$utf16\": [code units]}} for strings with lone surrogates)",
+                    path.display(),
+                    i + 1
+                )
+            })?;
             let name = case["fn"].as_str().unwrap_or_default().to_string();
             let Some(f) = manifest.exports.iter().find(|f| f.name == name) else {
                 bail!(
@@ -126,11 +142,42 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let script = work.join("record.mjs");
     std::fs::write(&script, format!("{CODEC_JS}\n{RECORD_JS}"))?;
     let out = opts.crate_dir.join(CASES);
-    run_node(
-        opts.node_args,
-        &script,
-        &[inputs_path.as_os_str(), out.as_os_str()],
-    )?;
+    // TS sources often import the way bundlers resolve (`./errors`, `./types`): a resolve hook
+    // lets Node follow them, so the original runs as it is.
+    std::fs::write(work.join("resolve.mjs"), RESOLVE_JS)?;
+    std::fs::write(work.join("register.mjs"), REGISTER_JS)?;
+    let register = work.canonicalize()?.join("register.mjs");
+    let mut node_args = vec![format!("--import={}", file_url(&register))];
+    node_args.extend(opts.node_args.iter().cloned());
+    let mut cmd = Command::new("node");
+    cmd.args(&node_args)
+        .arg(&script)
+        .arg(&inputs_path)
+        .arg(&out);
+    if let Some(dir) = opts.resolve_from {
+        let dir = dir
+            .canonicalize()
+            .with_context(|| format!("resolving {}", dir.display()))?;
+        cmd.env("CARCINIZE_RESOLVE_FROM", dir);
+    }
+    if let Err(error) = run(&mut cmd, "node") {
+        // Enums and parameter properties need Node to transform TS, not only strip types.
+        if !format!("{error:#}").contains("ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX") {
+            return Err(error);
+        }
+        let mut retry = Command::new("node");
+        retry
+            .arg("--experimental-transform-types")
+            .arg("--no-warnings=ExperimentalWarning")
+            .args(&node_args)
+            .arg(&script)
+            .arg(&inputs_path)
+            .arg(&out);
+        if let Some(dir) = opts.resolve_from {
+            retry.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
+        }
+        run(&mut retry, "node --experimental-transform-types")?;
+    }
 
     let text = std::fs::read_to_string(&out)?;
     let mut per_function = BTreeMap::new();
@@ -232,6 +279,76 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
             Ok(crate_dir.join("pkg").join(format!("{lib}.js")))
         }
     }
+}
+
+/// Per-function timing of the original against the Rust module.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BenchRow {
+    #[serde(rename = "fn")]
+    pub name: String,
+    pub cases: usize,
+    /// Nanoseconds per call.
+    pub original_ns: f64,
+    pub rust_ns: f64,
+    /// `original_ns / rust_ns`: above 1 means Rust is faster, bridge included.
+    pub speedup: f64,
+}
+
+pub struct BenchOptions<'a> {
+    pub crate_dir: &'a Path,
+    /// Minimum measured time per function and side, in milliseconds.
+    pub min_ms: u64,
+    pub resolve_from: Option<&'a Path>,
+    pub node_args: &'a [String],
+}
+
+/// Times the recorded cases against the TS original and the built Rust module, bridge included.
+pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
+    let manifest = Manifest::load(opts.crate_dir)?;
+    let cases = opts.crate_dir.join(CASES);
+    if !cases.exists() {
+        bail!(
+            "no {CASES} in {} (run `carcinize record` first)",
+            opts.crate_dir.display()
+        );
+    }
+    let modules: BTreeMap<String, String> = manifest
+        .exports
+        .iter()
+        .map(|f| {
+            (
+                f.name.clone(),
+                manifest.root.join(&f.file).to_string_lossy().into_owned(),
+            )
+        })
+        .collect();
+    let work = opts.crate_dir.join(WORK_DIR);
+    std::fs::create_dir_all(&work)?;
+    std::fs::write(work.join("resolve.mjs"), RESOLVE_JS)?;
+    std::fs::write(work.join("register.mjs"), REGISTER_JS)?;
+    let modules_path = work.join("bench-modules.json");
+    std::fs::write(&modules_path, serde_json::to_string(&modules)?)?;
+    let script = work.join("bench.mjs");
+    std::fs::write(&script, format!("{CODEC_JS}\n{BENCH_JS}"))?;
+    let out = work.join("bench.json");
+    let native = opts.crate_dir.join("index.cjs").canonicalize()?;
+    let register = work.canonicalize()?.join("register.mjs");
+    let mut cmd = Command::new("node");
+    cmd.arg("--experimental-transform-types")
+        .arg("--no-warnings")
+        .arg(format!("--import={}", file_url(&register)))
+        .args(opts.node_args)
+        .arg(&script)
+        .arg(&modules_path)
+        .arg(&native)
+        .arg(&cases)
+        .arg(&out)
+        .arg(opts.min_ms.to_string());
+    if let Some(dir) = opts.resolve_from {
+        cmd.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
+    }
+    run(&mut cmd, "node")?;
+    Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
 }
 
 pub struct DiffOptions<'a> {
@@ -449,6 +566,51 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
     Ok(())
 }
 
+fn file_url(path: &Path) -> String {
+    let text = path.to_string_lossy().replace('\\', "/");
+    if text.starts_with('/') {
+        format!("file://{text}")
+    } else {
+        format!("file:///{text}")
+    }
+}
+
+const REGISTER_JS: &str =
+    "import { register } from 'node:module'\nregister('./resolve.mjs', import.meta.url)\n";
+
+/// Node resolve hook: bundler-style relative imports, and npm packages from
+/// `CARCINIZE_RESOLVE_FROM` when the source tree has none installed.
+const RESOLVE_JS: &str = r#"
+import { existsSync, statSync } from 'node:fs'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+
+const extra = process.env.CARCINIZE_RESOLVE_FROM
+const suffixes = ['.ts', '.tsx', '.mts', '.js', '.mjs', '/index.ts', '/index.mts', '/index.js']
+const isFile = p => existsSync(p) && statSync(p).isFile()
+
+export async function resolve(specifier, context, next) {
+  try {
+    return await next(specifier, context)
+  }
+  catch (error) {
+    const missing = error?.code === 'ERR_MODULE_NOT_FOUND' || error?.code === 'ERR_UNSUPPORTED_DIR_IMPORT'
+    if (!missing || !context.parentURL)
+      throw error
+    if (specifier.startsWith('.') || specifier.startsWith('/')) {
+      const stem = fileURLToPath(new URL(specifier, context.parentURL)).replace(/\.js$/, '')
+      for (const suffix of suffixes) {
+        if (isFile(stem + suffix))
+          return next(pathToFileURL(stem + suffix).href, context)
+      }
+    }
+    else if (extra) {
+      return next(specifier, { ...context, parentURL: pathToFileURL(`${extra}/`).href })
+    }
+    throw error
+  }
+}
+"#;
+
 /// Encoding shared by the record, diff and shadow scripts. Lossless for what a JS caller
 /// can observe: `undefined`, `NaN`, `-0`, BigInt, Map/Set order, key order, lone surrogates.
 pub const CODEC_JS: &str = r#"
@@ -534,6 +696,45 @@ for (const c of inputs) {
 writeFileSync(outPath, `${lines.join('\n')}\n`)
 "#;
 
+const BENCH_JS: &str = r#"
+import { readFileSync, writeFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+
+const [modulesPath, nativePath, casesPath, outPath, minMs] = process.argv.slice(2)
+const modules = JSON.parse(readFileSync(modulesPath, 'utf8'))
+const loaded = await import(pathToFileURL(nativePath).href)
+const native = { ...(loaded.default && typeof loaded.default === 'object' ? loaded.default : {}), ...loaded }
+const cases = readFileSync(casesPath, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
+const byFn = new Map()
+for (const c of cases) {
+  if (!byFn.has(c.fn)) byFn.set(c.fn, [])
+  byFn.get(c.fn).push(c.args.map(dec))
+}
+// Time whole passes over the cases until `minMs` has passed; errors count as calls.
+const time = (fn, argsList) => {
+  const pass = () => {
+    for (const args of argsList) {
+      try { fn(...args) } catch {}
+    }
+  }
+  pass()
+  let passes = 0
+  const start = performance.now()
+  do { pass(); passes++ } while (performance.now() - start < Number(minMs))
+  return (performance.now() - start) * 1e6 / (passes * argsList.length)
+}
+const rows = []
+for (const [name, argsList] of byFn) {
+  const original = (await import(pathToFileURL(modules[name]).href))[name]
+  const rust = native[name]
+  if (typeof original !== 'function' || typeof rust !== 'function') continue
+  const originalNs = time(original, argsList)
+  const rustNs = time(rust, argsList)
+  rows.push({ fn: name, cases: argsList.length, original_ns: originalNs, rust_ns: rustNs, speedup: originalNs / rustNs })
+}
+writeFileSync(outPath, JSON.stringify(rows))
+"#;
+
 const DIFF_JS: &str = r#"
 import { readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
@@ -593,6 +794,9 @@ mod tests {
                 .collect(),
             returns: "number".into(),
             is_async: false,
+            is_generator: false,
+            type_params: Vec::new(),
+            uses_instanceof: false,
         }
     }
 

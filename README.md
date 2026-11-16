@@ -18,9 +18,18 @@ ship it, and a gate that says when a port is done.
 | 3. Record | `carcinize record <crate>` | Runs the TS original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ...) and saves `cases.jsonl` |
 | 3. Build | `carcinize build <crate>` | Builds the `.node` (napi-rs) or the wasm-bindgen package |
 | 3. Diff | `carcinize diff <crate>` | Replays the recorded cases against Rust, lists mismatches |
+| 3. Bench | `carcinize bench <crate>` | Times the recorded cases on the TS original and on Rust, bridge included |
 | 4. Shadow | `carcinize shadow <crate>` | Drop-in module: runs both, returns the original's result, reports mismatches; `CARCINIZE_MODE=old\|shadow\|new` |
 | 5. Gate | `carcinize gate <crate>` | fmt, clippy `-D warnings`, tests, `unsafe` audit, nothing unported, build, API, behavior |
 | Agents | `carcinize mcp` | Every step as an MCP tool over stdio; workflow skill in `skills/carcinize/SKILL.md` |
+
+## Case study: x18n's core
+
+All 29 functions of x18n's core that can move without an API change were ported with carcinize:
+every gate passes and 7,925 recorded cases match exactly. `carcinize bench` then showed the ports
+are slower than the TS as called from JS, because the bridge costs more than the work. Full report:
+[`demo/x18n-core`](./demo/x18n-core/README.md). The lesson is built in: measure with `bench` before
+shipping a port.
 
 ## Example: a real module from x18n
 
@@ -64,6 +73,23 @@ For agents, add the MCP server (`.mcp.json`):
 ```json
 { "mcpServers": { "carcinize": { "command": "carcinize", "args": ["mcp"] } } }
 ```
+
+## What `bridge` decides
+
+- Exports that cannot cross a bridge stay in TS, and the shadow module re-exports the original:
+  functions that take or return functions, generators and iterators, RegExp, `instanceof` checks,
+  generics, and values whose types (followed through imports, re-exports and `extends`) hold
+  functions. `--keep "name: reason"` keeps more, e.g. code that depends on `Intl` data.
+- TS types map to Rust types, with type aliases resolved through imports and parameter types
+  inferred from default values; anything structured crosses as JSON.
+- JSON cannot express `undefined`, NaN, Infinity, -0 or lone surrogates: structured values carry
+  markers (`{"$undefined": true}`, `{"$num": "NaN"}`, `{"$utf16": [...]}`) that the generated
+  `index.cjs` translates, with helpers in the crate's `js.rs`.
+
+`record` runs TS sources as they are: a Node resolve hook follows bundler-style imports
+(`./errors` to `./errors.ts`), `--resolve-from` supplies npm packages when the repo has none
+installed, and TS that needs transforming (enums, parameter properties) is retried with
+`--experimental-transform-types`.
 
 ## What `analyze` looks at
 

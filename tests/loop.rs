@@ -32,6 +32,7 @@ fn bridged(name: &str) -> PathBuf {
         out: Some(dir.clone()),
         name: None,
         force: false,
+        keep: Vec::new(),
     })
     .unwrap();
     dir
@@ -74,6 +75,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         out: Some(dir.clone()),
         name: None,
         force: false,
+        keep: Vec::new(),
     });
     assert!(again.unwrap_err().to_string().contains("never overwrites"));
     let blocked = bridge::bridge(&bridge::Options {
@@ -83,6 +85,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         out: Some(dir.join("nope")),
         name: None,
         force: false,
+        keep: Vec::new(),
     });
     assert!(blocked.unwrap_err().to_string().contains("Blocked"));
     std::fs::remove_dir_all(&dir).unwrap();
@@ -100,6 +103,7 @@ fn record_and_diff_catch_a_behavior_change() {
         count: 120,
         inputs: None,
         module: None,
+        resolve_from: None,
         node_args: &[],
     })
     .unwrap();
@@ -177,4 +181,37 @@ fn mcp_runs_analyze() {
         response["result"]["structuredContent"]["schema"],
         "carcinize/analyze@1"
     );
+}
+
+#[test]
+fn record_follows_bundler_style_imports() {
+    if !node_available() {
+        eprintln!("skipped: node not found");
+        return;
+    }
+    // `fs.ts` imports `./util.js`, a file that only exists as `util.ts`.
+    let dir = std::env::temp_dir().join(format!("carcinize-resolve-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    bridge::bridge(&bridge::Options {
+        root: &fixture(),
+        unit: "packages/a/src/fs.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+    })
+    .unwrap();
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 5,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    // The paths do not exist: every call throws, but the module loaded and ran.
+    assert_eq!((recorded.cases, recorded.errors), (5, 5));
+    std::fs::remove_dir_all(&dir).unwrap();
 }

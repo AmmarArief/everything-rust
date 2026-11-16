@@ -1,0 +1,1298 @@
+{"fn":"isOutdated","args":["x"],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[null,{}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[["a",1],true],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},"x"],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},["a",1]],"ok":false}
+{"fn":"isOutdated","args":[0,{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{}],"ok":false}
+{"fn":"isOutdated","args":[true,null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"$undefined":true},{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},true],"ok":false}
+{"fn":"isOutdated","args":["x",{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":["x",{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":["x",{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[null,{"a":"b"}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,["a",1]],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"$undefined":true},0],"ok":false}
+{"fn":"isOutdated","args":[["a",1],0],"ok":false}
+{"fn":"isOutdated","args":[true,[]],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},[]],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},["a",1]],"ok":false}
+{"fn":"isOutdated","args":[[],true],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[[],["a",1]],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},["a",1]],"ok":false}
+{"fn":"isOutdated","args":[null],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},[]],"ok":false}
+{"fn":"isOutdated","args":[{},{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[[],{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":["x","x"],"ok":false}
+{"fn":"isOutdated","args":[0,true],"ok":false}
+{"fn":"isOutdated","args":[{},["a",1]],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},"x"],"ok":false}
+{"fn":"isOutdated","args":[["a",1],[]],"ok":false}
+{"fn":"isOutdated","args":[null,"x"],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":["x",{}],"ok":false}
+{"fn":"isOutdated","args":[0,"x"],"ok":false}
+{"fn":"isOutdated","args":[null,0],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"$undefined":true},null],"ok":false}
+{"fn":"isOutdated","args":[true,["a",1]],"ok":false}
+{"fn":"isOutdated","args":[0,{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[null,{"a":{"b":"c"}}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[["a",1],{}],"ok":false}
+{"fn":"isOutdated","args":[true,{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":["x",0],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},0],"ok":false}
+{"fn":"isOutdated","args":[0,{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[[],"x"],"ok":false}
+{"fn":"isOutdated","args":[["a",1],null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},true],"ok":false}
+{"fn":"isOutdated","args":[true,0],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},{}],"ok":false}
+{"fn":"isOutdated","args":[true],"ok":false}
+{"fn":"isOutdated","args":[0,{}],"ok":false}
+{"fn":"isOutdated","args":[null,true],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"a":"b"},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[0,[]],"ok":false}
+{"fn":"isOutdated","args":["x",["a",1]],"ok":false}
+{"fn":"isOutdated","args":[["a",1],{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},true],"ok":false}
+{"fn":"isOutdated","args":[{},{}],"ok":false}
+{"fn":"isOutdated","args":[true,"x"],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},0],"ok":false}
+{"fn":"isOutdated","args":[[],[]],"ok":false}
+{"fn":"isOutdated","args":[["a",1]],"ok":false}
+{"fn":"isOutdated","args":[0,null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[0,["a",1]],"ok":false}
+{"fn":"isOutdated","args":[null,{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[null,null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,[]],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[true,{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[[],{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":["x",[]],"ok":false}
+{"fn":"isOutdated","args":[[],{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[["a",1],"x"],"ok":false}
+{"fn":"isOutdated","args":["x",null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[["a",1],{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"a":"b"},{}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},"x"],"ok":false}
+{"fn":"isOutdated","args":[["a",1],["a",1]],"ok":false}
+{"fn":"isOutdated","args":[{},true],"ok":false}
+{"fn":"isOutdated","args":[0],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{},[]],"ok":false}
+{"fn":"isOutdated","args":[{},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[[]],"ok":false}
+{"fn":"isOutdated","args":[[],{}],"ok":false}
+{"fn":"isOutdated","args":[{},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[["a",1],{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":["x",true],"ok":false}
+{"fn":"isOutdated","args":[[],null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{},0],"ok":false}
+{"fn":"isOutdated","args":[true,{}],"ok":false}
+{"fn":"isOutdated","args":[{"a":{"b":"c"}},[]],"ok":false}
+{"fn":"isOutdated","args":[{},"x"],"ok":false}
+{"fn":"isOutdated","args":[{}],"ok":false}
+{"fn":"isOutdated","args":[true,true],"ok":false}
+{"fn":"isOutdated","args":[[],0],"ok":false}
+{"fn":"isOutdated","args":[true,{"a":"b"}],"ok":false}
+{"fn":"isOutdated","args":[{},{"a":{"b":"c"}}],"ok":false}
+{"fn":"isOutdated","args":[0,0],"ok":false}
+{"fn":"renderPrompt","args":[null],"error":"Cannot read properties of null (reading 'targetName')"}
+{"fn":"renderPrompt","args":[{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":[["a",1]],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":["x"],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":[{}],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":[[]],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":[true],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":[{"a":"b"}],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"renderPrompt","args":[0],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"valueText","args":[0],"ok":"0"}
+{"fn":"valueText","args":["x"],"ok":"x"}
+{"fn":"valueText","args":[{"a":{"b":"c"}}],"ok":"[object Object]"}
+{"fn":"valueText","args":[[]],"ok":""}
+{"fn":"valueText","args":[null],"ok":""}
+{"fn":"valueText","args":[["a",1]],"ok":"a,1"}
+{"fn":"valueText","args":[{}],"ok":"[object Object]"}
+{"fn":"valueText","args":[{"a":"b"}],"ok":"[object Object]"}
+{"fn":"valueText","args":[true],"ok":"true"}
+{"fn":"sourceHash","args":[{"a":"b"}],"ok":"143202a7a041a7"}
+{"fn":"sourceHash","args":["x"],"ok":"158eb58d561258"}
+{"fn":"sourceHash","args":[["a",1]],"ok":"fd36a93a87a69"}
+{"fn":"sourceHash","args":[{"a":{"b":"c"}}],"ok":"13bda4b49202eb"}
+{"fn":"sourceHash","args":[null],"ok":"15e0da69fcb93a"}
+{"fn":"sourceHash","args":[[]],"ok":"15202279b28c9e"}
+{"fn":"sourceHash","args":[0],"ok":"b2475ab050fb7"}
+{"fn":"sourceHash","args":[{}],"ok":"1bc27f5a56d1e7"}
+{"fn":"sourceHash","args":[true],"ok":"156a4c870bf5f4"}
+{"fn":"findReview","args":[true,"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"key_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],""],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"HELLOHELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"ünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"a"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"trailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"a.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","hello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"a.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"trailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"ΣΊΣΥΦΟΣ"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"a"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[null,"Hello World"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"a😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"a😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"abca.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"./x/**/*.jsona.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"Hello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},""],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"emoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"a😀b😀ckey_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"key_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"ΣΊΣΥΦΟΣ"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"straßeé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"tab\tseparatedünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"straßeHELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"ΣΊΣΥΦΟΣa😀b😀c"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{},"Hello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"a:b:cé"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[true,"{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"ΣΊΣΥΦΟΣ"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x",":"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"emoji 👍🏽 mix"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[[],"a"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"straße"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,":"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[["a",1],"Hello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"HELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"HELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"Hello Worldhello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"  padded  ab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x",".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"a😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"﻿bomab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","HELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"İstanbulab"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[0,"{name} has {count} itemstrailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","X"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"{name} has {count} items:"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"ünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,":"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"日本語のテキストline1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"İstanbul﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"日本語のテキストé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"﻿bom"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["x","a..b{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"ab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","tab\tseparated"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,":﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"Hello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"hello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","src/a/b.tsHello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"a.b.c{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","x"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"trailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"ΣΊΣΥΦΟΣ"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"key_name-1src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"ΣΊΣΥΦΟΣ"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"hello:"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"日本語のテキスト"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["x","﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"İstanbulab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"  padded  "],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["x","é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"ab"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[null,"a:b:c"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{"a":"b"},"key_name-1é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},":a.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"ünïcödé"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[null,"line1\nline2"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["😀","😀😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"ΣΊΣΥΦΟΣİstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"tab\tseparated"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],""],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"ns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","Hello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"ns:key.path"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{},"ns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"./x/**/*.jsona"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"key_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"hello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","a.b.c./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a:b:cHello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"a.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"astraße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"line1\nline2a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"ns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"ab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"emoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},":"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,".leadingtrailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"emoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"a"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"hello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"src/a/b.tsabc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"{name} has {count} items"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["x","ünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","key_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"{name} has {count} items  padded  "],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[null,"İstanbul"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[0,"{name} has {count} items"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"HELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"ns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"😀straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"hello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,""],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{"a":"b"},"  padded  日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"ab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"日本語のテキストİstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,":hello"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"key_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"HELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"日本語のテキストsrc/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},":"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"a:b:csrc/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"key_name-1İstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"abcsrc/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"aa"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"ns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"  padded  a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"trailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"ab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"key_name-1"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"a..bns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"ns:key.pathünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"ab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"tab\tseparated"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[null,"ünïcödé日本語のテキスト"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["x","HELLO日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"ünïcödéhello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"a:b:chello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","{name} has {count} itemsa😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["́","é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"src/a/b.tsns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"a..b"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[true,"emoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"emoji 👍🏽 mixa:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"a😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","ns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"a.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"{name} has {count} itemsns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"./x/**/*.json"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":["x","src/a/b.tssrc/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"é"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"﻿bomİstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"tab\tseparated"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","a.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"hello world"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"ünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"a😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"日本語のテキストa.b.c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"Hello World日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a😀b😀ca😀b😀c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"﻿bom"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"abc:"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"  padded  日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"emoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"hello world"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[0,"ünïcödéabc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"a"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"a.b.cab"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"key_name-1a..b"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"src/a/b.ts"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"abc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[["a",1],"line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"a:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","  padded  .leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["i","line1\nline2"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"日本語のテキスト"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"ababc"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"trailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"tab\tseparated"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"emoji 👍🏽 mixa:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"key_name-1ΣΊΣΥΦΟΣ"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[["a",1],"İstanbulé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,".leading"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,""],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"HELLO"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"a:b:cİstanbul"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"Hello Worlda:b:c"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"aemoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"hellokey_name-1"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[null,"a😀b😀c:"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[null,"Hello World﻿bom"],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"findReview","args":[{},"straße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"a"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["x","./x/**/*.json"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"abc  padded  "],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,""],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[0,"  padded  hello"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[true,"hello worldstraße"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":["ng","trailing."],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"﻿bomns:key.path"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":{"b":"c"}},"Hello World"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[[],"😀"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{"a":"b"},"emoji 👍🏽 mix"],"error":"Cannot convert undefined or null to object"}
+{"fn":"findReview","args":[{},"helloünïcödé"],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[{"a":{"b":"c"}}],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[[]],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":["x"],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[0],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[["a",1]],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[{"a":"b"}],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[{}],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[true],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[null],"error":"Cannot read properties of null (reading 'threads')"}
+{"fn":"prefixMatches","args":[{"a":"b"},"hello world"],"ok":false}
+{"fn":"prefixMatches","args":[null,"a😀b😀c"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":"b"},""],"ok":false}
+{"fn":"prefixMatches","args":[null,"tab\tseparated"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[[],"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[null,"key_name-1"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[0,"a"],"ok":false}
+{"fn":"prefixMatches","args":[0,":"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[true,":a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"abc"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":["x","trailing."],"ok":false}
+{"fn":"prefixMatches","args":["x","X"],"ok":false}
+{"fn":"prefixMatches","args":[[],"key_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[0,"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"hello"],"ok":false}
+{"fn":"prefixMatches","args":[0,"./x/**/*.jsonsrc/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[true,".leading"],"ok":false}
+{"fn":"prefixMatches","args":[{},"abns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[0,".leading"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"hello"],"ok":false}
+{"fn":"prefixMatches","args":[null,"  padded  "],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[true,""],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"aemoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":["x","日本語のテキスト.leading"],"ok":false}
+{"fn":"prefixMatches","args":[[],"Hello Worlda😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[{},"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[[],"Hello World"],"ok":false}
+{"fn":"prefixMatches","args":[{},"abc"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"a..ba:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[{},"./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[true,"aa.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"ab./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[null,"ünïcödé"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[true,":"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"  padded  a..b"],"ok":false}
+{"fn":"prefixMatches","args":[true,"a:b:cline1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"éa"],"ok":false}
+{"fn":"prefixMatches","args":[true,"a.b.csrc/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[{},"emoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":["x","x"],"ok":false}
+{"fn":"prefixMatches","args":["i",".leadingabc"],"ok":false}
+{"fn":"prefixMatches","args":[null,"hello world"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[[],"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},":"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"HELLO"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"src/a/b.ts:"],"ok":false}
+{"fn":"prefixMatches","args":[{},"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":["x","İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[null,"straße"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[0,"emoji 👍🏽 mixa😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"a..b"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},".leading"],"ok":false}
+{"fn":"prefixMatches","args":[{},"trailing.a..b"],"ok":false}
+{"fn":"prefixMatches","args":[true,"key_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[{},"straße"],"ok":false}
+{"fn":"prefixMatches","args":["x","ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[[],"HELLO"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"key_name-1  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[true,"a"],"ok":false}
+{"fn":"prefixMatches","args":[null,"src/a/b.ts"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[null,"HELLO"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[null,"ΣΊΣΥΦΟΣ"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[0,"a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":["x","ΣΊΣΥΦΟΣ"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[true,"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[{},"ΣΊΣΥΦΟΣ"],"ok":false}
+{"fn":"prefixMatches","args":[0,"İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[[],"ΣΊΣΥΦΟΣ😀"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"é"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"key_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a..b"],"ok":false}
+{"fn":"prefixMatches","args":[true,"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[true,"  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[[],"﻿bom"],"ok":false}
+{"fn":"prefixMatches","args":[true,"a😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"a..b"],"ok":false}
+{"fn":"prefixMatches","args":[0,"  padded  "],"ok":false}
+{"fn":"prefixMatches","args":["x",":"],"ok":false}
+{"fn":"prefixMatches","args":["x","﻿bomline1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"straße"],"ok":false}
+{"fn":"prefixMatches","args":[null,"😀"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":"b"},"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[{},"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"ab"],"ok":false}
+{"fn":"prefixMatches","args":[null,"a..b"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[null,"{name} has {count} items"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":["x","abc"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[[],"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[true,"ab"],"ok":false}
+{"fn":"prefixMatches","args":[0,"é"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"a..bline1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"éa😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[0,"a😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[null,"ns:key.path"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[0,"aline1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[0,"ab"],"ok":false}
+{"fn":"prefixMatches","args":[true,"a..b"],"ok":false}
+{"fn":"prefixMatches","args":[true,"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[null,":"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[["a",1],"日本語のテキストé"],"ok":false}
+{"fn":"prefixMatches","args":[{},"İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"hello world"],"ok":false}
+{"fn":"prefixMatches","args":[[],"ünïcödéHello World"],"ok":false}
+{"fn":"prefixMatches","args":["x","line1\nline2trailing."],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"tab\tseparatedΣΊΣΥΦΟΣ"],"ok":false}
+{"fn":"prefixMatches","args":[[],"emoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[[],""],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[true,"ab日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[[],"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[[],"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":["x","  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[true,"é"],"ok":false}
+{"fn":"prefixMatches","args":[true,"😀"],"ok":false}
+{"fn":"prefixMatches","args":[0,"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[{},"ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":["x",".leading"],"ok":false}
+{"fn":"prefixMatches","args":[[],"﻿bomΣΊΣΥΦΟΣ"],"ok":false}
+{"fn":"prefixMatches","args":[true,"abc"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"key_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[null,"trailing."],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[true,"src/a/b.tstab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[0,"Hello World"],"ok":false}
+{"fn":"prefixMatches","args":["ΣΊΣΥΦΟ","{name} has {count} itemsΣΊΣΥΦΟΣ"],"ok":false}
+{"fn":"prefixMatches","args":[[],"straße"],"ok":false}
+{"fn":"prefixMatches","args":["x","key_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],":"],"ok":false}
+{"fn":"prefixMatches","args":[null,"./x/**/*.json"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[["a",1],"a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[0,"HELLO"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"abc"],"ok":false}
+{"fn":"prefixMatches","args":[[],"abc"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"a"],"ok":false}
+{"fn":"prefixMatches","args":[true,"straße"],"ok":false}
+{"fn":"prefixMatches","args":[null,"a.b.c"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[["a",1],"ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[[],"éHello World"],"ok":false}
+{"fn":"prefixMatches","args":[[],"line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[null,":a..b"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{},"HELLOemoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[{},"  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[true,"hello world"],"ok":false}
+{"fn":"prefixMatches","args":[[],"src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[null,""],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[["a",1],"é"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[true,"Hello World"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"Hello World./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[true,"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[[],"  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[{},":"],"ok":false}
+{"fn":"prefixMatches","args":[{},"ns:key.path.leading"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[true,"hello"],"ok":false}
+{"fn":"prefixMatches","args":[0,"日本語のテキストstraße"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"a😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"ésrc/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"trailing.ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"ab"],"ok":false}
+{"fn":"prefixMatches","args":[true,"a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"ünïcödéabc"],"ok":false}
+{"fn":"prefixMatches","args":[true,"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},":"],"ok":false}
+{"fn":"prefixMatches","args":[0,"hello"],"ok":false}
+{"fn":"prefixMatches","args":[null,"a"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[null,"Hello World"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[["a",1],".leading"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"ab"],"ok":false}
+{"fn":"prefixMatches","args":[[],"./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[0,"ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"é"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[{},"key_name-1ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"﻿bom"],"ok":false}
+{"fn":"prefixMatches","args":["STA","İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[{},"ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[[],"İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[0,"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[true,"İstanbulé"],"ok":false}
+{"fn":"prefixMatches","args":[0,"﻿bom"],"ok":false}
+{"fn":"prefixMatches","args":[0,"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[null,"éHello World"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":["x","﻿bom"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":["x","line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":["x","a😀b😀cHELLO"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"hello world"],"ok":false}
+{"fn":"prefixMatches","args":[true,"src/a/b.ts  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[true,"aba.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"a..bns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[true,"ünïcödéns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[{},"{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":["x","a😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[[],"a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"tab\tseparateda:b:c"],"ok":false}
+{"fn":"prefixMatches","args":["A","straße"],"ok":false}
+{"fn":"prefixMatches","args":["x","a.leading"],"ok":false}
+{"fn":"prefixMatches","args":["x","helloé"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"Hello World"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},".leading"],"ok":false}
+{"fn":"prefixMatches","args":["x","src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"tab\tseparated  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"{name} has {count} itemsHELLO"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"emoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"a.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[true,"line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":["x","a..b"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"😀"],"ok":false}
+{"fn":"prefixMatches","args":[true,"ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[{},"line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[[],"éünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[null,"abctab\tseparated"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":"b"},"a"],"ok":false}
+{"fn":"prefixMatches","args":[0,"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"line1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[[],"é"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"a..b"],"ok":false}
+{"fn":"prefixMatches","args":[0,"a:"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"HELLO"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"﻿bom"],"ok":false}
+{"fn":"prefixMatches","args":["c","src/a/b.tsa😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"hello"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"Hello World"],"ok":false}
+{"fn":"prefixMatches","args":[[],":"],"ok":false}
+{"fn":"prefixMatches","args":[{},"😀"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"src/a/b.tstab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[[],"key_name-1a..b"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[[],":ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[null,"﻿bom"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"ünïcödéHELLO"],"ok":false}
+{"fn":"prefixMatches","args":[{},"src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[{},":./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[true,"trailing.é"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[{},"trailing.{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":["x","日本語のテキスト"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"a:b:c"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"{name} has {count} itemskey_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"emoji 👍🏽 mix😀"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},".leadingstraße"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"a..b./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"./x/**/*.json  padded  "],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"key_name-1ünïcödé"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"tab\tseparated"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"a😀b😀c.leading"],"ok":false}
+{"fn":"prefixMatches","args":["x","emoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"😀"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"ns:key.pathline1\nline2"],"ok":false}
+{"fn":"prefixMatches","args":[{},"ab"],"ok":false}
+{"fn":"prefixMatches","args":[{},".leading"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"trailing."],"ok":false}
+{"fn":"prefixMatches","args":[0,"Hello Worldhello world"],"ok":false}
+{"fn":"prefixMatches","args":[[],"  padded  src/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[{},"é.leading"],"ok":false}
+{"fn":"prefixMatches","args":[{},"a:b:c.leading"],"ok":false}
+{"fn":"prefixMatches","args":[{},"Hello World"],"ok":false}
+{"fn":"prefixMatches","args":[{},""],"ok":false}
+{"fn":"prefixMatches","args":[true,"ns:key.path"],"ok":false}
+{"fn":"prefixMatches","args":[0,"./x/**/*.json"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"a😀b😀csrc/a/b.ts"],"ok":false}
+{"fn":"prefixMatches","args":[[],"abhello world"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"  padded  key_name-1"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":"b"},"a😀b😀c"],"ok":false}
+{"fn":"prefixMatches","args":[null,"日本語のテキスト  padded  "],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[true,"emoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"tab\tseparateda.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[0,"emoji 👍🏽 mix"],"ok":false}
+{"fn":"prefixMatches","args":[null,"é./x/**/*.json"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[null,"hello"],"error":"Cannot read properties of null (reading 'dynamic')"}
+{"fn":"prefixMatches","args":[{"a":{"b":"c"}},"ΣΊΣΥΦΟΣ"],"ok":false}
+{"fn":"prefixMatches","args":[0,":﻿bom"],"ok":false}
+{"fn":"prefixMatches","args":[["a",1],"a{name} has {count} items"],"ok":false}
+{"fn":"prefixMatches","args":[true,"İstanbul"],"ok":false}
+{"fn":"prefixMatches","args":[{},"hello world"],"ok":false}
+{"fn":"prefixMatches","args":[0,"日本語のテキストa.b.c"],"ok":false}
+{"fn":"prefixMatches","args":[[],"hello"],"ok":false}
+{"fn":"prefixMatches","args":["x","tab\tseparated"],"ok":false}
+{"fn":"suppressedRanges","args":["helloline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixtab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["straße"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀"],"ok":[]}
+{"fn":"suppressedRanges","args":["abc:"],"ok":[]}
+{"fn":"suppressedRanges","args":["abc"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["abcHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["é"],"ok":[]}
+{"fn":"suppressedRanges","args":["./x/**/*.jsona..b"],"ok":[]}
+{"fn":"suppressedRanges","args":[":"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":[":ab"],"ok":[]}
+{"fn":"suppressedRanges","args":[".leading日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":[".leading"],"ok":[]}
+{"fn":"suppressedRanges","args":["İstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.path"],"ok":[]}
+{"fn":"suppressedRanges","args":["İstanbula:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":["a"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..btab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedkey_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":[""],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.cHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["ab"],"ok":[]}
+{"fn":"suppressedRanges","args":["./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2hello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣ﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedab"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéhello"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..b"],"ok":[]}
+{"fn":"suppressedRanges","args":["straßeab"],"ok":[]}
+{"fn":"suppressedRanges","args":["abc.leading"],"ok":[]}
+{"fn":"suppressedRanges","args":["﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["İstanbul  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldsrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2src/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["abca😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:cé"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1a😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixa..b"],"ok":[]}
+{"fn":"suppressedRanges","args":[":hello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOab"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemsünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["straßeemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":[":straße"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathhello"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:cab"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2line1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["aab"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣa"],"ok":[]}
+{"fn":"suppressedRanges","args":["abline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} items:"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bsrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bé"],"ok":[]}
+{"fn":"suppressedRanges","args":["hellons:key.path"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bab"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello world:"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.tsstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["./x/**/*.jsoné"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  key_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:c{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemskey_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:cns:key.path"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  abc"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixtrailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["helloabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["éa:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":[":a:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.key_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello worldtrailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["😀tab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.tsHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀trailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOé"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀ns:key.path"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOtrailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1tab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1hello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worlda.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello worldHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  trailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["😀a.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2a"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  :"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.HELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..b{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.a😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:cstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀cünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀ca.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["straßeΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["aünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀cHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemsHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.path:"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldİstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.tskey_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.straße"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.ts﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.leading"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.path  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.c./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀c:"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキスト﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2straße"],"ok":[]}
+{"fn":"suppressedRanges","args":["abkey_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":[".leadinga.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":[".leadinghello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.tsabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀ca:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2é"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello worldİstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストsrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストhello"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣ./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣa😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["aabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.cline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["ab:"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.c  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":[":HELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.ts  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1Hello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["hellotab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.😀"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.cΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["﻿bomünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödé.leading"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemsabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello World😀"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  a:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":[":a.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["é./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["straße./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["straßeünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["abstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemsemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["abcünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bhello"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.ca😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2ab"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:chello"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2:"],"ok":[]}
+{"fn":"suppressedRanges","args":["abé"],"ok":[]}
+{"fn":"suppressedRanges","args":["straße  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["İstanbul./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödétab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldhello"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathtrailing."],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1é"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.a.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldab"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödé{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣ.leading"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["﻿bom😀"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀İstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["aba.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..b日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1src/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["helloa:b:c"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2a..b"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2İstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["a日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemsa😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストab"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀Hello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀chello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLO  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["helloİstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathab"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":[".leadingemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.abc"],"ok":[]}
+{"fn":"suppressedRanges","args":["éline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["éemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["straßesrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["hellostraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.tab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello worldΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":["ababc"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀HELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["abcns:key.path"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéhello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["straße﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello world{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLOline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  line1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.İstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  Hello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["helloHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["./x/**/*.jsonHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["straßeline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  ab"],"ok":[]}
+{"fn":"suppressedRanges","args":["﻿bomemoji 👍🏽 mix"],"ok":[]}
+{"fn":"suppressedRanges","args":["éHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLO﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["hello worldstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.a"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀cHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["{name} has {count} itemsa..b"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["aa"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストabc"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worldtab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.tsa.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.ts{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedline1\nline2"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.tsab"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparatedstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:"],"ok":[]}
+{"fn":"suppressedRanges","args":["étab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀ca..b"],"ok":[]}
+{"fn":"suppressedRanges","args":["  padded  tab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["a:b:csrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["key_name-1﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":[":abc"],"ok":[]}
+{"fn":"suppressedRanges","args":["﻿bomstraße"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストtrailing."],"ok":[]}
+{"fn":"suppressedRanges","args":[".leadinga..b"],"ok":[]}
+{"fn":"suppressedRanges","args":["Hello Worlda"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.path日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixsrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bİstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":[":a😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["straße{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["abcİstanbul"],"ok":[]}
+{"fn":"suppressedRanges","args":["abhello world"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀c./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["a😀b😀cé"],"ok":[]}
+{"fn":"suppressedRanges","args":["aHello World"],"ok":[]}
+{"fn":"suppressedRanges","args":["😀﻿bom"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..b:"],"ok":[]}
+{"fn":"suppressedRanges","args":["line1\nline2  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["atab\tseparated"],"ok":[]}
+{"fn":"suppressedRanges","args":["İstanbulab"],"ok":[]}
+{"fn":"suppressedRanges","args":["HELLO./x/**/*.json"],"ok":[]}
+{"fn":"suppressedRanges","args":["a.b.c{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["abca.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["emoji 👍🏽 mixa.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéa.b.c"],"ok":[]}
+{"fn":"suppressedRanges","args":["trailing.{name} has {count} items"],"ok":[]}
+{"fn":"suppressedRanges","args":["a..bHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストHELLO"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéab"],"ok":[]}
+{"fn":"suppressedRanges","args":["src/a/b.ts.leading"],"ok":[]}
+{"fn":"suppressedRanges","args":[":日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["helloünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["ΣΊΣΥΦΟΣsrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["﻿bom  padded  "],"ok":[]}
+{"fn":"suppressedRanges","args":["😀ünïcödé"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathsrc/a/b.ts"],"ok":[]}
+{"fn":"suppressedRanges","args":["tab\tseparated日本語のテキスト"],"ok":[]}
+{"fn":"suppressedRanges","args":["ns:key.pathkey_name-1"],"ok":[]}
+{"fn":"suppressedRanges","args":["ünïcödéΣΊΣΥΦΟΣ"],"ok":[]}
+{"fn":"suppressedRanges","args":[".leadinga😀b😀c"],"ok":[]}
+{"fn":"suppressedRanges","args":["日本語のテキストé"],"ok":[]}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":"b"},0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,{}],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[0,{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,["a",1]],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[{"a":"b"},["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":"b"},"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,{"a":{"b":"c"}}],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[{"a":"b"},true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,null],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[{"a":"b"},{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":"b"},{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,"x"],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[[],true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},["a",1]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":"b"},[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,0],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[{},"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":"b"},null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},0],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x",{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":"b"},{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{},{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,{}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,true],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,{"a":"b"}],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":["x","x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,[]],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,[]],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[true,{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[0,"x"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[null,true],"error":"Cannot read properties of null (reading 'pluralCategories')"}
+{"fn":"categoriesOf","args":[[],{"a":{"b":"c"}}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[["a",1],null],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"a":{"b":"c"}},{"a":"b"}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["x","X"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":["X","x"],"ok":{"$undefined":true}}
+{"fn":"isOutdated","args":[{"$undefined":true},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"updatedAt":1}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"updatedAt":2}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"updatedAt":"2"}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{"updatedAt":"10"}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},{}],"ok":false}
+{"fn":"isOutdated","args":[{"$undefined":true},null],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{"updatedAt":1}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{"updatedAt":2}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{"updatedAt":"2"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{"updatedAt":"10"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},{}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":1},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"updatedAt":2},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":2},{"updatedAt":1}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":2},{"updatedAt":2}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":2},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":2},{"updatedAt":"2"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":2},{"updatedAt":"10"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":2},{}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":2},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{"updatedAt":1}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{"updatedAt":2}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{"updatedAt":"2"}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{"updatedAt":"10"}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},{}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":{"$num":"Infinity"}},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{"updatedAt":1}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{"updatedAt":2}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{"updatedAt":"2"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{"updatedAt":"10"}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},{}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"2"},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{"updatedAt":1}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{"updatedAt":2}],"ok":true}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{"updatedAt":"2"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{"updatedAt":"10"}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},{}],"ok":false}
+{"fn":"isOutdated","args":[{"updatedAt":"10"},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[{},{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[{},{"updatedAt":1}],"ok":false}
+{"fn":"isOutdated","args":[{},{"updatedAt":2}],"ok":false}
+{"fn":"isOutdated","args":[{},{"updatedAt":{"$num":"Infinity"}}],"ok":false}
+{"fn":"isOutdated","args":[{},{"updatedAt":"2"}],"ok":false}
+{"fn":"isOutdated","args":[{},{"updatedAt":"10"}],"ok":false}
+{"fn":"isOutdated","args":[{},{}],"ok":false}
+{"fn":"isOutdated","args":[{},null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,{"$undefined":true}],"ok":false}
+{"fn":"isOutdated","args":[null,{"updatedAt":1}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,{"updatedAt":2}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,{"updatedAt":{"$num":"Infinity"}}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,{"updatedAt":"2"}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,{"updatedAt":"10"}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,{}],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"isOutdated","args":[null,null],"error":"Cannot read properties of null (reading 'updatedAt')"}
+{"fn":"valueText","args":[null],"ok":""}
+{"fn":"sourceHash","args":[null],"ok":"15e0da69fcb93a"}
+{"fn":"valueText","args":[""],"ok":""}
+{"fn":"sourceHash","args":[""],"ok":"151798dddd9f7"}
+{"fn":"valueText","args":["hello"],"ok":"hello"}
+{"fn":"sourceHash","args":["hello"],"ok":"f342b9af395e3"}
+{"fn":"valueText","args":["line\n\"quoted\"\t\\"],"ok":"line\n\"quoted\"\t\\"}
+{"fn":"sourceHash","args":["line\n\"quoted\"\t\\"],"ok":"162397be77f5fc"}
+{"fn":"valueText","args":["😀"],"ok":"😀"}
+{"fn":"sourceHash","args":["😀"],"ok":"a30039f8addde"}
+{"fn":"valueText","args":[{"$utf16":[55357]}],"ok":{"$utf16":[55357]}}
+{"fn":"sourceHash","args":[{"$utf16":[55357]}],"ok":"1670c02a2f6d8d"}
+{"fn":"valueText","args":[0],"ok":"0"}
+{"fn":"sourceHash","args":[0],"ok":"b2475ab050fb7"}
+{"fn":"valueText","args":[{"$num":"-0"}],"ok":"0"}
+{"fn":"sourceHash","args":[{"$num":"-0"}],"ok":"b2475ab050fb7"}
+{"fn":"valueText","args":[1],"ok":"1"}
+{"fn":"sourceHash","args":[1],"ok":"546d8e4fa6648"}
+{"fn":"valueText","args":[0.1],"ok":"0.1"}
+{"fn":"sourceHash","args":[0.1],"ok":"3faf99b7798c6"}
+{"fn":"valueText","args":[1e+21],"ok":"1e+21"}
+{"fn":"sourceHash","args":[1e+21],"ok":"7142409662afb"}
+{"fn":"valueText","args":[1e-7],"ok":"1e-7"}
+{"fn":"sourceHash","args":[1e-7],"ok":"19a00053506a8"}
+{"fn":"valueText","args":[123.456],"ok":"123.456"}
+{"fn":"sourceHash","args":[123.456],"ok":"d12c283df21e"}
+{"fn":"valueText","args":[-5],"ok":"-5"}
+{"fn":"sourceHash","args":[-5],"ok":"19dde4a625b609"}
+{"fn":"valueText","args":[{"$num":"NaN"}],"ok":"NaN"}
+{"fn":"sourceHash","args":[{"$num":"NaN"}],"ok":"15e0da69fcb93a"}
+{"fn":"valueText","args":[{"$num":"Infinity"}],"ok":"Infinity"}
+{"fn":"sourceHash","args":[{"$num":"Infinity"}],"ok":"15e0da69fcb93a"}
+{"fn":"valueText","args":[true],"ok":"true"}
+{"fn":"sourceHash","args":[true],"ok":"156a4c870bf5f4"}
+{"fn":"valueText","args":[false],"ok":"false"}
+{"fn":"sourceHash","args":[false],"ok":"30f8a6393f0aa"}
+{"fn":"valueText","args":[{"$undefined":true}],"ok":"undefined"}
+{"fn":"sourceHash","args":[{"$undefined":true}],"error":"Cannot read properties of undefined (reading 'length')"}
+{"fn":"valueText","args":[[1,"a",null]],"ok":"1,a,"}
+{"fn":"sourceHash","args":[[1,"a",null]],"ok":"10e89743ace7ff"}
+{"fn":"valueText","args":[{"a":1,"b":{"$undefined":true}}],"ok":"[object Object]"}
+{"fn":"sourceHash","args":[{"a":1,"b":{"$undefined":true}}],"ok":"1034b77cc1d846"}
+{"fn":"findReview","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}},"a2"],"ok":{"key":"nav.home","locale":"de","comment":{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}}}
+{"fn":"findReview","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}},"b1"],"ok":{"key":"nav.home","locale":"fr","comment":{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}}}
+{"fn":"findReview","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}},"n2"],"ok":{"key":"2","locale":"de","comment":{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}}}
+{"fn":"findReview","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}},"c1"],"ok":{"key":"ünï","locale":"ja","comment":{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}}}
+{"fn":"findReview","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}},"zz"],"ok":{"$undefined":true}}
+{"fn":"findReview","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}},""],"ok":{"$undefined":true}}
+{"fn":"findReview","args":[{"threads":{"k":{"de":"notarray"}}},"x"],"error":"comments.find is not a function"}
+{"fn":"findReview","args":[{"threads":{"k":{"de":[null]}}},"x"],"error":"Cannot read properties of null (reading 'id')"}
+{"fn":"findReview","args":[{},"x"],"error":"Cannot convert undefined or null to object"}
+{"fn":"sortReviews","args":[{"sources":{"b":{},"nav.home":{"de":"h2","fr":"h1"},"�":{"de":"y"},"😀":{"de":"x"}},"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"empty":{},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}}}],"ok":{"threads":{"2":{"de":[{"id":"n2","text":"t n2","time":"2026-01-01T00:00:00Z","type":"comment"}]},"nav.home":{"de":[{"id":"a1","text":"t a1","time":"2026-01-01T00:00:00Z","type":"comment"},{"id":"a2","text":"t a2","time":"2026-01-01T00:00:00Z","type":"comment"}],"fr":[{"id":"b1","text":"t b1","time":"2026-01-01T00:00:00Z","type":"comment"}]},"ünï":{"ja":[{"id":"c1","text":"t c1","time":"2026-01-01T00:00:00Z","type":"comment"}],"zh-Hant":[]}},"sources":{"nav.home":{"de":"h2","fr":"h1"},"😀":{"de":"x"},"�":{"de":"y"}}}}
+{"fn":"sortReviews","args":[{"sources":{},"threads":{}}],"ok":{"threads":{},"sources":{}}}
+{"fn":"sortReviews","args":[{"sources":{"9":{"y":"2"},"10":{"x":"1"}},"threads":{"a":{"de":[]},"b":{"a":[2],"z":[1]}}}],"ok":{"threads":{"a":{"de":[]},"b":{"a":[2],"z":[1]}},"sources":{"9":{"y":"2"},"10":{"x":"1"}}}}
+{"fn":"sortReviews","args":[{"sources":{},"threads":null}],"error":"Cannot convert undefined or null to object"}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":"pages"},"pages.home.title"],"ok":true}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":"pages"},"page"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":"pages"},"1x"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":"pages"},""],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":{"$undefined":true}},"pages.home.title"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":{"$undefined":true}},"page"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":{"$undefined":true}},"1x"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":{"$undefined":true}},""],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":false,"key":"pages"},"pages.home.title"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":false,"key":"pages"},"page"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":false,"key":"pages"},"1x"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":false,"key":"pages"},""],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"unknown","key":"x"},"pages.home.title"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"unknown","key":"x"},"page"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"unknown","key":"x"},"1x"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"unknown","key":"x"},""],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":""},"pages.home.title"],"ok":true}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":""},"page"],"ok":true}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":""},"1x"],"ok":true}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":""},""],"ok":true}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":1},"pages.home.title"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":1},"page"],"ok":false}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":1},"1x"],"ok":true}
+{"fn":"prefixMatches","args":[{"dynamic":"prefix","key":1},""],"ok":false}
+{"fn":"suppressedRanges","args":["no markers here"],"ok":[]}
+{"fn":"suppressedRanges","args":["a\n// x18n-disable-next-line\nt(\"x\")\nb\n"],"ok":[{"start":28,"end":34}]}
+{"fn":"suppressedRanges","args":["// x18n-disable-next-line"],"ok":[]}
+{"fn":"suppressedRanges","args":["x\n/* x18n-disable */\nt(\"a\")\n/* x18n-enable */\nt(\"b\")"],"ok":[{"start":5,"end":31}]}
+{"fn":"suppressedRanges","args":["x18n-disable"],"ok":[{"start":0,"end":12}]}
+{"fn":"suppressedRanges","args":["x18n-disabled x18n-disable-foo x18n-disable_ok x18n-disable!"],"ok":[{"start":47,"end":60}]}
+{"fn":"suppressedRanges","args":["😀 x18n-disable 😀 x18n-enable"],"ok":[{"start":3,"end":19}]}
+{"fn":"suppressedRanges","args":["// x18n-disable-next-line\r\nfoo\r\nbar"],"ok":[{"start":27,"end":31}]}
+{"fn":"suppressedRanges","args":["x18n-disable x18n-disable x18n-enable"],"ok":[{"start":0,"end":26},{"start":13,"end":26}]}
+{"fn":"categoriesOf","args":[{"code":"ru","ordinalCategories":["other"],"pluralCategories":["one","few","many","other"]},"cardinal"],"ok":["one","few","many","other"]}
+{"fn":"categoriesOf","args":[{},"cardinal"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"code":"ru","ordinalCategories":["other"],"pluralCategories":["one","few","many","other"]},"ordinal"],"ok":["other"]}
+{"fn":"categoriesOf","args":[{},"ordinal"],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"code":"ru","ordinalCategories":["other"],"pluralCategories":["one","few","many","other"]},{"$undefined":true}],"ok":["one","few","many","other"]}
+{"fn":"categoriesOf","args":[{},{"$undefined":true}],"ok":{"$undefined":true}}
+{"fn":"categoriesOf","args":[{"code":"ru","ordinalCategories":["other"],"pluralCategories":["one","few","many","other"]},"x"],"ok":["one","few","many","other"]}
+{"fn":"categoriesOf","args":[{},"x"],"ok":{"$undefined":true}}
+{"fn":"renderPrompt","args":[{"examples":[{"key":"a.b","source":"Save","target":"Speichern"}],"from":"en","glossary":[{"doNotTranslate":true,"note":{"$undefined":true},"term":"x18n","translation":{"$undefined":true}},{"doNotTranslate":false,"note":"noun","term":"key","translation":"Schlüssel"},{"doNotTranslate":false,"note":"","term":"plain","translation":""}],"instructions":["Write JSON.","One key per line."],"items":[{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"nav.home\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"nav.home","placeholders":["{name}"],"source":"Hello {name}"},{"context":[],"existing":"Über","key":"nav.about","placeholders":[],"previousSource":"About us","source":"Hello {name}"},{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"q\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"q","placeholders":["{name}"],"source":"say \"hi\"\n😀"}],"kind":"translate","nextCursor":"2","notes":["Brand: x18n"],"project":"p","remaining":1,"rules":["Keep placeholders.","Match tone."],"targetName":"German","to":"de","total":3}],"ok":"# Translate 3 messages from en to de (German)\n\n## Rules\n\n- Keep placeholders.\n- Match tone.\n- Brand: x18n\n\n## Glossary\n\n- x18n: do not translate\n- key → Schlüssel (noun)\n- plain\n\n## Existing de messages (style reference)\n\n- `a.b`: \"Save\" → \"Speichern\"\n\n## Messages\n\n### `nav.home`\n\n- Source: \"Hello {name}\"\n- Placeholders: `{name}`\n- Used in `src/App.vue:12`:\n\n  ```\n  <h1>\n    {{ t(\"nav.home\") }}\n  </h1>\n  ```\n\n### `nav.about`\n\n- Source: \"Hello {name}\"\n- Source when de last changed: \"About us\"\n- Current de: \"Über\"\n\n### `q`\n\n- Source: \"say \\\"hi\\\"\\n😀\"\n- Placeholders: `{name}`\n- Used in `src/App.vue:12`:\n\n  ```\n  <h1>\n    {{ t(\"q\") }}\n  </h1>\n  ```\n\n## How to write results\n\n- Write JSON.\n- One key per line.\n\nThis prompt holds 3 of 3 messages.\n"}
+{"fn":"renderPrompt","args":[{"examples":[{"key":"a.b","source":"Save","target":"Speichern"}],"from":"en","glossary":[{"doNotTranslate":true,"note":{"$undefined":true},"term":"x18n","translation":{"$undefined":true}},{"doNotTranslate":false,"note":"noun","term":"key","translation":"Schlüssel"},{"doNotTranslate":false,"note":"","term":"plain","translation":""}],"instructions":["Write JSON.","One key per line."],"items":[{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"nav.home\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"nav.home","placeholders":["{name}"],"source":"Hello {name}"},{"context":[],"existing":"Über","key":"nav.about","placeholders":[],"previousSource":"About us","source":"Hello {name}"},{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"q\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"q","placeholders":["{name}"],"source":"say \"hi\"\n😀"}],"kind":"review","nextCursor":"2","notes":["Brand: x18n"],"project":"p","remaining":0,"rules":["Keep placeholders.","Match tone."],"targetName":{"$undefined":true},"to":"de","total":3}],"ok":"# Review 3 de translations against en\n\nCheck meaning, placeholders, glossary terms, tone and length. Report and fix wrong translations.\n\n## Rules\n\n- Keep placeholders.\n- Match tone.\n- Brand: x18n\n\n## Glossary\n\n- x18n: do not translate\n- key → Schlüssel (noun)\n- plain\n\n## Existing de messages (style reference)\n\n- `a.b`: \"Save\" → \"Speichern\"\n\n## Messages\n\n### `nav.home`\n\n- Source: \"Hello {name}\"\n- Placeholders: `{name}`\n- Used in `src/App.vue:12`:\n\n  ```\n  <h1>\n    {{ t(\"nav.home\") }}\n  </h1>\n  ```\n\n### `nav.about`\n\n- Source: \"Hello {name}\"\n- Source when de last changed: \"About us\"\n- Current de: \"Über\"\n\n### `q`\n\n- Source: \"say \\\"hi\\\"\\n😀\"\n- Placeholders: `{name}`\n- Used in `src/App.vue:12`:\n\n  ```\n  <h1>\n    {{ t(\"q\") }}\n  </h1>\n  ```\n\n## How to write results\n\n- Write JSON.\n- One key per line.\n"}
+{"fn":"renderPrompt","args":[{"examples":[{"key":"a.b","source":"Save","target":"Speichern"}],"from":"en","glossary":[{"doNotTranslate":true,"note":{"$undefined":true},"term":"x18n","translation":{"$undefined":true}},{"doNotTranslate":false,"note":"noun","term":"key","translation":"Schlüssel"},{"doNotTranslate":false,"note":"","term":"plain","translation":""}],"instructions":["Write JSON.","One key per line."],"items":[],"kind":"translate","nextCursor":"2","notes":["Brand: x18n"],"project":"p","remaining":1,"rules":["Keep placeholders.","Match tone."],"targetName":"German","to":"de","total":3}],"ok":"# Translate 0 messages from en to de (German)\nNothing to do: every key is translated.\n"}
+{"fn":"renderPrompt","args":[{"examples":[{"key":"a.b","source":"Save","target":"Speichern"}],"from":"en","glossary":[{"doNotTranslate":true,"note":{"$undefined":true},"term":"x18n","translation":{"$undefined":true}},{"doNotTranslate":false,"note":"noun","term":"key","translation":"Schlüssel"},{"doNotTranslate":false,"note":"","term":"plain","translation":""}],"instructions":["Write JSON.","One key per line."],"items":[],"kind":"review","nextCursor":"2","notes":["Brand: x18n"],"project":"p","remaining":1,"rules":["Keep placeholders.","Match tone."],"targetName":"German","to":"de","total":3}],"ok":"# Review 0 de (German) translations against en\n\nCheck meaning, placeholders, glossary terms, tone and length. Report and fix wrong translations.\nNothing to do: every key is reviewed.\n"}
+{"fn":"renderPrompt","args":[{"examples":[],"from":"en","glossary":[],"instructions":["Write JSON.","One key per line."],"items":[{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"nav.home\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"nav.home","placeholders":["{name}"],"source":"Hello {name}"},{"context":[],"existing":"Über","key":"nav.about","placeholders":[],"previousSource":"About us","source":"Hello {name}"},{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"q\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"q","placeholders":["{name}"],"source":"say \"hi\"\n😀"}],"kind":"translate","nextCursor":"2","notes":[],"project":"p","remaining":1,"rules":["Keep placeholders.","Match tone."],"targetName":"","to":"zh-Hant","total":3}],"ok":"# Translate 3 messages from en to zh-Hant\n\n## Rules\n\n- Keep placeholders.\n- Match tone.\n\n## Messages\n\n### `nav.home`\n\n- Source: \"Hello {name}\"\n- Placeholders: `{name}`\n- Used in `src/App.vue:12`:\n\n  ```\n  <h1>\n    {{ t(\"nav.home\") }}\n  </h1>\n  ```\n\n### `nav.about`\n\n- Source: \"Hello {name}\"\n- Source when zh-Hant last changed: \"About us\"\n- Current zh-Hant: \"Über\"\n\n### `q`\n\n- Source: \"say \\\"hi\\\"\\n😀\"\n- Placeholders: `{name}`\n- Used in `src/App.vue:12`:\n\n  ```\n  <h1>\n    {{ t(\"q\") }}\n  </h1>\n  ```\n\n## How to write results\n\n- Write JSON.\n- One key per line.\n\nThis prompt holds 3 of 3 messages.\n"}
+{"fn":"renderPrompt","args":[{"examples":[{"key":"a.b","source":"Save","target":"Speichern"}],"from":"en","glossary":[{"doNotTranslate":true,"note":{"$undefined":true},"term":"x18n","translation":{"$undefined":true}},{"doNotTranslate":false,"note":"noun","term":"key","translation":"Schlüssel"},{"doNotTranslate":false,"note":"","term":"plain","translation":""}],"instructions":["Write JSON.","One key per line."],"items":[{"context":[{"line":1,"path":"a.ts","snippet":5}],"existing":{"$undefined":true},"key":"x","placeholders":["{name}"],"source":"Hello {name}"}],"kind":"translate","nextCursor":"2","notes":["Brand: x18n"],"project":"p","remaining":1,"rules":["Keep placeholders.","Match tone."],"targetName":"German","to":"de","total":3}],"error":"context.snippet.split is not a function"}
+{"fn":"renderPrompt","args":[{"examples":[{"key":"a.b","source":"Save","target":"Speichern"}],"from":"en","glossary":[{"doNotTranslate":true,"note":{"$undefined":true},"term":"x18n","translation":{"$undefined":true}},{"doNotTranslate":false,"note":"noun","term":"key","translation":"Schlüssel"},{"doNotTranslate":false,"note":"","term":"plain","translation":""}],"instructions":["Write JSON.","One key per line."],"items":[{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"nav.home\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"nav.home","placeholders":["{name}"],"source":"Hello {name}"},{"context":[],"existing":"Über","key":"nav.about","placeholders":[],"previousSource":"About us","source":"Hello {name}"},{"context":[{"line":12,"path":"src/App.vue","snippet":"<h1>\n  {{ t(\"q\") }}\n</h1>"}],"existing":{"$undefined":true},"key":"q","placeholders":["{name}"],"source":"say \"hi\"\n😀"}],"kind":"translate","nextCursor":"2","notes":["Brand: x18n"],"project":"p","remaining":1,"rules":"not an array","targetName":"German","to":"de","total":3}],"error":"data.rules.map is not a function"}
+{"fn":"renderPrompt","args":[{"kind":"translate"}],"error":"Cannot read properties of undefined (reading 'length')"}

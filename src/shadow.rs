@@ -23,7 +23,13 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
         .canonicalize()
         .with_context(|| format!("resolving {}", crate_dir.display()))?;
     let manifest = Manifest::load(&crate_dir)?;
-    let mut files: Vec<&str> = manifest.exports.iter().map(|f| f.file.as_str()).collect();
+    let mut files: Vec<&str> = manifest
+        .exports
+        .iter()
+        .map(|f| f.file.as_str())
+        .chain(manifest.js_only.iter().map(|j| j.file.as_str()))
+        .collect();
+    files.sort_unstable();
     files.dedup();
     let stem = manifest.crate_name.trim_end_matches("-rs");
     let path = match out {
@@ -114,6 +120,14 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
         code.push_str(&format!(
             "\nexport const {name}: typeof legacy{i}.{name} = ((...args: unknown[]) => call('{name}', legacy{i}.{name}, args)) as any\n",
             name = f.name
+        ));
+    }
+    for j in &manifest.js_only {
+        let i = files.iter().position(|file| *file == j.file).unwrap_or(0);
+        code.push_str(&format!(
+            "\n/** Stays in TS ({}). */\nexport const {name} = legacy{i}.{name}\n",
+            j.reason,
+            name = j.name
         ));
     }
     std::fs::write(&path, code).with_context(|| format!("writing {}", path.display()))?;

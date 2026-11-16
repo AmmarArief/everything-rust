@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::analyze::{self, Bridge, Status};
 use crate::risks::Risk;
-use crate::ts::exports::{ExportedFn, exported_functions};
+use crate::ts::exports::{ExportedFn, LocalType, exported_functions, local_types};
 
 pub const MANIFEST: &str = "carcinize.json";
 pub const SCHEMA: &str = "carcinize/bridge@1";
@@ -34,7 +34,99 @@ pub struct Manifest {
     pub unit: String,
     pub kind: Kind,
     pub crate_name: String,
+    /// Exports ported to Rust.
     pub exports: Vec<ExportedFn>,
+    /// Exports that cannot cross the bridge as they are; they stay in TS and the shadow module
+    /// re-exports them from the original.
+    #[serde(default)]
+    pub js_only: Vec<JsOnly>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct JsOnly {
+    pub name: String,
+    pub file: String,
+    pub line: u32,
+    pub reason: String,
+}
+
+/// Whether values of the local type `name` can hold functions: the type has a function or
+/// method member, or extends or mentions a type that does.
+fn has_functions(name: &str, local_types: &[LocalType], seen: &mut Vec<String>) -> bool {
+    if seen.iter().any(|s| s == name) {
+        return false;
+    }
+    seen.push(name.to_string());
+    let Some(t) = local_types.iter().find(|t| t.name == name) else {
+        return false;
+    };
+    let text = &t.text;
+    let method = text.lines().skip(1).any(|l| {
+        let l = l.trim().trim_start_matches("readonly ");
+        l.contains('(')
+            && l.split('(').next().is_some_and(|head| {
+                !head.is_empty()
+                    && head
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '_' || c == '?')
+            })
+    });
+    if text.contains("=>") || method {
+        return true;
+    }
+    text.split(|c: char| !(c.is_alphanumeric() || c == '_' || c == '$'))
+        .filter(|w| !w.is_empty() && *w != name)
+        .any(|w| has_functions(w, local_types, seen))
+}
+
+/// Why an export cannot cross a JS/Rust bridge unchanged, if it cannot.
+///
+/// Functions, iterators, RegExp objects and objects with function members are JS values a
+/// Rust function can neither take nor return; porting them would change the public API.
+pub fn js_only_reason(f: &ExportedFn, local_types: &[LocalType]) -> Option<String> {
+    if f.is_generator {
+        return Some("generator: returns a lazy iterator".into());
+    }
+    if f.uses_instanceof {
+        return Some("checks `instanceof`: class identity does not survive the bridge".into());
+    }
+    let types: Vec<&str> = f
+        .params
+        .iter()
+        .map(|p| p.ts_type.as_str())
+        .chain(std::iter::once(f.returns.as_str()))
+        .collect();
+    if types.iter().any(|t| t.contains("=>")) {
+        return Some("takes or returns a function".into());
+    }
+    let words = |t: &str| -> Vec<String> {
+        t.split(|c: char| !(c.is_alphanumeric() || c == '_' || c == '$'))
+            .filter(|w| !w.is_empty())
+            .map(str::to_string)
+            .collect()
+    };
+    for t in &types {
+        for word in words(t) {
+            match word.as_str() {
+                "RegExp" => return Some("takes or returns a RegExp".into()),
+                "Generator" | "Iterator" | "IterableIterator" | "AsyncGenerator"
+                | "AsyncIterable" => {
+                    return Some(format!("uses `{word}`, a lazy iterator"));
+                }
+                "Function" => return Some("takes or returns a function".into()),
+                _ => {}
+            }
+            if f.type_params.contains(&word) {
+                return Some(format!(
+                    "generic over `{word}`: values of any shape, functions included"
+                ));
+            }
+            if has_functions(&word, local_types, &mut Vec::new()) {
+                return Some(format!("uses `{word}`, which has function members"));
+            }
+        }
+    }
+    None
 }
 
 impl Manifest {
@@ -60,6 +152,8 @@ pub struct Options<'a> {
     pub name: Option<String>,
     /// Bridge a unit the plan marks blocked or keep.
     pub force: bool,
+    /// Exports to keep in TS, with an optional reason: `name` or `name: reason`.
+    pub keep: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -87,6 +181,12 @@ pub enum RType {
 impl RType {
     pub fn from_ts(ts: &str) -> Self {
         let ts = ts.trim().trim_start_matches("readonly ").trim();
+        // `(string | null)`: one parenthesized group around the whole type.
+        if let Some(inner) = ts.strip_prefix('(').and_then(|t| t.strip_suffix(')'))
+            && balanced(inner)
+        {
+            return Self::from_ts(inner);
+        }
         if let Some(inner) = ts
             .strip_prefix("Promise<")
             .and_then(|t| t.strip_suffix('>'))
@@ -115,6 +215,18 @@ impl RType {
             if let Some(inner) = ts.strip_prefix(wrapper).and_then(|t| t.strip_suffix('>')) {
                 return Self::Vec(Box::new(Self::from_ts(inner)));
             }
+        }
+        // `value is MessageLeaf`: a type predicate returns a boolean; `asserts x` returns nothing.
+        if ts.starts_with("asserts ") {
+            return Self::Unit;
+        }
+        if let Some((subject, _)) = ts.split_once(" is ")
+            && subject
+                .trim()
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '_' || c == '$')
+        {
+            return Self::Bool;
         }
         match ts {
             "string" => Self::Str,
@@ -156,6 +268,23 @@ fn is_string_literal(ts: &str) -> bool {
     ts.len() >= 2
         && ((ts.starts_with('\'') && ts.ends_with('\''))
             || (ts.starts_with('"') && ts.ends_with('"')))
+}
+
+fn balanced(ts: &str) -> bool {
+    let mut depth = 0i32;
+    for c in ts.chars() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth < 0 {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+    depth == 0
 }
 
 /// Splits on `sep` outside brackets.
@@ -229,6 +358,113 @@ pub fn snake_case(name: &str) -> String {
     }
 }
 
+/// Types declared in `file` and in the files it imports relatively (one level deep).
+fn types_in_scope(root: &Path, file: &str, text: &str) -> Vec<LocalType> {
+    let mut types = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    collect_types(root, file, text, 0, &mut seen, &mut types);
+    types
+}
+
+/// Types of a file and of the files it imports or re-exports, a few levels deep
+/// (`./types` -> `types/index.ts` -> `export * from './host'`).
+fn collect_types(
+    root: &Path,
+    file: &str,
+    text: &str,
+    depth: usize,
+    seen: &mut std::collections::HashSet<String>,
+    types: &mut Vec<LocalType>,
+) {
+    if depth > 4 || !seen.insert(file.to_string()) {
+        return;
+    }
+    types.extend(local_types(file, text));
+    let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+    for import in crate::ts::scan::scan(file, text).imports {
+        let spec = import.specifier;
+        if !spec.starts_with('.') {
+            continue;
+        }
+        let joined = if dir.is_empty() {
+            spec.clone()
+        } else {
+            format!("{dir}/{spec}")
+        };
+        let Some(base) = normalize_rel(&joined) else {
+            continue;
+        };
+        let stem = base.trim_end_matches(".js");
+        let candidates = [
+            format!("{stem}.ts"),
+            format!("{stem}.mts"),
+            format!("{stem}.d.ts"),
+            format!("{stem}/index.ts"),
+            base.clone(),
+        ];
+        if let Some(found) = candidates.iter().find(|c| root.join(c).is_file())
+            && let Ok(imported) = std::fs::read_to_string(root.join(found))
+        {
+            collect_types(root, found, &imported, depth + 1, seen, types);
+        }
+    }
+}
+
+/// Collapses `.` and `..` in a root-relative path.
+fn normalize_rel(path: &str) -> Option<String> {
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            _ => parts.push(part),
+        }
+    }
+    Some(parts.join("/"))
+}
+
+/// Replaces simple type aliases (`type KeyString = string`) by what they stand for.
+pub fn resolve_aliases(ts: &str, types: &[LocalType]) -> String {
+    let mut out = ts.to_string();
+    for _ in 0..4 {
+        let mut changed = false;
+        let mut next = String::with_capacity(out.len());
+        let mut word = String::new();
+        let flush = |word: &mut String, next: &mut String, changed: &mut bool| {
+            if let Some(t) = types.iter().find(|t| t.alias && t.name == *word) {
+                let text = t.text.trim();
+                if text.contains('|') {
+                    next.push('(');
+                    next.push_str(text);
+                    next.push(')');
+                } else {
+                    next.push_str(text);
+                }
+                *changed = true;
+            } else {
+                next.push_str(word);
+            }
+            word.clear();
+        };
+        for c in out.chars() {
+            if c.is_alphanumeric() || c == '_' || c == '$' {
+                word.push(c);
+            } else {
+                flush(&mut word, &mut next, &mut changed);
+                next.push(c);
+            }
+        }
+        flush(&mut word, &mut next, &mut changed);
+        out = next;
+        if !changed {
+            break;
+        }
+    }
+    out
+}
+
 pub fn bridge(opts: &Options) -> Result<Outcome> {
     let root = opts
         .root
@@ -255,13 +491,52 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     });
 
     let mut exports = Vec::new();
+    let mut js_only = Vec::new();
     for file in &unit.files {
         if file.ends_with(".vue") || file.ends_with(".svelte") || file.ends_with(".astro") {
             continue;
         }
         let text =
             std::fs::read_to_string(root.join(file)).with_context(|| format!("reading {file}"))?;
-        exports.extend(exported_functions(file, &text));
+        let types = types_in_scope(&root, file, &text);
+        for mut f in exported_functions(file, &text) {
+            for p in &mut f.params {
+                p.ts_type = resolve_aliases(&p.ts_type, &types);
+            }
+            f.returns = resolve_aliases(&f.returns, &types);
+            let kept = opts.keep.iter().find_map(|k| {
+                let (name, reason) = k
+                    .split_once(':')
+                    .map_or((k.as_str(), ""), |(n, r)| (n.trim(), r.trim()));
+                (name == f.name).then(|| {
+                    if reason.is_empty() {
+                        "kept in TS on request".to_string()
+                    } else {
+                        reason.to_string()
+                    }
+                })
+            });
+            match kept.or_else(|| js_only_reason(&f, &types)) {
+                Some(reason) => js_only.push(JsOnly {
+                    name: f.name,
+                    file: f.file,
+                    line: f.line,
+                    reason,
+                }),
+                None => exports.push(f),
+            }
+        }
+    }
+    if exports.is_empty() && !js_only.is_empty() {
+        bail!(
+            "every export of `{}` must stay in JS: {}",
+            unit.id,
+            js_only
+                .iter()
+                .map(|j| format!("{} ({})", j.name, j.reason))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     }
     if exports.is_empty() {
         bail!(
@@ -311,6 +586,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         kind,
         crate_name: crate_name.clone(),
         exports: exports.clone(),
+        js_only: js_only.clone(),
     };
     let json = exports.iter().any(|f| {
         f.params.iter().any(|p| param_type(p).contains_json())
@@ -341,6 +617,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     if utf16 {
         files.push(("src/utf16.rs".into(), UTF16_RS.into()));
     }
+    if json {
+        files.push(("src/js.rs".into(), JS_RS.into()));
+    }
     for (path, text) in &files {
         let target = crate_dir.join(path);
         if let Some(parent) = target.parent() {
@@ -355,6 +634,12 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     )];
     if utf16 {
         notes.push("The unit works with string offsets: src/utf16.rs has UTF-16 helpers that match JS indexing.".into());
+    }
+    for j in &js_only {
+        notes.push(format!(
+            "`{}` stays in TS: {}. The shadow module re-exports the original.",
+            j.name, j.reason
+        ));
     }
     if exports.iter().any(|f| f.is_async) {
         notes.push("Some functions are async in TS; the port is synchronous and the bridge returns plain values.".into());
@@ -383,12 +668,17 @@ fn cargo_toml(m: &Manifest, json: bool) -> String {
         Kind::Wasm => {
             let _ = writeln!(deps, "wasm-bindgen = \"0.2\"");
             if json {
+                let _ = writeln!(deps, "serde = \"1\"");
                 let _ = writeln!(deps, "serde-wasm-bindgen = \"0.6\"");
             }
         }
     }
     if json {
-        let _ = writeln!(deps, "serde_json = \"1\"");
+        // JS objects keep insertion order; serde_json sorts keys unless told otherwise.
+        let _ = writeln!(
+            deps,
+            "serde_json = {{ version = \"1\", features = [\"preserve_order\"] }}"
+        );
     }
     let build = if m.kind == Kind::Napi {
         "\n[build-dependencies]\nnapi-build = \"2\"\n"
@@ -430,6 +720,9 @@ fn lib_rs(m: &Manifest, utf16: bool) -> String {
     out.push_str("pub mod port;\n");
     if utf16 {
         out.push_str("pub mod utf16;\n");
+    }
+    if !json_exports(m).is_empty() {
+        out.push_str("pub mod js;\n");
     }
     if m.kind == Kind::Napi {
         out.push_str(NAPI_CATCH_PANIC);
@@ -495,7 +788,11 @@ fn lib_rs(m: &Manifest, utf16: bool) -> String {
                 }
                 let call = format!("port::{rust_name}({})", args.join(", "));
                 if json_ret {
-                    let _ = writeln!(out, "    Ok(serde_wasm_bindgen::to_value(&{call})?)");
+                    // json_compatible: objects become plain objects (not Maps), null stays null.
+                    let _ = writeln!(
+                        out,
+                        "    Ok(serde::Serialize::serialize(&{call}, &serde_wasm_bindgen::Serializer::json_compatible())?)"
+                    );
                 } else if any_json {
                     let _ = writeln!(out, "    Ok({call})");
                 } else {
@@ -541,18 +838,146 @@ fn port_rs(m: &Manifest) -> String {
     out
 }
 
+/// Exports whose signature carries JSON: their values go through the `undefined` marker.
+fn json_exports(m: &Manifest) -> Vec<&str> {
+    m.exports
+        .iter()
+        .filter(|f| {
+            f.params.iter().any(|p| param_type(p).contains_json())
+                || RType::from_ts(&f.returns).contains_json()
+        })
+        .map(|f| f.name.as_str())
+        .collect()
+}
+
 fn index_cjs(m: &Manifest) -> String {
-    match m.kind {
+    let load = match m.kind {
         Kind::Napi => format!(
-            "// Loads the native module built by `carcinize build`.\nmodule.exports = require('./{}.node')\n",
+            "// Loads the native module built by `carcinize build`.\nconst native = require('./{}.node')\n",
             m.lib_name()
         ),
         Kind::Wasm => format!(
-            "// Loads the wasm-bindgen (nodejs target) output built by `carcinize build`.\nmodule.exports = require('./pkg/{}.js')\n",
+            "// Loads the wasm-bindgen (nodejs target) output built by `carcinize build`.\nconst native = require('./pkg/{}.js')\n",
             m.lib_name()
         ),
+    };
+    let json = json_exports(m);
+    if json.is_empty() {
+        return format!("{load}module.exports = native\n");
+    }
+    let names = m
+        .exports
+        .iter()
+        .filter(|f| json.contains(&f.name.as_str()))
+        .map(|f| {
+            let flags: Vec<&str> = f
+                .params
+                .iter()
+                .map(|p| {
+                    if param_type(p).contains_json() {
+                        "true"
+                    } else {
+                        "false"
+                    }
+                })
+                .collect();
+            format!("{}: [{}]", f.name, flags.join(", "))
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "{load}\n\
+         // JSON has no `undefined` or NaN, and Rust strings no lone surrogates. Structured values cross the\n\
+         // bridge with `{{\"$undefined\": true}}` and `{{\"$utf16\": [...]}}` in their place (`js.rs`),\n\
+         // so `{{ a: undefined }}`, `null` and half an emoji all survive.\n\
+         const UNDEFINED = '$undefined'\n\
+         const toNative = v => v === undefined\n\
+         \x20 ? {{ [UNDEFINED]: true }}\n\
+         \x20 : typeof v === 'string' && !v.isWellFormed() ? {{ $utf16: Array.from({{ length: v.length }}, (_, i) => v.charCodeAt(i)) }}\n\
+         \x20 : typeof v === 'number' && (!Number.isFinite(v) || Object.is(v, -0)) ? {{ $num: Object.is(v, -0) ? '-0' : String(v) }}\n\
+         \x20 : Array.isArray(v) ? v.map(toNative)\n\
+         \x20 : v !== null && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toNative(x)]))\n\
+         \x20 : v\n\
+         const fromNative = v => Array.isArray(v) ? v.map(fromNative)\n\
+         \x20 : v !== null && typeof v === 'object' ? (v[UNDEFINED] === true && Object.keys(v).length === 1 ? undefined : Array.isArray(v.$utf16) && Object.keys(v).length === 1 ? String.fromCharCode(...v.$utf16) : typeof v.$num === 'string' && Object.keys(v).length === 1 ? Number(v.$num) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fromNative(x)])))\n\
+         \x20 : v\n\
+         module.exports = {{ ...native }}\n\
+         // Per function: which arguments are structured. Others pass through: an `undefined`\n\
+         // there is an omitted optional argument, an `Option` in Rust.\n\
+         for (const [name, structured] of Object.entries({{ {names} }})) {{\n\
+         \x20 module.exports[name] = (...args) => fromNative(native[name](...Array.from({{ length: Math.max(args.length, structured.length) }}, (_, i) => structured[i] ? toNative(args[i]) : args[i])))\n\
+         }}\n"
+    )
+}
+
+const JS_RS: &str = r#"//! JS values that JSON cannot express.
+
+#![forbid(unsafe_code)]
+
+/// JS `undefined` inside a structured value: `{ a: undefined }` is not `{ a: null }`.
+/// `index.cjs` turns this marker into `undefined` on the way out, and back on the way in.
+pub fn undefined() -> serde_json::Value {
+    serde_json::json!({ "$undefined": true })
+}
+
+/// A JS string from UTF-16 code units: a plain string when well-formed, else a marker that
+/// `index.cjs` turns into the exact JS string, lone surrogates included.
+pub fn utf16_string(units: &[u16]) -> serde_json::Value {
+    match String::from_utf16(units) {
+        Ok(s) => serde_json::Value::String(s),
+        Err(_) => serde_json::json!({ "$utf16": units }),
     }
 }
+
+/// The UTF-16 code units of a string received from JS, plain or marked.
+pub fn string_units(value: &serde_json::Value) -> Option<Vec<u16>> {
+    match value {
+        serde_json::Value::String(s) => Some(s.encode_utf16().collect()),
+        serde_json::Value::Object(o) if o.len() == 1 => o.get("$utf16")?
+            .as_array()?
+            .iter()
+            .map(|u| u.as_u64().and_then(|u| u16::try_from(u).ok()))
+            .collect(),
+        _ => None,
+    }
+}
+
+/// A JS number inside a structured value. JSON has no NaN, Infinity or -0: those cross as
+/// `{"$num": "NaN"}` and friends, which `index.cjs` turns back into numbers.
+pub fn number(n: f64) -> serde_json::Value {
+    if n.is_nan() {
+        serde_json::json!({ "$num": "NaN" })
+    } else if n.is_infinite() {
+        serde_json::json!({ "$num": if n > 0.0 { "Infinity" } else { "-Infinity" } })
+    } else if n == 0.0 && n.is_sign_negative() {
+        serde_json::json!({ "$num": "-0" })
+    } else if n.fract() == 0.0 && n.abs() < 9_007_199_254_740_992.0 {
+        serde_json::Value::from(n as i64)
+    } else {
+        serde_json::Value::from(n)
+    }
+}
+
+/// A number received from JS inside a structured value, plain or marked.
+pub fn as_number(value: &serde_json::Value) -> Option<f64> {
+    match value {
+        serde_json::Value::Number(n) => n.as_f64(),
+        serde_json::Value::Object(o) if o.len() == 1 => match o.get("$num")?.as_str()? {
+            "NaN" => Some(f64::NAN),
+            "Infinity" => Some(f64::INFINITY),
+            "-Infinity" => Some(f64::NEG_INFINITY),
+            "-0" => Some(-0.0),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Whether a structured value received from JS was `undefined`.
+pub fn is_undefined(value: &serde_json::Value) -> bool {
+    value.as_object().is_some_and(|o| o.len() == 1 && o.get("$undefined") == Some(&serde_json::Value::Bool(true)))
+}
+"#;
 
 fn readme(m: &Manifest) -> String {
     let functions: String = m
@@ -689,6 +1114,57 @@ mod tests {
             RType::from_ts("Record<string, string | number>").rust(),
             "serde_json::Value"
         );
+        assert_eq!(
+            RType::from_ts("(string | undefined)").rust(),
+            "Option<String>"
+        );
+        assert_eq!(RType::from_ts("(a) | (b)").rust(), "serde_json::Value");
+    }
+
+    #[test]
+    fn keeps_unbridgeable_exports_in_js() {
+        let source = "export interface LineIndex {\n  readonly lineCount: number\n  position(offset: number): number\n}\n\
+            export interface Range { start: number, end: number }\n\
+            export function keyMatcher(globs: readonly string[]): (key: string) => boolean { return () => true }\n\
+            export function globToRegExp(glob: string): RegExp { return /x/ }\n\
+            export function createLineIndex(text: string): LineIndex { return null! }\n\
+            export function* walk(tree: object) {}\n\
+            export function sortTree(tree: object, compare: (a: string, b: string) => number) {}\n\
+            export function contains(range: Range, offset: number): boolean { return true }\n";
+        let types = local_types("a.ts", source);
+        let reasons: Vec<(String, Option<String>)> = exported_functions("a.ts", source)
+            .iter()
+            .map(|f| (f.name.clone(), js_only_reason(f, &types)))
+            .collect();
+        let js_only: Vec<&str> = reasons
+            .iter()
+            .filter(|(_, r)| r.is_some())
+            .map(|(n, _)| n.as_str())
+            .collect();
+        assert_eq!(
+            js_only,
+            [
+                "keyMatcher",
+                "globToRegExp",
+                "createLineIndex",
+                "walk",
+                "sortTree"
+            ]
+        );
+    }
+
+    #[test]
+    fn resolves_simple_aliases() {
+        let types = local_types(
+            "m.ts",
+            "export type KeyString = string\nexport type Leaf = string | null\nexport type Map2<T> = T\n",
+        );
+        assert_eq!(
+            resolve_aliases("readonly KeyString[]", &types),
+            "readonly string[]"
+        );
+        assert_eq!(resolve_aliases("Leaf", &types), "(string | null)");
+        assert_eq!(resolve_aliases("Map2<KeyString>", &types), "Map2<string>");
     }
 
     #[test]
