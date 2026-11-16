@@ -1201,6 +1201,10 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 "src/rbconv.rs".to_string(),
                 crate::codegen_ruby::RBCONV_RS.to_string(),
             ),
+            (
+                "build.rs".to_string(),
+                crate::codegen_ruby::BUILD_RS.to_string(),
+            ),
         ]
     } else {
         let mut lib = crate::codegen_ffi::lib_rs(m, api);
