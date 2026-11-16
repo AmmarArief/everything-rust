@@ -1024,6 +1024,20 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 crate::codegen_ruby::wrapper(m),
             ));
         }
+        crate::lang::Lang::Java => {
+            files.extend(crate::codegen_java::wrappers(m));
+            files.push((
+                format!(
+                    "java/carcinize/{}.java",
+                    crate::codegen_ffi::java_native_class(m)
+                ),
+                crate::codegen_java::native_class(m),
+            ));
+            files.push((
+                "java/carcinize/CarcinizeJson.java".into(),
+                crate::codegen_java::JSON_JAVA.into(),
+            ));
+        }
         other => bail!("no wrapper generator for {}", other.name()),
     }
     Ok(files)

@@ -354,7 +354,11 @@ fn run() -> Result<ExitCode> {
                 outcome.path.display(),
                 outcome.exports.join(", ")
             );
-            if outcome.path.extension().is_some_and(|e| e == "rb") {
+            if outcome.path.extension().is_some_and(|e| e == "java") {
+                say!(
+                    "Call the <Class>Shadow classes in place of the originals; compile them with the originals and java/carcinize. -Dcarcinize.mode=old|shadow|new switches at runtime."
+                );
+            } else if outcome.path.extension().is_some_and(|e| e == "rb") {
                 say!(
                     "Require it after the original files. CARCINIZE_MODE=old|shadow|new switches at runtime."
                 );

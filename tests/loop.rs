@@ -701,3 +701,68 @@ fn ruby_modules_bridge_record_and_diff() {
     assert_eq!(diff.total, recorded.cases);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn java_available() -> bool {
+    Command::new("javac")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+}
+
+#[test]
+fn java_classes_bridge_record_and_diff() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/java");
+    let dir = std::env::temp_dir().join(format!("carcinize-java-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/main/java/com/example/text/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: Some("text-rs".into()),
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+    })
+    .unwrap();
+    assert_eq!(outcome.kind, Kind::Ffi);
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    assert!(
+        port.contains("pub fn parse_port(text: String) -> Result<i64, String>"),
+        "{port}"
+    );
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(lib.contains("fn Java_carcinize_TextRsNative_call"), "{lib}");
+    let wrapper = std::fs::read_to_string(dir.join("java/com/example/text/Strings.java")).unwrap();
+    assert!(
+        wrapper.contains("public static List<String> words(String text)"),
+        "{wrapper}"
+    );
+    if !java_available() {
+        return;
+    }
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 30,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(recorded.cases > 100, "{recorded:?}");
+    // `parsePort` throws NumberFormatException for text.
+    assert!(recorded.errors > 0);
+    harness::build(&dir).unwrap();
+    let diff = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        node_args: &[],
+    })
+    .unwrap();
+    // Unported functions panic, which Java sees as a RuntimeException: nothing can match.
+    assert_eq!(diff.passed, 0, "{diff:?}");
+    assert_eq!(diff.total, recorded.cases);
+    let _ = std::fs::remove_dir_all(&dir);
+}

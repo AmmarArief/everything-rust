@@ -177,6 +177,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         crate::harness_go::record(opts.crate_dir, &manifest, &cases)?
     } else if manifest.language == crate::lang::Lang::Ruby {
         crate::harness_ruby::record(opts.crate_dir, &manifest, &cases)?
+    } else if manifest.language == crate::lang::Lang::Java {
+        crate::harness_java::record(opts.crate_dir, &manifest, &cases)?
     } else {
         record_node(opts, &manifest, &cases)?
     };
@@ -402,6 +404,9 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if manifest.language == crate::lang::Lang::Ruby {
         return crate::harness_ruby::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
+    if manifest.language == crate::lang::Lang::Java {
+        return crate::harness_java::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -496,6 +501,12 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         && opts.module.is_none()
     {
         return crate::harness_ruby::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Java
+        && opts.module.is_none()
+    {
+        return crate::harness_java::diff(opts.crate_dir, &manifest);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {

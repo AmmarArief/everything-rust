@@ -164,7 +164,8 @@ pub fn build(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
     .with_context(|| format!("no shared library for `{lib}` in {}", release.display()))
 }
 
-fn built(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
+/// The built Rust library of a crate.
+pub fn built_library(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
     let lib = manifest.lib_name();
     let release = crate_dir.join("target/release");
     [
@@ -191,7 +192,7 @@ pub fn diff(crate_dir: &Path, manifest: &Manifest) -> Result<DiffOutcome> {
             crate_dir.display()
         );
     }
-    let rust = built(crate_dir, manifest)?;
+    let rust = built_library(crate_dir, manifest)?;
     let (driver, sigs) = driver(crate_dir, manifest)?;
     let out = crate_dir.join(WORK_DIR).join("diff.json");
     run(
@@ -216,7 +217,7 @@ pub fn bench(crate_dir: &Path, manifest: &Manifest, min_ms: u64) -> Result<Vec<B
         );
     }
     let original = build_original(crate_dir, manifest)?;
-    let rust = built(crate_dir, manifest)?;
+    let rust = built_library(crate_dir, manifest)?;
     let (driver, sigs) = driver(crate_dir, manifest)?;
     let out = crate_dir.join(WORK_DIR).join("bench.json");
     run(

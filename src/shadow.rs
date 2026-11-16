@@ -29,6 +29,27 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
     if manifest.kind == crate::bridge::Kind::CAbi {
         return shadow_c(&crate_dir, &manifest, out);
     }
+    if manifest.language == crate::lang::Lang::Java {
+        let dir = out.map_or_else(|| crate_dir.join("java"), Path::to_path_buf);
+        let files = crate::codegen_java::shadows(&manifest);
+        for (path, _) in &files {
+            let target = dir.join(path.trim_start_matches("shadow/"));
+            if target.exists() {
+                bail!("{} exists; remove it first or pass --out", target.display());
+            }
+        }
+        let mut first = None;
+        for (path, text) in &files {
+            let target = dir.join(path.trim_start_matches("shadow/"));
+            std::fs::create_dir_all(target.parent().context("no folder")?)?;
+            std::fs::write(&target, text)?;
+            first.get_or_insert(target);
+        }
+        return Ok(ShadowOutcome {
+            path: first.context("no class to shadow")?,
+            exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+        });
+    }
     if manifest.language == crate::lang::Lang::Ruby {
         let path = match out {
             Some(p) => p.to_path_buf(),
