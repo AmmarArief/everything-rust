@@ -1,6 +1,6 @@
 {
   "name": "rust-anything",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Make the slow part of your app fast in Rust without rewriting the app: profile, bridge, record, diff, bench, shadow and gate, for TypeScript/JavaScript, Python, C, Go, Ruby and Java.",
   "author": { "name": "rust-anything authors" },
   "homepage": "https://github.com/erkamyaman/rust-anything",

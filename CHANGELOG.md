@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 1.0.0 (2026-11-16)
 
 First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and Java.
 
@@ -34,3 +34,5 @@ First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and 
   Gemini CLI, keeping other settings and backing up each file it changes; `--remove` and
   `--dry-run`.
 - `mcp`: every step as an MCP tool; agent skill in `skills/rust-anything`.
+- Install with `npm install -g rust-anything` (prebuilt binaries for macOS, Linux and Windows) or
+  from the binaries attached to the GitHub release.

@@ -38,9 +38,12 @@ then `rust-anything setup`. Tell me when to restart you.
 Or yourself:
 
 ```sh
-cargo install --git https://github.com/erkamyaman/rust-anything
+npm install -g rust-anything  # prebuilt binary for macOS, Linux and Windows
+# or: cargo install --git https://github.com/erkamyaman/rust-anything
 rust-anything setup           # registers it with Claude Code, Codex, Cursor and Gemini CLI
 ```
+
+Prebuilt binaries are also attached to each [GitHub release](https://github.com/erkamyaman/rust-anything/releases).
 
 In Claude Code you can also install it as a plugin (the MCP server and the skill; the CLI above
 must be on your `PATH`):
@@ -309,9 +312,11 @@ Design choices and their reasons: [DECISIONS.md](./DECISIONS.md).
 ## Update or remove
 
 ```sh
-cargo install --git https://github.com/erkamyaman/rust-anything --force   # update
+npm install -g rust-anything@latest                                       # update (npm)
+cargo install --git https://github.com/erkamyaman/rust-anything --force   # update (Cargo)
 rust-anything setup                                                       # refresh agent settings
-rust-anything setup --remove && cargo uninstall rust-anything             # remove
+rust-anything setup --remove && npm uninstall -g rust-anything            # remove (npm)
+rust-anything setup --remove && cargo uninstall rust-anything             # remove (Cargo)
 ```
 
 `setup --remove` takes out only rust-anything's entries; the copies it saved

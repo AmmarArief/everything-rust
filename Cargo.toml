@@ -1,6 +1,6 @@
 [package]
 name = "rust-anything"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 description = "Plan, bridge, verify and ship incremental migrations to Rust from TypeScript/JavaScript, Python, C, Go, Ruby and Java"
 license = "MIT"
@@ -10,7 +10,7 @@ keywords = ["migration", "rewrite", "ffi", "napi", "pyo3"]
 categories = ["command-line-utilities", "development-tools", "wasm"]
 repository = "https://github.com/erkamyaman/rust-anything"
 homepage = "https://github.com/erkamyaman/rust-anything"
-exclude = ["demo/", "docs/examples/", "tests/fixtures/**/node_modules"]
+exclude = ["demo/", "npm/", "docs/examples/", "tests/fixtures/**/node_modules"]
 
 [dependencies]
 anyhow = "1"
