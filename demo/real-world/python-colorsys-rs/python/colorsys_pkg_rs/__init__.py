@@ -87,11 +87,11 @@ def _method(name, positions, names, json_result):
     call.__name__ = name
     return call
 
-rgb_to_yiq = _wrap(_native.rgb_to_yiq, (0,1,2,), ('r','g','b',), True)
-yiq_to_rgb = _wrap(_native.yiq_to_rgb, (0,1,2,), ('y','i','q',), True)
-rgb_to_hls = _wrap(_native.rgb_to_hls, (0,1,2,), ('r','g','b',), True)
-hls_to_rgb = _wrap(_native.hls_to_rgb, (0,1,2,), ('h','l','s',), True)
-rgb_to_hsv = _wrap(_native.rgb_to_hsv, (0,1,2,), ('r','g','b',), True)
-hsv_to_rgb = _wrap(_native.hsv_to_rgb, (0,1,2,), ('h','s','v',), True)
+rgb_to_yiq = _native.rgb_to_yiq
+yiq_to_rgb = _native.yiq_to_rgb
+rgb_to_hls = _native.rgb_to_hls
+hls_to_rgb = _native.hls_to_rgb
+rgb_to_hsv = _native.rgb_to_hsv
+hsv_to_rgb = _native.hsv_to_rgb
 
 __all__ = ['rgb_to_yiq', 'yiq_to_rgb', 'rgb_to_hls', 'hls_to_rgb', 'rgb_to_hsv', 'hsv_to_rgb']

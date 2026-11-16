@@ -5,6 +5,11 @@ use pyo3::prelude::*;
 
 pub mod js;
 pub mod port;
+pub mod pyconv;
+pub mod pynum;
+
+#[allow(unused_imports)]
+use pynum::Num;
 
 fn error(message: String) -> PyErr {
     use pyo3::exceptions as e;
@@ -27,94 +32,160 @@ fn error(message: String) -> PyErr {
     }
 }
 
-fn rgb_to_yiq_inner(r: String, g: String, b: String) -> Result<String, String> {
-    let r = crate::js::from_json(&r)?;
-    let g = crate::js::from_json(&g)?;
-    let b = crate::js::from_json(&b)?;
+fn rgb_to_yiq_inner(
+    r: Bound<'_, PyAny>,
+    g: Bound<'_, PyAny>,
+    b: Bound<'_, PyAny>,
+) -> Result<(Num, Num, Num), String> {
+    let r: Num = crate::pyconv::FromPy::from_py(&r)?;
+    let g: Num = crate::pyconv::FromPy::from_py(&g)?;
+    let b: Num = crate::pyconv::FromPy::from_py(&b)?;
     let out = port::rgb_to_yiq(r, g, b)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `rgb_to_yiq`.
 #[pyfunction]
 #[pyo3(name = "rgb_to_yiq", signature = (r, g, b))]
-fn rgb_to_yiq(r: String, g: String, b: String) -> PyResult<String> {
-    rgb_to_yiq_inner(r, g, b).map_err(error)
+fn rgb_to_yiq(
+    py: Python<'_>,
+    r: Bound<'_, PyAny>,
+    g: Bound<'_, PyAny>,
+    b: Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    rgb_to_yiq_inner(r, g, b)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
-fn yiq_to_rgb_inner(y: String, i: String, q: String) -> Result<String, String> {
-    let y = crate::js::from_json(&y)?;
-    let i = crate::js::from_json(&i)?;
-    let q = crate::js::from_json(&q)?;
+fn yiq_to_rgb_inner(
+    y: Bound<'_, PyAny>,
+    i: Bound<'_, PyAny>,
+    q: Bound<'_, PyAny>,
+) -> Result<(Num, Num, Num), String> {
+    let y: Num = crate::pyconv::FromPy::from_py(&y)?;
+    let i: Num = crate::pyconv::FromPy::from_py(&i)?;
+    let q: Num = crate::pyconv::FromPy::from_py(&q)?;
     let out = port::yiq_to_rgb(y, i, q)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `yiq_to_rgb`.
 #[pyfunction]
 #[pyo3(name = "yiq_to_rgb", signature = (y, i, q))]
-fn yiq_to_rgb(y: String, i: String, q: String) -> PyResult<String> {
-    yiq_to_rgb_inner(y, i, q).map_err(error)
+fn yiq_to_rgb(
+    py: Python<'_>,
+    y: Bound<'_, PyAny>,
+    i: Bound<'_, PyAny>,
+    q: Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    yiq_to_rgb_inner(y, i, q)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
-fn rgb_to_hls_inner(r: String, g: String, b: String) -> Result<String, String> {
-    let r = crate::js::from_json(&r)?;
-    let g = crate::js::from_json(&g)?;
-    let b = crate::js::from_json(&b)?;
+fn rgb_to_hls_inner(
+    r: Bound<'_, PyAny>,
+    g: Bound<'_, PyAny>,
+    b: Bound<'_, PyAny>,
+) -> Result<(Num, Num, Num), String> {
+    let r: Num = crate::pyconv::FromPy::from_py(&r)?;
+    let g: Num = crate::pyconv::FromPy::from_py(&g)?;
+    let b: Num = crate::pyconv::FromPy::from_py(&b)?;
     let out = port::rgb_to_hls(r, g, b)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `rgb_to_hls`.
 #[pyfunction]
 #[pyo3(name = "rgb_to_hls", signature = (r, g, b))]
-fn rgb_to_hls(r: String, g: String, b: String) -> PyResult<String> {
-    rgb_to_hls_inner(r, g, b).map_err(error)
+fn rgb_to_hls(
+    py: Python<'_>,
+    r: Bound<'_, PyAny>,
+    g: Bound<'_, PyAny>,
+    b: Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    rgb_to_hls_inner(r, g, b)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
-fn hls_to_rgb_inner(h: String, l: String, s: String) -> Result<String, String> {
-    let h = crate::js::from_json(&h)?;
-    let l = crate::js::from_json(&l)?;
-    let s = crate::js::from_json(&s)?;
+fn hls_to_rgb_inner(
+    h: Bound<'_, PyAny>,
+    l: Bound<'_, PyAny>,
+    s: Bound<'_, PyAny>,
+) -> Result<(Num, Num, Num), String> {
+    let h: Num = crate::pyconv::FromPy::from_py(&h)?;
+    let l: Num = crate::pyconv::FromPy::from_py(&l)?;
+    let s: Num = crate::pyconv::FromPy::from_py(&s)?;
     let out = port::hls_to_rgb(h, l, s)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `hls_to_rgb`.
 #[pyfunction]
 #[pyo3(name = "hls_to_rgb", signature = (h, l, s))]
-fn hls_to_rgb(h: String, l: String, s: String) -> PyResult<String> {
-    hls_to_rgb_inner(h, l, s).map_err(error)
+fn hls_to_rgb(
+    py: Python<'_>,
+    h: Bound<'_, PyAny>,
+    l: Bound<'_, PyAny>,
+    s: Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    hls_to_rgb_inner(h, l, s)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
-fn rgb_to_hsv_inner(r: String, g: String, b: String) -> Result<String, String> {
-    let r = crate::js::from_json(&r)?;
-    let g = crate::js::from_json(&g)?;
-    let b = crate::js::from_json(&b)?;
+fn rgb_to_hsv_inner(
+    r: Bound<'_, PyAny>,
+    g: Bound<'_, PyAny>,
+    b: Bound<'_, PyAny>,
+) -> Result<(Num, Num, Num), String> {
+    let r: Num = crate::pyconv::FromPy::from_py(&r)?;
+    let g: Num = crate::pyconv::FromPy::from_py(&g)?;
+    let b: Num = crate::pyconv::FromPy::from_py(&b)?;
     let out = port::rgb_to_hsv(r, g, b)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `rgb_to_hsv`.
 #[pyfunction]
 #[pyo3(name = "rgb_to_hsv", signature = (r, g, b))]
-fn rgb_to_hsv(r: String, g: String, b: String) -> PyResult<String> {
-    rgb_to_hsv_inner(r, g, b).map_err(error)
+fn rgb_to_hsv(
+    py: Python<'_>,
+    r: Bound<'_, PyAny>,
+    g: Bound<'_, PyAny>,
+    b: Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    rgb_to_hsv_inner(r, g, b)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
-fn hsv_to_rgb_inner(h: String, s: String, v: String) -> Result<String, String> {
-    let h = crate::js::from_json(&h)?;
-    let s = crate::js::from_json(&s)?;
-    let v = crate::js::from_json(&v)?;
+fn hsv_to_rgb_inner(
+    h: Bound<'_, PyAny>,
+    s: Bound<'_, PyAny>,
+    v: Bound<'_, PyAny>,
+) -> Result<(Num, Num, Num), String> {
+    let h: Num = crate::pyconv::FromPy::from_py(&h)?;
+    let s: Num = crate::pyconv::FromPy::from_py(&s)?;
+    let v: Num = crate::pyconv::FromPy::from_py(&v)?;
     let out = port::hsv_to_rgb(h, s, v)?;
-    crate::js::to_json(&out)
+    Ok(out)
 }
 
 /// `hsv_to_rgb`.
 #[pyfunction]
 #[pyo3(name = "hsv_to_rgb", signature = (h, s, v))]
-fn hsv_to_rgb(h: String, s: String, v: String) -> PyResult<String> {
-    hsv_to_rgb_inner(h, s, v).map_err(error)
+fn hsv_to_rgb(
+    py: Python<'_>,
+    h: Bound<'_, PyAny>,
+    s: Bound<'_, PyAny>,
+    v: Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    hsv_to_rgb_inner(h, s, v)
+        .map_err(error)
+        .and_then(|v| crate::pyconv::ToPy::to_py(&v, py))
 }
 
 #[pymodule]

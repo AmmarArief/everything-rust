@@ -99,16 +99,48 @@ fn params_of<'m>(m: &'m Manifest, f: &PortFn, class: Option<&str>) -> &'m [Param
 
 fn binding_type(ty: &str) -> String {
     match wire(ty) {
-        Wire::Json => "String".to_string(),
+        // Structured values arrive as Python objects and are converted in Rust: no JSON text.
+        Wire::Json => "Bound<'_, PyAny>".to_string(),
         _ => ty.to_string(),
     }
+}
+
+/// Whether `FromPy`/`ToPy` in `pyconv.rs` cover a type: then it converts directly, without
+/// building a `serde_json::Value` first.
+fn direct(ty: &str) -> bool {
+    const KNOWN: &[&str] = &[
+        "Vec",
+        "Option",
+        "HashMap",
+        "std",
+        "collections",
+        "String",
+        "f64",
+        "i64",
+        "bool",
+        "serde_json",
+        "Value",
+        "Num",
+        "crate",
+        "pynum",
+    ];
+    ty.split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .filter(|w| !w.is_empty())
+        .all(|w| KNOWN.contains(&w))
 }
 
 fn body(f: &PortFn, target: &str, constructor: bool) -> String {
     let mut body = String::new();
     for (n, t) in &f.params {
         if wire(t) == Wire::Json {
-            let _ = writeln!(body, "    let {n} = crate::js::from_json(&{n})?;");
+            if direct(t) {
+                let _ = writeln!(
+                    body,
+                    "    let {n}: {t} = crate::pyconv::FromPy::from_py(&{n})?;"
+                );
+            } else {
+                let _ = writeln!(body, "    let {n} = crate::pyconv::arg(&{n})?;");
+            }
         }
     }
     let args: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
@@ -125,8 +157,8 @@ fn body(f: &PortFn, target: &str, constructor: bool) -> String {
     let _ = writeln!(
         body,
         "    {}",
-        if !constructor && wire(&f.ret) == Wire::Json {
-            "crate::js::to_json(&out)"
+        if !constructor && wire(&f.ret) == Wire::Json && !direct(&f.ret) {
+            "serde_json::to_value(&out).map_err(|e| e.to_string())"
         } else {
             "Ok(out)"
         }
@@ -134,10 +166,28 @@ fn body(f: &PortFn, target: &str, constructor: bool) -> String {
     body
 }
 
+/// The `_inner` function's success type: structured results as a `serde_json::Value`.
 fn ret(f: &PortFn) -> String {
     match wire(&f.ret) {
-        Wire::Json => "String".into(),
+        Wire::Json if direct(&f.ret) => f.ret.clone(),
+        Wire::Json => "serde_json::Value".into(),
         _ => f.ret.clone(),
+    }
+}
+
+/// The `#[pyfunction]`'s success type: structured results as a Python object.
+fn py_ret(f: &PortFn) -> String {
+    match wire(&f.ret) {
+        Wire::Json => "Py<PyAny>".into(),
+        _ => f.ret.clone(),
+    }
+}
+
+/// How the `#[pyfunction]` hands back the `_inner` result.
+fn py_out(f: &PortFn) -> &'static str {
+    match wire(&f.ret) {
+        Wire::Json => ".map_err(error).and_then(|v| crate::pyconv::ToPy::to_py(&v, py))",
+        _ => ".map_err(error)",
     }
 }
 
@@ -177,6 +227,11 @@ pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
         out.push_str("pub mod js;\n");
     }
     out.push_str("pub mod port;\n");
+    if api.needs_json() {
+        out.push_str(
+            "pub mod pyconv;\npub mod pynum;\n\n#[allow(unused_imports)]\nuse pynum::Num;\n",
+        );
+    }
     if modules.utf16 {
         out.push_str("pub mod utf16;\n");
     }
@@ -205,14 +260,19 @@ pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
             f.js_name,
             signature(f, params_of(m, f, None))
         );
+        let py_param = if wire(&f.ret) == Wire::Json {
+            "py: Python<'_>, "
+        } else {
+            ""
+        };
         let _ = writeln!(
             out,
-            "fn {}({}) -> PyResult<{}> {{",
+            "fn {}({py_param}{}) -> PyResult<{}> {{",
             f.rust_name,
             params.join(", "),
-            ret(f)
+            py_ret(f)
         );
-        let _ = writeln!(out, "    {inner}({}).map_err(error)\n}}", args.join(", "));
+        let _ = writeln!(out, "    {inner}({}){}\n}}", args.join(", "), py_out(f));
         registrations.push(format!(
             "    m.add_function(wrap_pyfunction!({}, m)?)?;",
             f.rust_name
@@ -294,16 +354,22 @@ pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
             let args = std::iter::once(borrow)
                 .chain(method.params.iter().map(|(n, _)| n.as_str()))
                 .collect::<Vec<_>>();
+            let sig = if wire(&method.ret) == Wire::Json {
+                sig.replacen("self", "self, py: Python<'_>", 1)
+            } else {
+                sig
+            };
             let _ = writeln!(
                 out,
                 "\n    #[pyo3(name = \"{}\", signature = ({}))]\n    fn {}({sig}) -> PyResult<{}> {{\n        \
-                 {snake}_{}_inner({}).map_err(error)\n    }}",
+                 {snake}_{}_inner({}){}\n    }}",
                 method.js_name,
                 signature(method, params_of(m, method, Some(js))),
                 method.rust_name,
-                ret(method),
+                py_ret(method),
                 method.rust_name.trim_start_matches("r#"),
-                args.join(", ")
+                args.join(", "),
+                py_out(method)
             );
         }
         out.push_str("}\n");
@@ -319,16 +385,8 @@ pub fn lib_rs(m: &Manifest, api: &PortApi, modules: &Modules) -> String {
 
 /// The wrapper package: imports `_native`, converting structured values.
 pub fn package_init(m: &Manifest, api: &PortApi) -> String {
-    let structured = |f: &PortFn| -> (Vec<String>, bool) {
-        (
-            f.params
-                .iter()
-                .filter(|(_, t)| wire(t) == Wire::Json)
-                .map(|(n, _)| n.trim_start_matches("r#").to_string())
-                .collect(),
-            wire(&f.ret) == Wire::Json,
-        )
-    };
+    // Structured values are converted in Rust (`pyconv.rs`): every export is the native one.
+    let structured = |_: &PortFn| -> (Vec<String>, bool) { (Vec::new(), false) };
     let mut out = format!(
         "\"\"\"Rust port of `{}`, generated by carcinize. Import this package where the code\n\
          imported the original module.\"\"\"\n\nfrom . import _native\n{CODEC_PY}\n",
@@ -513,6 +571,457 @@ def _method(name, positions, names, json_result):
         return _dec(_json.loads(out)) if json_result else out
     call.__name__ = name
     return call
+"#;
+
+/// `src/pyconv.rs`: Python objects to `serde_json::Value` and back, in Rust, without JSON text.
+/// Values the JSON model lacks use the same markers as recorded cases: `$tuple`, `$set`,
+/// `$bytes`, `$int` (beyond i64), `$dict` (non-string keys), `$num` (NaN, infinities, -0).
+pub const PYCONV_RS: &str = r#"//! Python objects to `serde_json::Value` and back, in Rust. Generated by carcinize.
+
+#![forbid(unsafe_code)]
+
+use pyo3::prelude::*;
+use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString, PyTuple};
+use serde_json::{Map, Value, json};
+
+fn type_error(obj: &Bound<'_, PyAny>) -> String {
+    let name = obj.get_type().name().map(|n| n.to_string()).unwrap_or_default();
+    format!("TypeError: unsupported argument type {name}")
+}
+
+fn float(x: f64) -> Value {
+    if x.is_nan() {
+        json!({"$num": "NaN"})
+    } else if x.is_infinite() {
+        json!({"$num": if x > 0.0 { "Infinity" } else { "-Infinity" }})
+    } else if x == 0.0 && x.is_sign_negative() {
+        json!({"$num": "-0"})
+    } else {
+        json!(x)
+    }
+}
+
+fn items(obj: &Bound<'_, PyAny>) -> Result<Vec<Value>, String> {
+    let mut out = Vec::new();
+    for item in obj.try_iter().map_err(|e| e.to_string())? {
+        out.push(from_py(&item.map_err(|e| e.to_string())?)?);
+    }
+    Ok(out)
+}
+
+/// A Python object as a JSON value.
+pub fn from_py(obj: &Bound<'_, PyAny>) -> Result<Value, String> {
+    if obj.is_none() {
+        return Ok(Value::Null);
+    }
+    if obj.is_instance_of::<PyBool>() {
+        return Ok(Value::Bool(obj.extract::<bool>().map_err(|e| e.to_string())?));
+    }
+    if obj.is_instance_of::<PyInt>() {
+        return Ok(match obj.extract::<i64>() {
+            Ok(i) => json!(i),
+            Err(_) => json!({"$int": obj.str().map_err(|e| e.to_string())?.to_string()}),
+        });
+    }
+    if obj.is_instance_of::<PyFloat>() {
+        return Ok(float(obj.extract::<f64>().map_err(|e| e.to_string())?));
+    }
+    if obj.is_instance_of::<PyString>() {
+        return Ok(Value::String(obj.extract::<String>().map_err(|e| e.to_string())?));
+    }
+    if obj.is_instance_of::<PyList>() {
+        return Ok(Value::Array(items(obj)?));
+    }
+    if obj.is_instance_of::<PyTuple>() {
+        return Ok(json!({"$tuple": items(obj)?}));
+    }
+    if obj.is_instance_of::<PyDict>() {
+        let dict = obj.cast::<PyDict>().map_err(|e| e.to_string())?;
+        let mut map = Map::new();
+        let mut pairs = Vec::new();
+        let mut string_keys = true;
+        for (k, v) in dict.iter() {
+            let value = from_py(&v)?;
+            if let Ok(key) = k.extract::<String>() {
+                map.insert(key.clone(), value.clone());
+                pairs.push(json!([key, value]));
+            } else {
+                string_keys = false;
+                pairs.push(json!([from_py(&k)?, value]));
+            }
+        }
+        return Ok(if string_keys { Value::Object(map) } else { json!({"$dict": pairs}) });
+    }
+    if obj.is_instance_of::<PySet>() || obj.is_instance_of::<PyFrozenSet>() {
+        return Ok(json!({"$set": items(obj)?}));
+    }
+    if obj.is_instance_of::<PyBytes>() {
+        return Ok(json!({"$bytes": obj.extract::<Vec<u8>>().map_err(|e| e.to_string())?}));
+    }
+    Err(type_error(obj))
+}
+
+/// A structured argument, converted to the port's parameter type.
+pub fn arg<T: serde::de::DeserializeOwned>(obj: &Bound<'_, PyAny>) -> Result<T, String> {
+    serde_json::from_value(from_py(obj)?).map_err(|e| format!("TypeError: {e}"))
+}
+
+/// A Python argument as a Rust value, without going through JSON.
+pub trait FromPy: Sized {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String>;
+}
+
+/// A Rust result as a Python object, without going through JSON.
+pub trait ToPy {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>>;
+}
+
+macro_rules! extract {
+    ($($t:ty),*) => {$(
+        impl FromPy for $t {
+            fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+                obj.extract::<$t>().map_err(|_| type_error(obj))
+            }
+        }
+        impl ToPy for $t {
+            fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+                Ok(self.clone().into_pyobject(py)?.to_owned().into_any().unbind())
+            }
+        }
+    )*};
+}
+extract!(i64, bool, String);
+
+impl FromPy for f64 {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+        if obj.is_instance_of::<PyFloat>() || obj.is_instance_of::<PyInt>() {
+            obj.extract::<f64>().map_err(|_| type_error(obj))
+        } else {
+            Err(type_error(obj))
+        }
+    }
+}
+
+impl ToPy for f64 {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(PyFloat::new(py, *self).into_any().unbind())
+    }
+}
+
+impl FromPy for crate::pynum::Num {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+        use crate::pynum::Num;
+        if obj.is_instance_of::<PyFloat>() {
+            return obj.extract::<f64>().map(Num::Float).map_err(|_| type_error(obj));
+        }
+        if obj.is_instance_of::<PyInt>() {
+            return obj
+                .extract::<i64>()
+                .map(Num::Int)
+                .map_err(|_| "OverflowError: int too large for the port".to_string());
+        }
+        Err(type_error(obj))
+    }
+}
+
+impl ToPy for crate::pynum::Num {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        match *self {
+            crate::pynum::Num::Int(i) => i.to_py(py),
+            crate::pynum::Num::Float(x) => x.to_py(py),
+        }
+    }
+}
+
+impl FromPy for Value {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+        from_py(obj)
+    }
+}
+
+impl ToPy for Value {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        to_py(py, self)
+    }
+}
+
+impl<T: FromPy> FromPy for Option<T> {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+        if obj.is_none() { Ok(None) } else { T::from_py(obj).map(Some) }
+    }
+}
+
+impl<T: ToPy> ToPy for Option<T> {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        match self {
+            Some(v) => v.to_py(py),
+            None => Ok(py.None()),
+        }
+    }
+}
+
+impl<T: FromPy> FromPy for Vec<T> {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+        if !obj.is_instance_of::<PyList>() && !obj.is_instance_of::<PyTuple>() {
+            return Err(type_error(obj));
+        }
+        let mut out = Vec::new();
+        for item in obj.try_iter().map_err(|e| e.to_string())? {
+            out.push(T::from_py(&item.map_err(|e| e.to_string())?)?);
+        }
+        Ok(out)
+    }
+}
+
+impl<T: ToPy> ToPy for Vec<T> {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let items: PyResult<Vec<Py<PyAny>>> = self.iter().map(|x| x.to_py(py)).collect();
+        Ok(PyList::new(py, items?)?.into_any().unbind())
+    }
+}
+
+impl<T: FromPy> FromPy for std::collections::HashMap<String, T> {
+    fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+        let dict = obj.cast::<PyDict>().map_err(|_| type_error(obj))?;
+        let mut out = Self::new();
+        for (k, v) in dict.iter() {
+            out.insert(k.extract::<String>().map_err(|_| type_error(&k))?, T::from_py(&v)?);
+        }
+        Ok(out)
+    }
+}
+
+impl<T: ToPy> ToPy for std::collections::HashMap<String, T> {
+    fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let dict = PyDict::new(py);
+        for (k, v) in self {
+            dict.set_item(k, v.to_py(py)?)?;
+        }
+        Ok(dict.into_any().unbind())
+    }
+}
+
+macro_rules! tuples {
+    ($(($($t:ident $i:tt),+)),*) => {$(
+        impl<$($t: FromPy),+> FromPy for ($($t,)+) {
+            fn from_py(obj: &Bound<'_, PyAny>) -> Result<Self, String> {
+                let t = obj.cast::<PyTuple>().map_err(|_| type_error(obj))?;
+                Ok(($($t::from_py(&t.get_item($i).map_err(|e| e.to_string())?)?,)+))
+            }
+        }
+        impl<$($t: ToPy),+> ToPy for ($($t,)+) {
+            fn to_py(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+                Ok(PyTuple::new(py, [$(self.$i.to_py(py)?),+])?.into_any().unbind())
+            }
+        }
+    )*};
+}
+tuples!((A 0, B 1), (A 0, B 1, C 2), (A 0, B 1, C 2, D 3));
+
+/// A JSON value as a Python object; markers become the Python types they stand for.
+pub fn to_py(py: Python<'_>, v: &Value) -> PyResult<Py<PyAny>> {
+    let list = |items: &[Value]| -> PyResult<Vec<Py<PyAny>>> { items.iter().map(|x| to_py(py, x)).collect() };
+    Ok(match v {
+        Value::Null => py.None(),
+        Value::Bool(b) => PyBool::new(py, *b).to_owned().into_any().unbind(),
+        Value::Number(n) => match n.as_i64() {
+            Some(i) if !n.is_f64() => i.into_pyobject(py)?.into_any().unbind(),
+            _ => match n.as_u64() {
+                Some(u) if !n.is_f64() => u.into_pyobject(py)?.into_any().unbind(),
+                _ => PyFloat::new(py, n.as_f64().unwrap_or(f64::NAN)).into_any().unbind(),
+            },
+        },
+        Value::String(s) => PyString::new(py, s).into_any().unbind(),
+        Value::Array(items) => PyList::new(py, list(items)?)?.into_any().unbind(),
+        Value::Object(o) if o.len() == 1 => {
+            let (key, inner) = o.iter().next().expect("one entry");
+            let items = || inner.as_array().map(Vec::as_slice).unwrap_or_default();
+            match key.as_str() {
+                "$tuple" => PyTuple::new(py, list(items())?)?.into_any().unbind(),
+                "$set" => PySet::new(py, list(items())?)?.into_any().unbind(),
+                "$bytes" => {
+                    let bytes: Vec<u8> = items().iter().filter_map(|b| b.as_u64()).map(|b| b as u8).collect();
+                    PyBytes::new(py, &bytes).into_any().unbind()
+                }
+                "$int" => py
+                    .import("builtins")?
+                    .getattr("int")?
+                    .call1((inner.as_str().unwrap_or("0"),))?
+                    .unbind(),
+                "$float" => PyFloat::new(py, inner.as_str().and_then(|s| s.parse().ok()).unwrap_or(f64::NAN)).into_any().unbind(),
+                "$num" => PyFloat::new(
+                    py,
+                    match inner.as_str() {
+                        Some("Infinity") => f64::INFINITY,
+                        Some("-Infinity") => f64::NEG_INFINITY,
+                        Some("-0") => -0.0,
+                        _ => f64::NAN,
+                    },
+                )
+                .into_any()
+                .unbind(),
+                "$dict" => {
+                    let dict = PyDict::new(py);
+                    for pair in items() {
+                        if let Some([k, v]) = pair.as_array().map(Vec::as_slice) {
+                            dict.set_item(to_py(py, k)?, to_py(py, v)?)?;
+                        }
+                    }
+                    dict.into_any().unbind()
+                }
+                _ => {
+                    let dict = PyDict::new(py);
+                    dict.set_item(key, to_py(py, inner)?)?;
+                    dict.into_any().unbind()
+                }
+            }
+        }
+        Value::Object(o) => {
+            let dict = PyDict::new(py);
+            for (k, x) in o {
+                dict.set_item(k, to_py(py, x)?)?;
+            }
+            dict.into_any().unbind()
+        }
+    })
+}
+"#;
+
+/// `src/pynum.rs`: Python's int-or-float, for ports of code that takes either.
+pub const PYNUM_RS: &str = r#"//! Python numbers: an int stays an int through `+`, `-`, `*`, `//` and `%`; `/` gives a float.
+//! Generated by carcinize. Ints beyond i64 become floats (Python would keep a big int).
+
+#![forbid(unsafe_code)]
+
+use std::cmp::Ordering;
+use std::ops::{Add, Mul, Neg, Sub};
+
+#[derive(Clone, Copy, Debug)]
+pub enum Num {
+    Int(i64),
+    Float(f64),
+}
+
+impl Num {
+    pub fn f(self) -> f64 {
+        match self {
+            Self::Int(i) => i as f64,
+            Self::Float(x) => x,
+        }
+    }
+
+    fn op(self, o: Self, int: fn(i64, i64) -> Option<i64>, float: fn(f64, f64) -> f64) -> Self {
+        match (self, o) {
+            (Self::Int(a), Self::Int(b)) => int(a, b).map_or_else(|| Self::Float(float(a as f64, b as f64)), Self::Int),
+            (a, b) => Self::Float(float(a.f(), b.f())),
+        }
+    }
+
+    /// `/`: always a float; `ZeroDivisionError` for zero.
+    pub fn true_div(self, o: Self) -> Result<Self, String> {
+        match (self, o) {
+            (_, o) if o.f() == 0.0 => Err(match (self, o) {
+                (Self::Int(_), Self::Int(_)) => "ZeroDivisionError: division by zero".into(),
+                _ => "ZeroDivisionError: float division by zero".into(),
+            }),
+            (a, b) => Ok(Self::Float(a.f() / b.f())),
+        }
+    }
+
+    /// `%`: the result takes the divisor's sign.
+    pub fn modulo(self, o: Self) -> Result<Self, String> {
+        match (self, o) {
+            (Self::Int(_), Self::Int(0)) => Err("ZeroDivisionError: integer modulo by zero".into()),
+            (Self::Int(a), Self::Int(b)) => {
+                let r = a.wrapping_rem(b);
+                Ok(Self::Int(if r != 0 && (r < 0) != (b < 0) { r + b } else { r }))
+            }
+            (a, b) => {
+                let (x, y) = (a.f(), b.f());
+                if y == 0.0 {
+                    return Err("ZeroDivisionError: float modulo".into());
+                }
+                let m = x % y;
+                Ok(Self::Float(if m != 0.0 {
+                    if (y < 0.0) != (m < 0.0) { m + y } else { m }
+                } else {
+                    0.0_f64.copysign(y)
+                }))
+            }
+        }
+    }
+
+    /// Python's `max(a, b, ...)`: the first value no later value is greater than.
+    pub fn max(values: &[Self]) -> Self {
+        values[1..].iter().fold(values[0], |m, &x| if x > m { x } else { m })
+    }
+
+    /// Python's `min(a, b, ...)`.
+    pub fn min(values: &[Self]) -> Self {
+        values[1..].iter().fold(values[0], |m, &x| if x < m { x } else { m })
+    }
+}
+
+impl From<f64> for Num {
+    fn from(x: f64) -> Self {
+        Self::Float(x)
+    }
+}
+
+impl From<i64> for Num {
+    fn from(i: i64) -> Self {
+        Self::Int(i)
+    }
+}
+
+impl Add for Num {
+    type Output = Self;
+    fn add(self, o: Self) -> Self {
+        self.op(o, i64::checked_add, |a, b| a + b)
+    }
+}
+
+impl Sub for Num {
+    type Output = Self;
+    fn sub(self, o: Self) -> Self {
+        self.op(o, i64::checked_sub, |a, b| a - b)
+    }
+}
+
+impl Mul for Num {
+    type Output = Self;
+    fn mul(self, o: Self) -> Self {
+        self.op(o, i64::checked_mul, |a, b| a * b)
+    }
+}
+
+impl Neg for Num {
+    type Output = Self;
+    fn neg(self) -> Self {
+        match self {
+            Self::Int(i) => i.checked_neg().map_or(Self::Float(-(i as f64)), Self::Int),
+            Self::Float(x) => Self::Float(-x),
+        }
+    }
+}
+
+impl PartialEq for Num {
+    fn eq(&self, o: &Self) -> bool {
+        match (*self, *o) {
+            (Self::Int(a), Self::Int(b)) => a == b,
+            (a, b) => a.f() == b.f(),
+        }
+    }
+}
+
+impl PartialOrd for Num {
+    fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
+        match (*self, *o) {
+            (Self::Int(a), Self::Int(b)) => a.partial_cmp(&b),
+            (a, b) => a.f().partial_cmp(&b.f()),
+        }
+    }
+}
 "#;
 
 #[cfg(test)]

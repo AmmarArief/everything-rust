@@ -682,6 +682,10 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     if modules.js {
         files.push(("src/js.rs".into(), codegen::JS_RS.to_string()));
     }
+    if manifest.kind == Kind::Pyo3 && fns.needs_json() {
+        files.push(("src/pyconv.rs".into(), crate::codegen_py::PYCONV_RS.into()));
+        files.push(("src/pynum.rs".into(), crate::codegen_py::PYNUM_RS.into()));
+    }
     let cargo_path = crate_dir.join("Cargo.toml");
     let cargo = std::fs::read_to_string(&cargo_path).context("reading Cargo.toml")?;
     let cargo = codegen::ensure_deps(&cargo, manifest.kind, &fns).map_err(anyhow::Error::msg)?;
@@ -942,6 +946,10 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     }
     if modules.js {
         files.push(("src/js.rs".into(), codegen::JS_RS.into()));
+    }
+    if manifest.kind == Kind::Pyo3 && fns.needs_json() {
+        files.push(("src/pyconv.rs".into(), crate::codegen_py::PYCONV_RS.into()));
+        files.push(("src/pynum.rs".into(), crate::codegen_py::PYNUM_RS.into()));
     }
     for (path, text) in &files {
         let target = crate_dir.join(path);
