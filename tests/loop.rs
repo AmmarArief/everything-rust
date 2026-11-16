@@ -255,7 +255,7 @@ fn async_functions_get_async_bindings() {
                 assert!(cargo.contains("features = [\"async\"]") && cargo.contains("futures"))
             }
             Kind::Wasm => assert!(cargo.contains("wasm-bindgen-futures")),
-            Kind::Pyo3 => {}
+            Kind::Pyo3 | Kind::CAbi => {}
         }
         let index = std::fs::read_to_string(dir.join("index.cjs")).unwrap();
         // Only structured functions are wrapped; `countWords` passes its promise straight through.
@@ -491,4 +491,80 @@ fn python_modules_bridge_record_and_diff() {
     let fixed = diff(&dir);
     assert_eq!(fixed.failed, 0, "{:?}", fixed.mismatches);
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+fn cc_available() -> bool {
+    Command::new("cc")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+}
+
+#[test]
+fn c_units_bridge_record_and_diff() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/c");
+    let dir = std::env::temp_dir().join(format!("carcinize-c-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/text.c",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+    })
+    .unwrap();
+    assert_eq!(outcome.kind, Kind::CAbi);
+    let manifest = Manifest::load(&dir).unwrap();
+    // A returned pointer needs an ownership design: it stays in C.
+    let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
+    assert_eq!(kept, ["upper_copy"]);
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(
+        lib.contains("pub extern \"C\" fn count_words(s: *const c_char) -> usize"),
+        "{lib}"
+    );
+    let header = std::fs::read_to_string(dir.join("include/text_rs.h")).unwrap();
+    assert!(
+        header.contains("bool is_palindrome(const char *s);"),
+        "{header}"
+    );
+    if !(cc_available() && python_available()) {
+        return;
+    }
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 40,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert_eq!(recorded.cases, 120);
+    // `vowels` forgets upper case: the diff must notice.
+    std::fs::write(
+        dir.join("src/port.rs"),
+        "pub fn count_words(s: Option<&[u8]>) -> usize {\n    s.map_or(0, |s| s.split(|b| b.is_ascii_whitespace() || *b == 0x0b).filter(|w| !w.is_empty()).count())\n}\n\
+         pub fn vowels(s: Option<&[u8]>) -> std::ffi::c_int {\n    s.map_or(-1, |s| s.iter().filter(|b| b\"aeiou\".contains(b)).count() as std::ffi::c_int)\n}\n\
+         pub fn is_palindrome(s: Option<&[u8]>) -> bool {\n    s.is_some_and(|s| s.iter().eq(s.iter().rev()))\n}\n",
+    )
+    .unwrap();
+    harness::build(&dir).unwrap();
+    let diff = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(diff.missing.is_empty());
+    assert!(diff.failed > 0 && diff.failed < 40, "{diff:?}");
+    assert!(
+        diff.mismatches.iter().all(|m| m["fn"] == "vowels"),
+        "{diff:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

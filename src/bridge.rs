@@ -26,6 +26,9 @@ pub enum Kind {
     Napi,
     Wasm,
     Pyo3,
+    /// `extern "C"` functions with the original names: a drop-in replacement for C code.
+    #[serde(rename = "c-abi")]
+    CAbi,
 }
 
 /// What `bridge` generated; every later step starts from it.
@@ -625,6 +628,15 @@ pub struct Refreshed {
 /// `port.rs`, and adds the dependencies they need to Cargo.toml. Never touches `port.rs`.
 pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     let manifest = Manifest::load(crate_dir)?;
+    if manifest.kind == Kind::CAbi {
+        let files = c_bindings(&manifest);
+        write_files(crate_dir, &files)?;
+        format_rust(crate_dir);
+        return Ok(Refreshed {
+            functions: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+            files: files.into_iter().map(|(p, _)| p).collect(),
+        });
+    }
     let port =
         std::fs::read_to_string(crate_dir.join("src/port.rs")).context("reading src/port.rs")?;
     let fns = codegen::parse_port(&port);
@@ -694,6 +706,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     let kind = opts.kind.unwrap_or(match unit.bridge {
         Bridge::WasmBindgen => Kind::Wasm,
         Bridge::Pyo3 => Kind::Pyo3,
+        Bridge::CAbi => Kind::CAbi,
         _ => Kind::Napi,
     });
 
@@ -861,6 +874,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         classes: classes.clone(),
         js_only: js_only.clone(),
     };
+    if kind == Kind::CAbi {
+        return bridge_c(&manifest, &crate_dir, &js_only);
+    }
     let port = codegen::port_rs(&manifest);
     let fns = codegen::parse_port(&port);
     let modules = codegen::Modules {
@@ -939,6 +955,69 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     })
 }
 
+fn write_files(crate_dir: &Path, files: &[(String, String)]) -> Result<()> {
+    for (path, text) in files {
+        let target = crate_dir.join(path);
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&target, text).with_context(|| format!("writing {}", target.display()))?;
+    }
+    Ok(())
+}
+
+/// The generated C-side files: the `extern "C"` layer and its header. C signatures are fixed
+/// by the original, so they come from the manifest, not from `port.rs`.
+fn c_bindings(m: &Manifest) -> Vec<(String, String)> {
+    vec![
+        ("src/lib.rs".into(), crate::codegen_c::lib_rs(m)),
+        (
+            format!("include/{}.h", m.lib_name()),
+            crate::codegen_c::header(m),
+        ),
+    ]
+}
+
+fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Outcome> {
+    let mut files = vec![
+        (
+            "Cargo.toml".to_string(),
+            crate::codegen_c::cargo_toml(manifest),
+        ),
+        ("src/port.rs".into(), crate::codegen_c::port_rs(manifest)),
+        (".gitignore".into(), "target/\n.carcinize/\n".into()),
+        ("README.md".into(), readme(manifest)),
+        (
+            MANIFEST.into(),
+            serde_json::to_string_pretty(manifest)? + "\n",
+        ),
+    ];
+    files.extend(c_bindings(manifest));
+    write_files(crate_dir, &files)?;
+    format_rust(crate_dir);
+    let mut notes = vec![
+        format!(
+            "Port each function in src/port.rs, then: carcinize record {0} && carcinize build {0} && carcinize diff {0}",
+            crate_dir.display()
+        ),
+        format!(
+            "Link target/release/lib{}.a (or the .so) instead of the C objects; include/{}.h has the prototypes.",
+            manifest.lib_name(),
+            manifest.lib_name()
+        ),
+    ];
+    for j in kept {
+        notes.push(format!("`{}` stays in C: {}.", j.name, j.reason));
+    }
+    Ok(Outcome {
+        crate_dir: crate_dir.to_path_buf(),
+        kind: Kind::CAbi,
+        files: files.into_iter().map(|(p, _)| p).collect(),
+        exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+        notes,
+    })
+}
+
 fn readme(m: &Manifest) -> String {
     let functions: String = m
         .exports
@@ -956,6 +1035,7 @@ fn readme(m: &Manifest) -> String {
             Kind::Napi => "napi-rs",
             Kind::Wasm => "wasm-bindgen",
             Kind::Pyo3 => "PyO3",
+            Kind::CAbi => "the C ABI",
         },
     )
 }

@@ -6,9 +6,11 @@
 pub mod analyze;
 pub mod bridge;
 pub mod codegen;
+pub mod codegen_c;
 pub mod codegen_py;
 pub mod gate;
 pub mod harness;
+pub mod harness_c;
 pub mod harness_py;
 pub mod lang;
 pub mod mcp;

@@ -354,9 +354,15 @@ fn run() -> Result<ExitCode> {
                 outcome.path.display(),
                 outcome.exports.join(", ")
             );
-            say!(
-                "Import it in place of the original. CARCINIZE_MODE=old|shadow|new switches at runtime."
-            );
+            if outcome.path.extension().is_some_and(|e| e == "c") {
+                say!(
+                    "Compile the original with the -D flags in shadow/flags.txt, build the crate with --features shadow, and link all three."
+                );
+            } else {
+                say!(
+                    "Import it in place of the original. CARCINIZE_MODE=old|shadow|new switches at runtime."
+                );
+            }
         }
         Cmd::Gate {
             crate_dir,

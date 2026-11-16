@@ -26,6 +26,9 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
     if manifest.language == crate::lang::Lang::Python {
         return shadow_python(&crate_dir, &manifest, out);
     }
+    if manifest.kind == crate::bridge::Kind::CAbi {
+        return shadow_c(&crate_dir, &manifest, out);
+    }
     let mut files: Vec<&str> = manifest
         .exports
         .iter()
@@ -399,6 +402,32 @@ def load(path):
     return importlib.import_module(".".join(parts))
 "#
 };
+
+/// C: a shadow translation unit, and the `-D` flags that rename the originals beside it.
+fn shadow_c(crate_dir: &Path, manifest: &Manifest, out: Option<&Path>) -> Result<ShadowOutcome> {
+    let stem = manifest
+        .crate_name
+        .trim_end_matches("-rs")
+        .replace('-', "_");
+    let path = match out {
+        Some(p) => p.to_path_buf(),
+        None => crate_dir.join("shadow").join(format!("{stem}_shadow.c")),
+    };
+    if path.exists() {
+        bail!("{} exists; remove it first or pass --out", path.display());
+    }
+    let dir = path.parent().context("output path has no folder")?;
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(&path, crate::codegen_c::shadow_c(manifest))?;
+    std::fs::write(
+        dir.join("flags.txt"),
+        crate::codegen_c::shadow_flags(manifest),
+    )?;
+    Ok(ShadowOutcome {
+        path,
+        exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+    })
+}
 
 #[cfg(test)]
 mod tests {

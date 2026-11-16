@@ -21,6 +21,9 @@ pub struct Param {
     /// Python keyword-only parameter (after `*`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub keyword_only: bool,
+    /// The exact source type, for languages whose bridge must match it (C: `size_t`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_type: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,6 +47,12 @@ pub struct ExportedFn {
     /// Why the function must stay in its language, found by the language plugin.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocker: Option<String>,
+    /// The exact source return type (C: `unsigned long`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_return: Option<String>,
+    /// The declaration as written (C: `int word_count(const char *text)`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prototype: Option<String>,
 }
 
 /// An exported class: its constructor and public instance methods, or why it must stay in TS.

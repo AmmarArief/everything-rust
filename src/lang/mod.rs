@@ -6,6 +6,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+pub mod c;
 pub mod python;
 pub mod syntax;
 
@@ -99,6 +100,7 @@ pub enum Resolution {
 pub fn discover(lang: Lang, root: &Path) -> anyhow::Result<crate::ts::discover::Workspace> {
     match lang {
         Lang::Python => python::discover(root),
+        Lang::C => c::discover(root),
         _ => anyhow::bail!("{} is not supported yet", lang.name()),
     }
 }
@@ -106,6 +108,7 @@ pub fn discover(lang: Lang, root: &Path) -> anyhow::Result<crate::ts::discover::
 pub fn scan(lang: Lang, _path: &str, text: &str) -> crate::ts::scan::FileFacts {
     match lang {
         Lang::Python => python::scan(text),
+        Lang::C => c::scan(text),
         _ => crate::ts::scan::FileFacts::default(),
     }
 }
@@ -124,6 +127,7 @@ pub fn resolve(
             python::Resolution::Stdlib => Resolution::Stdlib,
             python::Resolution::Unresolved => Resolution::Unresolved,
         },
+        Lang::C => c::resolve(from, spec, index),
         _ => Resolution::Unresolved,
     }
 }
@@ -138,11 +142,15 @@ pub fn exports(
 ) {
     match lang {
         Lang::Python => python::exports(path, text),
+        Lang::C => (c::exports(path, text), Vec::new()),
         _ => (Vec::new(), Vec::new()),
     }
 }
 
 /// Dependency tables of the languages without their own module entry yet.
-pub fn lookup(_lang: Lang, _name: &str) -> Option<crate::ts::deps::CrateMatch> {
-    None
+pub fn lookup(lang: Lang, name: &str) -> Option<crate::ts::deps::CrateMatch> {
+    match lang {
+        Lang::C => c::lookup(name),
+        _ => None,
+    }
 }

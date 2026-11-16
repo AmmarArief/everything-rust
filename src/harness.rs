@@ -171,6 +171,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
 
     let out = if manifest.language == crate::lang::Lang::Python {
         crate::harness_py::record(opts.crate_dir, &cases)?
+    } else if manifest.kind == Kind::CAbi {
+        crate::harness_c::record(opts.crate_dir, &manifest, &cases)?
     } else {
         record_node(opts, &manifest, &cases)?
     };
@@ -257,6 +259,7 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
     let manifest = Manifest::load(crate_dir)?;
     match manifest.kind {
         Kind::Pyo3 => crate::harness_py::build(crate_dir, &manifest),
+        Kind::CAbi => crate::harness_c::build(crate_dir, &manifest),
         Kind::Napi => {
             let target = crate_dir.join("target");
             run(
@@ -363,6 +366,9 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if manifest.language == crate::lang::Lang::Python {
         return crate::harness_py::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
+    if manifest.kind == Kind::CAbi {
+        return crate::harness_c::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -439,6 +445,12 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         && opts.module.is_none()
     {
         return crate::harness_py::diff(opts.crate_dir, &manifest, opts.ignore_key_order);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.kind == Kind::CAbi
+        && opts.module.is_none()
+    {
+        return crate::harness_c::diff(opts.crate_dir, &manifest);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
