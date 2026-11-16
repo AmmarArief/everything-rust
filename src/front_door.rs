@@ -11,12 +11,19 @@ use serde::{Deserialize, Serialize};
 use toml_edit::{DocumentMut, InlineTable, value};
 
 use crate::app::{self, ReplayOptions, ReplayOutcome};
+use crate::front_door_http as http_door;
 
 pub const APP_DIR: &str = "rust/app";
 pub const STATE_FILE: &str = "rust-anything.json";
 pub const KILL_SWITCH_PREFIX: &str = "RUST_ANYTHING_UNIT_";
 const SCHEMA: &str = "rust-anything/front-door@1";
-pub(crate) const GLUE_MARKER: &str = "unimplemented!(\"glue for";
+const GLUE_MARKER: &str = "unimplemented!(\"glue for";
+
+/// The glue file still holds the stub `wire` wrote, however rustfmt wrapped it.
+pub(crate) fn is_stub(glue: &str) -> bool {
+    let squash = |s: &str| s.split_whitespace().collect::<String>();
+    squash(glue).contains(&squash(GLUE_MARKER))
+}
 
 /// `rust/app/rust-anything.json`: the commands the front door routes and the units wired to them.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +35,25 @@ pub struct State {
     pub units: Vec<WiredUnit>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub lifted: bool,
+    #[serde(default, skip_serializing_if = "AppKind::is_cli")]
+    pub kind: AppKind,
+    /// Servers: the requests recorded, as `METHOD /path`, to choose routes from.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AppKind {
+    #[default]
+    Cli,
+    Http,
+}
+
+impl AppKind {
+    fn is_cli(&self) -> bool {
+        *self == AppKind::Cli
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,7 +62,11 @@ pub struct WiredUnit {
     #[serde(rename = "crate")]
     pub crate_name: String,
     pub path: String,
+    #[serde(default)]
     pub commands: Vec<String>,
+    /// Servers: the routes the unit answers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routes: Vec<String>,
     pub switch: String,
 }
 
@@ -440,6 +470,7 @@ fn build_and_replay(repo: &Path) -> Result<ReplayOutcome> {
         repo,
         build: Some(&app::shell_quote(&exe.to_string_lossy())),
         timeout_secs: None,
+        port: None,
     })
 }
 
@@ -454,6 +485,8 @@ pub struct FrontDoorOutcome {
     pub dir: PathBuf,
     pub binary: String,
     pub commands: Vec<String>,
+    /// Servers: the recorded requests, as `METHOD /path`.
+    pub routes: Vec<String>,
     pub flags: BTreeMap<String, BTreeMap<String, Flag>>,
     pub files: Vec<String>,
     pub replay: Option<ReplayOutcome>,
@@ -476,8 +509,41 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         "{} already exists; the front door is yours once scaffolded (remove it to scaffold again)",
         dir.display()
     );
-    let (commands, flags) = infer_cli(&app::recorded_args(&repo)?);
     let binary = package_name(&config.name);
+    if let Some(http) = &config.http {
+        ensure!(
+            http.port.is_none(),
+            "the front door starts the original on a port of its own: make the original take its port from PORT or `{{port}}` in its command, then record again without --port"
+        );
+        let routes = crate::http::recorded_routes(&repo)?;
+        let state = State {
+            schema: SCHEMA.to_string(),
+            name: config.name.clone(),
+            commands: Vec::new(),
+            units: Vec::new(),
+            lifted: false,
+            kind: AppKind::Http,
+            routes: routes.clone(),
+        };
+        let files: Vec<(&str, String)> = vec![
+            ("Cargo.toml", http_door::cargo_toml(&binary, &config.name)),
+            (".gitignore", "/target\n".to_string()),
+            ("src/main.rs", http_door::main_rs()),
+            ("src/original.rs", http_door::original_rs(&config.run)),
+            ("src/units/mod.rs", http_door::units_rs(&state, false)),
+        ];
+        return finish_front_door(
+            &repo,
+            opts,
+            state,
+            files,
+            binary,
+            Vec::new(),
+            BTreeMap::new(),
+            routes,
+        );
+    }
+    let (commands, flags) = infer_cli(&app::recorded_args(&repo)?);
     let files: Vec<(&str, String)> = vec![
         (
             "Cargo.toml",
@@ -501,7 +567,36 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         commands: commands.clone(),
         units: Vec::new(),
         lifted: false,
+        kind: AppKind::Cli,
+        routes: Vec::new(),
     };
+    let mut files = files;
+    files.push(("src/units/mod.rs", units_rs(&state)));
+    finish_front_door(
+        &repo,
+        opts,
+        state,
+        files,
+        binary,
+        commands,
+        flags,
+        Vec::new(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn finish_front_door(
+    repo: &Path,
+    opts: &FrontDoorOptions,
+    state: State,
+    files: Vec<(&str, String)>,
+    binary: String,
+    commands: Vec<String>,
+    flags: BTreeMap<String, BTreeMap<String, Flag>>,
+    routes: Vec<String>,
+) -> Result<FrontDoorOutcome> {
+    let repo = repo.to_path_buf();
+    let dir = repo.join(APP_DIR);
     for (path, text) in &files {
         let target = dir.join(path);
         if let Some(parent) = target.parent() {
@@ -509,8 +604,6 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         }
         std::fs::write(&target, text).with_context(|| format!("writing {}", target.display()))?;
     }
-    std::fs::create_dir_all(dir.join("src/units"))?;
-    std::fs::write(dir.join("src/units/mod.rs"), units_rs(&state))?;
     rustfmt(&dir.join("src/main.rs"));
     state.save(&repo)?;
     let replay = if opts.check {
@@ -519,11 +612,12 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         None
     };
     let mut written: Vec<String> = files.iter().map(|(p, _)| p.to_string()).collect();
-    written.extend(["src/units/mod.rs".to_string(), STATE_FILE.to_string()]);
+    written.push(STATE_FILE.to_string());
     Ok(FrontDoorOutcome {
         dir,
         binary,
         commands,
+        routes,
         flags,
         files: written,
         replay,
@@ -563,6 +657,9 @@ pub struct WireOptions<'a> {
     pub unit: &'a str,
     /// Commands the unit answers; kept from the last wire when empty.
     pub commands: &'a [String],
+    /// Servers: routes the unit answers (`GET /users/{id}`, `/path` for any method, `*` for
+    /// everything else); kept from the last wire when empty.
+    pub routes: &'a [String],
     /// Wire without running `gate` on the unit first (when it just passed).
     pub skip_gate: bool,
     pub check: bool,
@@ -573,6 +670,7 @@ pub struct WireOutcome {
     pub unit: String,
     pub crate_dir: PathBuf,
     pub commands: Vec<String>,
+    pub routes: Vec<String>,
     pub switch: String,
     pub glue: PathBuf,
     /// The glue file still holds the generated stub.
@@ -641,7 +739,33 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
     };
 
     let previous = state.units.iter().position(|u| u.name == name);
-    let commands = if opts.commands.is_empty() {
+    let http = state.kind == AppKind::Http;
+    ensure!(
+        !http || opts.commands.is_empty(),
+        "{} is a server: name what {name} answers with --route, not --command",
+        state.name
+    );
+    ensure!(
+        http || opts.routes.is_empty(),
+        "{} is a CLI: name what {name} answers with --command, not --route",
+        state.name
+    );
+    let routes = if !http {
+        Vec::new()
+    } else if opts.routes.is_empty() {
+        previous
+            .map(|i| state.units[i].routes.clone())
+            .filter(|r| !r.is_empty())
+            .with_context(|| format!("name the routes {name} answers with --route"))?
+    } else {
+        http_door::check_routes(&state, &name, opts.routes)?
+            .iter()
+            .map(http_door::Route::key)
+            .collect()
+    };
+    let commands = if http {
+        Vec::new()
+    } else if opts.commands.is_empty() {
         previous
             .map(|i| state.units[i].commands.clone())
             .with_context(|| format!("name the commands {name} answers with --command"))?
@@ -654,7 +778,7 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         .map(String::as_str)
         .chain([state.name.as_str()])
         .collect();
-    for command in &commands {
+    for command in commands.iter().filter(|_| !http) {
         ensure!(
             routable.contains(&command.as_str()),
             "the front door has no command `{command}` (it has: {}); add it to src/cli.rs and to `commands` in {}",
@@ -678,6 +802,7 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         crate_name: crate_name.clone(),
         path: path.clone(),
         commands: commands.clone(),
+        routes: routes.clone(),
         switch: switch.clone(),
     };
     match previous {
@@ -696,12 +821,22 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         .join("src/units")
         .join(format!("{}.rs", ident(&name)));
     if !glue.exists() {
-        std::fs::write(&glue, glue_rs(&crate_name))?;
+        let stub = if http {
+            http_door::glue_rs(&crate_name)
+        } else {
+            glue_rs(&crate_name)
+        };
+        std::fs::write(&glue, stub)?;
     }
-    std::fs::write(app_dir.join("src/units/mod.rs"), units_rs(&state))?;
+    let units = if http {
+        http_door::units_rs(&state, false)
+    } else {
+        units_rs(&state)
+    };
+    std::fs::write(app_dir.join("src/units/mod.rs"), units)?;
     rustfmt(&app_dir.join("src/units/mod.rs"));
     state.save(&repo)?;
-    let glue_pending = std::fs::read_to_string(&glue)?.contains(GLUE_MARKER);
+    let glue_pending = is_stub(&std::fs::read_to_string(&glue)?);
     let replay = if opts.check {
         Some(build_and_replay(&repo)?)
     } else {
@@ -711,6 +846,7 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         unit: name,
         crate_dir,
         commands,
+        routes,
         switch,
         glue,
         glue_pending,
@@ -763,6 +899,8 @@ mod tests {
             commands: vec!["div".into(), "words".into()],
             units: Vec::new(),
             lifted: false,
+            kind: AppKind::Cli,
+            routes: Vec::new(),
         };
         assert!(units_rs(&state).contains("None"));
         state.units.push(WiredUnit {
@@ -770,6 +908,7 @@ mod tests {
             crate_name: "wordcount-rs".into(),
             path: "../wordcount-rs".into(),
             commands: vec!["words".into()],
+            routes: Vec::new(),
             switch: "RUST_ANYTHING_UNIT_WORDCOUNT".into(),
         });
         let code = units_rs(&state);

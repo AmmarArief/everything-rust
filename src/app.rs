@@ -23,14 +23,14 @@ pub const CONFIG_FILE: &str = "rust-anything.json";
 pub const REPORT_FILE: &str = "replay-report.md";
 pub const FALLBACK_ENV: &str = "RUST_ANYTHING_FALLBACK_LOG";
 pub const BUILTIN_NORMALIZERS: [&str; 3] = ["timestamps", "uuids", "key-order"];
-const SCHEMA: &str = "rust-anything/app-cases@1";
-const MAX_TRAPS: usize = 300;
+pub(crate) const SCHEMA: &str = "rust-anything/app-cases@1";
+pub(crate) const MAX_TRAPS: usize = 300;
 const MAX_INPUT_FILE: u64 = 1 << 20;
 const TIMESTAMP: &str = r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:[.,]\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?|\b\d{2}:\d{2}:\d{2}(?:[.,]\d+)?\b";
 const UUID: &str =
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b";
 
-const INT_TRAPS: [&str; 8] = [
+pub(crate) const INT_TRAPS: [&str; 8] = [
     "-7",
     "0",
     "-1",
@@ -40,7 +40,7 @@ const INT_TRAPS: [&str; 8] = [
     "-9223372036854775808",
     "18446744073709551616",
 ];
-const FLOAT_TRAPS: [&str; 7] = [
+pub(crate) const FLOAT_TRAPS: [&str; 7] = [
     "-0.0",
     "0.1",
     "0.30000000000000004",
@@ -49,7 +49,7 @@ const FLOAT_TRAPS: [&str; 7] = [
     "5e-324",
     "1.7976931348623157e308",
 ];
-const STRING_TRAPS: [&str; 7] = [
+pub(crate) const STRING_TRAPS: [&str; 7] = [
     "héllo wörld",
     "👍🏽 thumbs",
     "日本語",
@@ -58,13 +58,13 @@ const STRING_TRAPS: [&str; 7] = [
     "İstanbul",
     "straße",
 ];
-const STDIN_TRAPS: [&str; 4] = [
+pub(crate) const STDIN_TRAPS: [&str; 4] = [
     "naïve café 👍🏽\nsecond line\n",
     "",
     "日本語 テキスト\r\nline two\r\n",
     "  spaced   out  \n\n",
 ];
-const JSON_TRAPS: [&str; 2] = [
+pub(crate) const JSON_TRAPS: [&str; 2] = [
     r#"{"zebra":1,"apple":2,"10":3,"2":4,"é":5,"Apple":6}"#,
     r#"{"n":9007199254740993,"f":1e21,"t":0.1,"neg":-7}"#,
 ];
@@ -86,9 +86,12 @@ pub struct Config {
     pub normalizers: BTreeMap<String, String>,
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
+    /// Set when the app is a server: cases are requests, in `http/`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub http: Option<crate::http::HttpConfig>,
 }
 
-fn default_timeout() -> u64 {
+pub(crate) fn default_timeout() -> u64 {
     30
 }
 
@@ -188,7 +191,7 @@ impl Run {
     }
 }
 
-struct Normalizers {
+pub(crate) struct Normalizers {
     patterns: Vec<Regex>,
     key_order: bool,
 }
@@ -226,7 +229,7 @@ impl Normalizers {
         })
     }
 
-    fn apply(&self, text: &str) -> String {
+    pub(crate) fn apply(&self, text: &str) -> String {
         let mut out = text.to_string();
         for p in &self.patterns {
             out = p.replace_all(&out, "[..]").into_owned();
@@ -276,7 +279,7 @@ fn sort_json_text(text: &str) -> String {
         .join("\n")
 }
 
-fn temp_dir(tag: &str) -> Result<PathBuf> {
+pub(crate) fn temp_dir(tag: &str) -> Result<PathBuf> {
     static NEXT: AtomicUsize = AtomicUsize::new(0);
     let dir = std::env::temp_dir().join(format!(
         "rust-anything-app-{tag}-{}-{}",
@@ -288,7 +291,7 @@ fn temp_dir(tag: &str) -> Result<PathBuf> {
     Ok(dir)
 }
 
-fn resolve_word(repo: &Path, word: &str) -> String {
+pub(crate) fn resolve_word(repo: &Path, word: &str) -> String {
     if word.starts_with('-') {
         return word.to_string();
     }
@@ -460,12 +463,12 @@ fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> 
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Tok {
-    text: String,
-    op: bool,
+pub(crate) struct Tok {
+    pub(crate) text: String,
+    pub(crate) op: bool,
 }
 
-fn shell_tokens(line: &str) -> Option<Vec<Tok>> {
+pub(crate) fn shell_tokens(line: &str) -> Option<Vec<Tok>> {
     let mut toks = Vec::new();
     let mut cur = String::new();
     let mut in_tok = false;
@@ -629,7 +632,7 @@ fn diff_ops<A, B>(a: &[A], b: &[B], eq: impl Fn(&A, &B) -> bool) -> Vec<Op> {
     ops
 }
 
-fn line_matches(expected: &str, actual: &str) -> bool {
+pub(crate) fn line_matches(expected: &str, actual: &str) -> bool {
     if !expected.contains("[..]") {
         return expected == actual;
     }
@@ -733,7 +736,7 @@ fn tokens(line: &str) -> Vec<&str> {
     out
 }
 
-fn merge_line(a: &str, b: &str) -> String {
+pub(crate) fn merge_line(a: &str, b: &str) -> String {
     let (ta, tb) = (tokens(a), tokens(b));
     if ta.len() != tb.len() {
         return "[..]".to_string();
@@ -940,6 +943,14 @@ fn find_examples(repo: &Path, names: &[String]) -> Vec<Case> {
     if names.is_empty() {
         return Vec::new();
     }
+    scan_examples(repo, |line, doc_dir| {
+        parse_example(line, names, repo, doc_dir)
+    })
+}
+
+/// Shell lines in the repository's Markdown code blocks and `.sh` files, each given to `parse`
+/// with the folder of the file it came from.
+pub(crate) fn scan_examples<T>(repo: &Path, parse: impl Fn(&str, &Path) -> Option<T>) -> Vec<T> {
     let skip = ["node_modules", "target", "vendor", ".git"];
     let walker = ignore::WalkBuilder::new(repo)
         .max_depth(Some(4))
@@ -991,12 +1002,12 @@ fn find_examples(repo: &Path, names: &[String]) -> Vec<Case> {
                     None if matches!(lang.as_str(), "sh" | "bash" | "shell" | "zsh") => line,
                     None => continue,
                 };
-                if let Some(case) = parse_example(candidate, names, repo, doc_dir) {
+                if let Some(case) = parse(candidate, doc_dir) {
                     out.push(case);
                 }
             } else {
                 let candidate = line.strip_prefix("$ ").unwrap_or(line);
-                if let Some(case) = parse_example(candidate, names, repo, doc_dir) {
+                if let Some(case) = parse(candidate, doc_dir) {
                     out.push(case);
                 }
             }
@@ -1081,7 +1092,7 @@ fn trap_cases(bases: &[Case]) -> Vec<Case> {
     out
 }
 
-fn slug(text: &str) -> String {
+pub(crate) fn slug(text: &str) -> String {
     let mut out = String::new();
     for c in text.chars() {
         if c.is_ascii_alphanumeric() {
@@ -1104,6 +1115,11 @@ pub struct RecordOptions<'a> {
     pub name: Option<&'a str>,
     pub traps: bool,
     pub timeout_secs: Option<u64>,
+    /// The app is a server: record requests instead of command lines.
+    pub http: bool,
+    /// The port a server always listens on (implies `http`); unset, it gets a free one through
+    /// `PORT` and `{port}`.
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1118,7 +1134,7 @@ pub struct RecordOutcome {
     pub noisy: Vec<String>,
     /// Cases whose exit code or written files differed between the two runs.
     pub unstable: Vec<String>,
-    /// Cases not written because the original timed out.
+    /// Cases not written: the original timed out or did not answer.
     pub timed_out: Vec<String>,
 }
 
@@ -1132,7 +1148,7 @@ struct Recorded {
     unstable: bool,
 }
 
-fn settle_text(norm: &Normalizers, a: &[u8], b: &[u8]) -> (Vec<u8>, bool, bool) {
+pub(crate) fn settle_text(norm: &Normalizers, a: &[u8], b: &[u8]) -> (Vec<u8>, bool, bool) {
     match (std::str::from_utf8(a), std::str::from_utf8(b)) {
         (Ok(a), Ok(b)) => {
             let (a, b) = (norm.apply(a), norm.apply(b));
@@ -1287,8 +1303,21 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .timeout_secs
             .or(existing.as_ref().map(|c| c.timeout_secs))
             .unwrap_or_else(default_timeout),
+        http: if opts.http || opts.port.is_some() {
+            Some(crate::http::HttpConfig { port: opts.port })
+        } else {
+            existing.as_ref().and_then(|c| c.http.clone())
+        },
     };
     let norm = Normalizers::new(&config)?;
+    if config.http.is_some() {
+        let outcome = crate::http::record(&repo, &config, &norm, opts)?;
+        std::fs::write(
+            cases_dir(&repo).join(CONFIG_FILE),
+            serde_json::to_string_pretty(&config)? + "\n",
+        )?;
+        return Ok(outcome);
+    }
 
     let examples = find_examples(&repo, &names);
     let inputs = match opts.inputs {
@@ -1497,7 +1526,12 @@ fn load_spec(dir: &Path, path: &Path) -> Result<Spec> {
     })
 }
 
-fn compare(norm: &Normalizers, expected: &[u8], actual: &[u8], binary: bool) -> Option<String> {
+pub(crate) fn compare(
+    norm: &Normalizers,
+    expected: &[u8],
+    actual: &[u8],
+    binary: bool,
+) -> Option<String> {
     if !binary && let (Ok(e), Ok(a)) = (std::str::from_utf8(expected), std::str::from_utf8(actual))
     {
         let e = norm.canonical(&norm.apply(e));
@@ -1518,6 +1552,8 @@ pub struct ReplayOptions<'a> {
     /// Command line of the build to test; the original's command when `None`.
     pub build: Option<&'a str>,
     pub timeout_secs: Option<u64>,
+    /// Servers: the port the build listens on, when it is fixed.
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1614,7 +1650,7 @@ fn check(
     Ok((problems, run.fallback))
 }
 
-fn report_markdown(outcome: &ReplayOutcome) -> String {
+pub(crate) fn report_markdown(outcome: &ReplayOutcome) -> String {
     let mut out = String::from("# App replay\n\n");
     out += &format!(
         "Build: `{}`\n\n",
@@ -1721,10 +1757,14 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         normalize: Vec::new(),
         normalizers: BTreeMap::new(),
         timeout_secs: default_timeout(),
+        http: None,
     });
     let norm = Normalizers::new(&config)?;
-    let specs = load_specs(&dir)?;
     let timeout = Duration::from_secs(opts.timeout_secs.unwrap_or(config.timeout_secs));
+    if config.http.is_some() {
+        return crate::http::replay(&repo, &config, &norm, &command, opts.port, timeout);
+    }
+    let specs = load_specs(&dir)?;
     let results = par_map(&specs, |spec| {
         if matches!(spec.status, Expect::Skip) {
             return Ok((Vec::new(), None));
@@ -1815,6 +1855,7 @@ mod tests {
             normalize: vec!["timestamps".into(), "uuids".into(), "key-order".into()],
             normalizers: BTreeMap::from([("req".to_string(), r"req-\d+".to_string())]),
             timeout_secs: 30,
+            http: None,
         };
         let norm = Normalizers::new(&config).unwrap();
         assert_eq!(

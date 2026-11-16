@@ -72,12 +72,14 @@ failed calls), and the semantic traps: non-ASCII and emoji strings, negative div
 modulo, integer overflow, large and tiny floats, map and set order, regex lookaround.
 
 Run the original twice on every case. Where its own runs disagree (timestamps, ids, ordering),
-the difference is **noise**: normalize it in the case, never in the port. For a CLI,
+the difference is **noise**: normalize it in the case, never in the port.
 `rust-anything app record <repo> -- <command that runs the original>` does all of this: the
 app's documented examples, `--inputs` for the tests, workloads and error paths you collect, the
-traps, two runs, `--normalize` for named noise, trycmd cases in `rust/app-cases/`. Then
-`rust-anything app replay <repo>`: the original must pass 100%. (HTTP servers: record and replay
-by hand until the tool supports them.)
+traps, two runs, `--normalize` for named noise. A CLI's cases are trycmd files in
+`rust/app-cases/`. For a server add `--http`: the command starts it, taking its port from `PORT`
+or `{port}` (`--port` if it is fixed), and requests come from `curl` lines in its docs and
+`--inputs` (`{"method", "path", "headers", "body"}`), stored in `rust/app-cases/http/`. Then
+`rust-anything app replay <repo>`: the original must pass 100%.
 
 ## 4. Build the front door
 
@@ -89,8 +91,9 @@ falls back to the original:
   and exit code through.
 - **HTTP server**: proxy every route not ported yet to the original server.
 
-For a CLI, `rust-anything app front-door <repo>` scaffolds it (clap parser from the recorded
-commands and flags, fallback for everything) and replays it. `replay` against the front door must
+`rust-anything app front-door <repo>` scaffolds it and replays it: for a CLI a clap parser from
+the recorded commands and flags, for a server an axum app that starts the original on a port of
+its own and proxies to it. `replay` against the front door must
 match 100% before any unit moves. Count the fallbacks: the **fallback rate** is the share of cases
 the original still answers, and it only goes down.
 
@@ -102,9 +105,11 @@ to 5 of SKILL.md, then:
 
 1. Wire the unit into the front door, and stop falling back for what it covers:
    `rust-anything app wire <repo> <unit> --command <name>` (the app's own name as the command
-   takes argv that names no command: no arguments, unknown commands). Write the glue in
-   `rust/app/src/units/<unit>.rs` (parse the arguments, call `<crate>::port`, print what the
-   original prints, return its exit code), then run `app wire <repo> <unit>` again.
+   takes argv that names no command: no arguments, unknown commands). For a server,
+   `--route 'GET /users/{id}'` (axum syntax; `/path` for any method, `*` for every route no
+   other unit answers). Write the glue in `rust/app/src/units/<unit>.rs` (read the arguments or
+   the request, call `<crate>::port`, answer what the original answers: output and exit code, or
+   status, headers and body), then run `app wire <repo> <unit>` again.
 2. `wire` replays: 100% again, and a lower fallback rate.
 3. Keep the **kill switch** `wire` adds: `RUST_ANYTHING_UNIT_<NAME>=original` sends the unit back
    to the original, until the lift.
@@ -129,7 +134,7 @@ falling back, by name; glue still a stub; units failing gate). Then, on a copy f
 3. Works the lift checklist: assets read at run time or asset folders not embedded (warnings to
    act on), every target in `DECISIONS.md` built or checked where it is installed, and
    `rust/app/tests/app_cases.rs`, which runs `rust/app-cases` with trycmd on `cargo test`, so CI
-   runs replay with nothing but cargo.
+   runs replay with nothing but cargo (for a server, run `app replay --build <binary>` in CI).
 4. Runs fmt, clippy `-D warnings` and `cargo test` on every unit crate and on `rust/app`, then
    `replay` on the pure binary.
 

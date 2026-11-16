@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- HTTP servers, in all six languages: `app record --http` (or `--port`) starts the original,
+  sends requests from the `curl` lines in its docs, `--inputs` and traps (path segments, query
+  values, bodies, an unknown route), twice, and stores each request and response in
+  `rust/app-cases/http/`. `app replay` runs any build the same way. `app front-door` scaffolds an
+  axum server that starts the original on its own port and proxies every route no unit answers,
+  counting each fallback; `app wire --route` hands axum routes (`GET /users/{id}`, `*`) to a unit
+  behind its kill switch; `app lift` removes the proxy. Proved end to end on a small server in
+  each language, replayed with the original moved away.
 - `app lift` (also MCP tool `app_lift`) for CLI apps: refuses until replay passes with fallback
   rate 0 and every unit passes gate, listing every blocker. On a copy first, it removes the
   fallback and the kill switches, turns each unit crate into a plain library (no `cdylib`,

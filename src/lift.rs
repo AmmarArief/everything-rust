@@ -14,7 +14,8 @@ use serde::Serialize;
 use toml_edit::{DocumentMut, Item as TomlItem, value};
 
 use crate::app::{self, ReplayOptions, ReplayOutcome};
-use crate::front_door::{self, APP_DIR, GLUE_MARKER, MAIN_RS, STATE_FILE, State};
+use crate::front_door::{self, APP_DIR, AppKind, MAIN_RS, STATE_FILE, State};
+use crate::front_door_http as http_door;
 use crate::gate::{self, Check};
 
 const BINDING_DEPS: [&str; 9] = [
@@ -348,10 +349,28 @@ fn cases_test_rs(case_bin: &str, binary: &str) -> String {
     )
 }
 
+fn same_code(a: &str, b: &str) -> bool {
+    let squash = |s: &str| s.split_whitespace().collect::<String>();
+    squash(a) == squash(b)
+}
+
+fn generated_main(state: &State) -> String {
+    match state.kind {
+        AppKind::Cli => MAIN_RS.to_string(),
+        AppKind::Http => http_door::main_rs(),
+    }
+}
+
 fn lift_app(stage_app: &Path, state: &mut State, case_bin: &str) -> Result<()> {
+    let http = state.kind == AppKind::Http;
     let main = stage_app.join("src/main.rs");
-    if std::fs::read_to_string(&main)? == MAIN_RS {
-        std::fs::write(&main, LIFTED_MAIN)?;
+    if same_code(&std::fs::read_to_string(&main)?, &generated_main(state)) {
+        let lifted = if http {
+            http_door::lifted_main_rs()
+        } else {
+            LIFTED_MAIN.to_string()
+        };
+        std::fs::write(&main, lifted)?;
     }
     let _ = std::fs::remove_file(stage_app.join("src/original.rs"));
     let cli = stage_app.join("src/cli.rs");
@@ -366,7 +385,12 @@ fn lift_app(stage_app: &Path, state: &mut State, case_bin: &str) -> Result<()> {
     }
     state.lifted = true;
     let units = stage_app.join("src/units/mod.rs");
-    std::fs::write(&units, lifted_units_rs(state))?;
+    let routing = if http {
+        http_door::units_rs(state, true)
+    } else {
+        lifted_units_rs(state)
+    };
+    std::fs::write(&units, routing)?;
     front_door::rustfmt(&units);
     std::fs::write(
         stage_app.join(STATE_FILE),
@@ -386,6 +410,17 @@ fn lift_app(stage_app: &Path, state: &mut State, case_bin: &str) -> Result<()> {
             "`{}` in Rust, lifted by rust-anything from its front door",
             state.name
         ));
+    }
+    if http {
+        if let Some(deps) = doc
+            .get_mut("dependencies")
+            .and_then(TomlItem::as_table_like_mut)
+        {
+            deps.remove("reqwest");
+        }
+        std::fs::write(&cargo, doc.to_string())?;
+        front_door::rustfmt(&main);
+        return Ok(());
     }
     doc["dev-dependencies"]["trycmd"] = value("1");
     std::fs::write(&cargo, doc.to_string())?;
@@ -552,10 +587,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
         let glue = app_dir
             .join("src/units")
             .join(format!("{}.rs", front_door::ident(&unit.name)));
-        if std::fs::read_to_string(&glue)
-            .unwrap_or_default()
-            .contains(GLUE_MARKER)
-        {
+        if front_door::is_stub(&std::fs::read_to_string(&glue).unwrap_or_default()) {
             blockers.push(format!(
                 "{}: the glue in {} is still the generated stub",
                 unit.name,
@@ -565,7 +597,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
         units.push((unit.clone(), dir));
     }
     let main = std::fs::read_to_string(app_dir.join("src/main.rs"))?;
-    if main != MAIN_RS && main.contains("original::") {
+    if !same_code(&main, &generated_main(&state)) && main.contains("original::") {
         blockers.push(
             "src/main.rs was changed and still calls the original: remove `mod original`, `original::report_fallbacks()` and `original::run` by hand, then lift again"
                 .to_string(),
@@ -578,6 +610,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
             repo: &repo,
             build: Some(&app::shell_quote(&exe.to_string_lossy())),
             timeout_secs: None,
+            port: None,
         })
     }) {
         Err(e) => blockers.push(format!("the front door does not build: {e:#}")),
@@ -669,12 +702,14 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
     }
     checklist.push(Item::new(
         "replay in CI",
-        if config.normalize.iter().any(|n| n == "key-order") {
+        if state.kind == AppKind::Http || config.normalize.iter().any(|n| n == "key-order") {
             Mark::Warn
         } else {
             Mark::Pass
         },
-        if config.normalize.iter().any(|n| n == "key-order") {
+        if state.kind == AppKind::Http {
+            "trycmd runs command lines only: run `rust-anything app replay <repo> --build <the binary>` in CI for the HTTP cases"
+        } else if config.normalize.iter().any(|n| n == "key-order") {
             "rust/app/tests/app_cases.rs runs the cases with trycmd on `cargo test`, which compares JSON as text: also run `rust-anything app replay` in CI for the key-order normalizer"
         } else {
             "rust/app/tests/app_cases.rs runs the recorded cases with trycmd on `cargo test`"
@@ -695,6 +730,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
                 repo: &repo,
                 build: Some(&app::shell_quote(&exe.to_string_lossy())),
                 timeout_secs: None,
+                port: None,
             })?;
             checklist.push(Item::new(
                 "replay",
@@ -785,8 +821,11 @@ mod tests {
                 path: "../wordcount-rs".into(),
                 commands: vec!["words".into(), "tcli".into()],
                 switch: "RUST_ANYTHING_UNIT_WORDCOUNT".into(),
+                routes: Vec::new(),
             }],
             lifted: true,
+            kind: AppKind::Cli,
+            routes: Vec::new(),
         };
         let code = lifted_units_rs(&state);
         assert!(code.contains("\"words\" | \"tcli\" => Some(wordcount::run(command, matches)),"));

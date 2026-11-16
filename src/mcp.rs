@@ -164,6 +164,8 @@ fn tools() -> Value {
                 "normalize": { "type": "array", "items": { "type": "string" }, "description": "Normalizers: timestamps, uuids, key-order, or name=regex." },
                 "name": { "type": "string", "description": "Name the app is invoked by in its docs." },
                 "traps": { "type": "boolean", "description": "Add semantic-trap cases (default true)." },
+                "http": { "type": "boolean", "description": "The app is a server: `run` starts it (it takes its port from PORT or {port}); cases are requests from curl lines in its docs, `inputs` ({\"name\", \"method\", \"path\", \"headers\", \"body\"}) and traps." },
+                "port": { "type": "integer", "description": "A port the server always listens on (implies http)." },
             }, "required": ["repo"] },
         },
         {
@@ -172,11 +174,12 @@ fn tools() -> Value {
             "inputSchema": { "type": "object", "properties": {
                 "repo": { "type": "string", "description": "Repository root." },
                 "build": { "type": "string", "description": "Command line of the build to test; the original when omitted." },
+                "port": { "type": "integer", "description": "Servers: the port the build always listens on; otherwise it gets a free one through PORT and {port}." },
             }, "required": ["repo"] },
         },
         {
             "name": "app_front_door",
-            "description": "Scaffold <repo>/rust/app, the Rust binary that owns the CLI's entry point: a clap parser for the recorded commands and flags, every command running the original with the same argv, stdin and env (each fallback counted). Builds it and replays the cases: 100% passed at 100% fallback. Needs app_record first; never overwrites rust/app.",
+            "description": "Scaffold <repo>/rust/app, the Rust binary that owns the CLI's entry point: a clap parser for the recorded commands and flags, every command running the original with the same argv, stdin and env (each fallback counted). For a server: an axum app that starts the original on a port of its own and proxies every route no unit answers. Builds it and replays the cases: 100% passed at 100% fallback. Needs app_record first; never overwrites rust/app.",
             "inputSchema": { "type": "object", "properties": {
                 "repo": { "type": "string", "description": "Repository root." },
                 "check": { "type": "boolean", "description": "Build and replay (default true)." },
@@ -189,6 +192,7 @@ fn tools() -> Value {
                 "repo": { "type": "string", "description": "Repository root." },
                 "unit": { "type": "string", "description": "Unit crate folder, its name under rust/, or the unit id it was bridged from." },
                 "commands": { "type": "array", "items": { "type": "string" }, "description": "Commands the unit answers; kept from the last wire when omitted." },
+                "routes": { "type": "array", "items": { "type": "string" }, "description": "Servers: routes the unit answers, axum syntax: \"GET /users/{id}\", \"/path\" for any method, \"*\" for everything else; kept from the last wire when omitted." },
                 "skip_gate": { "type": "boolean", "description": "Do not run gate on the unit first." },
                 "check": { "type": "boolean", "description": "Build and replay (default true)." },
             }, "required": ["repo", "unit"] },
@@ -320,6 +324,8 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 name: args["name"].as_str(),
                 traps: args["traps"].as_bool().unwrap_or(true),
                 timeout_secs: None,
+                http: args["http"].as_bool().unwrap_or(false),
+                port: args["port"].as_u64().and_then(|p| u16::try_from(p).ok()),
             })?)?
         }
         "app_replay" => {
@@ -328,6 +334,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 repo: &repo,
                 build: args["build"].as_str(),
                 timeout_secs: None,
+                port: args["port"].as_u64().and_then(|p| u16::try_from(p).ok()),
             })?)?
         }
         "app_front_door" => {
@@ -343,6 +350,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 repo: &repo,
                 unit: args["unit"].as_str().context("missing `unit`")?,
                 commands: &strings("commands"),
+                routes: &strings("routes"),
                 skip_gate: args["skip_gate"].as_bool().unwrap_or(false),
                 check: args["check"].as_bool().unwrap_or(true),
             })?)?

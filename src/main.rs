@@ -227,6 +227,13 @@ enum AppCmd {
         /// Seconds before a run is killed (default 30).
         #[arg(long)]
         timeout: Option<u64>,
+        /// The app is a server: the command starts it, taking its port from PORT or `{port}`;
+        /// cases are requests (curl lines in its docs, `--inputs`, traps), kept in `http/`.
+        #[arg(long)]
+        http: bool,
+        /// A port the server always listens on (implies --http).
+        #[arg(long)]
+        port: Option<u16>,
         #[arg(long)]
         json: bool,
         /// The command that runs the original, after `--`; paths are relative to the repository.
@@ -247,6 +254,10 @@ enum AppCmd {
         /// Seconds before a run is killed.
         #[arg(long)]
         timeout: Option<u64>,
+        /// Servers: the port the build always listens on; otherwise it gets a free one through
+        /// PORT and `{port}`.
+        #[arg(long)]
+        port: Option<u16>,
         #[arg(long)]
         json: bool,
     },
@@ -274,6 +285,10 @@ enum AppCmd {
         /// A command the unit answers. Repeatable; kept from the last wire when omitted.
         #[arg(long = "command")]
         commands: Vec<String>,
+        /// Servers: a route the unit answers, axum syntax (`GET /users/{id}`, `/path` for any
+        /// method, `*` for everything else). Repeatable; kept from the last wire when omitted.
+        #[arg(long = "route")]
+        routes: Vec<String>,
         /// Do not run gate on the unit first (it just passed).
         #[arg(long)]
         skip_gate: bool,
@@ -631,6 +646,8 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             name,
             no_traps,
             timeout,
+            http,
+            port,
             json,
             run,
         } => {
@@ -642,6 +659,8 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 name: name.as_deref(),
                 traps: !no_traps,
                 timeout_secs: timeout,
+                http,
+                port,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
@@ -675,12 +694,14 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             repo,
             build,
             timeout,
+            port,
             json,
         } => {
             let outcome = app::replay(&app::ReplayOptions {
                 repo: &repo,
                 build: build.as_deref(),
                 timeout_secs: timeout,
+                port,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
@@ -704,13 +725,15 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
                 say!(
-                    "Created {} (binary `{}`), commands: {}",
+                    "Created {} (binary `{}`), {}",
                     outcome.dir.display(),
                     outcome.binary,
-                    if outcome.commands.is_empty() {
-                        "none (one root command)".to_string()
+                    if !outcome.routes.is_empty() {
+                        format!("requests recorded: {}", outcome.routes.join(", "))
+                    } else if outcome.commands.is_empty() {
+                        "commands: none (one root command)".to_string()
                     } else {
-                        outcome.commands.join(", ")
+                        format!("commands: {}", outcome.commands.join(", "))
                     }
                 );
                 for file in &outcome.files {
@@ -719,10 +742,17 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 if let Some(replay) = &outcome.replay {
                     say_replay(replay);
                 }
-                say!(
-                    "Every command runs the original. After a unit passes gate: rust-anything app wire {} <unit> --command <name>",
-                    repo.display()
-                );
+                if outcome.routes.is_empty() {
+                    say!(
+                        "Every command runs the original. After a unit passes gate: rust-anything app wire {} <unit> --command <name>",
+                        repo.display()
+                    );
+                } else {
+                    say!(
+                        "Every request goes to the original. After a unit passes gate: rust-anything app wire {} <unit> --route 'GET /path/{{param}}'",
+                        repo.display()
+                    );
+                }
             }
             if outcome
                 .replay
@@ -736,6 +766,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             repo,
             unit,
             commands,
+            routes,
             skip_gate,
             no_check,
             json,
@@ -744,6 +775,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 repo: &repo,
                 unit: &unit,
                 commands: &commands,
+                routes: &routes,
                 skip_gate,
                 check: !no_check,
             })?;

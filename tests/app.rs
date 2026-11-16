@@ -84,6 +84,8 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
         name: None,
         traps: true,
         timeout_secs: None,
+        http: false,
+        port: None,
     })
     .unwrap();
     assert_eq!(outcome.examples, 7, "{outcome:?}");
@@ -113,6 +115,7 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
         repo,
         build: None,
         timeout_secs: None,
+        port: None,
     })
     .unwrap();
     assert_eq!(original.total, outcome.cases);
@@ -128,6 +131,7 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
         repo,
         build: Some(buggy),
         timeout_secs: None,
+        port: None,
     })
     .unwrap();
     assert!(!bug.failures.is_empty());
@@ -196,6 +200,7 @@ fn front_door_then_wire(repo: &Path) {
             repo,
             unit: "wordcount-rs",
             commands,
+            routes: &[],
             skip_gate: true,
             check: true,
         })
@@ -565,6 +570,8 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         name: None,
         traps: false,
         timeout_secs: None,
+        http: false,
+        port: None,
     })
     .unwrap();
     let door = front_door::front_door(&FrontDoorOptions { repo, check: true }).unwrap();
@@ -590,6 +597,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
             repo,
             unit,
             commands: &commands.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
+            routes: &[],
             skip_gate: true,
             check,
         })
@@ -669,6 +677,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         repo,
         build: Some(&lifted.binary.as_ref().unwrap().to_string_lossy()),
         timeout_secs: None,
+        port: None,
     })
     .unwrap();
     assert_eq!(
@@ -689,6 +698,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         repo,
         unit: "wordcount",
         commands: &[],
+        routes: &[],
         skip_gate: true,
         check: false,
     });

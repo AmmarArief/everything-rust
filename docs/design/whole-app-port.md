@@ -1,6 +1,6 @@
 # Design: whole app to a pure Rust app
 
-Status: milestones 1 to 3 built (CLIs: record, replay, front door, wire, lift); 4 to 6 to come.
+Status: milestones 1 to 4 built (CLIs and HTTP servers: record, replay, front door, wire, lift); 5 and 6 to come.
 
 ## Goal
 
@@ -165,6 +165,27 @@ Taken while building, without a question to the user (the conventional option, w
     any other crate only loses `cdylib` and binding dependencies.
 17. **Asset findings are warnings, cross targets are checked, not linked**: neither can be judged
     for certain locally, and an uninstalled target is skipped with the command that adds it.
+18. **HTTP cases live in `rust/app-cases/http/`**: `<case>.toml` with `[request]` and `[response]`
+    (status, headers), `<case>.body` for the response body with trycmd's `[..]` and `...`. A
+    subfolder keeps them out of trycmd's `*.toml` glob; TOML matches the CLI cases.
+19. **A server gets its port from `PORT` and `{port}`**, a free one per start, so runs and tests
+    never collide; `--port` is for originals that cannot be told. The front door needs the first
+    kind, since it runs the original next to itself.
+20. **Requests go in name order to one fresh server per run**, so state between requests (create,
+    then read) is recorded and replayed the same way.
+21. **Per-response headers are not compared** (date, server, connection, content-length, etag,
+    last-modified, x-powered-by and the like): they differ between any two servers. The rest are,
+    and the user deletes the ones that do not matter.
+22. **Examples are `curl` lines to localhost** in the docs, the form servers document themselves in.
+23. **rust-anything speaks HTTP/1.1 itself** (no client crate): requests are small and local, and
+    every dependency is a cost for all users.
+24. **The front door uses axum 0.8, tokio and reqwest without default features** (plain HTTP to
+    the original, no TLS); reqwest does not follow redirects there, so the original's answer
+    passes through as it is.
+25. **`wire --route` takes axum routes**; `*` is the router's fallback, and a wired path sends
+    other methods back to the original (front door) or to `*` (lifted).
+26. **Lift of a server has no trycmd test**: trycmd runs command lines only, so the checklist
+    asks for `app replay --build` in CI instead of writing a client into the app.
 
 ## Draft pitch
 

@@ -209,6 +209,33 @@ rust-anything app lift .
   files read at run time and asset folders not embedded, and replay on the pure binary. Only when
   all of it passes are the changes written back. The original is never touched.
 
+### Servers
+
+The same commands prove HTTP servers. `--http` says the command starts a server; it takes its
+port from `PORT` or `{port}` in the command (`--port` for one that always listens on the same
+port):
+
+```sh
+rust-anything app record . --http -- node server.js
+rust-anything app replay .
+rust-anything app front-door .                                    # axum: every route proxied
+rust-anything app wire . api --route 'GET /users/{id}' --route '*'
+rust-anything app lift .
+```
+
+- Requests come from `curl` lines in the app's docs (`curl -X POST -d ... http://localhost:8080/x`),
+  `--inputs` (`{"name", "method", "path", "headers", "body"}`) and traps: path segments and query
+  values swapped for the same traps as CLI arguments, bodies for text and JSON traps, and an
+  unknown route. Each run starts the server fresh and sends the requests in name order, so state
+  between requests is kept.
+- Cases are `rust/app-cases/http/<case>.toml` (the request, the status and the headers that matter)
+  and `<case>.body` (the response body, with `[..]` where two runs differed). Date, server and
+  other per-response headers are left out; delete any header line you do not care about.
+- The front door is an axum server that starts the original on a port of its own and proxies
+  every route no unit answers. `wire --route` takes axum routes: `METHOD /path/{param}`, `/path`
+  for any method, `*` for everything else; the glue gets the route, its parameters and the
+  request. `lift` removes the proxy; HTTP cases then run in CI with `app replay`.
+
 All five are MCP tools too: `app_record`, `app_replay`, `app_front_door`, `app_wire` and
 `app_lift`.
 
