@@ -69,16 +69,8 @@ impl FuzzyScoreBatch {
         query: String,
         min: f64,
     ) -> napi::Result<napi::bindgen_prelude::Uint32Array> {
-        let out = run(|| self.inner.run(query))?;
-        let mut hits: Vec<(f64, u32)> = out
-            .into_iter()
-            .enumerate()
-            .map(|(i, r)| (r, u32::try_from(i).unwrap_or(u32::MAX)))
-            .filter(|(r, _)| *r >= min)
-            .collect();
-        // Stable: equal results keep the items' order, as JS `sort` and Python `sorted` do.
-        hits.sort_by(|a, b| b.0.total_cmp(&a.0));
-        let order: Vec<u32> = hits.into_iter().map(|(_, i)| i).collect();
+        let out = run(|| self.inner.rank(query, min))?;
+        let order: Vec<u32> = out;
         Ok(napi::bindgen_prelude::Uint32Array::new(order))
     }
 }

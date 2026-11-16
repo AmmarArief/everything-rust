@@ -43,6 +43,8 @@ pub struct PortApi {
     pub classes: Vec<PortClass>,
     /// Every `pub struct` of `port.rs` (a batch uses `<Name>Index` when the port defines one).
     pub structs: Vec<String>,
+    /// The structs whose `impl` has a `pub fn rank` (an index that ranks by itself).
+    pub ranked: Vec<String>,
 }
 
 impl PortApi {
@@ -248,7 +250,25 @@ pub fn parse_port(source: &str) -> PortApi {
                     .collect()
             })
             .collect(),
+        ranked: Vec::new(),
     };
+    // `impl Name {` ... `}` at column 0: does it define `pub fn rank`?
+    for (i, line) in lines.iter().enumerate() {
+        let Some(rest) = line.strip_prefix("impl ") else {
+            continue;
+        };
+        let name: String = rest
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        let body = lines[i + 1..].iter().take_while(|l| !l.starts_with('}'));
+        if body
+            .into_iter()
+            .any(|l| l.trim_start().starts_with("pub fn rank("))
+        {
+            api.ranked.push(name);
+        }
+    }
     for (i, line) in lines.iter().enumerate() {
         let Some(rest) = line.strip_prefix("pub struct ") else {
             continue;

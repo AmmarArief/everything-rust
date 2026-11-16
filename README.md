@@ -67,23 +67,29 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 ```
 
 A `FuzzyScoreIndex` struct in `port.rs` replaces the default loop with one that prepares the
-items once (lowercased UTF-16 and a character mask per key). On x18n's sidebar search over
-50,000 keys, with identical results, compared with the TS pipeline:
+items once, and can rank by itself (`rank`): it keeps the keys lowercased with a character mask
+each, a table of each key's first position of every common character (a one-letter query is one
+column), and the last query's matches (typing `se` after `s` rescores only what `s` matched). On
+x18n's sidebar search over 50,000 keys, typed letter by letter, with identical results:
 
 | | Per query | vs TS |
 | --- | ---: | ---: |
-| TS: `map(fuzzyScore)`, filter, sort | 8.5 ms | 1x |
+| TS: `map(fuzzyScore)`, filter, sort | 10 ms | 1x |
+| TS with the same narrowing as the index | 4.1-5.4 ms | 2x |
 | The same port, called per key | - | 0.2-0.4x |
 | `FuzzyScoreBatch`, default index (4 cores) | 5.1 ms | 1.7x |
-| `FuzzyScoreBatch` with `FuzzyScoreIndex` (napi, 4 cores) | 1.2 ms | **7.0x** |
-| The same with wasm (one thread) | 3.0 ms | 2.9x |
+| `FuzzyScoreBatch` with `FuzzyScoreIndex` (napi, 4 cores) | 0.45-0.56 ms | **18-22x** |
+| The same with wasm (one thread) | 0.95 ms | **11.5x** |
+
+Against TS doing the same narrowing, Rust is still 7-12x faster (wasm 5x). Turn the returned
+indexes into keys with a plain loop: `Array.from(order, i => keys[i])` cost 20x more, 0.4 ms.
 
 Every language gets batches, and they beat the original even where per-call ports lose. The
 same work on 4 cores, identical results and errors (benchmarks in each demo folder):
 
 | Language | Workload | Original | Per-call port vs original | Batch vs original |
 | --- | --- | ---: | ---: | ---: |
-| TS | x18n search, 50,000 keys | 8.5 ms | 0.2-0.4x | **7.0x** |
+| TS | x18n search, 50,000 keys | 10 ms | 0.2-0.4x | **20x** |
 | Python | `slugify`, 20,000 strings | 98 ms | - | **17x** |
 | Ruby | `slugify`, 20,000 strings | 110 ms | - | **12.7x** |
 | Ruby | `shellescape` (stdlib), 50,000 mixed values | 88 ms | - | **11.8x** |

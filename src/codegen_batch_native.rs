@@ -5,7 +5,9 @@ use std::fmt::Write as _;
 
 use crate::bridge::Manifest;
 use crate::codegen::PortApi;
-use crate::codegen_batch::{Batch, default_index, fixed, rank_body, spec_with};
+use crate::codegen_batch::{
+    Batch, default_index, fixed, rank_body, rank_for, spec_with, use_custom_rank,
+};
 use crate::ts::exports::ExportedFn;
 
 /// The export a batch belongs to.
@@ -137,7 +139,8 @@ pub fn ruby_rs(m: &Manifest, api: &PortApi) -> Result<(String, String), String> 
              class.define_method(\"run\", method!({class}::run, {n}))?;\n",
             class = s.class,
         );
-        if let Some(rank) = rank_body(ret) {
+        if let Some(rank) = rank_for(&s) {
+            let from = code.len();
             let _ = write!(
                 code,
                 "\n    fn rank(ruby: &Ruby, rb_self: &Self{sep}{params}, min: f64) -> Result<Vec<u32>, Error> {{\n{convert}        \
@@ -145,6 +148,7 @@ pub fn ruby_rs(m: &Manifest, api: &PortApi) -> Result<(String, String), String> 
                 params = params.join(", "),
                 names = names.join(", "),
             );
+            use_custom_rank(&mut code, from, &s, &names);
             let _ = writeln!(
                 init,
                 "    class.define_method(\"rank\", method!({}::rank, {}))?;",
@@ -540,7 +544,8 @@ pub fn go_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
             class = s.class,
             args = names.join(", "),
         );
-        if let Some(rank) = rank_body(s.f.ret.trim()) {
+        if let Some(rank) = rank_for(s) {
+            let from = out.len();
             let _ = write!(
                 out,
                 "\n/// Indexes of the items whose result is at least `min`, best first: 0, or 1 with the error.\n///\n/// # Safety\n///\n\
@@ -555,6 +560,7 @@ pub fn go_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
                  // SAFETY: Go passes a valid `err`.\n        Err(message) => unsafe {{ fail(err, message) }},\n    }}\n}}\n",
                 args = names.join(", "),
             );
+            use_custom_rank(&mut out, from, s, &names);
         }
     }
     Ok(out)
@@ -1030,7 +1036,8 @@ pub fn java_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
             },
             args = args.join(", "),
         );
-        if let Some(rank) = rank_body(s.f.ret.trim()) {
+        if let Some(rank) = rank_for(s) {
+            let from = out.len();
             let _ = write!(
                 out,
                 "\n/// Indexes of the items whose result is at least `min`, best first.\n\
@@ -1045,6 +1052,7 @@ pub fn java_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
                 rank_sym = sym("nRank"),
                 args = args.join(", "),
             );
+            use_custom_rank(&mut out, from, s, &args);
         }
     }
     Ok(out)

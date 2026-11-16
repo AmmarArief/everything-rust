@@ -60,6 +60,8 @@ pub(crate) struct Spec<'a> {
     pub class: String,
     pub index: String,
     pub custom: bool,
+    /// The custom index has its own `rank(&self, <fixed>, min: f64) -> Result<Vec<u32>, String>`.
+    pub custom_rank: bool,
 }
 
 const ITEMS: &[&str] = &["String", "&str", "f64", "i64", "bool"];
@@ -138,6 +140,7 @@ pub(crate) fn spec_with<'a>(
     }
     let base = pascal(&f.js_name);
     let custom = api.structs.iter().any(|s| *s == format!("{base}Index"));
+    let custom_rank = custom && api.ranked.iter().any(|s| *s == format!("{base}Index"));
     Ok(Spec {
         f,
         item,
@@ -153,6 +156,7 @@ pub(crate) fn spec_with<'a>(
             format!("{base}DefaultIndex")
         },
         custom,
+        custom_rank,
     })
 }
 
@@ -240,6 +244,33 @@ fn napi_out(ret: &str) -> (&'static str, &'static str) {
         ),
         _ => ("Vec<String>", "out"),
     }
+}
+
+/// The ranking code for a spec: the index's own `rank` when it has one, else the generic body
+/// over `run`'s results (the generated call is switched by [`use_custom_rank`]).
+pub(crate) fn rank_for(s: &Spec) -> Option<String> {
+    let body = rank_body(s.f.ret.trim())?;
+    Some(if s.custom_rank {
+        "let order: Vec<u32> = out;".to_string()
+    } else {
+        body
+    })
+}
+
+/// In code appended to `out` since `from`: calls the index's `rank(<fixed>, min)` instead of
+/// `run(<fixed>)`, when it has one.
+pub(crate) fn use_custom_rank(out: &mut String, from: usize, s: &Spec, names: &[&str]) {
+    if !s.custom_rank {
+        return;
+    }
+    let args = names.join(", ");
+    let with_min = if args.is_empty() {
+        "min".to_string()
+    } else {
+        format!("{args}, min")
+    };
+    let tail = out.split_off(from);
+    out.push_str(&tail.replacen(&format!(".run({args})"), &format!(".rank({with_min})"), 1));
 }
 
 pub(crate) fn rank_body(ret: &str) -> Option<String> {
@@ -333,7 +364,8 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
             res_run = res.replace("{T}", &out_ty),
             run_body = call(&format!("Ok({out_expr})")),
         );
-        if let Some(rank) = rank_body(ret) {
+        if let Some(rank) = rank_for(&s) {
+            let from = out.len();
             let order_ty = if wasm {
                 "Vec<u32>"
             } else {
@@ -353,6 +385,7 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
                 res.replace("{T}", order_ty),
                 call(&format!("{rank}\n        Ok({order_expr})"))
             );
+            use_custom_rank(&mut out, from, &s, &names);
         }
         out.push_str("}\n");
     }
@@ -389,7 +422,8 @@ pub fn py_rs(m: &Manifest, api: &PortApi) -> Result<(String, Vec<String>), Strin
             params = params.join(", "),
             names = names.join(", "),
         );
-        if let Some(rank) = rank_body(ret) {
+        if let Some(rank) = rank_for(&s) {
+            let from = out.len();
             let _ = write!(
                 out,
                 "\n    /// Indexes of the items whose result is at least `min`, highest result first.\n    \
@@ -398,6 +432,7 @@ pub fn py_rs(m: &Manifest, api: &PortApi) -> Result<(String, Vec<String>), Strin
                 params = params.join(", "),
                 names = names.join(", "),
             );
+            use_custom_rank(&mut out, from, &s, &names);
         }
         out.push_str("}\n");
         classes.push(s.class);

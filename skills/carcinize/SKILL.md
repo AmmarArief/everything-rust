@@ -52,6 +52,9 @@ Write the port in `src/port.rs` only; `src/lib.rs` is the thin binding layer.
   `Mod::FnBatch.new(items)` in Ruby) and call `rank`/`run` per query; close it in Go and Java. Define
   `pub struct FnIndex` in `port.rs` with `new(items)` and `run(...)` to prepare the items once
   (lowercase, masks, sorted tables); it must give the same result as the function, item by item.
+  Give it a `rank(<fixed>, min)` when ranking can skip work (narrowing to the last query's
+  matches as the user types, table lookups); test it against the function over every item. Map
+  returned indexes with a plain loop, not `Array.from(order, fn)`.
 - A batch multiplies the port's per-item speed by the cores, so against compiled originals (Go,
   Java) the port itself must be fast: handle ASCII without Unicode tables, build the result in
   one pre-sized `String`, avoid intermediate lowercase copies; keep `diff` passing.

@@ -64,13 +64,21 @@ are identical to the TS pipeline for every query:
 
 | | ms per query | vs TS |
 | --- | ---: | ---: |
-| TS pipeline | 8.5 | 1x |
+| TS pipeline | 10 | 1x |
+| TS with the same narrowing | 4.1-5.4 | 2x |
 | Batch, default index (port per item, 4 cores) | 5.1 | 1.7x |
-| Batch with `FuzzyScoreIndex`, napi, 4 cores | 1.2 | 7.0x |
-| Batch with `FuzzyScoreIndex`, wasm, 1 thread | 3.0 | 2.9x |
+| Batch with `FuzzyScoreIndex` (masks), napi, 4 cores | 1.2 | 7x |
+| Batch with `FuzzyScoreIndex` ranking itself, napi, 4 cores | 0.45-0.56 | 18-22x |
+| The same, wasm, 1 thread | 0.95 | 11.5x |
 
-Of the 1.2 ms, 0.4 ms is JS turning the returned indexes back into keys; the Rust ranking alone is
-10x faster than the TS pipeline.
+The step from 7x to 20x: of the 1.2 ms, 0.4 ms was the benchmark's own `Array.from(order, i =>
+keys[i])` (a plain loop costs 0.02 ms). The rest came from letting the index rank by itself:
+it rescores only the last query's matches when the new query extends it (a key that does not
+match `s` cannot match `se`), reads one-letter queries from a table of first positions, scores
+ASCII keys as bytes, and orders the whole-number scores with a counting sort. Callgrind showed
+library calls (`memchr`, `memcmp`) costing more than plain loops on 30-byte keys. Part of the gain
+is the algorithm, so the benchmark also runs TS with the same narrowing: Rust is 7-12x faster
+than that (wasm 5x).
 
 The same pattern in the other languages, against the originals (4 cores, identical results and
 errors):

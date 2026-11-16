@@ -25,7 +25,13 @@ const ts = (query: string): string[] => keys
 const t0 = performance.now()
 const batch = new FuzzyScoreBatch(keys)
 const build = performance.now() - t0
-const rust = (query: string): string[] => Array.from(batch.rank(query, 0), (i: number) => keys[i])
+// Indexes back to keys with a plain loop: `Array.from(order, i => keys[i])` costs 20x more.
+const rust = (query: string): string[] => {
+  const order = batch.rank(query, 0)
+  const out = new Array(order.length)
+  for (let i = 0; i < order.length; i++) out[i] = keys[order[i]]
+  return out
+}
 
 const typed = ['s', 'se', 'set', 'sett', 'setti', 'settin', 'setting', 'n', 'na', 'nav', 'navh', 'navho', 'navhom', 'navhome', 'Xq', 'éa']
 for (const q of typed) {
@@ -38,7 +44,23 @@ const time = (search: (q: string) => string[]) => {
   for (let i = 0; i < 5; i++) typed.forEach(search)
   return (performance.now() - start) / (5 * typed.length)
 }
+// TS with the same narrowing as the Rust index, to tell the algorithm from the language: a key
+// that does not match a query matches no query that extends it.
+let last: { query: string, keys: string[] } | undefined
+const tsNarrowed = (query: string): string[] => {
+  const lower = query.toLowerCase()
+  const pool = last && lower.startsWith(last.query) ? last.keys : keys
+  const scored = pool.map(key => ({ key, score: fuzzyScore(query, key) })).filter(m => m.score >= 0)
+  last = { query: lower, keys: scored.map(m => m.key) }
+  return scored.sort((a, b) => b.score - a.score).map(m => m.key)
+}
+for (const q of typed) {
+  if (ts(q).join('\n') !== tsNarrowed(q).join('\n'))
+    throw new Error(`narrowed TS differs for ${JSON.stringify(q)}`)
+}
+
 const a = time(ts)
+const n = time(tsNarrowed)
 const b = time(rust)
 console.log(`same results for ${typed.length} queries; index built in ${build.toFixed(1)} ms`)
-console.log(`TS ${a.toFixed(2)} ms per query, Rust ${b.toFixed(2)} ms per query: ${(a / b).toFixed(1)}x faster`)
+console.log(`TS ${a.toFixed(2)} ms per query; TS narrowed ${n.toFixed(2)} ms; Rust ${b.toFixed(2)} ms: ${(a / b).toFixed(1)}x faster than TS, ${(n / b).toFixed(1)}x faster than narrowed TS`)

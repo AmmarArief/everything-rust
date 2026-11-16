@@ -874,5 +874,19 @@ fn batches_keep_items_in_rust() {
     let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
     assert!(lib.contains("inner: port::CountIndex,"));
     assert!(!lib.contains("CountDefaultIndex"));
+    assert!(
+        lib.contains("self.inner.run()"),
+        "no `rank` of its own yet: {lib}"
+    );
+    // An index with its own `rank` (say, narrowing as the user types) is called for `rank`.
+    let mut port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    port = port.replace(
+        "    pub fn run(&self)",
+        "    pub fn rank(&self, min: f64) -> Result<Vec<u32>, String> {\n        let _ = min;\n        Ok(Vec::new())\n    }\n    pub fn run(&self)",
+    );
+    std::fs::write(dir.join("src/port.rs"), port).unwrap();
+    bridge::refresh(&dir).unwrap();
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(lib.contains("self.inner.rank(min)"), "{lib}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
