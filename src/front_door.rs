@@ -16,7 +16,7 @@ pub const APP_DIR: &str = "rust/app";
 pub const STATE_FILE: &str = "rust-anything.json";
 pub const KILL_SWITCH_PREFIX: &str = "RUST_ANYTHING_UNIT_";
 const SCHEMA: &str = "rust-anything/front-door@1";
-const GLUE_MARKER: &str = "unimplemented!(\"glue for";
+pub(crate) const GLUE_MARKER: &str = "unimplemented!(\"glue for";
 
 /// `rust/app/rust-anything.json`: the commands the front door routes and the units wired to them.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +26,8 @@ pub struct State {
     pub commands: Vec<String>,
     #[serde(default)]
     pub units: Vec<WiredUnit>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub lifted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,7 +84,7 @@ fn package_name(name: &str) -> String {
     out
 }
 
-fn ident(name: &str) -> String {
+pub(crate) fn ident(name: &str) -> String {
     let mut out: String = name
         .chars()
         .map(|c| {
@@ -197,7 +199,7 @@ fn cli_rs(
     let mut out = format!(
         "use std::ffi::OsString;\n\n\
          use clap::{{{imports}}};\n\n\
-         /// The command name `units::dispatch` gets when the app has no subcommands.\n\
+         /// The command `units::dispatch` gets when argv names no subcommand.\n\
          pub const ROOT: &str = {name:?};\n\n\
          fn rest() -> Arg {{\n    \
              Arg::new(\"args\")\n        \
@@ -216,8 +218,7 @@ fn cli_rs(
     if commands.is_empty() {
         out += &arg_lines(flags.get(""), "        ");
     } else {
-        out +=
-            "        .disable_help_subcommand(true)\n        .allow_external_subcommands(true)\n";
+        out += "        .disable_help_subcommand(true)\n        .args_conflicts_with_subcommands(true)\n        .arg(rest())\n";
         for command in commands {
             out += &format!(
                 "        .subcommand(\n            Command::new({command:?})\n                .disable_help_flag(true)\n"
@@ -231,7 +232,7 @@ fn cli_rs(
     out
 }
 
-const MAIN_RS: &str = "mod cli;
+pub(crate) const MAIN_RS: &str = "mod cli;
 mod original;
 mod units;
 
@@ -390,23 +391,25 @@ fn glue_rs(crate_name: &str) -> String {
     )
 }
 
-fn rustfmt(file: &Path) {
+pub(crate) fn rustfmt(file: &Path) {
     let _ = Command::new("rustfmt")
         .args(["--edition", "2024"])
         .arg(file)
         .output();
 }
 
-fn cargo_build(app_dir: &Path) -> Result<PathBuf> {
-    let out = Command::new("cargo")
-        .args([
-            "build",
-            "--message-format=json-render-diagnostics",
-            "--manifest-path",
-        ])
-        .arg(app_dir.join("Cargo.toml"))
-        .output()
-        .context("running cargo")?;
+pub(crate) fn cargo_build(app_dir: &Path, target_dir: Option<&Path>) -> Result<PathBuf> {
+    let mut cmd = Command::new("cargo");
+    cmd.args([
+        "build",
+        "--message-format=json-render-diagnostics",
+        "--manifest-path",
+    ])
+    .arg(app_dir.join("Cargo.toml"));
+    if let Some(dir) = target_dir {
+        cmd.env("CARGO_TARGET_DIR", dir);
+    }
+    let out = cmd.output().context("running cargo")?;
     ensure!(
         out.status.success(),
         "cargo build in {} failed:\n{}",
@@ -432,7 +435,7 @@ fn cargo_build(app_dir: &Path) -> Result<PathBuf> {
 }
 
 fn build_and_replay(repo: &Path) -> Result<ReplayOutcome> {
-    let exe = cargo_build(&repo.join(APP_DIR))?;
+    let exe = cargo_build(&repo.join(APP_DIR), None)?;
     app::replay(&ReplayOptions {
         repo,
         build: Some(&app::shell_quote(&exe.to_string_lossy())),
@@ -497,6 +500,7 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         name: config.name.clone(),
         commands: commands.clone(),
         units: Vec::new(),
+        lifted: false,
     };
     for (path, text) in &files {
         let target = dir.join(path);
@@ -583,6 +587,10 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         .canonicalize()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let mut state = State::load(&repo)?;
+    ensure!(
+        !state.lifted,
+        "the app is lifted: there is no fallback left to wire around; call the crate from src/units directly"
+    );
     let app_dir = repo.join(APP_DIR);
     let crate_dir = find_unit(&repo, opts.unit)?;
     let manifest_text = std::fs::read_to_string(crate_dir.join("Cargo.toml"))?;
@@ -640,11 +648,12 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
     } else {
         opts.commands.to_vec()
     };
-    let routable: Vec<&str> = if state.commands.is_empty() {
-        vec![state.name.as_str()]
-    } else {
-        state.commands.iter().map(String::as_str).collect()
-    };
+    let routable: Vec<&str> = state
+        .commands
+        .iter()
+        .map(String::as_str)
+        .chain([state.name.as_str()])
+        .collect();
     for command in &commands {
         ensure!(
             routable.contains(&command.as_str()),
@@ -753,6 +762,7 @@ mod tests {
             name: "tcli".to_string(),
             commands: vec!["div".into(), "words".into()],
             units: Vec::new(),
+            lifted: false,
         };
         assert!(units_rs(&state).contains("None"));
         state.units.push(WiredUnit {

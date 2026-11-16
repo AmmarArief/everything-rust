@@ -10,6 +10,7 @@ use std::process::Command;
 
 use rust_anything::app::{self, RecordOptions, ReplayOptions};
 use rust_anything::front_door::{self, FrontDoorOptions, WireOptions};
+use rust_anything::lift::{self, LiftOptions};
 
 fn available(program: &str, arg: &str) -> bool {
     Command::new(program)
@@ -409,4 +410,450 @@ fn the_command_exits_non_zero_on_a_mismatch() {
     assert!(text.starts_with("9/10 cases passed"), "{text}");
     assert!(text.contains("- input-003-div: stderr"), "{text}");
     std::fs::remove_dir_all(&repo).unwrap();
+}
+
+fn write_unit(repo: &Path, name: &str, port: &str) {
+    let unit = repo.join("rust").join(name);
+    std::fs::create_dir_all(unit.join("src")).unwrap();
+    std::fs::write(
+        unit.join("Cargo.toml"),
+        format!(
+            "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"2024\"\npublish = false\n\n[lib]\ncrate-type = [\"cdylib\", \"rlib\"]\n"
+        ),
+    )
+    .unwrap();
+    std::fs::write(unit.join("src/lib.rs"), "pub mod port;\n").unwrap();
+    std::fs::write(unit.join("src/port.rs"), port).unwrap();
+}
+
+/// How the original counts and uppercases: a faithful port matches its own language.
+struct Semantics {
+    count: &'static str,
+    upper: &'static str,
+    unit: &'static str,
+}
+
+const CHARS: Semantics = Semantics {
+    count: "Count::Chars",
+    upper: "Upper::Full",
+    unit: "characters",
+};
+
+fn textops_port(s: &Semantics) -> String {
+    format!(
+        "pub enum Count {{
+    Chars,
+    Bytes,
+}}
+
+pub enum Upper {{
+    Full,
+    Simple,
+    Ascii,
+}}
+
+pub const COUNT: Count = {};
+pub const UPPER: Upper = {};
+pub const UNIT: &str = {:?};
+
+pub fn upper(text: &str) -> String {{
+    match UPPER {{
+        Upper::Full => text.to_uppercase(),
+        Upper::Simple => text
+            .chars()
+            .map(|c| {{
+                let mut up = c.to_uppercase();
+                match (up.next(), up.next()) {{
+                    (Some(u), None) => u,
+                    _ => c,
+                }}
+            }})
+            .collect(),
+        Upper::Ascii => text.to_ascii_uppercase(),
+    }}
+}}
+
+pub fn count(text: &str) -> usize {{
+    match COUNT {{
+        Count::Chars => text.chars().count(),
+        Count::Bytes => text.len(),
+    }}
+}}
+
+pub fn div(a: i64, b: i64) -> Option<(i64, i64)> {{
+    (b != 0).then(|| (a / b, a % b))
+}}
+",
+        s.count, s.upper, s.unit
+    )
+}
+
+const TEXTOPS_GLUE: &str = "use std::ffi::OsString;
+use std::process::ExitCode;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use clap::ArgMatches;
+use textops_rs::port;
+
+pub fn run(command: &str, matches: &ArgMatches) -> ExitCode {
+    let args: Vec<String> = matches
+        .get_many::<OsString>(\"args\")
+        .into_iter()
+        .flatten()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    match (command, args.as_slice()) {
+        (\"upper\", words) => {
+            println!(\"{}\", port::upper(&words.join(\" \")));
+            ExitCode::SUCCESS
+        }
+        (\"len\", [text]) => {
+            println!(\"{}\", port::count(text));
+            ExitCode::SUCCESS
+        }
+        (\"div\", [a, b]) => match (a.parse::<i64>(), b.parse::<i64>()) {
+            (Ok(a), Ok(b)) => match port::div(a, b) {
+                Some((q, r)) => {
+                    println!(\"{a} / {b} = {q} remainder {r}\");
+                    ExitCode::SUCCESS
+                }
+                None => {
+                    eprintln!(\"error: division by zero\");
+                    ExitCode::from(2)
+                }
+            },
+            _ => {
+                eprintln!(\"error: not a number\");
+                ExitCode::from(2)
+            }
+        },
+        (\"copy\", [from, to]) => {
+            let Ok(text) = std::fs::read_to_string(from) else {
+                eprintln!(\"error: cannot read {from}\");
+                return ExitCode::from(1);
+            };
+            if std::fs::write(to, port::upper(&text)).is_err() {
+                eprintln!(\"error: cannot write {to}\");
+                return ExitCode::from(1);
+            }
+            println!(\"copied {} {}\", port::count(&text), port::UNIT);
+            ExitCode::SUCCESS
+        }
+        (\"now\", _) => {
+            let nanos = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_or(0, |d| d.as_nanos());
+            println!(\"now: {nanos}\");
+            ExitCode::SUCCESS
+        }
+        _ => {
+            eprintln!(\"usage: tcli upper|len|div|words|copy|now\");
+            ExitCode::from(1)
+        }
+    }
+}
+";
+
+/// Record, front door, wire every command to Rust, lift, then replay the pure binary with the
+/// original moved away: nothing may still need it.
+fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str) {
+    app::record(&RecordOptions {
+        repo,
+        run: &words(run),
+        inputs: None,
+        normalize: &[],
+        name: None,
+        traps: false,
+        timeout_secs: None,
+    })
+    .unwrap();
+    let door = front_door::front_door(&FrontDoorOptions { repo, check: true }).unwrap();
+    let replay = door.replay.unwrap();
+    assert_eq!(replay.passed, replay.total);
+    assert_eq!(replay.fallback.unwrap().cases, replay.total);
+
+    let blocked = lift::lift(&LiftOptions { repo }).unwrap();
+    assert!(!blocked.lifted);
+    assert!(
+        blocked
+            .blockers
+            .iter()
+            .any(|b| b.contains("no unit is wired")),
+        "{:?}",
+        blocked.blockers
+    );
+
+    write_unit(repo, "wordcount-rs", WORDCOUNT_PORT);
+    write_unit(repo, "textops-rs", &textops_port(semantics));
+    let wire = |unit: &str, commands: &[&str], check: bool| {
+        front_door::wire(&WireOptions {
+            repo,
+            unit,
+            commands: &commands.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
+            skip_gate: true,
+            check,
+        })
+        .unwrap()
+    };
+    let words_glue = wire("wordcount", &["words"], false).glue;
+    std::fs::write(words_glue, WORDCOUNT_GLUE).unwrap();
+    let partial = wire("textops", &["upper", "len"], true);
+    let fallback = partial.replay.unwrap().fallback.unwrap();
+    assert!(fallback.cases > 0);
+    let blocked = lift::lift(&LiftOptions { repo }).unwrap();
+    assert!(!blocked.lifted);
+    assert!(
+        blocked
+            .blockers
+            .iter()
+            .any(|b| b.contains("the glue in") && b.contains("textops")),
+        "{:?}",
+        blocked.blockers
+    );
+    std::fs::write(&partial.glue, TEXTOPS_GLUE).unwrap();
+    let blocked = lift::lift(&LiftOptions { repo }).unwrap();
+    assert!(
+        blocked
+            .blockers
+            .iter()
+            .any(|b| b.contains("still fall back") && b.contains("example-003-div")),
+        "{:?}",
+        blocked.blockers
+    );
+
+    let all = wire(
+        "textops",
+        &["upper", "len", "div", "copy", "now", "tcli"],
+        true,
+    );
+    let replay = all.replay.unwrap();
+    assert_eq!(replay.passed, replay.total, "{:?}", replay.failures);
+    assert_eq!(replay.fallback.unwrap().cases, 0);
+    for dir in ["rust/app", "rust/wordcount-rs", "rust/textops-rs"] {
+        sh(&repo.join(dir), "cargo", &["fmt"]);
+    }
+
+    let lifted = lift::lift(&LiftOptions { repo }).unwrap();
+    assert!(lifted.lifted, "{:?}", lifted.blockers);
+    assert!(
+        lifted.checklist.iter().all(|i| i.mark != lift::Mark::Fail),
+        "{:?}",
+        lifted.checklist
+    );
+    assert!(
+        lifted
+            .checklist
+            .iter()
+            .any(|i| i.name == "rust/app: cargo test" && i.mark == lift::Mark::Pass)
+    );
+    let replay = lifted.replay.as_ref().unwrap();
+    assert_eq!(replay.passed, replay.total);
+
+    let app_dir = repo.join(front_door::APP_DIR);
+    assert!(!app_dir.join("src/original.rs").exists());
+    let main = std::fs::read_to_string(app_dir.join("src/main.rs")).unwrap();
+    assert!(!main.contains("original"), "{main}");
+    let units = std::fs::read_to_string(app_dir.join("src/units/mod.rs")).unwrap();
+    assert!(!units.contains("RUST_ANYTHING_UNIT"), "{units}");
+    assert!(app_dir.join("tests/app_cases.rs").is_file());
+    for unit in ["wordcount-rs", "textops-rs"] {
+        let cargo =
+            std::fs::read_to_string(repo.join("rust").join(unit).join("Cargo.toml")).unwrap();
+        assert!(!cargo.contains("cdylib"), "{cargo}");
+    }
+    assert!(front_door::State::load(repo).unwrap().lifted);
+
+    let hidden = repo.join(format!("{original}.hidden"));
+    std::fs::rename(repo.join(original), &hidden).unwrap();
+    let pure = app::replay(&ReplayOptions {
+        repo,
+        build: Some(&lifted.binary.as_ref().unwrap().to_string_lossy()),
+        timeout_secs: None,
+    })
+    .unwrap();
+    assert_eq!(
+        pure.passed,
+        pure.total,
+        "{}",
+        std::fs::read_to_string(&pure.report).unwrap()
+    );
+    assert!(
+        pure.fallback.is_none(),
+        "the pure binary has no fallback hook"
+    );
+    std::fs::rename(&hidden, repo.join(original)).unwrap();
+
+    let again = lift::lift(&LiftOptions { repo });
+    assert!(again.is_err());
+    let rewire = front_door::wire(&WireOptions {
+        repo,
+        unit: "wordcount",
+        commands: &[],
+        skip_gate: true,
+        check: false,
+    });
+    assert!(rewire.is_err());
+    std::fs::remove_dir_all(repo).unwrap();
+}
+
+#[test]
+fn ts_cli_lifts_to_pure_rust() {
+    if !available("node", "--version") || !available("cargo", "--version") {
+        eprintln!("skipped: node or cargo not found");
+        return;
+    }
+    lift_end_to_end(&fixture("ts"), "node tcli.js", &CHARS, "tcli.js");
+}
+
+#[test]
+fn python_cli_lifts_to_pure_rust() {
+    if !available("python3", "--version") || !available("cargo", "--version") {
+        eprintln!("skipped: python3 or cargo not found");
+        return;
+    }
+    lift_end_to_end(&fixture("python"), "python3 tcli.py", &CHARS, "tcli.py");
+}
+
+#[test]
+fn c_cli_lifts_to_pure_rust() {
+    if !available("cc", "--version") || !available("cargo", "--version") {
+        eprintln!("skipped: cc or cargo not found");
+        return;
+    }
+    let repo = fixture("c");
+    sh(&repo, "cc", &["-O1", "-o", "tcli", "tcli.c"]);
+    let bytes = Semantics {
+        count: "Count::Bytes",
+        upper: "Upper::Ascii",
+        unit: "bytes",
+    };
+    lift_end_to_end(&repo, "./tcli", &bytes, "tcli");
+}
+
+#[test]
+fn go_cli_lifts_to_pure_rust() {
+    if !available("go", "version") || !available("cargo", "--version") {
+        eprintln!("skipped: go or cargo not found");
+        return;
+    }
+    let repo = fixture("go");
+    sh(&repo, "go", &["build", "-o", "tcli", "."]);
+    let go = Semantics {
+        count: "Count::Bytes",
+        upper: "Upper::Simple",
+        unit: "bytes",
+    };
+    lift_end_to_end(&repo, "./tcli", &go, "tcli");
+}
+
+#[test]
+fn ruby_cli_lifts_to_pure_rust() {
+    if !available("ruby", "--version") || !available("cargo", "--version") {
+        eprintln!("skipped: ruby or cargo not found");
+        return;
+    }
+    lift_end_to_end(&fixture("ruby"), "ruby tcli.rb", &CHARS, "tcli.rb");
+}
+
+#[test]
+fn java_cli_lifts_to_pure_rust() {
+    if !available("javac", "--version")
+        || !available("java", "--version")
+        || !available("cargo", "--version")
+    {
+        eprintln!("skipped: javac, java or cargo not found");
+        return;
+    }
+    let repo = fixture("java");
+    sh(&repo, "javac", &["-d", "classes", "Tcli.java"]);
+    lift_end_to_end(&repo, "java -cp ./classes Tcli", &CHARS, "classes");
+}
+
+#[test]
+fn lift_strips_bridge_bindings_in_every_language() {
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let base = std::env::temp_dir().join(format!("rust-anything-strip-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let units = [
+        ("mini", "packages/a/src/util.ts", "ts"),
+        ("python", "src/textkit/", "python"),
+        ("c", "src/text.c", "c"),
+        ("go", "strkit/", "go"),
+        ("ruby", "lib/textkit/", "ruby"),
+        ("java", "src/main/java/com/example/text/", "java"),
+    ];
+    for (fixture, unit, lang) in units {
+        let dir = base.join(lang);
+        rust_anything::bridge::bridge(&rust_anything::bridge::Options {
+            root: &fixtures.join(fixture),
+            unit,
+            kind: None,
+            out: Some(dir.clone()),
+            name: None,
+            force: false,
+            keep: Vec::new(),
+            lang: None,
+            batch: Vec::new(),
+        })
+        .unwrap();
+        if lang == "ts" {
+            let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+            std::fs::write(
+                dir.join("src/port.rs"),
+                format!("{port}\n#[allow(unused_imports)]\nuse crate::utf16;\n"),
+            )
+            .unwrap();
+        }
+        let removed = lift::strip_unit(&dir).unwrap();
+        assert!(!removed.is_empty(), "{lang}");
+        let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
+        for binding in [
+            "cdylib",
+            "staticlib",
+            "napi",
+            "pyo3",
+            "magnus",
+            "jni",
+            "build =",
+        ] {
+            assert!(!cargo.contains(binding), "{lang}: {cargo}");
+        }
+        let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+        let expected = if lang == "ts" {
+            "pub mod port;\npub mod utf16;\n"
+        } else {
+            "pub mod port;\n"
+        };
+        assert_eq!(lib, expected, "{lang}");
+        for generated in [
+            "build.rs",
+            "index.cjs",
+            "python",
+            "go",
+            "ruby",
+            "java",
+            "include",
+            "src/wire.rs",
+            "src/js.rs",
+            "src/pyconv.rs",
+            "src/rbconv.rs",
+        ] {
+            assert!(!dir.join(generated).exists(), "{lang}: {generated}");
+        }
+        assert!(dir.join("src/port.rs").is_file());
+        if available("cargo", "--version") {
+            let out = Command::new("cargo")
+                .args(["check", "--quiet", "--manifest-path"])
+                .arg(dir.join("Cargo.toml"))
+                .env("CARGO_TARGET_DIR", base.join("target"))
+                .output()
+                .unwrap();
+            assert!(
+                out.status.success(),
+                "{lang}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+        }
+    }
+    std::fs::remove_dir_all(&base).unwrap();
 }

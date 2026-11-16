@@ -1,6 +1,6 @@
 # Design: whole app to a pure Rust app
 
-Status: draft for review, 2026-11-16. Nothing here is built yet.
+Status: milestones 1 to 3 built (CLIs: record, replay, front door, wire, lift); 4 to 6 to come.
 
 ## Goal
 
@@ -137,6 +137,34 @@ tool.
    round.
 4. **New pitch drafted now, published with milestone 1**, so the README never promises what does
    not exist yet.
+
+Taken while building, without a question to the user (the conventional option, with the reason):
+
+5. **The original's command goes after `--`** (`app record . -- python3 cli.py`), as `profile`
+   already takes its workload; it is saved with the cases, so later runs need no arguments.
+6. **`--inputs` is JSONL** (`{"name", "args", "stdin", "env", "files"}`), like `record --inputs`.
+7. **Settings live in `rust/app-cases/rust-anything.json`**, not a TOML file, so a trycmd
+   `*.toml` glob never reads them as a case.
+8. **Re-recording overwrites cases of the same name and deletes none**: hand-written cases stay.
+9. **The fallback hook is the file named by `RUST_ANYTHING_FALLBACK_LOG`**: one line per
+   fallback, created empty to report none. Any build can report through it, not only ours.
+10. **The front door's clap parser only routes**: the original always gets the raw argv, and
+    anything clap rejects falls back, so the parser never has to match the original exactly.
+11. **Argv that names no command routes to the app's own name**, so a unit can take the usage
+    and unknown-command paths; without it no CLI reaches fallback rate 0.
+12. **`wire` takes `--command` (repeatable), runs `gate` unless `--skip-gate`, and writes the glue
+    file once**; only `src/units/mod.rs` is regenerated, so the agent's code is never overwritten.
+13. **`front-door` and `wire` build and replay by default** (`--no-check` to skip): the design asks
+    for replay after each step.
+14. **Lift is all or nothing**: it works on a copy and writes back only when every check passes,
+    so a failed lift leaves the repository as it was.
+15. **Replay in CI is a trycmd test in `rust/app`** (`tests/app_cases.rs`, run by `cargo test`):
+    CI then needs only cargo, and decision 2 chose trycmd files for this. No workflow file is
+    written; where CI runs stays the user's.
+16. **Lift removes generated wrappers only from crates `bridge` made** (they have its manifest);
+    any other crate only loses `cdylib` and binding dependencies.
+17. **Asset findings are warnings, cross targets are checked, not linked**: neither can be judged
+    for certain locally, and an uninstalled target is skipped with the command that adds it.
 
 ## Draft pitch
 

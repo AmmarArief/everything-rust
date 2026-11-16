@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 
-use crate::{analyze, app, bridge, front_door, gate, harness, shadow};
+use crate::{analyze, app, bridge, front_door, gate, harness, lift, shadow};
 
 const PROTOCOL_VERSION: &str = "2025-06-18";
 
@@ -193,6 +193,13 @@ fn tools() -> Value {
                 "check": { "type": "boolean", "description": "Build and replay (default true)." },
             }, "required": ["repo", "unit"] },
         },
+        {
+            "name": "app_lift",
+            "description": "Make rust/app a pure Rust app. Refuses (and lists every blocker) unless replay passes with fallback rate 0 and every unit passes gate. Then, on a copy first: removes the fallback and kill switches, turns each unit into a plain library (no cdylib, bindings or generated wrappers), adds a trycmd test running rust/app-cases on cargo test, checks fmt/clippy/tests, DECISIONS.md targets and assets, and replays the pure binary. Never touches the original.",
+            "inputSchema": { "type": "object", "properties": {
+                "repo": { "type": "string", "description": "Repository root." },
+            }, "required": ["repo"] },
+        },
     ])
 }
 
@@ -340,6 +347,9 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 check: args["check"].as_bool().unwrap_or(true),
             })?)?
         }
+        "app_lift" => serde_json::to_value(lift::lift(&lift::LiftOptions {
+            repo: &path("repo")?,
+        })?)?,
         _ => anyhow::bail!("unknown tool `{name}`"),
     })
 }
@@ -378,7 +388,8 @@ mod tests {
                 "app_record",
                 "app_replay",
                 "app_front_door",
-                "app_wire"
+                "app_wire",
+                "app_lift"
             ]
         );
         let bad = handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "gate", "arguments": {} } })).unwrap();

@@ -72,9 +72,12 @@ failed calls), and the semantic traps: non-ASCII and emoji strings, negative div
 modulo, integer overflow, large and tiny floats, map and set order, regex lookaround.
 
 Run the original twice on every case. Where its own runs disagree (timestamps, ids, ordering),
-the difference is **noise**: normalize it in the case, never in the port. Store the cases in
-`rust/app-cases/` with a `replay` script that runs any build against them and prints
-`passed/total`. The original must pass 100%.
+the difference is **noise**: normalize it in the case, never in the port. For a CLI,
+`rust-anything app record <repo> -- <command that runs the original>` does all of this: the
+app's documented examples, `--inputs` for the tests, workloads and error paths you collect, the
+traps, two runs, `--normalize` for named noise, trycmd cases in `rust/app-cases/`. Then
+`rust-anything app replay <repo>`: the original must pass 100%. (HTTP servers: record and replay
+by hand until the tool supports them.)
 
 ## 4. Build the front door
 
@@ -86,8 +89,10 @@ falls back to the original:
   and exit code through.
 - **HTTP server**: proxy every route not ported yet to the original server.
 
-`replay` against the front door must match 100% before any unit moves. Count the fallbacks: the
-**fallback rate** is the share of cases the original still answers, and it only goes down.
+For a CLI, `rust-anything app front-door <repo>` scaffolds it (clap parser from the recorded
+commands and flags, fallback for everything) and replays it. `replay` against the front door must
+match 100% before any unit moves. Count the fallbacks: the **fallback rate** is the share of cases
+the original still answers, and it only goes down.
 
 ## 5. Port every unit
 
@@ -95,10 +100,14 @@ Follow the plan's waves, lowest first, so every unit's dependencies are already 
 tangled core in one large piece rather than writing glue around it. Each unit goes through steps 1
 to 5 of SKILL.md, then:
 
-1. Wire the unit into the front door, and stop falling back for what it covers.
-2. Run `replay`: 100% again, and a lower fallback rate.
-3. Keep a **kill switch**: one environment variable per unit sends it back to the original, until
-   the lift.
+1. Wire the unit into the front door, and stop falling back for what it covers:
+   `rust-anything app wire <repo> <unit> --command <name>` (the app's own name as the command
+   takes argv that names no command: no arguments, unknown commands). Write the glue in
+   `rust/app/src/units/<unit>.rs` (parse the arguments, call `<crate>::port`, print what the
+   original prints, return its exit code), then run `app wire <repo> <unit>` again.
+2. `wire` replays: 100% again, and a lower fallback rate.
+3. Keep the **kill switch** `wire` adds: `RUST_ANYTHING_UNIT_<NAME>=original` sends the unit back
+   to the original, until the lift.
 
 Translate faithfully first, with the original's structure, types and error paths; make it
 idiomatic only after `replay` passes, and run `replay` again. Where the original returns or throws
@@ -110,21 +119,30 @@ results, the fallback rate and what is left.
 
 ## 6. Lift to a pure Rust app
 
-When the fallback rate is zero and every unit passes `gate`:
+When the fallback rate is zero and every unit passes `gate`, run
+`rust-anything app lift <repo>`. It refuses until both hold and lists every blocker (cases still
+falling back, by name; glue still a stub; units failing gate). Then, on a copy first, it:
 
-1. Delete the fallback path and the kill switches.
-2. Call the units' `port.rs` code directly from `rust/app`; drop the bindings and the generated
-   wrappers.
-3. Work the lift checklist: assets and templates embedded or shipped, every target from
-   `DECISIONS.md` builds, packaging and release, CI runs `replay`.
-4. Run `rust-anything gate` on every unit crate, and `cargo clippy --all-targets -- -D warnings`
-   and `cargo test` on `rust/app`.
+1. Deletes the fallback path and the kill switches.
+2. Turns each unit crate into a plain library of `rust/app`: no `cdylib`, bindings or generated
+   wrappers; `rust/app` calls `port.rs` through the glue.
+3. Works the lift checklist: assets read at run time or asset folders not embedded (warnings to
+   act on), every target in `DECISIONS.md` built or checked where it is installed, and
+   `rust/app/tests/app_cases.rs`, which runs `rust/app-cases` with trycmd on `cargo test`, so CI
+   runs replay with nothing but cargo.
+4. Runs fmt, clippy `-D warnings` and `cargo test` on every unit crate and on `rust/app`, then
+   `replay` on the pure binary.
+
+Only when everything passes are the changes written back; a failure leaves the repo as it was
+and names the copy to look at. Fix each `warn` line and each skipped target (packaging and
+release are yours), then report them to the user.
 
 ## 7. Prove the app, then cut over
 
-Run `replay` against the pure Rust app: every case matches to the bar in `DECISIONS.md`. A
-mismatch is a bug in the port, never in the cases; change a case only with the user's approval,
-and record why in `DECISIONS.md`.
+`app lift` ends with `replay` against the pure Rust app; run `rust-anything app replay <repo>
+--build <path to the binary>` again after any change, and `cargo test` in `rust/app` in CI: every
+case matches to the bar in `DECISIONS.md`. A mismatch is a bug in the port, never in the cases;
+change a case only with the user's approval, and record why in `DECISIONS.md`.
 
 Report to the user: replay results, gate results for every crate, speed against the original, and
 every known behavior difference. The user decides the cutover. Leave the original in place as

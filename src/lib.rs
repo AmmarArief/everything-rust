@@ -25,6 +25,7 @@ pub mod harness_java;
 pub mod harness_py;
 pub mod harness_ruby;
 pub mod lang;
+pub mod lift;
 pub mod mcp;
 pub mod profile;
 pub mod report;

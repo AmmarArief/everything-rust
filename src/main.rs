@@ -17,7 +17,7 @@ macro_rules! say_raw {
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use rust_anything::{analyze, app, bridge, front_door, gate, harness, mcp, report, shadow};
+use rust_anything::{analyze, app, bridge, front_door, gate, harness, lift, mcp, report, shadow};
 
 #[derive(Parser)]
 #[command(
@@ -280,6 +280,17 @@ enum AppCmd {
         /// Only write the files; skip the build and replay.
         #[arg(long)]
         no_check: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Make `rust/app` a pure Rust app, once replay passes with fallback rate 0 and every unit
+    /// passes gate: removes the fallback and the kill switches, turns the units into plain
+    /// libraries, runs the lift checklist and replays the pure binary. Checked on a copy first;
+    /// the original stays in place.
+    Lift {
+        /// Repository root.
+        #[arg(default_value = ".")]
+        repo: PathBuf,
         #[arg(long)]
         json: bool,
     },
@@ -761,6 +772,55 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 .as_ref()
                 .is_some_and(|r| !r.failures.is_empty())
             {
+                return Ok(ExitCode::FAILURE);
+            }
+        }
+        AppCmd::Lift { repo, json } => {
+            let outcome = lift::lift(&lift::LiftOptions { repo: &repo })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                for item in &outcome.checklist {
+                    let mark = match item.mark {
+                        lift::Mark::Pass => "pass",
+                        lift::Mark::Warn => "warn",
+                        lift::Mark::Fail => "FAIL",
+                        lift::Mark::Skip => "skip",
+                    };
+                    let mut lines = item.detail.lines();
+                    say!(
+                        "{mark}  {:<24} {}",
+                        item.name,
+                        lines.next().unwrap_or_default()
+                    );
+                    if item.mark == lift::Mark::Fail {
+                        for line in lines {
+                            say!("      {line}");
+                        }
+                    }
+                }
+                if outcome.lifted {
+                    say!(
+                        "Lifted: {} is a pure Rust app ({}). Removed {} generated files; the original is untouched.",
+                        repo.join(front_door::APP_DIR).display(),
+                        outcome
+                            .binary
+                            .as_ref()
+                            .map(|b| b.display().to_string())
+                            .unwrap_or_default(),
+                        outcome.removed.len()
+                    );
+                } else {
+                    say!("Not lifted:");
+                    for b in &outcome.blockers {
+                        say!("- {b}");
+                    }
+                    if let Some(stage) = &outcome.stage {
+                        say!("The lifted copy is in {} for a look.", stage.display());
+                    }
+                }
+            }
+            if !outcome.lifted {
                 return Ok(ExitCode::FAILURE);
             }
         }

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- `app lift` (also MCP tool `app_lift`) for CLI apps: refuses until replay passes with fallback
+  rate 0 and every unit passes gate, listing every blocker. On a copy first, it removes the
+  fallback and the kill switches, turns each unit crate into a plain library (no `cdylib`,
+  bindings or generated wrappers), adds a trycmd test that runs `rust/app-cases` on
+  `cargo test`, runs the lift checklist (fmt, clippy, tests, `DECISIONS.md` targets, assets) and
+  replays the pure binary; only then are the changes written back. Proved end to end on the
+  small CLI in all six languages, replayed with the original moved away.
+- The front door routes argv that names no command (no arguments, unknown commands) to the app's
+  own name, so a unit can answer it; replay lists the cases that fell back.
 - `app front-door` and `app wire` (also MCP tools `app_front_door` and `app_wire`) for CLI apps.
   `front-door` scaffolds `rust/app`, a Rust binary with a clap parser for the recorded commands
   and flags where every command runs the original and counts the fallback; it builds and replays

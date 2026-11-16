@@ -27,74 +27,7 @@ pub struct GateOutcome {
 
 pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
     let manifest = Manifest::load(crate_dir)?;
-    let cargo = |args: &[&str]| -> (bool, String) {
-        let mut cmd = Command::new("cargo");
-        cmd.args(args)
-            .arg("--manifest-path")
-            .arg(crate_dir.join("Cargo.toml"))
-            .env("CARGO_TARGET_DIR", crate_dir.join("target"));
-        // Lint arguments go after `--`, so the manifest path must come before them.
-        match cmd.output() {
-            Ok(o) => (
-                o.status.success(),
-                last_lines(&String::from_utf8_lossy(&o.stderr), 15),
-            ),
-            Err(e) => (false, e.to_string()),
-        }
-    };
-    let mut checks = Vec::new();
-
-    let (ok, out) = cargo(&["fmt", "--check"]);
-    checks.push(Check {
-        name: "fmt",
-        passed: ok,
-        detail: if ok {
-            "formatted".into()
-        } else {
-            format!("run `cargo fmt`\n{out}")
-        },
-    });
-
-    let mut clippy = Command::new("cargo");
-    clippy
-        .args(["clippy", "--all-targets", "--manifest-path"])
-        .arg(crate_dir.join("Cargo.toml"))
-        .args(["--", "-D", "warnings"])
-        .env("CARGO_TARGET_DIR", crate_dir.join("target"));
-    let (ok, out) = match clippy.output() {
-        Ok(o) => (
-            o.status.success(),
-            last_lines(&String::from_utf8_lossy(&o.stderr), 15),
-        ),
-        Err(e) => (false, e.to_string()),
-    };
-    checks.push(Check {
-        name: "clippy",
-        passed: ok,
-        detail: if ok { "no warnings".into() } else { out },
-    });
-
-    let (ok, out) = cargo(&["test", "--quiet"]);
-    checks.push(Check {
-        name: "cargo test",
-        passed: ok,
-        detail: if ok { "passed".into() } else { out },
-    });
-
-    let (unexplained, explained) = unsafe_blocks(&crate_dir.join("src"));
-    checks.push(Check {
-        name: "unsafe",
-        passed: unexplained.is_empty(),
-        detail: if unexplained.is_empty() {
-            format!("{explained} unsafe uses, each with a `// SAFETY:` comment")
-        } else {
-            format!(
-                "unsafe without a `// SAFETY:` comment: {}",
-                unexplained.join(", ")
-            )
-        },
-    });
-
+    let mut checks = rust_checks(crate_dir, &crate_dir.join("target"));
     let port = std::fs::read_to_string(crate_dir.join("src/port.rs")).unwrap_or_default();
     let todo = port.matches("unimplemented!(").count();
     checks.push(Check {
@@ -171,6 +104,95 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         passed: checks.iter().all(|c| c.passed),
         checks,
     })
+}
+
+/// The checks that hold for any Rust crate, bindings or not: fmt, clippy (warnings are errors),
+/// cargo test, and `unsafe` only with a `// SAFETY:` comment.
+pub fn rust_checks(crate_dir: &Path, target_dir: &Path) -> Vec<Check> {
+    let cargo = |args: &[&str]| -> (bool, String) {
+        let mut cmd = Command::new("cargo");
+        cmd.args(args)
+            .arg("--manifest-path")
+            .arg(crate_dir.join("Cargo.toml"))
+            .env("CARGO_TARGET_DIR", target_dir);
+        // Lint arguments go after `--`, so the manifest path must come before them.
+        match cmd.output() {
+            Ok(o) => (
+                o.status.success(),
+                last_lines(&String::from_utf8_lossy(&o.stderr), 15),
+            ),
+            Err(e) => (false, e.to_string()),
+        }
+    };
+    let mut checks = Vec::new();
+
+    let (ok, out) = cargo(&["fmt", "--check"]);
+    checks.push(Check {
+        name: "fmt",
+        passed: ok,
+        detail: if ok {
+            "formatted".into()
+        } else {
+            format!("run `cargo fmt`\n{out}")
+        },
+    });
+
+    let mut clippy = Command::new("cargo");
+    clippy
+        .args(["clippy", "--all-targets", "--manifest-path"])
+        .arg(crate_dir.join("Cargo.toml"))
+        .args(["--", "-D", "warnings"])
+        .env("CARGO_TARGET_DIR", target_dir);
+    let (ok, out) = match clippy.output() {
+        Ok(o) => (
+            o.status.success(),
+            last_lines(&String::from_utf8_lossy(&o.stderr), 15),
+        ),
+        Err(e) => (false, e.to_string()),
+    };
+    checks.push(Check {
+        name: "clippy",
+        passed: ok,
+        detail: if ok { "no warnings".into() } else { out },
+    });
+
+    let (ok, out) = cargo(&["test", "--quiet"]);
+    checks.push(Check {
+        name: "cargo test",
+        passed: ok,
+        detail: if ok { "passed".into() } else { out },
+    });
+
+    let (unexplained, explained) = unsafe_blocks(&crate_dir.join("src"));
+    checks.push(Check {
+        name: "unsafe",
+        passed: unexplained.is_empty(),
+        detail: if unexplained.is_empty() {
+            format!("{explained} unsafe uses, each with a `// SAFETY:` comment")
+        } else {
+            format!(
+                "unsafe without a `// SAFETY:` comment: {}",
+                unexplained.join(", ")
+            )
+        },
+    });
+
+    checks
+}
+
+/// No function in `src/port.rs` is still `unimplemented!`.
+pub fn ported_check(crate_dir: &Path) -> Check {
+    let port = std::fs::read_to_string(crate_dir.join("src/port.rs")).unwrap_or_default();
+    let todo = port.matches("unimplemented!(").count();
+    Check {
+        name: "ported",
+        passed: todo == 0,
+        detail: if todo == 0 {
+            "nothing `unimplemented!` in port.rs".into()
+        } else {
+            format!("{todo} functions in port.rs still `unimplemented!`")
+        },
+    }
 }
 
 /// `unsafe` uses in Rust sources, split into those without and with a `// SAFETY:` comment just above.

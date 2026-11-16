@@ -189,7 +189,28 @@ rust-anything app wire . textkit                          # 100% again, lower fa
   routes the commands to it, then builds and replays. `RUST_ANYTHING_UNIT_<NAME>=original` sends a
   wired unit back to the original until the lift.
 
-All four are MCP tools too: `app_record`, `app_replay`, `app_front_door` and `app_wire`.
+Wire the app's own name as a command (`--command mytool`) for argv that names no command: no
+arguments, unknown commands, usage errors.
+
+When replay passes with fallback rate 0 and every unit passes gate, make it a pure Rust app:
+
+```sh
+rust-anything app lift .
+```
+
+- `app lift` refuses until both hold, and says what blocks it: the cases still falling back,
+  glue still a stub, units failing gate.
+- On a copy first, it removes the fallback path and the kill switches, turns each unit crate into
+  a plain library of `rust/app` (no `cdylib`, bindings or generated wrappers), and adds
+  `rust/app/tests/app_cases.rs`, which runs `rust/app-cases` with trycmd on `cargo test`, so CI
+  needs nothing but cargo.
+- Then it runs the lift checklist: fmt, clippy `-D warnings` and tests on every unit and on
+  `rust/app`, every target named in `rust/DECISIONS.md` built or checked where it is installed,
+  files read at run time and asset folders not embedded, and replay on the pure binary. Only when
+  all of it passes are the changes written back. The original is never touched.
+
+All five are MCP tools too: `app_record`, `app_replay`, `app_front_door`, `app_wire` and
+`app_lift`.
 
 ## Case study: x18n's core
 

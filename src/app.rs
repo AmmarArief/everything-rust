@@ -1540,6 +1540,8 @@ pub struct Fallback {
     pub cases: usize,
     pub total: usize,
     pub rate: f64,
+    /// The cases that fell back.
+    pub names: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1738,7 +1740,7 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         fallback: None,
         report: dir.join(REPORT_FILE),
     };
-    let (mut reported, mut fell_back) = (false, 0);
+    let (mut reported, mut fell_back) = (false, Vec::new());
     for (spec, result) in specs.iter().zip(results) {
         if matches!(spec.status, Expect::Skip) {
             outcome.skipped += 1;
@@ -1747,7 +1749,9 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         let (problems, fallback) = result?;
         outcome.total += 1;
         reported |= fallback.is_some();
-        fell_back += usize::from(fallback == Some(true));
+        if fallback == Some(true) {
+            fell_back.push(spec.name.clone());
+        }
         if problems.is_empty() {
             outcome.passed += 1;
         } else {
@@ -1760,9 +1764,10 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
     }
     if reported {
         outcome.fallback = Some(Fallback {
-            cases: fell_back,
+            cases: fell_back.len(),
             total: outcome.total,
-            rate: fell_back as f64 / outcome.total.max(1) as f64,
+            rate: fell_back.len() as f64 / outcome.total.max(1) as f64,
+            names: fell_back,
         });
     }
     std::fs::write(&outcome.report, report_markdown(&outcome))
