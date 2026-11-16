@@ -8,7 +8,7 @@
     {
       "name": "rust-anything",
       "source": "./",
-      "description": "Make the slow part of your app fast in Rust without rewriting the app. Needs the rust-anything CLI on PATH (cargo install --git https://github.com/erkamyaman/rust-anything)."
+      "description": "Rewrite your app in Rust, one piece at a time, proving nothing changed. Needs the rust-anything CLI on PATH (cargo install --git https://github.com/erkamyaman/rust-anything)."
     }
   ]
 }

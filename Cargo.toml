@@ -2,7 +2,7 @@
 name = "rust-anything"
 version = "1.0.1"
 edition = "2024"
-description = "Plan, bridge, verify and ship incremental migrations to Rust from TypeScript/JavaScript, Python, C, Go, Ruby and Java"
+description = "Rewrite your app in Rust, one piece at a time, proving nothing changed. TypeScript/JavaScript, Python, C, Go, Ruby and Java"
 license = "MIT"
 readme = "README.md"
 rust-version = "1.88"
