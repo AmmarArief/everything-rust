@@ -44,10 +44,12 @@ public final class HashBatch implements AutoCloseable {
 
     private final State state;
     private final java.lang.ref.Cleaner.Cleanable cleanable;
+    private final int count;
 
     /** Copies the items into Rust. */
     public HashBatch(String[] texts) {
         state = new State(nNew(texts));
+        count = texts.length;
         cleanable = CLEANER.register(this, state);
     }
 

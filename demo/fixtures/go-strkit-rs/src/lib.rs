@@ -554,19 +554,49 @@ unsafe fn batch_out<T: Copy>(out: *mut T, cap: usize, values: &[T]) {
     }
 }
 
-/// Frees the string results of a batch, after Go copied them.
+/// Moves string results into Go's buffer: their bytes one after another, and each one's length.
+/// The copies and the frees run on all cores.
 ///
 /// # Safety
 ///
-/// `ptr` and `len` come from a batch's `run`, once.
+/// `res` comes from a batch's `run` and is taken once; `buf` holds `len` bytes, the results'
+/// total from `run`, and `lens` holds `cap` values.
 // SAFETY: exported unmangled under a name only carcinize defines.
 #[unsafe(no_mangle)]
 // SAFETY: callers uphold the contract under `# Safety`.
-pub unsafe extern "C" fn carcinize_b_free_bytes(ptr: *mut u8, len: usize) {
-    if !ptr.is_null() {
-        // SAFETY: the buffer was a boxed slice of `len` bytes, leaked by `run`.
-        drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len)) });
+pub unsafe extern "C" fn carcinize_b_take_strings(
+    res: *mut Vec<String>,
+    buf: *mut u8,
+    len: usize,
+    lens: *mut usize,
+    cap: usize,
+) {
+    use rayon::prelude::*;
+    if res.is_null() {
+        return;
     }
+    // SAFETY: `res` was boxed by `run` and is taken once (see above).
+    let values: Vec<String> = *unsafe { Box::from_raw(res) };
+    let sizes: Vec<usize> = values.iter().map(String::len).collect();
+    // SAFETY: Go passes `lens` of `cap` values (see above).
+    unsafe { batch_out(lens, cap, &sizes) };
+    if len > 0 && !buf.is_null() {
+        // SAFETY: Go passes `len` writable bytes, for this call only (see above).
+        let mut rest = unsafe { std::slice::from_raw_parts_mut(buf, len) };
+        let mut parts = Vec::with_capacity(values.len());
+        for n in &sizes {
+            let all = std::mem::take(&mut rest);
+            let (head, tail) = all.split_at_mut((*n).min(all.len()));
+            parts.push(head);
+            rest = tail;
+        }
+        parts
+            .into_par_iter()
+            .zip(values.par_iter())
+            .with_min_len(256)
+            .for_each(|(dst, v)| dst.copy_from_slice(&v.as_bytes()[..dst.len()]));
+    }
+    values.into_par_iter().with_min_len(256).for_each(drop);
 }
 
 /// The items of `SlugifyBatch` as the port takes them; the port runs per item. Define
@@ -637,31 +667,19 @@ pub unsafe extern "C" fn carcinize_b_Slugify_free(h: *mut SlugifyDefaultIndex) {
 pub unsafe extern "C" fn carcinize_b_Slugify_run(
     h: *const SlugifyDefaultIndex,
     max: i64,
-    out: *mut *mut u8,
-    out_len: *mut usize,
-    lens: *mut usize,
-    cap: usize,
+    res: *mut *mut Vec<String>,
+    total: *mut usize,
     err: *mut *mut c_char,
 ) -> i32 {
     // SAFETY: Go keeps the batch alive during the call.
     let index = unsafe { &*h };
     match run(|| index.run(max)) {
         Ok(values) => {
-            let mut bytes = Vec::with_capacity(values.iter().map(String::len).sum());
-            let sizes: Vec<usize> = values
-                .iter()
-                .map(|v| {
-                    bytes.extend_from_slice(v.as_bytes());
-                    v.len()
-                })
-                .collect();
-            let bytes = bytes.into_boxed_slice();
-            // SAFETY: Go passes valid `out`, `out_len` and `lens` of `cap` values; Go frees the
-            // buffer with `carcinize_b_free_bytes`.
+            // SAFETY: Go passes valid `res` and `total`, and takes the results with
+            // `carcinize_b_take_strings`.
             unsafe {
-                batch_out(lens, cap, &sizes);
-                *out_len = bytes.len();
-                *out = Box::into_raw(bytes).cast::<u8>();
+                *total = values.iter().map(String::len).sum();
+                *res = Box::into_raw(Box::new(values));
             }
             0
         }

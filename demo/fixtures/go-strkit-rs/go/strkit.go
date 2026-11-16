@@ -12,10 +12,10 @@ void carcinize_free(char *ptr);
 int carcinize_t_Slugify(const uint8_t *s_ptr, size_t s_len, int64_t max, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 int carcinize_t_ParsePort(const uint8_t *s_ptr, size_t s_len, int64_t *out, char **err);
 int carcinize_t_Initials(const uint8_t *name_ptr, size_t name_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
-void carcinize_b_free_bytes(uint8_t *ptr, size_t len);
+void carcinize_b_take_strings(void *res, uint8_t *buf, size_t len, size_t *lens, size_t cap);
 void *carcinize_b_Slugify_new(const uint8_t *bytes, size_t bytes_len, const size_t *lens, size_t count);
 void carcinize_b_Slugify_free(void *h);
-int carcinize_b_Slugify_run(const void *h, int64_t max, uint8_t **out, size_t *out_len, size_t *lens, size_t cap, char **err);
+int carcinize_b_Slugify_run(const void *h, int64_t max, void **res, size_t *total, char **err);
 void *carcinize_b_ParsePort_new(const uint8_t *bytes, size_t bytes_len, const size_t *lens, size_t count);
 void carcinize_b_ParsePort_free(void *h);
 int carcinize_b_ParsePort_run(const void *h, int64_t *out, size_t cap, char **err);
@@ -425,17 +425,18 @@ func (b *SlugifyBatch) Close() {
 // Run returns Slugify's result for every item, in order.
 func (b *SlugifyBatch) Run(max int) []string {
 	var errp *C.char
-	var ptr *C.uint8_t
+	var res unsafe.Pointer
 	var total C.size_t
-	lens := make([]C.size_t, b.n)
-	status := C.carcinize_b_Slugify_run(b.h, C.int64_t(max), &ptr, &total, carcinizePtr(lens), C.size_t(b.n), &errp)
+	status := C.carcinize_b_Slugify_run(b.h, C.int64_t(max), &res, &total, &errp)
 	runtime.KeepAlive(b)
 	if status == 1 {
 		panic(carcinizeErr(errp))
 	}
-	// One copy into Go memory; each result is a slice of it.
-	all := C.GoStringN((*C.char)(unsafe.Pointer(ptr)), C.int(total))
-	C.carcinize_b_free_bytes(ptr, total)
+	// Rust writes the results straight into Go memory; each result is a slice of it.
+	buf := make([]byte, int(total))
+	lens := make([]C.size_t, b.n)
+	C.carcinize_b_take_strings(res, carcinizeBytes(buf), total, carcinizePtr(lens), C.size_t(b.n))
+	all := unsafe.String(unsafe.SliceData(buf), len(buf))
 	out := make([]string, b.n)
 	at := 0
 	for i, n := range lens {

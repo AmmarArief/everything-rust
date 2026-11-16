@@ -44,10 +44,12 @@ public final class SlugifyBatch implements AutoCloseable {
 
     private final State state;
     private final java.lang.ref.Cleaner.Cleanable cleanable;
+    private final int count;
 
     /** Copies the items into Rust. */
     public SlugifyBatch(String[] texts) {
         state = new State(nNew(texts));
+        count = texts.length;
         cleanable = CLEANER.register(this, state);
     }
 
@@ -63,9 +65,17 @@ public final class SlugifyBatch implements AutoCloseable {
     /** {@code slugify}'s result for every item, in order. */
     public String[] run(int max) {
         String[] slot = CarcinizeError.slot();
-        String[] out = nRun(handle(), max, slot);
+        int[] lens = new int[count];
+        char[] chars = nRun(handle(), max, lens, slot);
         CarcinizeError.check(slot);
         java.lang.ref.Reference.reachabilityFence(this);
+        // One array from Rust; each result is a slice of it.
+        String[] out = new String[count];
+        int at = 0;
+        for (int i = 0; i < count; i++) {
+            out[i] = new String(chars, at, lens[i]);
+            at += lens[i];
+        }
         return out;
     }
 
@@ -79,5 +89,5 @@ public final class SlugifyBatch implements AutoCloseable {
 
     private static native void nFree(long handle);
 
-    private static native String[] nRun(long handle, int max, String[] slot);
+    private static native char[] nRun(long handle, int max, int[] lens, String[] slot);
 }

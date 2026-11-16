@@ -44,10 +44,12 @@ public final class PagesBatch implements AutoCloseable {
 
     private final State state;
     private final java.lang.ref.Cleaner.Cleanable cleanable;
+    private final int count;
 
     /** Copies the items into Rust. */
     public PagesBatch(int[] totals) {
         state = new State(nNew(totals));
+        count = totals.length;
         cleanable = CLEANER.register(this, state);
     }
 

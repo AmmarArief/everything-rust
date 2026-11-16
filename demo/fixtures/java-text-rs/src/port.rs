@@ -43,21 +43,43 @@ pub fn pages(total: i64, per_page: i64) -> Result<i64, String> {
 
 /// Port of `slugify` (`Strings.java:14`).
 pub fn slugify(text: String, max: i64) -> Result<String, String> {
-    let mut out = String::new();
+    let mut out = String::with_capacity(text.len());
     let mut dash = false;
-    for c in text.to_lowercase().chars() {
-        if c.is_alphanumeric() {
+    let mut push = |c: char| {
+        let alnum = if c.is_ascii() {
+            c.is_ascii_alphanumeric()
+        } else {
+            c.is_alphanumeric()
+        };
+        if alnum {
             out.push(c);
             dash = false;
         } else if !dash && !out.is_empty() {
             out.push('-');
             dash = true;
         }
+    };
+    // `toLowerCase` lowers each character on its own, except a final sigma. That rule looks past
+    // neighbours only through cased and case-ignorable characters, which whitespace is not: a
+    // piece up to whitespace that holds a `Σ` is lowered whole, the rest per character.
+    for piece in text.split_inclusive(char::is_whitespace) {
+        if piece.contains('Σ') {
+            piece.to_lowercase().chars().for_each(&mut push);
+            continue;
+        }
+        for c in piece.chars() {
+            if c.is_ascii() {
+                push(c.to_ascii_lowercase());
+            } else {
+                c.to_lowercase().for_each(&mut push);
+            }
+        }
     }
     if out.ends_with('-') {
         out.pop();
     }
-    if max > 0 && out.chars().count() as i64 > max {
+    // Bytes are at least characters: a short slug needs no count.
+    if max > 0 && out.len() as i64 > max && out.chars().count() as i64 > max {
         out = out.chars().take(max as usize).collect();
     }
     Ok(out)
@@ -110,4 +132,26 @@ pub fn hash(text: String) -> Result<i64, String> {
         h = h.wrapping_mul(31).wrapping_add(i32::from(unit));
     }
     Ok(i64::from(h))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn slugify_lowers_like_the_whole_string() {
+        // Final sigma depends on the neighbours: lowering per piece must agree with lowering the
+        // whole text, then slugifying.
+        for text in [
+            "ΣΊΣΥΦΟΣ  and ΟΔΟΣ.",
+            "AΣ Σ ΣA",
+            "ΣΣ'Σ x",
+            "İstanbul ΣΑΣ\u{301} Σ",
+        ] {
+            let lower = text.to_lowercase();
+            assert_eq!(
+                super::slugify(text.into(), 0),
+                super::slugify(lower, 0),
+                "{text}"
+            );
+        }
+    }
 }

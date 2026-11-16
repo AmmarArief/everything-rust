@@ -80,13 +80,22 @@ errors):
 | Python | fixture `slugify`, 20,000 strings | 98 ms | - | 17x |
 | Ruby | fixture `slugify`, 20,000 strings | 110 ms | - | 12.7x |
 | Ruby | `Shellwords.shellescape`, 50,000 mixed values | 88 ms | - | 11.8x |
-| Go | fixture `Slugify`, 50,000 strings | 52 ms | 0.73x | 2.5x |
-| Java | fixture `slugify`, 50,000 strings | 43 ms | 0.46x | 1.7x |
+| Go | fixture `Slugify`, 50,000 strings | 49 ms | 0.93x | 3.3-4.1x |
+| Java | fixture `slugify`, 50,000 strings | 43 ms | 0.68x | 3.0x |
 
 The Go batch first ran slower than one thread: the port allocates per item and glibc's allocator
 serialized the threads inside the Go process. Batch crates now use mimalloc. The shellescape batch
 also found a port bug that per-call recording had missed: Ruby symbols (`shellescape(:sym)`) came
 back as their JSON marker. Fixed in the port.
+
+Go and Java then went from 2.5x and 1.7x to 4x and 3x. Inside the batch, half the time was not
+the work: results were joined and freed on one thread, Go copied them a second time, and Java
+made one JNI call per string through modified UTF-8. String results now go back in bulk, written
+on all cores into Go's own buffer or one Java `char[]`. The other half was the ports: on one
+thread the Rust `slugify` was barely faster than Go's and slower than Java's JIT. Lowering ASCII
+without table lookups and without an intermediate string fixed that; Java's port keeps the
+final-sigma rule by lowering only the whitespace-separated piece that holds a `Σ` as a whole.
+Per call, the Go port went from 0.73x to 0.93x, the Java one from 0.46x to 0.68x.
 
 ## What the runs found
 

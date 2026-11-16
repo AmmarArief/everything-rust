@@ -222,7 +222,51 @@ fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String
         let _ = env.throw_new("java/lang/NullPointerException", "null String argument");
         return None;
     }
-    env.get_string(s).ok().map(Into::into)
+    let raw = env.get_raw();
+    let mut stack = [0u16; 128];
+    // SAFETY: `raw` is this thread's JNIEnv and `s` a live, non-null String reference; the JVM
+    // fills every entry of the function table.
+    let len = unsafe { ((**raw).GetStringLength?)(raw, s.as_raw()) };
+    let n = usize::try_from(len).unwrap_or(0);
+    let mut heap = Vec::new();
+    let units: &mut [u16] = if n <= stack.len() {
+        &mut stack[..n]
+    } else {
+        heap.resize(n, 0);
+        &mut heap
+    };
+    // SAFETY: as above; `units` holds exactly `len` UTF-16 code units.
+    unsafe { ((**raw).GetStringRegion?)(raw, s.as_raw(), 0, len, units.as_mut_ptr()) };
+    // UTF-16 straight from the String: no modified UTF-8 in between.
+    Some(String::from_utf16_lossy(units))
+}
+
+/// A Java String from Rust text, built from UTF-16 (`NewString`), not modified UTF-8.
+#[allow(dead_code)]
+fn java_string(env: &mut jni::JNIEnv, text: &str) -> jni::sys::jstring {
+    let mut stack = [0u16; 128];
+    let mut heap = Vec::new();
+    let units: &[u16] = if text.len() <= stack.len() {
+        let mut n = 0;
+        for u in text.encode_utf16() {
+            stack[n] = u;
+            n += 1;
+        }
+        &stack[..n]
+    } else {
+        heap.extend(text.encode_utf16());
+        &heap
+    };
+    let Ok(len) = jni::sys::jsize::try_from(units.len()) else {
+        return std::ptr::null_mut();
+    };
+    let raw = env.get_raw();
+    // SAFETY: `raw` is this thread's JNIEnv, valid for the call.
+    let Some(new_string) = (unsafe { (**raw).NewString }) else {
+        return std::ptr::null_mut();
+    };
+    // SAFETY: `units` holds `len` UTF-16 code units, read during the call only.
+    unsafe { new_string(raw, units.as_ptr(), len) }
 }
 
 /// `com.example.text.Nums.gcd(long a, long b)`: typed, no JSON.
@@ -277,9 +321,7 @@ pub extern "system" fn Java_carcinize_TextRsNative_n_1slugify<'local>(
         return std::ptr::null_mut();
     };
     match run(|| port::slugify(text, i64::from(max))) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -450,21 +492,59 @@ fn batch_strings(env: &mut jni::JNIEnv, items: &jni::objects::JObjectArray) -> O
     Some(out)
 }
 
-/// Strings as a Java `String[]`.
-fn batch_string_array(env: &mut jni::JNIEnv, values: &[String]) -> jni::sys::jobjectArray {
-    let n = jni::sys::jsize::try_from(values.len()).unwrap_or(jni::sys::jsize::MAX);
-    let Ok(array) = env.new_object_array(n, "java/lang/String", jni::objects::JObject::null())
-    else {
+/// String results as one `char[]` of UTF-16, each result's length written to `lens`: Java
+/// slices it into strings, instead of one JNI call per string. Encoding and freeing run on all
+/// cores.
+fn batch_utf16(
+    env: &mut jni::JNIEnv,
+    values: Vec<String>,
+    lens: &jni::objects::JIntArray,
+) -> jni::sys::jcharArray {
+    use rayon::prelude::*;
+    let sizes: Vec<usize> = values
+        .par_iter()
+        .with_min_len(256)
+        .map(|v| v.encode_utf16().count())
+        .collect();
+    let mut chars = vec![0u16; sizes.iter().sum()];
+    let mut rest = chars.as_mut_slice();
+    let mut parts = Vec::with_capacity(values.len());
+    for n in &sizes {
+        let (head, tail) = std::mem::take(&mut rest).split_at_mut(*n);
+        parts.push(head);
+        rest = tail;
+    }
+    parts
+        .into_par_iter()
+        .zip(values.par_iter())
+        .with_min_len(256)
+        .for_each(|(dst, v)| {
+            for (d, u) in dst.iter_mut().zip(v.encode_utf16()) {
+                *d = u;
+            }
+        });
+    values.into_par_iter().with_min_len(256).for_each(drop);
+    let counts: Vec<jni::sys::jint> = sizes
+        .iter()
+        .map(|&n| jni::sys::jint::try_from(n).unwrap_or(jni::sys::jint::MAX))
+        .collect();
+    if env.set_int_array_region(lens, 0, &counts).is_err() {
+        return std::ptr::null_mut();
+    }
+    let Ok(n) = jni::sys::jsize::try_from(chars.len()) else {
+        let _ = env.throw_new(
+            "java/lang/OutOfMemoryError",
+            "batch results over 2^31 characters",
+        );
         return std::ptr::null_mut();
     };
-    for (i, v) in (0..n).zip(values) {
-        let Ok(s) = env.new_string(v) else {
-            return std::ptr::null_mut();
-        };
-        let _ = env.set_object_array_element(&array, i, &s);
-        let _ = env.delete_local_ref(s);
+    match env.new_char_array(n) {
+        Ok(array) => {
+            let _ = env.set_char_array_region(&array, 0, &chars);
+            array.into_raw()
+        }
+        Err(_) => std::ptr::null_mut(),
     }
-    array.into_raw()
 }
 
 /// A port's integer as a Java `int`, wrapping like a Java cast.
@@ -562,13 +642,14 @@ pub extern "system" fn Java_com_example_text_SlugifyBatch_nRun<'local>(
     _class: jni::objects::JClass<'local>,
     handle: jni::sys::jlong,
     max: jni::sys::jint,
+    lens: jni::objects::JIntArray<'local>,
     slot: jni::objects::JObjectArray<'local>,
-) -> jni::sys::jobjectArray {
+) -> jni::sys::jcharArray {
     let max = i64::from(max);
     // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).
     let index: &SlugifyDefaultIndex = unsafe { batch_ref(handle) };
     match run(|| index.run(max)) {
-        Ok(values) => batch_string_array(&mut env, &values),
+        Ok(values) => batch_utf16(&mut env, values, &lens),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()

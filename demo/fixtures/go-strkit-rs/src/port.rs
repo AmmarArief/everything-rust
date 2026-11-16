@@ -15,10 +15,18 @@ fn go_lower_str(s: &str) -> String {
 
 /// Port of `Slugify` (`strkit/strkit.go:18`).
 pub fn slugify(s: String, max: i64) -> Result<String, String> {
-    let mut out = String::new();
+    let mut out = String::with_capacity(s.len());
     let mut dash = false;
-    for c in go_lower_str(&s).chars() {
-        if c.is_alphanumeric() {
+    // Go lowers each rune on its own; ASCII needs no table lookups.
+    for c in s.chars() {
+        let (c, alnum) = if c.is_ascii() {
+            let c = c.to_ascii_lowercase();
+            (c, c.is_ascii_alphanumeric())
+        } else {
+            let c = go_lower(c);
+            (c, c.is_alphanumeric())
+        };
+        if alnum {
             out.push(c);
             dash = false;
         } else if !dash && !out.is_empty() {

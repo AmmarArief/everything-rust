@@ -339,12 +339,13 @@ fn go_fixed_params(
     (c, rust, convert)
 }
 
-/// The results' C out-parameters: Go-owned for numbers and booleans, a Rust buffer for strings.
+/// The results' C out-parameters: Go-owned for numbers and booleans; for strings, the results
+/// stay in Rust until Go has a buffer of their total size (`carcinize_b_take_strings`).
 fn go_out_params(result_c: &str) -> (&'static str, String) {
     match result_c {
         "string" => (
-            "uint8_t **out, size_t *out_len, size_t *lens, size_t cap",
-            "out: *mut *mut u8, out_len: *mut usize, lens: *mut usize, cap: usize".into(),
+            "void **res, size_t *total",
+            "res: *mut *mut Vec<String>, total: *mut usize".into(),
         ),
         "int64_t" => (
             "int64_t *out, size_t cap",
@@ -365,7 +366,9 @@ pub fn go_prototypes(m: &Manifest, api: &PortApi) -> String {
     };
     let mut out = String::new();
     if !batches.is_empty() {
-        out.push_str("void carcinize_b_free_bytes(uint8_t *ptr, size_t len);\n");
+        out.push_str(
+            "void carcinize_b_take_strings(void *res, uint8_t *buf, size_t len, size_t *lens, size_t cap);\n",
+        );
     }
     for g in &batches {
         let name = &g.e.name;
@@ -441,19 +444,43 @@ unsafe fn batch_out<T: Copy>(out: *mut T, cap: usize, values: &[T]) {
     }
 }
 
-/// Frees the string results of a batch, after Go copied them.
+/// Moves string results into Go's buffer: their bytes one after another, and each one's length.
+/// The copies and the frees run on all cores.
 ///
 /// # Safety
 ///
-/// `ptr` and `len` come from a batch's `run`, once.
+/// `res` comes from a batch's `run` and is taken once; `buf` holds `len` bytes, the results'
+/// total from `run`, and `lens` holds `cap` values.
 // SAFETY: exported unmangled under a name only carcinize defines.
 #[unsafe(no_mangle)]
 // SAFETY: callers uphold the contract under `# Safety`.
-pub unsafe extern "C" fn carcinize_b_free_bytes(ptr: *mut u8, len: usize) {
-    if !ptr.is_null() {
-        // SAFETY: the buffer was a boxed slice of `len` bytes, leaked by `run`.
-        drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len)) });
+pub unsafe extern "C" fn carcinize_b_take_strings(res: *mut Vec<String>, buf: *mut u8, len: usize, lens: *mut usize, cap: usize) {
+    use rayon::prelude::*;
+    if res.is_null() {
+        return;
     }
+    // SAFETY: `res` was boxed by `run` and is taken once (see above).
+    let values: Vec<String> = *unsafe { Box::from_raw(res) };
+    let sizes: Vec<usize> = values.iter().map(String::len).collect();
+    // SAFETY: Go passes `lens` of `cap` values (see above).
+    unsafe { batch_out(lens, cap, &sizes) };
+    if len > 0 && !buf.is_null() {
+        // SAFETY: Go passes `len` writable bytes, for this call only (see above).
+        let mut rest = unsafe { std::slice::from_raw_parts_mut(buf, len) };
+        let mut parts = Vec::with_capacity(values.len());
+        for n in &sizes {
+            let all = std::mem::take(&mut rest);
+            let (head, tail) = all.split_at_mut((*n).min(all.len()));
+            parts.push(head);
+            rest = tail;
+        }
+        parts
+            .into_par_iter()
+            .zip(values.par_iter())
+            .with_min_len(256)
+            .for_each(|(dst, v)| dst.copy_from_slice(&v.as_bytes()[..dst.len()]));
+    }
+    values.into_par_iter().with_min_len(256).for_each(drop);
 }
 "#;
 
@@ -482,13 +509,10 @@ pub fn go_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
         let names: Vec<&str> = g.fixed.iter().map(|(n, ..)| n.as_str()).collect();
         let (_, outs) = go_out_params(g.result_c);
         let write = if g.result_c == "string" {
-            "            let mut bytes = Vec::with_capacity(values.iter().map(String::len).sum());\n            \
-             let sizes: Vec<usize> = values.iter().map(|v| { bytes.extend_from_slice(v.as_bytes()); v.len() }).collect();\n            \
-             let bytes = bytes.into_boxed_slice();\n            \
-             // SAFETY: Go passes valid `out`, `out_len` and `lens` of `cap` values; Go frees the\n            \
-             // buffer with `carcinize_b_free_bytes`.\n            \
-             unsafe {\n                batch_out(lens, cap, &sizes);\n                *out_len = bytes.len();\n                \
-             *out = Box::into_raw(bytes).cast::<u8>();\n            }"
+            "            // SAFETY: Go passes valid `res` and `total`, and takes the results with\n            \
+             // `carcinize_b_take_strings`.\n            \
+             unsafe {\n                *total = values.iter().map(String::len).sum();\n                \
+             *res = Box::into_raw(Box::new(values));\n            }"
                 .to_string()
         } else {
             "            // SAFETY: Go passes a slice of `cap` values.\n            unsafe { batch_out(out, cap, &values) };".to_string()
@@ -600,12 +624,13 @@ pub fn go_wrapper(m: &Manifest, api: &PortApi) -> Result<String, String> {
         let result = &g.result;
         let run_body = match g.result_c {
             "string" => format!(
-                "\tvar errp *C.char\n\tvar ptr *C.uint8_t\n\tvar total C.size_t\n\tlens := make([]C.size_t, b.n)\n\
-                 \tstatus := C.carcinize_b_{name}_run(b.h{args}, &ptr, &total, carcinizePtr(lens), C.size_t(b.n), &errp)\n\
+                "\tvar errp *C.char\n\tvar res unsafe.Pointer\n\tvar total C.size_t\n\
+                 \tstatus := C.carcinize_b_{name}_run(b.h{args}, &res, &total, &errp)\n\
                  \truntime.KeepAlive(b)\n{fail}\
-                 \t// One copy into Go memory; each result is a slice of it.\n\
-                 \tall := C.GoStringN((*C.char)(unsafe.Pointer(ptr)), C.int(total))\n\
-                 \tC.carcinize_b_free_bytes(ptr, total)\n\
+                 \t// Rust writes the results straight into Go memory; each result is a slice of it.\n\
+                 \tbuf := make([]byte, int(total))\n\tlens := make([]C.size_t, b.n)\n\
+                 \tC.carcinize_b_take_strings(res, carcinizeBytes(buf), total, carcinizePtr(lens), C.size_t(b.n))\n\
+                 \tall := unsafe.String(unsafe.SliceData(buf), len(buf))\n\
                  \tout := make([]{result}, b.n)\n\tat := 0\n\tfor i, n := range lens {{\n\t\tout[i] = {result}(all[at : at+int(n)])\n\t\tat += int(n)\n\t}}\n\
                  \treturn out{ok}\n",
                 fail = fail("nil"),
@@ -845,20 +870,41 @@ fn batch_strings(env: &mut jni::JNIEnv, items: &jni::objects::JObjectArray) -> O
     Some(out)
 }
 
-/// Strings as a Java `String[]`.
-fn batch_string_array(env: &mut jni::JNIEnv, values: &[String]) -> jni::sys::jobjectArray {
-    let n = jni::sys::jsize::try_from(values.len()).unwrap_or(jni::sys::jsize::MAX);
-    let Ok(array) = env.new_object_array(n, "java/lang/String", jni::objects::JObject::null()) else {
+/// String results as one `char[]` of UTF-16, each result's length written to `lens`: Java
+/// slices it into strings, instead of one JNI call per string. Encoding and freeing run on all
+/// cores.
+fn batch_utf16(env: &mut jni::JNIEnv, values: Vec<String>, lens: &jni::objects::JIntArray) -> jni::sys::jcharArray {
+    use rayon::prelude::*;
+    let sizes: Vec<usize> = values.par_iter().with_min_len(256).map(|v| v.encode_utf16().count()).collect();
+    let mut chars = vec![0u16; sizes.iter().sum()];
+    let mut rest = chars.as_mut_slice();
+    let mut parts = Vec::with_capacity(values.len());
+    for n in &sizes {
+        let (head, tail) = std::mem::take(&mut rest).split_at_mut(*n);
+        parts.push(head);
+        rest = tail;
+    }
+    parts.into_par_iter().zip(values.par_iter()).with_min_len(256).for_each(|(dst, v)| {
+        for (d, u) in dst.iter_mut().zip(v.encode_utf16()) {
+            *d = u;
+        }
+    });
+    values.into_par_iter().with_min_len(256).for_each(drop);
+    let counts: Vec<jni::sys::jint> = sizes.iter().map(|&n| jni::sys::jint::try_from(n).unwrap_or(jni::sys::jint::MAX)).collect();
+    if env.set_int_array_region(lens, 0, &counts).is_err() {
+        return std::ptr::null_mut();
+    }
+    let Ok(n) = jni::sys::jsize::try_from(chars.len()) else {
+        let _ = env.throw_new("java/lang/OutOfMemoryError", "batch results over 2^31 characters");
         return std::ptr::null_mut();
     };
-    for (i, v) in (0..n).zip(values) {
-        let Ok(s) = env.new_string(v) else {
-            return std::ptr::null_mut();
-        };
-        let _ = env.set_object_array_element(&array, i, &s);
-        let _ = env.delete_local_ref(s);
+    match env.new_char_array(n) {
+        Ok(array) => {
+            let _ = env.set_char_array_region(&array, 0, &chars);
+            array.into_raw()
+        }
+        Err(_) => std::ptr::null_mut(),
     }
-    array.into_raw()
 }
 
 /// A port's integer as a Java `int`, wrapping like a Java cast.
@@ -934,8 +980,8 @@ pub fn java_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
         }
         let (array_ty, write) = if g.result.port == "String" {
             (
-                "jni::sys::jobjectArray".to_string(),
-                "batch_string_array(&mut env, &values)".to_string(),
+                "jni::sys::jcharArray".to_string(),
+                "batch_utf16(&mut env, values, &lens)".to_string(),
             )
         } else {
             (
@@ -965,7 +1011,7 @@ pub fn java_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
              if handle != 0 {{\n        // SAFETY: Java frees each handle from `nNew` once (its Cleaner runs once).\n        \
              drop(unsafe {{ Box::from_raw(handle as *mut {index}) }});\n    }}\n}}\n\n\
              /// `{name}` over every item; errors go to `slot`.\n// SAFETY: the JNI symbol of `{package}.{class}.nRun`; nothing else defines it.\n#[unsafe(no_mangle)]\n\
-             pub extern \"system\" fn {run}<'local>(mut env: jni::JNIEnv<'local>, _class: jni::objects::JClass<'local>, handle: jni::sys::jlong{params}, slot: jni::objects::JObjectArray<'local>) -> {array_ty} {{\n\
+             pub extern \"system\" fn {run}<'local>(mut env: jni::JNIEnv<'local>, _class: jni::objects::JClass<'local>, handle: jni::sys::jlong{params}{lens_param}, slot: jni::objects::JObjectArray<'local>) -> {array_ty} {{\n\
              {convert}    // SAFETY: Java passes a live handle (it checks for 0 and keeps the batch reachable).\n    \
              let index: &{index} = unsafe {{ batch_ref(handle) }};\n    \
              match run(|| index.run({args})) {{\n        Ok(values) => {write},\n        \
@@ -977,6 +1023,11 @@ pub fn java_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
             free = sym("nFree"),
             run = sym("nRun"),
             item_array = g.item.array,
+            lens_param = if g.result.port == "String" {
+                ", lens: jni::objects::JIntArray<'local>"
+            } else {
+                ""
+            },
             args = args.join(", "),
         );
         if let Some(rank) = rank_body(s.f.ret.trim()) {
@@ -1039,6 +1090,23 @@ pub fn java_files(m: &Manifest, api: &PortApi) -> Result<Vec<(String, String)>, 
         } else {
             String::new()
         };
+        let strings = g.result.java == "String";
+        let run_body = if strings {
+            format!(
+                "        String[] slot = CarcinizeError.slot();\n        int[] lens = new int[count];\n        \
+                 char[] chars = nRun(handle(){args}, lens, slot);\n        CarcinizeError.check(slot);\n        \
+                 java.lang.ref.Reference.reachabilityFence(this);\n        \
+                 // One array from Rust; each result is a slice of it.\n        \
+                 String[] out = new String[count];\n        int at = 0;\n        for (int i = 0; i < count; i++) {{\n            \
+                 out[i] = new String(chars, at, lens[i]);\n            at += lens[i];\n        }}\n        return out;\n"
+            )
+        } else {
+            format!(
+                "        String[] slot = CarcinizeError.slot();\n        {ret}[] out = nRun(handle(){args}, slot);\n        \
+                 CarcinizeError.check(slot);\n        java.lang.ref.Reference.reachabilityFence(this);\n        return out;\n",
+                ret = g.result.java
+            )
+        };
         let mut src = String::new();
         if !g.package.is_empty() {
             let _ = writeln!(src, "package {};\n", g.package);
@@ -1058,20 +1126,20 @@ pub fn java_files(m: &Manifest, api: &PortApi) -> Result<Vec<(String, String)>, 
              State(long handle) {{\n            this.handle = handle;\n        }}\n\n        \
              @Override\n        public synchronized void run() {{\n            if (handle != 0) {{\n                nFree(handle);\n                handle = 0;\n            }}\n        }}\n\n        \
              synchronized long get() {{\n            if (handle == 0) {{\n                throw new IllegalStateException(\"{class} is closed\");\n            }}\n            return handle;\n        }}\n    }}\n\n    \
-             private final State state;\n    private final java.lang.ref.Cleaner.Cleanable cleanable;\n\n    \
+             private final State state;\n    private final java.lang.ref.Cleaner.Cleanable cleanable;\n    private final int count;\n\n    \
              /** Copies the items into Rust. */\n    public {class}({item_java}[] {item}s) {{\n        \
-             state = new State(nNew({item}s));\n        cleanable = CLEANER.register(this, state);\n    }}\n{list}\n    \
+             state = new State(nNew({item}s));\n        count = {item}s.length;\n        cleanable = CLEANER.register(this, state);\n    }}\n{list}\n    \
              private long handle() {{\n        return state.get();\n    }}\n\n    \
-             /** {{@code {name}}}'s result for every item, in order. */\n    public {ret}[] run({params}) {{\n        \
-             String[] slot = CarcinizeError.slot();\n        {ret}[] out = nRun(handle(){args}, slot);\n        \
-             CarcinizeError.check(slot);\n        java.lang.ref.Reference.reachabilityFence(this);\n        return out;\n    }}\n{rank}\n    \
+             /** {{@code {name}}}'s result for every item, in order. */\n    public {ret}[] run({params}) {{\n{run_body}    }}\n{rank}\n    \
              /** Frees the items on the Rust side. */\n    @Override\n    public void close() {{\n        cleanable.clean();\n    }}\n\n    \
              private static native long nNew({item_java}[] items);\n\n    \
              private static native void nFree(long handle);\n\n    \
-             private static native {ret}[] nRun(long handle{native_params}, String[] slot);\n}}\n",
+             private static native {native_ret}[] nRun(long handle{native_params}{lens}, String[] slot);\n}}\n",
             name = g.e.name,
             ret = g.result.java,
             params = params.join(", "),
+            native_ret = if strings { "char" } else { g.result.java },
+            lens = if strings { ", int[] lens" } else { "" },
         );
         let dir = if g.package.is_empty() {
             "java".to_string()

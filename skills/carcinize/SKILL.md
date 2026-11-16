@@ -52,6 +52,9 @@ Write the port in `src/port.rs` only; `src/lib.rs` is the thin binding layer.
   `Mod::FnBatch.new(items)` in Ruby) and call `rank`/`run` per query; close it in Go and Java. Define
   `pub struct FnIndex` in `port.rs` with `new(items)` and `run(...)` to prepare the items once
   (lowercase, masks, sorted tables); it must give the same result as the function, item by item.
+- A batch multiplies the port's per-item speed by the cores, so against compiled originals (Go,
+  Java) the port itself must be fast: handle ASCII without Unicode tables, build the result in
+  one pre-sized `String`, avoid intermediate lowercase copies; keep `diff` passing.
 - Speed: run `carcinize bench` and follow its verdict. In Go and Java, a call into Rust costs more
   than a small function's work: port the function with its callers, not alone. In Python ports,
   use `crate::pynum::Num` for numbers that may be int or float, not `serde_json::Value`.

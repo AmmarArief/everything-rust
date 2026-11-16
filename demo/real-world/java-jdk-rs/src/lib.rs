@@ -229,7 +229,51 @@ fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String
         let _ = env.throw_new("java/lang/NullPointerException", "null String argument");
         return None;
     }
-    env.get_string(s).ok().map(Into::into)
+    let raw = env.get_raw();
+    let mut stack = [0u16; 128];
+    // SAFETY: `raw` is this thread's JNIEnv and `s` a live, non-null String reference; the JVM
+    // fills every entry of the function table.
+    let len = unsafe { ((**raw).GetStringLength?)(raw, s.as_raw()) };
+    let n = usize::try_from(len).unwrap_or(0);
+    let mut heap = Vec::new();
+    let units: &mut [u16] = if n <= stack.len() {
+        &mut stack[..n]
+    } else {
+        heap.resize(n, 0);
+        &mut heap
+    };
+    // SAFETY: as above; `units` holds exactly `len` UTF-16 code units.
+    unsafe { ((**raw).GetStringRegion?)(raw, s.as_raw(), 0, len, units.as_mut_ptr()) };
+    // UTF-16 straight from the String: no modified UTF-8 in between.
+    Some(String::from_utf16_lossy(units))
+}
+
+/// A Java String from Rust text, built from UTF-16 (`NewString`), not modified UTF-8.
+#[allow(dead_code)]
+fn java_string(env: &mut jni::JNIEnv, text: &str) -> jni::sys::jstring {
+    let mut stack = [0u16; 128];
+    let mut heap = Vec::new();
+    let units: &[u16] = if text.len() <= stack.len() {
+        let mut n = 0;
+        for u in text.encode_utf16() {
+            stack[n] = u;
+            n += 1;
+        }
+        &stack[..n]
+    } else {
+        heap.extend(text.encode_utf16());
+        &heap
+    };
+    let Ok(len) = jni::sys::jsize::try_from(units.len()) else {
+        return std::ptr::null_mut();
+    };
+    let raw = env.get_raw();
+    // SAFETY: `raw` is this thread's JNIEnv, valid for the call.
+    let Some(new_string) = (unsafe { (**raw).NewString }) else {
+        return std::ptr::null_mut();
+    };
+    // SAFETY: `units` holds `len` UTF-16 code units, read during the call only.
+    unsafe { new_string(raw, units.as_ptr(), len) }
 }
 
 /// `com.example.jdk.Jdk.toRadix(int value, int radix)`: typed, no JSON.
@@ -243,9 +287,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1toRadix<'local>(
     slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::to_radix(i64::from(value), i64::from(radix))) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -285,9 +327,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1toBinary<'local>(
     slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::to_binary(i64::from(value))) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -305,9 +345,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1toHex<'local>(
     slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::to_hex(value)) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -381,9 +419,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1formatDouble<'local>(
     slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::format_double(value)) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -404,9 +440,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1urlEncode<'local>(
         return std::ptr::null_mut();
     };
     match run(|| port::url_encode(text)) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -427,9 +461,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1base64<'local>(
         return std::ptr::null_mut();
     };
     match run(|| port::base64(text)) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()
@@ -450,9 +482,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1upper<'local>(
         return std::ptr::null_mut();
     };
     match run(|| port::upper(text)) {
-        Ok(out) => env
-            .new_string(out)
-            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Ok(out) => java_string(&mut env, &out),
         Err(message) => {
             report(&mut env, &slot, &message);
             std::ptr::null_mut()

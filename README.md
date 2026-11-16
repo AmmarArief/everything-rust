@@ -87,8 +87,8 @@ same work on 4 cores, identical results and errors (benchmarks in each demo fold
 | Python | `slugify`, 20,000 strings | 98 ms | - | **17x** |
 | Ruby | `slugify`, 20,000 strings | 110 ms | - | **12.7x** |
 | Ruby | `shellescape` (stdlib), 50,000 mixed values | 88 ms | - | **11.8x** |
-| Go | `Slugify`, 50,000 strings | 52 ms | 0.73x | **2.5x** |
-| Java | `slugify`, 50,000 strings | 43 ms | 0.46x | **1.7x** |
+| Go | `Slugify`, 50,000 strings | 49 ms | 0.93x | **4x** |
+| Java | `slugify`, 50,000 strings | 43 ms | 0.68x | **3x** |
 
 Compiled originals gain less: the per-item work is already fast, so the batch wins by the number of
 cores. Batch crates allocate with mimalloc: with the system allocator the Go batch was slower than

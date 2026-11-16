@@ -16,13 +16,19 @@ pub enum Schema {
     Opt(&'static Schema),
     Struct(&'static [(&'static str, Schema)]),
     Tuple(&'static [Schema]),
+    Num,
+    Str16,
+    OptJs(&'static Schema),
+    Obj(&'static [(&'static str, Schema)]),
+    Map16(&'static Schema),
+    Dyn,
 }
 
 impl Schema {
     /// The item type of a list, map or option.
     pub const fn inner(&self) -> &Schema {
         match self {
-            Self::List(s) | Self::Map(s) | Self::Opt(s) => s,
+            Self::List(s) | Self::Map(s) | Self::Opt(s) | Self::OptJs(s) | Self::Map16(s) => s,
             _ => self,
         }
     }
@@ -107,6 +113,61 @@ impl<'a> Reader<'a> {
             .ok_or_else(|| "NullPointerException: null value".to_string())
     }
 
+    /// A JS string as UTF-16 code units.
+    pub fn units(&mut self) -> Result<Vec<u16>, String> {
+        if self.tag()? == 0 {
+            return Err("TypeError: expected a string".into());
+        }
+        let n = self.count()?;
+        let bytes = self.take(n.checked_mul(2).ok_or(SHORT)?)?;
+        Ok(bytes
+            .chunks_exact(2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]))
+            .collect())
+    }
+
+    /// A JS string; lone surrogates become U+FFFD, as napi's own conversion does.
+    pub fn string16(&mut self) -> Result<String, String> {
+        Ok(String::from_utf16_lossy(&self.units()?))
+    }
+
+    /// A JS optional value: 0 `undefined`, 1 a value, 2 `null`.
+    pub fn opt_js<T>(
+        &mut self,
+        item: impl FnOnce(&mut Self) -> Result<T, String>,
+    ) -> Result<Option<T>, String> {
+        if self.tag()? == 1 {
+            item(self).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn required_js<T>(
+        &mut self,
+        item: impl FnOnce(&mut Self) -> Result<T, String>,
+    ) -> Result<T, String> {
+        self.opt_js(item)?
+            .ok_or_else(|| "TypeError: expected a value, got undefined or null".to_string())
+    }
+
+    /// A string-keyed record (keys as JS strings).
+    pub fn map16<T>(
+        &mut self,
+        mut item: impl FnMut(&mut Self) -> Result<T, String>,
+    ) -> Result<Vec<(String, T)>, String> {
+        if self.tag()? == 0 {
+            return Ok(Vec::new());
+        }
+        let n = self.count()?;
+        let mut out = Vec::with_capacity(n.min(1 << 16));
+        for _ in 0..n {
+            let key = self.string16()?;
+            out.push((key, item(self)?));
+        }
+        Ok(out)
+    }
+
     /// A list; nil reads as empty.
     pub fn list<T>(
         &mut self,
@@ -170,6 +231,28 @@ impl Writer {
         self.tag(1);
         self.count(s.len());
         self.0.extend_from_slice(s.as_bytes());
+    }
+
+    /// A JS string from a Rust one (well-formed: tag 1).
+    pub fn string16(&mut self, s: &str) {
+        self.tag(1);
+        let at = self.0.len();
+        self.count(0);
+        let mut n = 0usize;
+        for u in s.encode_utf16() {
+            self.0.extend_from_slice(&u.to_le_bytes());
+            n += 1;
+        }
+        self.0[at..at + 4].copy_from_slice(&u32::try_from(n).unwrap_or(u32::MAX).to_le_bytes());
+    }
+
+    /// A JS string from code units, lone surrogates included (tag 4).
+    pub fn units(&mut self, units: &[u16]) {
+        self.tag(4);
+        self.count(units.len());
+        for u in units {
+            self.0.extend_from_slice(&u.to_le_bytes());
+        }
     }
 }
 
@@ -249,11 +332,189 @@ pub fn read_value(r: &mut Reader, schema: &Schema) -> Result<Value, String> {
                 .map(|s| read_value(r, s))
                 .collect::<Result<_, _>>()?,
         ),
+        Schema::Num => js_number(r.f64()?),
+        Schema::Str16 => js_string(r.units()?),
+        Schema::OptJs(inner) => match r.tag()? {
+            1 => read_value(r, inner)?,
+            2 => Value::Null,
+            _ => json!({"$undefined": true}),
+        },
+        Schema::Obj(fields) => {
+            let n = r.tag()?;
+            let mut out = Map::new();
+            for _ in 0..n {
+                let index = usize::from(r.tag()?);
+                match fields.get(index) {
+                    Some((key, field)) => {
+                        out.insert((*key).to_string(), read_value(r, field)?);
+                    }
+                    None => {
+                        let key = r.string16()?;
+                        out.insert(key, read_dyn(r)?);
+                    }
+                }
+            }
+            Value::Object(out)
+        }
+        Schema::Map16(item) => {
+            if r.tag()? == 0 {
+                Value::Null
+            } else {
+                let n = r.count()?;
+                let mut out = Map::new();
+                for _ in 0..n {
+                    let key = r.string16()?;
+                    out.insert(key, read_value(r, item)?);
+                }
+                Value::Object(out)
+            }
+        }
+        Schema::Dyn => read_dyn(r)?,
     })
 }
 
+/// A JS number as JSON, as the JSON bridge reads it: integers as integers, markers for the rest.
+fn js_number(x: f64) -> Value {
+    if x.is_finite()
+        && !(x == 0.0 && x.is_sign_negative())
+        && x.fract() == 0.0
+        && x.abs() < 9_007_199_254_740_992.0
+    {
+        json!(x as i64)
+    } else {
+        float_value(x)
+    }
+}
+
+/// A JS string as JSON: lone surrogates as `{"$utf16": [...]}`.
+fn js_string(units: Vec<u16>) -> Value {
+    match String::from_utf16(&units) {
+        Ok(s) => Value::String(s),
+        Err(_) => json!({"$utf16": units}),
+    }
+}
+
+/// Any JS value, tagged: 0 undefined, 1 null, 2 false, 3 true, 4 number, 5 string, 6 array,
+/// 7 object.
+pub fn read_dyn(r: &mut Reader) -> Result<Value, String> {
+    let units = |r: &mut Reader| -> Result<Vec<u16>, String> {
+        let n = r.count()?;
+        let bytes = r.take(n.checked_mul(2).ok_or(SHORT)?)?;
+        Ok(bytes
+            .chunks_exact(2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]))
+            .collect())
+    };
+    Ok(match r.tag()? {
+        0 => json!({"$undefined": true}),
+        1 => Value::Null,
+        2 => Value::Bool(false),
+        3 => Value::Bool(true),
+        4 => js_number(r.f64()?),
+        5 => js_string(units(r)?),
+        6 => {
+            let n = r.count()?;
+            let mut out = Vec::with_capacity(n.min(1 << 16));
+            for _ in 0..n {
+                out.push(read_dyn(r)?);
+            }
+            Value::Array(out)
+        }
+        7 => {
+            let n = r.count()?;
+            let mut out = Map::new();
+            for _ in 0..n {
+                let key = String::from_utf16_lossy(&units(r)?);
+                out.insert(key, read_dyn(r)?);
+            }
+            Value::Object(out)
+        }
+        t => return Err(format!("TypeError: unknown value tag {t}")),
+    })
+}
+
+fn marker<'v>(v: &'v Value, key: &str) -> Option<&'v Value> {
+    v.as_object()
+        .filter(|o| o.len() == 1)
+        .and_then(|o| o.get(key))
+}
+
+fn write_units16(w: &mut Writer, v: &Value) -> Option<()> {
+    if let Value::String(s) = v {
+        w.string16(s);
+        return Some(());
+    }
+    let units: Vec<u16> = marker(v, "$utf16")?
+        .as_array()?
+        .iter()
+        .map(|u| u.as_u64().and_then(|u| u16::try_from(u).ok()))
+        .collect::<Option<_>>()?;
+    w.units(&units);
+    Some(())
+}
+
+/// Writes any JSON value as a tagged JS value; markers become what they stand for.
+pub fn write_dyn(w: &mut Writer, v: &Value) {
+    match v {
+        Value::Null => w.tag(1),
+        Value::Bool(b) => w.tag(if *b { 3 } else { 2 }),
+        Value::Number(n) => {
+            w.tag(4);
+            w.f64(n.as_f64().unwrap_or(f64::NAN));
+        }
+        Value::String(s) => {
+            w.tag(5);
+            let units: Vec<u16> = s.encode_utf16().collect();
+            w.count(units.len());
+            for u in units {
+                w.0.extend_from_slice(&u.to_le_bytes());
+            }
+        }
+        Value::Array(items) => {
+            w.tag(6);
+            w.count(items.len());
+            for x in items {
+                write_dyn(w, x);
+            }
+        }
+        Value::Object(o) => {
+            if marker(v, "$undefined").is_some() {
+                w.tag(0);
+            } else if let Some(x) = value_float(v).filter(|_| marker(v, "$num").is_some()) {
+                w.tag(4);
+                w.f64(x);
+            } else if let Some(units) = marker(v, "$utf16").and_then(Value::as_array) {
+                w.tag(5);
+                w.count(units.len());
+                for u in units {
+                    w.0.extend_from_slice(
+                        &u16::try_from(u.as_u64().unwrap_or(0xFFFD))
+                            .unwrap_or(0xFFFD)
+                            .to_le_bytes(),
+                    );
+                }
+            } else {
+                w.tag(7);
+                w.count(o.len());
+                for (k, x) in o {
+                    let units: Vec<u16> = k.encode_utf16().collect();
+                    w.count(units.len());
+                    for u in units {
+                        w.0.extend_from_slice(&u.to_le_bytes());
+                    }
+                    write_dyn(w, x);
+                }
+            }
+        }
+    }
+}
+
+/// The start of the error a result of the wrong shape raises; JS bridges answer it by running
+/// the call through JSON instead.
+pub const MISMATCH: &str = "TypeError: the port returned ";
+
 fn mismatch(schema: &str, v: &Value) -> String {
-    format!("TypeError: the port returned {v} where the original returns {schema}")
+    format!("{MISMATCH}{v} where the original returns {schema}")
 }
 
 /// Writes a JSON value as `schema`; the port's value must fit the original's type.
@@ -320,6 +581,48 @@ pub fn write_value(w: &mut Writer, v: &Value, schema: &Schema) -> Result<(), Str
             }
             _ => return Err(mismatch("several results", v)),
         },
+        Schema::Num => w.f64(value_float(v).ok_or_else(|| mismatch("a number", v))?),
+        Schema::Str16 => write_units16(w, v).ok_or_else(|| mismatch("a string", v))?,
+        Schema::OptJs(inner) => {
+            if marker(v, "$undefined").is_some() {
+                w.tag(0);
+            } else if v.is_null() {
+                w.tag(2);
+            } else {
+                w.tag(1);
+                write_value(w, v, inner)?;
+            }
+        }
+        Schema::Obj(fields) => {
+            let o = v.as_object().ok_or_else(|| mismatch("an object", v))?;
+            w.tag(u8::try_from(o.len()).map_err(|_| mismatch("an object of at most 255 keys", v))?);
+            for (k, x) in o {
+                match fields.iter().position(|(key, _)| key == k) {
+                    Some(i) if i < 255 => {
+                        w.tag(i as u8);
+                        write_value(w, x, &fields[i].1)?;
+                    }
+                    _ => {
+                        w.tag(255);
+                        w.string16(k);
+                        write_dyn(w, x);
+                    }
+                }
+            }
+        }
+        Schema::Map16(item) => match v {
+            Value::Null => w.tag(0),
+            Value::Object(o) => {
+                w.tag(1);
+                w.count(o.len());
+                for (k, x) in o {
+                    w.string16(k);
+                    write_value(w, x, item)?;
+                }
+            }
+            _ => return Err(mismatch("a record", v)),
+        },
+        Schema::Dyn => write_dyn(w, v),
     }
     Ok(())
 }
