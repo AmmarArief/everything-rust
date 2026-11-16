@@ -40,6 +40,9 @@ pub struct State {
     /// Servers: the requests recorded, as `METHOD /path`, to choose routes from.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub routes: Vec<String>,
+    /// Libraries: the public API, unit by unit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub api: Vec<crate::library::ApiUnit>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,6 +51,7 @@ pub enum AppKind {
     #[default]
     Cli,
     Http,
+    Library,
 }
 
 impl AppKind {
@@ -68,6 +72,15 @@ pub struct WiredUnit {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub routes: Vec<String>,
     pub switch: String,
+    /// Libraries: the unit id the crate ports.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+    /// Libraries: the shadow drop-in the original package imports in place of the unit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shadow: Option<String>,
+    /// Libraries: exports that stay in the original language.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kept: Vec<String>,
 }
 
 impl State {
@@ -112,6 +125,15 @@ fn package_name(name: &str) -> String {
         out = format!("app-{out}").trim_end_matches('-').to_string();
     }
     out
+}
+
+/// `RUST_ANYTHING_UNIT_<NAME>`, the variable that sends a unit back to the original.
+pub fn kill_switch(crate_name: &str) -> String {
+    let name = crate_name.strip_suffix("-rs").unwrap_or(crate_name);
+    format!(
+        "{KILL_SWITCH_PREFIX}{}",
+        ident(name).trim_start_matches("unit_").to_uppercase()
+    )
 }
 
 pub(crate) fn ident(name: &str) -> String {
@@ -464,7 +486,11 @@ pub(crate) fn cargo_build(app_dir: &Path, target_dir: Option<&Path>) -> Result<P
     exe.context("cargo built no binary")
 }
 
-fn build_and_replay(repo: &Path) -> Result<ReplayOutcome> {
+fn build_and_replay(repo: &Path, state: &State) -> Result<ReplayOutcome> {
+    if state.kind == AppKind::Library {
+        crate::library::cargo_build_lib(&repo.join(APP_DIR), None)?;
+        return crate::library::replay(repo, state);
+    }
     let exe = cargo_build(&repo.join(APP_DIR), None)?;
     app::replay(&ReplayOptions {
         repo,
@@ -476,6 +502,8 @@ fn build_and_replay(repo: &Path) -> Result<ReplayOutcome> {
 
 pub struct FrontDoorOptions<'a> {
     pub repo: &'a Path,
+    /// Treat the repository as a library even when it has a `main` (a demo, a test runner).
+    pub library: bool,
     /// Build the front door and replay the recorded cases against it.
     pub check: bool,
 }
@@ -487,6 +515,8 @@ pub struct FrontDoorOutcome {
     pub commands: Vec<String>,
     /// Servers: the recorded requests, as `METHOD /path`.
     pub routes: Vec<String>,
+    /// Libraries: the public API, unit by unit.
+    pub api: Vec<crate::library::ApiUnit>,
     pub flags: BTreeMap<String, BTreeMap<String, Flag>>,
     pub files: Vec<String>,
     pub replay: Option<ReplayOutcome>,
@@ -497,12 +527,20 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         .repo
         .canonicalize()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
-    let config = app::Config::load(&repo)?.with_context(|| {
-        format!(
-            "no recorded cases in {}: run `rust-anything app record` first",
-            app::cases_dir(&repo).display()
-        )
-    })?;
+    let config = app::Config::load(&repo)?;
+    let config = match config {
+        Some(c) if !opts.library => c,
+        _ => {
+            let report = crate::analyze::analyze(&repo)?;
+            let shape = crate::whole_app::whole_app(&repo, &report).shape;
+            ensure!(
+                opts.library || shape == "library",
+                "no recorded cases in {}: run `rust-anything app record` first (or --library if this {shape} is used as a library)",
+                app::cases_dir(&repo).display()
+            );
+            return library_front_door(&repo, opts, &report);
+        }
+    };
     let dir = repo.join(APP_DIR);
     ensure!(
         !dir.exists(),
@@ -524,6 +562,7 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
             lifted: false,
             kind: AppKind::Http,
             routes: routes.clone(),
+            api: Vec::new(),
         };
         let files: Vec<(&str, String)> = vec![
             ("Cargo.toml", http_door::cargo_toml(&binary, &config.name)),
@@ -569,6 +608,7 @@ pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
         lifted: false,
         kind: AppKind::Cli,
         routes: Vec::new(),
+        api: Vec::new(),
     };
     let mut files = files;
     files.push(("src/units/mod.rs", units_rs(&state)));
@@ -597,6 +637,7 @@ fn finish_front_door(
 ) -> Result<FrontDoorOutcome> {
     let repo = repo.to_path_buf();
     let dir = repo.join(APP_DIR);
+    let state_api = state.api.clone();
     for (path, text) in &files {
         let target = dir.join(path);
         if let Some(parent) = target.parent() {
@@ -604,10 +645,14 @@ fn finish_front_door(
         }
         std::fs::write(&target, text).with_context(|| format!("writing {}", target.display()))?;
     }
-    rustfmt(&dir.join("src/main.rs"));
+    if state.kind == AppKind::Library {
+        rustfmt(&dir.join("src/lib.rs"));
+    } else {
+        rustfmt(&dir.join("src/main.rs"));
+    }
     state.save(&repo)?;
     let replay = if opts.check {
-        Some(build_and_replay(&repo)?)
+        Some(build_and_replay(&repo, &state)?)
     } else {
         None
     };
@@ -618,8 +663,133 @@ fn finish_front_door(
         binary,
         commands,
         routes,
+        api: state_api,
         flags,
         files: written,
+        replay,
+    })
+}
+
+fn library_front_door(
+    repo: &Path,
+    opts: &FrontDoorOptions,
+    report: &crate::analyze::Report,
+) -> Result<FrontDoorOutcome> {
+    let name = report
+        .packages
+        .first()
+        .map(|p| p.name.clone())
+        .filter(|n| !n.is_empty())
+        .or_else(|| repo.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .unwrap_or_else(|| "lib".to_string());
+    let package = package_name(&name);
+    let state = State {
+        schema: SCHEMA.to_string(),
+        name: name.clone(),
+        commands: Vec::new(),
+        units: Vec::new(),
+        lifted: false,
+        kind: AppKind::Library,
+        routes: Vec::new(),
+        api: crate::library::public_api(repo, report),
+    };
+    ensure!(
+        !state.api.is_empty(),
+        "no exported function or class found to make a public API from"
+    );
+    let files: Vec<(&str, String)> = vec![
+        ("Cargo.toml", crate::library::cargo_toml(&package, &name)),
+        (".gitignore", "/target\n".to_string()),
+        ("src/lib.rs", crate::library::lib_rs(&state, false)),
+    ];
+    finish_front_door(
+        repo,
+        opts,
+        state,
+        files,
+        package,
+        Vec::new(),
+        BTreeMap::new(),
+        Vec::new(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn library_wire(
+    repo: &Path,
+    opts: &WireOptions,
+    mut state: State,
+    crate_dir: &Path,
+    crate_name: String,
+    name: String,
+    switch: String,
+    gate: Option<bool>,
+) -> Result<WireOutcome> {
+    ensure!(
+        opts.commands.is_empty() && opts.routes.is_empty(),
+        "{} is a library: a unit answers its own exports, so wire takes no --command or --route",
+        state.name
+    );
+    let manifest = crate::bridge::Manifest::load(crate_dir).with_context(|| {
+        format!(
+            "a library unit is a crate made by `bridge` (the original package calls it through its bindings), and {} has no manifest",
+            crate_dir.display()
+        )
+    })?;
+    let api = crate::library::api_unit(&state, &manifest.unit)?.clone();
+    let app_dir = repo.join(APP_DIR);
+    let previous = state.units.iter().position(|u| u.name == name);
+    let shadow = crate::library::shadow_for(
+        crate_dir,
+        previous.and_then(|i| state.units[i].shadow.as_deref()),
+    )?;
+    let path = match crate_dir.strip_prefix(repo.join("rust")) {
+        Ok(rel) => format!("../{}", rel.to_string_lossy().replace('\\', "/")),
+        Err(_) => crate_dir.to_string_lossy().into_owned(),
+    };
+    let entry = WiredUnit {
+        name: name.clone(),
+        crate_name: crate_name.clone(),
+        path: path.clone(),
+        commands: Vec::new(),
+        routes: Vec::new(),
+        switch: switch.clone(),
+        unit: Some(api.unit.clone()),
+        shadow: shadow.as_ref().map(|p| p.to_string_lossy().into_owned()),
+        kept: manifest.js_only.iter().map(|j| j.name.clone()).collect(),
+    };
+    match previous {
+        Some(i) => state.units[i] = entry,
+        None => state.units.push(entry),
+    }
+    let cargo_path = app_dir.join("Cargo.toml");
+    let mut doc: DocumentMut = std::fs::read_to_string(&cargo_path)?.parse()?;
+    let mut dep = InlineTable::new();
+    dep.insert("path", path.as_str().into());
+    doc["dependencies"][crate_name.as_str()] = value(dep);
+    std::fs::write(&cargo_path, doc.to_string())?;
+    if manifest.kind == crate::bridge::Kind::Pyo3 {
+        crate::library::allow_python_symbols(&app_dir)?;
+    }
+    let lib = app_dir.join("src/lib.rs");
+    std::fs::write(&lib, crate::library::lib_rs(&state, false))?;
+    rustfmt(&lib);
+    state.save(repo)?;
+    let replay = if opts.check {
+        Some(build_and_replay(repo, &state)?)
+    } else {
+        None
+    };
+    Ok(WireOutcome {
+        shadow,
+        unit: name,
+        crate_dir: crate_dir.to_path_buf(),
+        commands: Vec::new(),
+        routes: Vec::new(),
+        switch,
+        glue: lib,
+        glue_pending: false,
+        gate,
         replay,
     })
 }
@@ -667,6 +837,8 @@ pub struct WireOptions<'a> {
 
 #[derive(Debug, Serialize)]
 pub struct WireOutcome {
+    /// Libraries: the drop-in the original package imports in place of the unit.
+    pub shadow: Option<PathBuf>,
     pub unit: String,
     pub crate_dir: PathBuf,
     pub commands: Vec<String>,
@@ -713,10 +885,7 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         .strip_suffix("-rs")
         .unwrap_or(&crate_name)
         .to_string();
-    let switch = format!(
-        "{KILL_SWITCH_PREFIX}{}",
-        ident(&name).trim_start_matches("unit_").to_uppercase()
-    );
+    let switch = kill_switch(&crate_name);
 
     let gate = if opts.skip_gate {
         None
@@ -737,6 +906,11 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         }
         Some(true)
     };
+    if state.kind == AppKind::Library {
+        return library_wire(
+            &repo, opts, state, &crate_dir, crate_name, name, switch, gate,
+        );
+    }
 
     let previous = state.units.iter().position(|u| u.name == name);
     let http = state.kind == AppKind::Http;
@@ -804,6 +978,9 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
         commands: commands.clone(),
         routes: routes.clone(),
         switch: switch.clone(),
+        unit: None,
+        shadow: None,
+        kept: Vec::new(),
     };
     match previous {
         Some(i) => state.units[i] = entry,
@@ -838,11 +1015,12 @@ pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
     state.save(&repo)?;
     let glue_pending = is_stub(&std::fs::read_to_string(&glue)?);
     let replay = if opts.check {
-        Some(build_and_replay(&repo)?)
+        Some(build_and_replay(&repo, &state)?)
     } else {
         None
     };
     Ok(WireOutcome {
+        shadow: None,
         unit: name,
         crate_dir,
         commands,
@@ -901,6 +1079,7 @@ mod tests {
             lifted: false,
             kind: AppKind::Cli,
             routes: Vec::new(),
+            api: Vec::new(),
         };
         assert!(units_rs(&state).contains("None"));
         state.units.push(WiredUnit {
@@ -910,6 +1089,9 @@ mod tests {
             commands: vec!["words".into()],
             routes: Vec::new(),
             switch: "RUST_ANYTHING_UNIT_WORDCOUNT".into(),
+            unit: None,
+            shadow: None,
+            kept: Vec::new(),
         });
         let code = units_rs(&state);
         assert!(code.contains("mod wordcount;"), "{code}");

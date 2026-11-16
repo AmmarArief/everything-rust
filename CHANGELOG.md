@@ -2,50 +2,57 @@
 
 ## Unreleased
 
-- `analyze --whole-app` (also `whole_app` on the MCP `analyze` tool): the app's shape (CLI, server
-  or library) and entry points, from manifests (`bin`, scripts, `cmd/`, gemspec executables) and
-  code (a `main`, a server starting); every external dependency, imported or declared in
-  package.json, pyproject or requirements.txt, go.mod, Gemfile or gemspec, pom.xml or Gradle, with
-  its crate and fit; the port order as pieces, units that import each other in one piece; and
-  numbered decisions with a recommended answer for the grilling round. POSIX headers and
-  `com.sun.*` now map to their Rust counterparts.
+Whole-app ports: rust-anything now takes a TypeScript/JavaScript, Python, C, Go, Ruby or Java app
+all the way to a pure Rust app, proving at every step that it still behaves the same. CLIs, HTTP
+servers and libraries, in all six languages; every `app` command is also an MCP tool
+(`app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`).
+
+- Plan: `analyze --whole-app` gives the app's shape (CLI, server or library) and entry points,
+  every external dependency (imported, or declared in package.json, pyproject or
+  requirements.txt, go.mod, Gemfile or gemspec, pom.xml or Gradle) with its crate and fit, the port
+  order as pieces (units that import each other move together), and numbered decisions with a
+  recommended answer for the user. POSIX headers and `com.sun.*` now map to their Rust
+  counterparts.
+- Record: `app record` runs the original on its own documented examples, an `--inputs` file and
+  semantic traps (non-ASCII and emoji, negative division and modulo, overflow, float extremes,
+  map order, missing files), twice; what differs between the two runs becomes a wildcard, and
+  named normalizers (`timestamps`, `uuids`, `key-order`, `name=regex`) are saved with the cases.
+  CLI cases are trycmd files in `rust/app-cases/` (argv, stdin, env and files in; stdout, stderr,
+  exit code and files out). With `--http` (or `--port`) the command starts a server, and requests
+  from the `curl` lines in its docs, `--inputs` and traps are stored in `rust/app-cases/http/`.
+- Replay: `app replay` runs any build (the original, the front door, the final binary) against
+  the cases, prints `passed/total` and the fallback rate, writes a report with a diff per failing
+  case, and exits non-zero on any mismatch, so CI can run it. Any build can report its fallbacks
+  through the file named by `RUST_ANYTHING_FALLBACK_LOG`.
+- Front door: `app front-door` scaffolds `rust/app`, which owns the entry point from day one and
+  hands what is not ported yet to the original, counting every fallback: for a CLI a clap binary
+  that runs the original with the same argv, stdin and environment; for a server an axum app that
+  starts the original on its own port and proxies to it; for a library (no `main`, no server, or
+  `--library`) a Rust crate with the public API, while the original package keeps its callers.
+  Replay against a fresh front door passes 100% at 100% fallback.
+- Wire: after a unit passes `gate`, `app wire` adds its crate to `rust/app` and routes commands
+  (`--command`), routes (`--route 'GET /users/{id}'`, `*`) or, for a library, the unit's exports
+  to it, behind a kill switch, `RUST_ANYTHING_UNIT_<NAME>=original`; it writes a glue file to fill
+  in once, then builds and replays. For a library it writes the unit's shadow drop-in for the
+  original package to import, and shadows in every language but C (switched at build time) honor
+  the kill switch.
+- Lift: once the fallback rate is 0 and every unit passes `gate`, `app lift` makes it pure Rust.
+  It refuses until then and lists every blocker; it works on a copy, removes the fallback path and
+  the kill switches, turns each unit crate into a plain library (no `cdylib`, bindings or
+  generated wrappers), runs the lift checklist (fmt, clippy, tests, every target in
+  `rust/DECISIONS.md`, assets, replay in CI) and replays the pure binary, and writes the result
+  back only when all of it passes. CLIs get a trycmd test that runs the cases on `cargo test`.
+  The original is never touched.
 - `gate` checks error paths: every place the original fails on purpose (`throw`, `raise`, an
   `error` result) needs a recorded failing case, and `port.rs` may not `unwrap`, `expect` or
   `panic!` in a function whose original returns an error, unless marked `// INFALLIBLE: <why>`.
 - `record` adds the semantic traps to every function: each trap value of a parameter's type, one
-  parameter at a time (string length and case, signed division, overflow edges, float printing,
-  map and sort order), next to the generated cases.
-- HTTP servers, in all six languages: `app record --http` (or `--port`) starts the original,
-  sends requests from the `curl` lines in its docs, `--inputs` and traps (path segments, query
-  values, bodies, an unknown route), twice, and stores each request and response in
-  `rust/app-cases/http/`. `app replay` runs any build the same way. `app front-door` scaffolds an
-  axum server that starts the original on its own port and proxies every route no unit answers,
-  counting each fallback; `app wire --route` hands axum routes (`GET /users/{id}`, `*`) to a unit
-  behind its kill switch; `app lift` removes the proxy. Proved end to end on a small server in
-  each language, replayed with the original moved away.
-- `app lift` (also MCP tool `app_lift`) for CLI apps: refuses until replay passes with fallback
-  rate 0 and every unit passes gate, listing every blocker. On a copy first, it removes the
-  fallback and the kill switches, turns each unit crate into a plain library (no `cdylib`,
-  bindings or generated wrappers), adds a trycmd test that runs `rust/app-cases` on
-  `cargo test`, runs the lift checklist (fmt, clippy, tests, `DECISIONS.md` targets, assets) and
-  replays the pure binary; only then are the changes written back. Proved end to end on the
-  small CLI in all six languages, replayed with the original moved away.
-- The front door routes argv that names no command (no arguments, unknown commands) to the app's
-  own name, so a unit can answer it; replay lists the cases that fell back.
-- `app front-door` and `app wire` (also MCP tools `app_front_door` and `app_wire`) for CLI apps.
-  `front-door` scaffolds `rust/app`, a Rust binary with a clap parser for the recorded commands
-  and flags where every command runs the original and counts the fallback; it builds and replays
-  (100% passed at 100% fallback). `wire` checks a unit with `gate`, adds its crate to `rust/app`,
-  writes a glue file to fill in, routes the unit's commands to it behind a
-  `RUST_ANYTHING_UNIT_<NAME>=original` kill switch, then builds and replays. Proved on the same
-  small CLI in all six languages.
-- `app record` and `app replay` (also MCP tools `app_record` and `app_replay`): app-level
-  behavior for CLIs in all six languages. `record` runs the original on its documented examples,
-  an `--inputs` file and semantic traps, twice each, turns what differs between runs into
-  wildcards, applies named normalizers (`timestamps`, `uuids`, `key-order`, `name=regex`), and
-  writes trycmd-compatible cases to `rust/app-cases/`. `replay` runs any build against them,
-  prints `passed/total`, writes a report with a diff per failing case, exits non-zero on a
-  mismatch, and reports the fallback rate of builds that write `RUST_ANYTHING_FALLBACK_LOG`.
+  parameter at a time, next to the generated cases.
+- Proved end to end on a small CLI and a small HTTP server written in each of the six languages,
+  replayed with the original moved away, and on libraries (a C library lifted to one pure Rust
+  crate; TypeScript and Python libraries moved unit by unit).
+- The pitch is now rewriting a whole app in Rust; making the slow part fast stays as a smaller use
+  of the same tool.
 
 ## 1.0.1 (2026-11-16)
 

@@ -1740,6 +1740,17 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let dir = cases_dir(&repo);
     let config = Config::load(&repo)?;
+    if config.is_none()
+        && let Ok(state) = crate::front_door::State::load(&repo)
+        && state.kind == crate::front_door::AppKind::Library
+    {
+        ensure!(
+            opts.build.is_none(),
+            "{} is a library: its cases replay through each unit's bindings, so --build does not apply",
+            state.name
+        );
+        return crate::library::replay(&repo, &state);
+    }
     let command = match (opts.build, &config) {
         (Some(build), _) => shell_split(build)?,
         (None, Some(c)) => c.run.clone(),

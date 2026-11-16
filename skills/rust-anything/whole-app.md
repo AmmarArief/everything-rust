@@ -68,7 +68,8 @@ Capture what the app does from the outside, so every later build is held to it:
 
 - **CLI**: arguments, stdin and environment in; stdout, stderr, exit code and files written out.
 - **HTTP server**: requests in; status, headers that matter and bodies out.
-- **Library**: the public API, through `rust-anything record` on each entry unit.
+- **Library**: the public API, through `rust-anything record` on each unit: there is no process
+  to replay, so skip `app record`; the units' recorded cases are the proof.
 
 Inputs: the app's tests, examples and real workloads, its error paths (bad input, missing files,
 failed calls), and the semantic traps: non-ASCII and emoji strings, negative division and
@@ -86,19 +87,23 @@ or `{port}` (`--port` if it is fixed), and requests come from `curl` lines in it
 
 ## 4. Build the front door
 
-Create `rust/app`, the Rust binary that owns the entry point from now on, with the argument
-parser, config loading and server setup from `DECISIONS.md`. Everything it does not handle yet
-falls back to the original:
+Create `rust/app`, which owns the entry point from now on, with the argument parser, config
+loading and server setup from `DECISIONS.md`. Everything it does not handle yet falls back to the
+original:
 
 - **CLI**: run the original with the same arguments, stdin and environment, and pass its output
   and exit code through.
 - **HTTP server**: proxy every route not ported yet to the original server.
+- **Library**: a Rust crate with the public API; the original package keeps its callers and
+  reaches each unit's Rust through the unit's shadow drop-in.
 
 `rust-anything app front-door <repo>` scaffolds it and replays it: for a CLI a clap parser from
 the recorded commands and flags, for a server an axum app that starts the original on a port of
-its own and proxies to it. `replay` against the front door must
-match 100% before any unit moves. Count the fallbacks: the **fallback rate** is the share of cases
-the original still answers, and it only goes down.
+its own and proxies to it, for a library (no `main`, no server, or `--library`) a library crate
+that lists every unit's exports. `replay` against the front door must match 100% before any unit
+moves. Count the fallbacks: the **fallback rate** is the share of cases (for a library, of public
+exports) the original still answers, and it only goes down. The code in `rust/app` is yours once
+scaffolded: `front-door` never overwrites it.
 
 ## 5. Port every unit
 
@@ -112,10 +117,13 @@ to 5 of SKILL.md, then:
    `--route 'GET /users/{id}'` (axum syntax; `/path` for any method, `*` for every route no
    other unit answers). Write the glue in `rust/app/src/units/<unit>.rs` (read the arguments or
    the request, call `<crate>::port`, answer what the original answers: output and exit code, or
-   status, headers and body), then run `app wire <repo> <unit>` again.
+   status, headers and body), then run `app wire <repo> <unit>` again. For a library,
+   `app wire <repo> <unit crate>` with no command or route: the unit's exports become a module of
+   `rust/app`, and `wire` writes the unit's shadow; change the original package to import the
+   shadow in place of the unit, so its callers reach the Rust.
 2. `wire` replays: 100% again, and a lower fallback rate.
 3. Keep the **kill switch** `wire` adds: `RUST_ANYTHING_UNIT_<NAME>=original` sends the unit back
-   to the original, until the lift.
+   to the original, until the lift (a C library's shadow switches at build time instead).
 
 Translate faithfully first, with the original's structure, types and error paths; make it
 idiomatic only after `replay` passes, and run `replay` again. Where the original returns or throws
@@ -130,17 +138,22 @@ results, the fallback rate and what is left.
 
 When the fallback rate is zero and every unit passes `gate`, run
 `rust-anything app lift <repo>`. It refuses until both hold and lists every blocker (cases still
-falling back, by name; glue still a stub; units failing gate). Then, on a copy first, it:
+falling back, by name, or for a library the exports still only in the original; glue still a
+stub; units failing gate). Then, on a copy first, it:
 
 1. Deletes the fallback path and the kill switches.
-2. Turns each unit crate into a plain library of `rust/app`: no `cdylib`, bindings or generated
-   wrappers; `rust/app` calls `port.rs` through the glue.
+2. Turns each unit crate into a plain library of `rust/app`: no `cdylib`, bindings, generated
+   wrappers or shadows; `rust/app` calls `port.rs` through the glue (a library re-exports it).
 3. Works the lift checklist: assets read at run time or asset folders not embedded (warnings to
    act on), every target in `DECISIONS.md` built or checked where it is installed, and
    `rust/app/tests/app_cases.rs`, which runs `rust/app-cases` with trycmd on `cargo test`, so CI
-   runs replay with nothing but cargo (for a server, run `app replay --build <binary>` in CI).
+   runs replay with nothing but cargo (for a server, run `app replay --build <binary>` in CI;
+   a library's cases ran through the bindings the lift removes, so turn the ones that matter
+   into Rust tests). For a library it also lists files of the original that still import the
+   shadows: point them back at the original's own modules, which stay as reference.
 4. Runs fmt, clippy `-D warnings` and `cargo test` on every unit crate and on `rust/app`, then
-   `replay` on the pure binary.
+   `replay` on the pure binary (a library: builds it as one crate, with every `port.rs` as it was
+   when its cases matched).
 
 Only when everything passes are the changes written back; a failure leaves the repo as it was
 and names the copy to look at. Fix each `warn` line and each skipped target (packaging and
@@ -150,7 +163,8 @@ release are yours), then report them to the user.
 
 `app lift` ends with `replay` against the pure Rust app; run `rust-anything app replay <repo>
 --build <path to the binary>` again after any change, and `cargo test` in `rust/app` in CI: every
-case matches to the bar in `DECISIONS.md`. A mismatch is a bug in the port, never in the cases;
+case matches to the bar in `DECISIONS.md`. A library is proved before its lift: every unit's
+`app replay` at 100%; after it, `cargo test` and the Rust tests you added. A mismatch is a bug in the port, never in the cases;
 change a case only with the user's approval, and record why in `DECISIONS.md`.
 
 Report to the user: replay results, gate results for every crate, speed against the original, and

@@ -186,6 +186,7 @@ fn tools() -> Value {
             "inputSchema": { "type": "object", "properties": {
                 "repo": { "type": "string", "description": "Repository root." },
                 "check": { "type": "boolean", "description": "Build and replay (default true)." },
+                "library": { "type": "boolean", "description": "Treat the repository as a library even if it has a main: the front door is a Rust crate with the public API, re-exporting each wired unit's port. Found by default when there is no main and no server." },
             }, "required": ["repo"] },
         },
         {
@@ -351,6 +352,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let repo = path("repo")?;
             serde_json::to_value(front_door::front_door(&front_door::FrontDoorOptions {
                 repo: &repo,
+                library: args["library"].as_bool().unwrap_or(false),
                 check: args["check"].as_bool().unwrap_or(true),
             })?)?
         }

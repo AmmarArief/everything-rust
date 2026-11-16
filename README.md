@@ -57,6 +57,7 @@ must be on your `PATH`):
 reads skills. It keeps your other settings, is safe to run again, and `--remove` undoes it.
 Then ask your agent, for example:
 
+- *"Rewrite this CLI in Rust with rust-anything, end to end, and prove it behaves the same."*
 - *"This search feels slow. Profile it with rust-anything and move the hot loop to Rust."*
 - *"Plan a migration of `src/parser/` to Rust with rust-anything; port the first unit and prove it."*
 - *"Bench the Rust port in `rust/text-rs` against the original and tell me whether to ship it."*
@@ -128,6 +129,16 @@ The original stays the source of truth: `record` runs it on edge cases (and your
 saves what it returns or throws; `diff` replays every case against the Rust; nothing ships until
 they all match and `gate` passes. Callers keep the original API throughout.
 
+A whole app goes through the same loop unit by unit, inside a frame that proves the whole
+program ([Port a whole app](#port-a-whole-app)):
+
+```
+analyze --whole-app ──> app record ──> app front-door ──> per unit: the loop above, then app wire ──> app lift
+ shape, every           what the app    Rust owns the       gate passes, so the unit answers in         pure Rust,
+ dependency, the        does from the   entry point; the     Rust: replay 100%, fallback rate down      proved by
+ decisions to make      outside         original answers                                                replay
+```
+
 ## The loop
 
 | Step | Command | What it does |
@@ -143,10 +154,21 @@ they all match and `gate` passes. Callers keep the original API throughout.
 | 5. Gate | `rust-anything gate <crate>` | fmt, clippy `-D warnings`, tests, `unsafe` audit, nothing unported, a recorded failing case for every error path of the original, no `unwrap`/`expect`/`panic!` where the original returns an error (unless marked `// INFALLIBLE: <why>`), build, API, behavior |
 | Agents | `rust-anything setup` | Registers the MCP server (`rust-anything mcp`, every step as a tool) and the workflow skill ([`skills/rust-anything/SKILL.md`](./skills/rust-anything/SKILL.md)) with your coding agents |
 
-## Whole-app behavior: `app record` and `app replay`
+## Port a whole app
 
-`record` and `diff` prove one unit. `app record` and `app replay` prove the whole program from the
-outside, for CLIs in any of the six languages (the app is a black box):
+The goal is a pure Rust app that behaves like the original, with the original kept as reference.
+Your agent writes the Rust; rust-anything orders the work, scaffolds it, and proves every step.
+The [whole-app skill](./skills/rust-anything/whole-app.md) walks the agent through it, starting
+with the decisions only you can make.
+
+Plan first: `rust-anything analyze . --whole-app` adds the app's shape (CLI, server or library)
+and entry points, every external dependency (imported or declared) with its Rust crate and fit,
+the port order as pieces (units that import each other move together), and numbered decisions
+with a recommended answer: keep units, blocked units, dependencies with no or a partial crate.
+
+Then prove the whole program from the outside. `record` and `diff` prove one unit; `app record`
+and `app replay` prove the app, for CLIs and servers in any of the six languages (the app is a
+black box):
 
 ```sh
 rust-anything app record . -- python3 cli.py          # the command that runs the original
@@ -235,6 +257,34 @@ rust-anything app lift .
   every route no unit answers. `wire --route` takes axum routes: `METHOD /path/{param}`, `/path`
   for any method, `*` for everything else; the glue gets the route, its parameters and the
   request. `lift` removes the proxy; HTTP cases then run in CI with `app replay`.
+
+### Libraries
+
+A library has no process to replay: its public API is the front door, and each unit's recorded
+cases are the proof.
+
+```sh
+rust-anything app front-door .        # rust/app: a Rust crate with the public API
+# each unit through the loop: bridge, record, port.rs, build, diff, gate; then:
+rust-anything app wire . textkit-rs   # re-exported from rust/app; the original imports its shadow
+rust-anything app replay .            # every wired unit's cases; fallback = exports still in the original
+rust-anything app lift .
+```
+
+- `app front-door` finds the public API (every unit's exports) when the repository has no `main`
+  and no server (`--library` otherwise), and scaffolds `rust/app` as a library crate. Each wired
+  unit becomes a module of it: `pub use textkit_rs::port as textkit;`.
+- `app wire` takes a crate made by `bridge`, runs `gate`, and writes the unit's shadow drop-in:
+  the original package imports it in place of the unit, so its callers keep the original API and
+  reach the Rust. `RUST_ANYTHING_UNIT_<NAME>=original` sends the unit back (C: build without the
+  shadow's flags).
+- `app replay` runs every wired unit's recorded cases through its bindings. The fallback rate is
+  the share of public exports Rust does not answer yet: unwired units, and exports `bridge` keeps
+  in the original language.
+- `app lift` needs fallback 0 and every unit through `gate`; it strips the bindings, wrappers and
+  shadows from the units and leaves `rust/app` as one pure Rust library. It does not touch any
+  `port.rs`, so the cases that matched through the bindings still describe it; the checklist
+  warns about files of the original that still import the shadows.
 
 All five are MCP tools too: `app_record`, `app_replay`, `app_front_door`, `app_wire` and
 `app_lift`.

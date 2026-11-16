@@ -172,7 +172,12 @@ pub fn run(_command: &str, _matches: &ArgMatches) -> ExitCode {
 
 /// The front door answers everything through the original; then a unit takes over `words`.
 fn front_door_then_wire(repo: &Path) {
-    let door = front_door::front_door(&FrontDoorOptions { repo, check: true }).unwrap();
+    let door = front_door::front_door(&FrontDoorOptions {
+        repo,
+        library: false,
+        check: true,
+    })
+    .unwrap();
     assert_eq!(
         door.commands,
         ["copy", "div", "len", "now", "upper", "words"]
@@ -574,7 +579,12 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         port: None,
     })
     .unwrap();
-    let door = front_door::front_door(&FrontDoorOptions { repo, check: true }).unwrap();
+    let door = front_door::front_door(&FrontDoorOptions {
+        repo,
+        library: false,
+        check: true,
+    })
+    .unwrap();
     let replay = door.replay.unwrap();
     assert_eq!(replay.passed, replay.total);
     assert_eq!(replay.fallback.unwrap().cases, replay.total);

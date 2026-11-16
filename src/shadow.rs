@@ -45,7 +45,7 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
         for (path, text) in &files {
             let target = dir.join(path.trim_start_matches("shadow/"));
             std::fs::create_dir_all(target.parent().context("no folder")?)?;
-            std::fs::write(&target, text)?;
+            std::fs::write(&target, with_kill_switch(text, &manifest.crate_name))?;
             first.get_or_insert(target);
         }
         return Ok(ShadowOutcome {
@@ -64,7 +64,13 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
             bail!("{} exists; remove it first or pass --out", path.display());
         }
         std::fs::create_dir_all(path.parent().context("output path has no folder")?)?;
-        std::fs::write(&path, crate::codegen_ruby::shadow(&manifest))?;
+        std::fs::write(
+            &path,
+            with_kill_switch(
+                &crate::codegen_ruby::shadow(&manifest),
+                &manifest.crate_name,
+            ),
+        )?;
         return Ok(ShadowOutcome {
             path,
             exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
@@ -84,7 +90,13 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
         }
         std::fs::create_dir_all(path.parent().context("output path has no folder")?)?;
         let original = crate::harness_go::import_path(&manifest)?;
-        std::fs::write(&path, crate::codegen_go::shadow(&manifest, &original))?;
+        std::fs::write(
+            &path,
+            with_kill_switch(
+                &crate::codegen_go::shadow(&manifest, &original),
+                &manifest.crate_name,
+            ),
+        )?;
         let _ = std::process::Command::new("gofmt")
             .arg("-w")
             .arg(&path)
@@ -251,7 +263,8 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
             name = j.name
         ));
     }
-    std::fs::write(&path, code).with_context(|| format!("writing {}", path.display()))?;
+    std::fs::write(&path, with_kill_switch(&code, &manifest.crate_name))
+        .with_context(|| format!("writing {}", path.display()))?;
     Ok(ShadowOutcome {
         path,
         exports: manifest
@@ -264,6 +277,46 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
 }
 
 /// An ES import specifier for `to`, relative to the folder `from`.
+/// Makes the shadow honor the unit's kill switch, `RUST_ANYTHING_UNIT_<NAME>=original`, before
+/// `RUST_ANYTHING_MODE`: the original package can send one unit back on its own.
+fn with_kill_switch(text: &str, crate_name: &str) -> String {
+    let switch = crate::front_door::kill_switch(crate_name);
+    text.replacen(
+        "((globalThis as any).process?.env?.RUST_ANYTHING_MODE ?? 'shadow')",
+        &format!(
+            "((globalThis as any).process?.env?.{switch} === 'original' ? 'old' : ((globalThis as any).process?.env?.RUST_ANYTHING_MODE ?? 'shadow'))"
+        ),
+        1,
+    )
+    .replacen(
+        "_MODE = os.environ.get(\"RUST_ANYTHING_MODE\", \"shadow\")",
+        &format!(
+            "_MODE = \"old\" if os.environ.get(\"{switch}\") == \"original\" else os.environ.get(\"RUST_ANYTHING_MODE\", \"shadow\")"
+        ),
+        1,
+    )
+    .replacen(
+        "MODE = ENV.fetch(\"RUST_ANYTHING_MODE\", \"shadow\")",
+        &format!(
+            "MODE = ENV[\"{switch}\"] == \"original\" ? \"old\" : ENV.fetch(\"RUST_ANYTHING_MODE\", \"shadow\")"
+        ),
+        1,
+    )
+    .replacen(
+        "var mode = func() string {\n",
+        &format!(
+            "var mode = func() string {{\n\tif os.Getenv(\"{switch}\") == \"original\" {{\n\t\treturn \"old\"\n\t}}\n"
+        ),
+        1,
+    )
+    .replace(
+        "System.getProperty(\"rust-anything.mode\", \"shadow\")",
+        &format!(
+            "(\"original\".equals(System.getenv(\"{switch}\")) ? \"old\" : System.getProperty(\"rust-anything.mode\", \"shadow\"))"
+        ),
+    )
+}
+
 fn relative(from: &Path, to: &Path) -> String {
     let from: Vec<Component> = from.components().collect();
     let to_parts: Vec<Component> = to.components().collect();
@@ -393,7 +446,8 @@ fn shadow_python(
             m = module_of(&j.file)
         ));
     }
-    std::fs::write(&path, code).with_context(|| format!("writing {}", path.display()))?;
+    std::fs::write(&path, with_kill_switch(&code, &manifest.crate_name))
+        .with_context(|| format!("writing {}", path.display()))?;
     Ok(ShadowOutcome {
         path,
         exports: manifest

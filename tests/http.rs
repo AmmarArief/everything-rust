@@ -268,6 +268,7 @@ fn check_language(lang: &Lang) {
     record(&repo, &run, false);
     let door = front_door::front_door(&FrontDoorOptions {
         repo: &repo,
+        library: false,
         check: true,
     })
     .unwrap();

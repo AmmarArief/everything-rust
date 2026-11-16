@@ -501,10 +501,14 @@ mod tests {
                 commands: Vec::new(),
                 routes: routes.iter().map(|r| r.to_string()).collect(),
                 switch: "RUST_ANYTHING_UNIT_API".into(),
+                unit: None,
+                shadow: None,
+                kept: Vec::new(),
             }],
             lifted: false,
             kind: AppKind::Http,
             routes: Vec::new(),
+            api: Vec::new(),
         }
     }
 

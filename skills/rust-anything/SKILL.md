@@ -12,14 +12,15 @@ goal is the whole app, and call a port done only when `gate` passes.
 only as reference): read [whole-app.md](whole-app.md) first and follow it. It grills the user on
 the decisions, researches the dependencies, records the whole app, puts a Rust front door in front
 of the original, runs the steps below for every unit, then lifts the app to a standalone Rust
-binary.
+binary (or, for a library, one pure Rust crate). CLIs, HTTP servers and libraries.
 
 Languages: TypeScript/JavaScript, Python, C, Go, Ruby, Java. The language is detected; `--lang`
 overrides it. The steps are the same everywhere; only the bridge differs (napi-rs or wasm for
 TS, PyO3, a C ABI, cgo, a magnus extension, JNI), and the original's callers keep their API.
 
 Tools: the `rust-anything` CLI, or the same steps as MCP tools (`rust-anything mcp`): `profile`,
-`analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`.
+`analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`, and for a
+whole app `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`.
 If the MCP tools are not available, use the CLI; if `rust-anything` is not installed, ask the user
 to install it (`cargo install --git https://github.com/erkamyaman/rust-anything`) and run
 `rust-anything setup`, then restart the agent.

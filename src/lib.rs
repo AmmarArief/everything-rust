@@ -28,6 +28,7 @@ pub mod harness_py;
 pub mod harness_ruby;
 pub mod http;
 pub mod lang;
+pub mod library;
 pub mod lift;
 pub mod mcp;
 pub mod profile;

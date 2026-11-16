@@ -1,6 +1,6 @@
 # Design: whole app to a pure Rust app
 
-Status: milestones 1 to 5 built (CLIs and HTTP servers end to end, `analyze --whole-app`, gate error paths, record traps); 6 to come.
+Status: built, all six milestones (CLIs, HTTP servers and libraries, in all six languages).
 
 ## Goal
 
@@ -202,6 +202,25 @@ Taken while building, without a question to the user (the conventional option, w
     with `// SAFETY:`: the convention reviewers already know.
 33. **Traps go one parameter at a time**, the others as in the first generated case, so a
     mismatch points at one value; structured parameters keep their generated, well-typed values.
+34. **A library's front door is a Rust crate re-exporting each wired unit's port as a module**
+    (`pub use textkit_rs::port as textkit;`), not a flat namespace: units may export the same name,
+    and glob re-exports of both would be ambiguous.
+35. **The original package reaches Rust through the units' shadows**, which already keep the
+    original API in every language; `wire` writes the shadow and the user or agent points the
+    package at it. rust-anything does not edit the original's own files.
+36. **Shadows honor `RUST_ANYTHING_UNIT_<NAME>=original`** before `RUST_ANYTHING_MODE`, so a library
+    unit has the same kill switch as a CLI or server unit. C's shadow is chosen at build time and
+    keeps its flags.
+37. **A library's fallback rate counts public exports**, not calls: each export not yet answered in
+    Rust (an unwired unit, or one `bridge` keeps in the original language) is one fallback.
+38. **A library's replay is `diff` on every wired unit**: the recorded cases through the bindings.
+    After the lift the bindings are gone; the lift does not change any `port.rs`, so those results
+    still describe it, and the checklist asks for Rust tests in CI.
+39. **The public API is every exported function and class of every non-keep unit**, found the way
+    `bridge` finds them; `--library` treats a repository with a demo `main` as a library.
+40. **A PyO3 unit gets a `.cargo/config.toml` in `rust/app`** that lets macOS link its `cdylib` with
+    Python's symbols left to load time (PyO3's documented setting); the lift removes it with the
+    bindings.
 
 ## Draft pitch
 

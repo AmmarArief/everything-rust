@@ -275,6 +275,10 @@ enum AppCmd {
         /// Only write the files; skip the build and replay.
         #[arg(long)]
         no_check: bool,
+        /// Treat the repository as a library even if it has a `main`: the front door is a Rust
+        /// crate with the public API (found by default when there is no main and no server).
+        #[arg(long)]
+        library: bool,
         #[arg(long)]
         json: bool,
     },
@@ -723,20 +727,37 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
         AppCmd::FrontDoor {
             repo,
             no_check,
+            library,
             json,
         } => {
             let outcome = front_door::front_door(&front_door::FrontDoorOptions {
                 repo: &repo,
+                library,
                 check: !no_check,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
                 say!(
-                    "Created {} (binary `{}`), {}",
+                    "Created {} ({} `{}`), {}",
                     outcome.dir.display(),
+                    if outcome.api.is_empty() {
+                        "binary"
+                    } else {
+                        "crate"
+                    },
                     outcome.binary,
-                    if !outcome.routes.is_empty() {
+                    if !outcome.api.is_empty() {
+                        format!(
+                            "a library; public API: {}",
+                            outcome
+                                .api
+                                .iter()
+                                .map(|a| format!("{} ({} exports)", a.unit, a.exports.len()))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    } else if !outcome.routes.is_empty() {
                         format!("requests recorded: {}", outcome.routes.join(", "))
                     } else if outcome.commands.is_empty() {
                         "commands: none (one root command)".to_string()
@@ -750,7 +771,12 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 if let Some(replay) = &outcome.replay {
                     say_replay(replay);
                 }
-                if outcome.routes.is_empty() {
+                if !outcome.api.is_empty() {
+                    say!(
+                        "Every export is still only in the original. After a unit's crate (from `bridge`) passes gate: rust-anything app wire {} <unit crate>",
+                        repo.display()
+                    );
+                } else if outcome.routes.is_empty() {
                     say!(
                         "Every command runs the original. After a unit passes gate: rust-anything app wire {} <unit> --command <name>",
                         repo.display()
@@ -794,9 +820,26 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                     "Wired {} ({}) to {}; {}=original sends it back to the original",
                     outcome.unit,
                     outcome.crate_dir.display(),
-                    outcome.commands.join(", "),
+                    if outcome.shadow.is_some() {
+                        "the public API".to_string()
+                    } else if outcome.routes.is_empty() {
+                        outcome.commands.join(", ")
+                    } else {
+                        outcome.routes.join(", ")
+                    },
                     outcome.switch
                 );
+                if let Some(shadow) = &outcome.shadow {
+                    say!(
+                        "The original package imports {} in place of the unit until the lift.",
+                        shadow.display()
+                    );
+                    if shadow.extension().is_some_and(|e| e == "c") {
+                        say!(
+                            "C switches at build time: compile without the -D flags in shadow/flags.txt to send it back."
+                        );
+                    }
+                }
                 if outcome.glue_pending {
                     say!(
                         "Write the glue in {}, then run this again.",
