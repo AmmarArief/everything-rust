@@ -187,7 +187,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         .arg(&script)
         .arg(&inputs_path)
         .arg(&out)
-        .env("CARCINIZE_PATHS", &aliases);
+        .env("CARCINIZE_PATHS", &aliases)
+        .env("CARCINIZE_WORKSPACE", workspace_env(&manifest));
     if let Some(dir) = opts.resolve_from {
         let dir = dir
             .canonicalize()
@@ -207,7 +208,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .arg(&script)
             .arg(&inputs_path)
             .arg(&out)
-            .env("CARCINIZE_PATHS", &aliases);
+            .env("CARCINIZE_PATHS", &aliases)
+            .env("CARCINIZE_WORKSPACE", workspace_env(&manifest));
         if let Some(dir) = opts.resolve_from {
             retry.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
         }
@@ -397,7 +399,8 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
         .arg(&cases)
         .arg(&out)
         .arg(opts.min_ms.to_string())
-        .env("CARCINIZE_PATHS", alias_env(&manifest));
+        .env("CARCINIZE_PATHS", alias_env(&manifest))
+        .env("CARCINIZE_WORKSPACE", workspace_env(&manifest));
     if let Some(dir) = opts.resolve_from {
         cmd.env("CARCINIZE_RESOLVE_FROM", dir.canonicalize()?);
     }
@@ -749,6 +752,29 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
     Ok(())
 }
 
+/// Workspace packages as `{ name: absolute source folder }` for the resolve hook: a monorepo
+/// imports its own packages by name, and their build output may not exist.
+fn workspace_env(manifest: &Manifest) -> String {
+    let packages: BTreeMap<String, String> = crate::ts::discover::discover(&manifest.root)
+        .map(|ws| {
+            ws.packages
+                .into_iter()
+                .filter(|p| !p.dir.is_empty())
+                .map(|p| {
+                    let dir = manifest.root.join(&p.dir);
+                    let src = if dir.join("src").is_dir() {
+                        dir.join("src")
+                    } else {
+                        dir
+                    };
+                    (p.name, src.to_string_lossy().into_owned())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    serde_json::to_string(&packages).unwrap_or_else(|_| "{}".into())
+}
+
 /// The tsconfig `paths` of the unit's files, as JSON for the resolve hook: `[[pattern, [absolute targets]]]`.
 fn alias_env(manifest: &Manifest) -> String {
     let mut entries: Vec<(String, Vec<String>)> = Vec::new();
@@ -796,6 +822,17 @@ const extra = process.env.CARCINIZE_RESOLVE_FROM
 // tsconfig `paths`: [[pattern, [absolute targets]]], longest prefix first.
 const aliases = JSON.parse(process.env.CARCINIZE_PATHS || '[]')
   .sort(([a], [b]) => b.split('*')[0].length - a.split('*')[0].length)
+// Workspace packages by name: `@x18n/core` and `@x18n/core/sub` resolve to source.
+const workspace = JSON.parse(process.env.CARCINIZE_WORKSPACE || '{}')
+const workspaceTargets = (specifier) => {
+  for (const [name, src] of Object.entries(workspace)) {
+    if (specifier === name)
+      return [`${src}/index`]
+    if (specifier.startsWith(`${name}/`))
+      return [`${src}/${specifier.slice(name.length + 1)}`, `${src}/${specifier.slice(name.length + 1)}/index`]
+  }
+  return []
+}
 const aliasTargets = (specifier) => {
   for (const [pattern, targets] of aliases) {
     const [prefix, suffix = ''] = pattern.split('*')
@@ -812,7 +849,7 @@ const isFile = p => existsSync(p) && statSync(p).isFile()
 
 export async function resolve(specifier, context, next) {
   // Aliases first: `@/x` is not even a valid package name for Node.
-  for (const target of aliasTargets(specifier)) {
+  for (const target of [...aliasTargets(specifier), ...workspaceTargets(specifier)]) {
     const stem = target.replace(/\.js$/, '')
     for (const suffix of ['', ...suffixes]) {
       if (isFile(stem + suffix))

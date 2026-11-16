@@ -388,16 +388,34 @@ fn collect_types(
     let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
     for import in crate::ts::scan::scan(file, text).imports {
         let spec = import.specifier;
-        if !spec.starts_with('.') {
-            continue;
-        }
-        let joined = if dir.is_empty() {
-            spec.clone()
+        // Workspace packages (`@x18n/core`) are followed to their source entry.
+        let base = if spec.starts_with('.') {
+            let joined = if dir.is_empty() {
+                spec.clone()
+            } else {
+                format!("{dir}/{spec}")
+            };
+            match normalize_rel(&joined) {
+                Some(base) => base,
+                None => continue,
+            }
         } else {
-            format!("{dir}/{spec}")
-        };
-        let Some(base) = normalize_rel(&joined) else {
-            continue;
+            let name = crate::ts::deps::package_name(&spec);
+            let Some(pkg_dir) = workspace_packages(root).get(name).cloned() else {
+                continue;
+            };
+            let sub = spec[name.len()..].trim_start_matches('/');
+            let src = if root.join(&pkg_dir).join("src").is_dir() {
+                format!("{pkg_dir}/src")
+            } else {
+                pkg_dir
+            };
+            let src = src.trim_start_matches('/').to_string();
+            if sub.is_empty() {
+                format!("{src}/index")
+            } else {
+                format!("{src}/{sub}")
+            }
         };
         let stem = base.trim_end_matches(".js");
         let candidates = [
@@ -415,6 +433,26 @@ fn collect_types(
     }
 }
 
+/// Workspace package names and their root-relative folders, read once per root.
+fn workspace_packages(root: &Path) -> std::collections::HashMap<String, String> {
+    use std::sync::{Mutex, OnceLock};
+    static CACHE: OnceLock<
+        Mutex<std::collections::HashMap<PathBuf, std::collections::HashMap<String, String>>>,
+    > = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()));
+    let mut cache = cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    cache
+        .entry(root.to_path_buf())
+        .or_insert_with(|| {
+            crate::ts::discover::discover(root)
+                .map(|ws| ws.packages.into_iter().map(|p| (p.name, p.dir)).collect())
+                .unwrap_or_default()
+        })
+        .clone()
+}
+
 /// Collapses `.` and `..` in a root-relative path.
 fn normalize_rel(path: &str) -> Option<String> {
     let mut parts: Vec<&str> = Vec::new();
@@ -428,6 +466,54 @@ fn normalize_rel(path: &str) -> Option<String> {
         }
     }
     Some(parts.join("/"))
+}
+
+/// `f<T extends string>(s: T)` takes a string: type parameters with a simple constraint are
+/// replaced by it. The rest stay listed, and keep the function in TS.
+pub fn substitute_constraints(f: &mut ExportedFn, types: &[LocalType]) {
+    let mut remaining = Vec::new();
+    for tp in std::mem::take(&mut f.type_params) {
+        let Some((name, constraint)) = tp.split_once(" extends ") else {
+            remaining.push(tp);
+            continue;
+        };
+        let constraint = resolve_aliases(constraint, types);
+        // Data constraints (`string`, `string | readonly string[]`) are substituted; anything that
+        // could hold a function keeps the type parameter, and the function stays in TS.
+        let open_ended = constraint.contains("=>")
+            || constraint
+                .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+                .any(|w| {
+                    matches!(w, "Function" | "object" | "unknown" | "any")
+                        || has_functions(w, types, &mut Vec::new())
+                });
+        if open_ended {
+            remaining.push(name.to_string());
+            continue;
+        }
+        let replacement = format!("({constraint})");
+        for p in &mut f.params {
+            p.ts_type = replace_word(&p.ts_type, name, &replacement);
+        }
+        f.returns = replace_word(&f.returns, name, &replacement);
+    }
+    f.type_params = remaining;
+}
+
+fn replace_word(text: &str, word: &str, with: &str) -> String {
+    let mut out = String::new();
+    let mut current = String::new();
+    for c in text.chars().chain(std::iter::once(' ')) {
+        if c.is_alphanumeric() || c == '_' || c == '$' {
+            current.push(c);
+        } else {
+            out.push_str(if current == word { with } else { &current });
+            current.clear();
+            out.push(c);
+        }
+    }
+    out.pop();
+    out
 }
 
 /// Replaces simple type aliases (`type KeyString = string`) by what they stand for.
@@ -629,6 +715,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
                 p.ts_type = resolve_aliases(&p.ts_type, &types);
             }
             f.returns = resolve_aliases(&f.returns, &types);
+            substitute_constraints(&mut f, &types);
             let kept = keep_reason(&opts.keep, &f.name);
             match kept.or_else(|| js_only_reason(&f, &types)) {
                 Some(reason) => js_only.push(JsOnly {
@@ -950,6 +1037,25 @@ mod tests {
         );
         assert_eq!(resolve_aliases("Leaf", &types), "(string | null)");
         assert_eq!(resolve_aliases("Map2<KeyString>", &types), "Map2<string>");
+    }
+
+    #[test]
+    fn substitutes_simple_constraints() {
+        let found = exported_functions(
+            "a.ts",
+            "export function up<T extends string>(s: T): Uppercase<T> { return s as any }\n\
+             export function pick<T>(x: T): T { return x }\n\
+             export function first<S extends readonly string[]>(xs: S, n?: number): string { return '' }\n",
+        );
+        let mut fns = found;
+        for f in &mut fns {
+            substitute_constraints(f, &[]);
+        }
+        assert_eq!(fns[0].params[0].ts_type, "(string)");
+        assert!(fns[0].type_params.is_empty());
+        assert_eq!(fns[1].type_params, ["T"]);
+        assert_eq!(fns[2].params[0].ts_type, "(readonly string[])");
+        assert!(js_only_reason(&fns[0], &[]).is_none() && js_only_reason(&fns[1], &[]).is_some());
     }
 
     #[test]

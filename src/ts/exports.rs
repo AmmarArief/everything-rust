@@ -247,16 +247,7 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
                         returns: annotation(f.return_type.as_deref()),
                         is_async: f.r#async,
                         is_generator: f.generator,
-                        type_params: f
-                            .type_parameters
-                            .as_ref()
-                            .map(|tp| {
-                                tp.params
-                                    .iter()
-                                    .map(|p| p.name.name.as_str().to_string())
-                                    .collect()
-                            })
-                            .unwrap_or_default(),
+                        type_params: type_params_of(f.type_parameters.as_deref(), &text),
                         uses_instanceof: uses_instanceof(&text(f.span)),
                     });
                 }
@@ -266,16 +257,9 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
                     let Some(name) = binding_name(&declarator.id) else {
                         continue;
                     };
-                    let type_names =
-                        |tp: Option<&oxc_ast::ast::TSTypeParameterDeclaration>| -> Vec<String> {
-                            tp.map(|tp| {
-                                tp.params
-                                    .iter()
-                                    .map(|p| p.name.name.as_str().to_string())
-                                    .collect()
-                            })
-                            .unwrap_or_default()
-                        };
+                    let type_names = |tp: Option<&oxc_ast::ast::TSTypeParameterDeclaration>| {
+                        type_params_of(tp, &text)
+                    };
                     let (fn_params, returns, is_async, is_generator, span, type_params) =
                         match &declarator.init {
                             Some(Expression::ArrowFunctionExpression(f)) => (
@@ -313,6 +297,23 @@ pub fn exported_functions(path: &str, source: &str) -> Vec<ExportedFn> {
         }
     }
     out
+}
+
+/// Type parameters as `T`, or `T extends <constraint>` when constrained.
+fn type_params_of(
+    tp: Option<&oxc_ast::ast::TSTypeParameterDeclaration>,
+    text: &dyn Fn(oxc_span::Span) -> String,
+) -> Vec<String> {
+    tp.map(|tp| {
+        tp.params
+            .iter()
+            .map(|p| match &p.constraint {
+                Some(c) => format!("{} extends {}", p.name.name.as_str(), text(c.span())),
+                None => p.name.name.as_str().to_string(),
+            })
+            .collect()
+    })
+    .unwrap_or_default()
 }
 
 fn uses_instanceof(code: &str) -> bool {

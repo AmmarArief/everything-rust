@@ -368,3 +368,35 @@ fn tsconfig_aliases_are_followed() {
     assert_eq!((recorded.cases, recorded.errors), (5, 0));
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn record_resolves_workspace_packages_to_source() {
+    if !node_available() {
+        return;
+    }
+    // `@m/b` imports `@m/a` by name; `@m/a` has no build output (`dist/` does not exist).
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/monorepo");
+    let dir = std::env::temp_dir().join(format!("carcinize-monorepo-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "packages/b/src/titles.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+    })
+    .unwrap();
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 10,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert_eq!((recorded.cases, recorded.errors), (10, 0));
+    std::fs::remove_dir_all(&dir).unwrap();
+}

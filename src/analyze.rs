@@ -116,6 +116,9 @@ pub struct UnitReport {
     /// 0-100: readiness balanced with value (compute-heavy, tested, big enough to matter).
     /// `start_here` is ordered by it.
     pub priority: u32,
+    /// Exported functions and classes, and how many of them can cross a bridge unchanged.
+    pub exports: usize,
+    pub bridgeable: usize,
     pub notes: Vec<String>,
 }
 
@@ -181,7 +184,64 @@ pub fn analyze(root: &Path) -> Result<Report> {
             Some(scan::scan(parse_as, &code))
         })
         .collect();
-    Ok(build(root, &ws, &facts))
+    let mut report = build(root, &ws, &facts);
+    check_bridgeable(root, &mut report);
+    Ok(report)
+}
+
+/// Counts each unit's exports that can cross a bridge, with the rules `bridge` applies. A unit
+/// whose exports are all JS-shaped (plugin objects, callbacks) cannot be ported without an API
+/// change: it is marked `caution` and left out of `start_here`.
+fn check_bridgeable(root: &Path, report: &mut Report) {
+    use crate::ts::exports::{exported_classes, exported_functions};
+    for unit in &mut report.units {
+        if matches!(unit.status, Status::Keep | Status::Blocked) {
+            continue;
+        }
+        let (mut exports, mut bridgeable) = (0, 0);
+        for file in &unit.files {
+            let Ok(text) = std::fs::read_to_string(root.join(file)) else {
+                continue;
+            };
+            let types = crate::bridge::types_in_scope(root, file, &text);
+            for mut f in exported_functions(file, &text) {
+                exports += 1;
+                crate::bridge::substitute_constraints(&mut f, &types);
+                bridgeable += usize::from(crate::bridge::js_only_reason(&f, &types).is_none());
+            }
+            for class in exported_classes(file, &text) {
+                exports += 1;
+                bridgeable += usize::from(class.blocker.is_none());
+            }
+        }
+        unit.exports = exports;
+        unit.bridgeable = bridgeable;
+        if exports > 0 && bridgeable == 0 {
+            unit.status = Status::Caution;
+            unit.notes.insert(
+                0,
+                "Every export is JS-shaped (functions, plugin objects, iterators): porting the logic \
+                 means adding a data-only function, an API change."
+                    .into(),
+            );
+        }
+    }
+    let summary = &mut report.summary;
+    (
+        summary.ready,
+        summary.caution,
+        summary.blocked,
+        summary.keep,
+    ) = (0, 0, 0, 0);
+    for u in &report.units {
+        match u.status {
+            Status::Ready => summary.ready += 1,
+            Status::Caution => summary.caution += 1,
+            Status::Blocked => summary.blocked += 1,
+            Status::Keep => summary.keep += 1,
+        }
+    }
+    report.start_here = start_here(&report.units);
 }
 
 fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>]) -> Report {
@@ -559,6 +619,8 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
             unit.direct_tests,
             package_tests,
         ),
+        exports: 0,
+        bridgeable: 0,
         notes,
     }
 }
@@ -567,7 +629,7 @@ fn start_here(units: &[UnitReport]) -> Vec<String> {
     let pick = |statuses: &[Status], min_loc: usize| -> Vec<&UnitReport> {
         let mut list: Vec<&UnitReport> = units
             .iter()
-            .filter(|u| statuses.contains(&u.status) && u.loc >= min_loc)
+            .filter(|u| statuses.contains(&u.status) && u.loc >= min_loc && u.bridgeable > 0)
             .collect();
         list.sort_by(|a, b| {
             b.priority
