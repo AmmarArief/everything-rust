@@ -4,18 +4,30 @@ package strkit
 
 /*
 #cgo LDFLAGS: -L${SRCDIR}/../target/release -lstrkit_rs -Wl,-rpath,${SRCDIR}/../target/release
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 char *carcinize_call(const char *name, const char *args);
 void carcinize_free(char *ptr);
+int carcinize_t_Slugify(const uint8_t *s_ptr, size_t s_len, int64_t max, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_t_ParsePort(const uint8_t *s_ptr, size_t s_len, int64_t *out, char **err);
+int carcinize_t_Initials(const uint8_t *name_ptr, size_t name_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_w_WordFreq(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_w_Mean(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_w_Midpoint(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_w_SplitPair(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 */
 import "C"
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"math"
 	"unsafe"
 )
+
+var _ = binary.LittleEndian
 
 type Point struct {
 	X float64 `json:"x"`
@@ -112,77 +124,237 @@ func carcinizeMust(err error) {
 	}
 }
 
-// Slugify is the Rust port of `func Slugify(s string, max int) string` (`strkit/strkit.go:18`).
-func Slugify(s string, max int) string {
-	raw, err := carcinizeCall("Slugify", s, max)
-	carcinizeMust(err)
-	var r0 string
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
-}
-
-// WordFreq is the Rust port of `func WordFreq(text string) map[string]int` (`strkit/strkit.go:38`).
-func WordFreq(text string) map[string]int {
-	raw, err := carcinizeCall("WordFreq", text)
-	carcinizeMust(err)
-	var r0 map[string]int
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
-}
-
-// ParsePort is the Rust port of `func ParsePort(s string) (int, error)` (`strkit/strkit.go:47`).
-func ParsePort(s string) (int, error) {
-	raw, err := carcinizeCall("ParsePort", s)
-	if err != nil {
-		var r0 int
-		return r0, err
+// carcinizeStr is a string's bytes for C, without copying; nil for "".
+func carcinizeStr(s string) *C.uint8_t {
+	if len(s) == 0 {
+		return nil
 	}
-	var r0 int
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0, nil
+	return (*C.uint8_t)(unsafe.Pointer(unsafe.StringData(s)))
 }
 
-// Mean is the Rust port of `func Mean(xs []float64) float64` (`strkit/strkit.go:59`).
+// carcinizeErr takes the error message the Rust side allocated.
+func carcinizeErr(p *C.char) string {
+	msg := C.GoString(p)
+	C.carcinize_free(p)
+	return msg
+}
+
+// The binary wire: little endian; strings, slices, maps and structs start with 0 for nil.
+func cwU32(b []byte, n int) []byte   { return binary.LittleEndian.AppendUint32(b, uint32(n)) }
+func cwI64(b []byte, v int64) []byte { return binary.LittleEndian.AppendUint64(b, uint64(v)) }
+func cwF64(b []byte, v float64) []byte {
+	return binary.LittleEndian.AppendUint64(b, math.Float64bits(v))
+}
+func cwBool(b []byte, v bool) []byte {
+	if v {
+		return append(b, 1)
+	}
+	return append(b, 0)
+}
+func cwStr(b []byte, s string) []byte {
+	b = append(b, 1)
+	b = cwU32(b, len(s))
+	return append(b, s...)
+}
+
+type cwReader struct {
+	b []byte
+	i int
+}
+
+func (r *cwReader) u8() byte {
+	v := r.b[r.i]
+	r.i++
+	return v
+}
+func (r *cwReader) u32() int {
+	v := binary.LittleEndian.Uint32(r.b[r.i:])
+	r.i += 4
+	return int(v)
+}
+func (r *cwReader) i64() int64 {
+	v := binary.LittleEndian.Uint64(r.b[r.i:])
+	r.i += 8
+	return int64(v)
+}
+func (r *cwReader) f64() float64 { return math.Float64frombits(uint64(r.i64())) }
+func (r *cwReader) bool() bool   { return r.u8() != 0 }
+func (r *cwReader) str() string {
+	if r.u8() == 0 {
+		return ""
+	}
+	n := r.u32()
+	s := string(r.b[r.i : r.i+n])
+	r.i += n
+	return s
+}
+
+func cwPtr(b []byte) *C.uint8_t {
+	if len(b) == 0 {
+		return nil
+	}
+	return (*C.uint8_t)(unsafe.Pointer(&b[0]))
+}
+
+// Slugify is the Rust port of `func Slugify(s string, max int) string` (`strkit/strkit.go:18`): a typed call, no JSON.
+func Slugify(s string, max int) string {
+	var errp *C.char
+	var stack [256]byte
+	buf := stack[:]
+	var n C.size_t
+	status := C.carcinize_t_Slugify(carcinizeStr(s), C.size_t(len(s)), C.int64_t(max), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	if status == 2 {
+		buf = make([]byte, int(n))
+		status = C.carcinize_t_Slugify(carcinizeStr(s), C.size_t(len(s)), C.int64_t(max), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return string(buf[:n])
+}
+
+// WordFreq is the Rust port of `func WordFreq(text string) map[string]int` (`strkit/strkit.go:38`): binary wire, no JSON.
+func WordFreq(text string) map[string]int {
+	cwb := make([]byte, 0, 128)
+	cwb = cwStr(cwb, text)
+	var r0 map[string]int
+	var cwStack [512]byte
+	cwOut := cwStack[:]
+	var n C.size_t
+	var errp *C.char
+	status := C.carcinize_w_WordFreq(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	if status == 2 {
+		cwOut = make([]byte, int(n))
+		status = C.carcinize_w_WordFreq(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	cwr := &cwReader{b: cwOut[:n]}
+	if cwr.u8() == 1 {
+		n0 := cwr.u32()
+		r0 = make(map[string]int, n0)
+		for j0 := 0; j0 < n0; j0++ {
+			k0 := cwr.str()
+			var v0 int
+			v0 = int(cwr.i64())
+			r0[k0] = v0
+		}
+	}
+	return r0
+}
+
+// ParsePort is the Rust port of `func ParsePort(s string) (int, error)` (`strkit/strkit.go:47`): a typed call, no JSON.
+func ParsePort(s string) (int, error) {
+	var errp *C.char
+	var out C.int64_t
+	status := C.carcinize_t_ParsePort(carcinizeStr(s), C.size_t(len(s)), &out, &errp)
+	if status == 1 {
+		return 0, errors.New(carcinizeErr(errp))
+	}
+	return int(out), nil
+}
+
+// Mean is the Rust port of `func Mean(xs []float64) float64` (`strkit/strkit.go:59`): binary wire, no JSON.
 func Mean(xs []float64) float64 {
-	raw, err := carcinizeCall("Mean", xs)
-	carcinizeMust(err)
+	cwb := make([]byte, 0, 128)
+	if xs == nil {
+		cwb = append(cwb, 0)
+	} else {
+		cwb = append(cwb, 1)
+		cwb = cwU32(cwb, len(xs))
+		for _, v0 := range xs {
+			cwb = cwF64(cwb, float64(v0))
+		}
+	}
 	var r0 float64
-	carcinizeMust(carcinizeDecode(raw, &r0))
+	var cwStack [512]byte
+	cwOut := cwStack[:]
+	var n C.size_t
+	var errp *C.char
+	status := C.carcinize_w_Mean(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	if status == 2 {
+		cwOut = make([]byte, int(n))
+		status = C.carcinize_w_Mean(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	cwr := &cwReader{b: cwOut[:n]}
+	r0 = float64(cwr.f64())
 	return r0
 }
 
-// Midpoint is the Rust port of `func Midpoint(a, b Point) Point` (`strkit/strkit.go:71`).
+// Midpoint is the Rust port of `func Midpoint(a, b Point) Point` (`strkit/strkit.go:71`): binary wire, no JSON.
 func Midpoint(a Point, b Point) Point {
-	raw, err := carcinizeCall("Midpoint", a, b)
-	carcinizeMust(err)
+	cwb := make([]byte, 0, 128)
+	cwb = append(cwb, 1)
+	cwb = cwF64(cwb, float64(a.X))
+	cwb = cwF64(cwb, float64(a.Y))
+	cwb = append(cwb, 1)
+	cwb = cwF64(cwb, float64(b.X))
+	cwb = cwF64(cwb, float64(b.Y))
 	var r0 Point
-	carcinizeMust(carcinizeDecode(raw, &r0))
+	var cwStack [512]byte
+	cwOut := cwStack[:]
+	var n C.size_t
+	var errp *C.char
+	status := C.carcinize_w_Midpoint(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	if status == 2 {
+		cwOut = make([]byte, int(n))
+		status = C.carcinize_w_Midpoint(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	cwr := &cwReader{b: cwOut[:n]}
+	if cwr.u8() == 1 {
+		r0.X = float64(cwr.f64())
+		r0.Y = float64(cwr.f64())
+	}
 	return r0
 }
 
-// Initials is the Rust port of `func Initials(name string) string` (`strkit/strkit.go:76`).
+// Initials is the Rust port of `func Initials(name string) string` (`strkit/strkit.go:76`): a typed call, no JSON.
 func Initials(name string) string {
-	raw, err := carcinizeCall("Initials", name)
-	carcinizeMust(err)
-	var r0 string
-	carcinizeMust(carcinizeDecode(raw, &r0))
-	return r0
+	var errp *C.char
+	var stack [256]byte
+	buf := stack[:]
+	var n C.size_t
+	status := C.carcinize_t_Initials(carcinizeStr(name), C.size_t(len(name)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	if status == 2 {
+		buf = make([]byte, int(n))
+		status = C.carcinize_t_Initials(carcinizeStr(name), C.size_t(len(name)), (*C.uint8_t)(unsafe.Pointer(&buf[0])), C.size_t(len(buf)), &n, &errp)
+	}
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	return string(buf[:n])
 }
 
-// SplitPair is the Rust port of `func SplitPair(s, sep string) (string, string, bool)` (`strkit/strkit.go:85`).
+// SplitPair is the Rust port of `func SplitPair(s, sep string) (string, string, bool)` (`strkit/strkit.go:85`): binary wire, no JSON.
 func SplitPair(s string, sep string) (string, string, bool) {
-	raw, err := carcinizeCall("SplitPair", s, sep)
-	carcinizeMust(err)
+	cwb := make([]byte, 0, 128)
+	cwb = cwStr(cwb, s)
+	cwb = cwStr(cwb, sep)
 	var r0 string
 	var r1 string
 	var r2 bool
-	var parts []json.RawMessage
-	carcinizeMust(json.Unmarshal(raw, &parts))
-	if len(parts) != 3 {
-		panic("carcinize: expected 3 results")
+	var cwStack [512]byte
+	cwOut := cwStack[:]
+	var n C.size_t
+	var errp *C.char
+	status := C.carcinize_w_SplitPair(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	if status == 2 {
+		cwOut = make([]byte, int(n))
+		status = C.carcinize_w_SplitPair(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
 	}
-	carcinizeMust(carcinizeDecode(parts[0], &r0))
-	carcinizeMust(carcinizeDecode(parts[1], &r1))
-	carcinizeMust(carcinizeDecode(parts[2], &r2))
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	cwr := &cwReader{b: cwOut[:n]}
+	r0 = cwr.str()
+	r1 = cwr.str()
+	r2 = cwr.bool()
 	return r0, r1, r2
 }

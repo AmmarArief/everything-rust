@@ -15,15 +15,19 @@ int carcinize_t_Ext(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size
 int carcinize_t_Base(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 int carcinize_t_IsAbs(const uint8_t *path_ptr, size_t path_len, bool *out, char **err);
 int carcinize_t_Dir(const uint8_t *path_ptr, size_t path_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
+int carcinize_w_Split(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);
 */
 import "C"
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"math"
 	"unsafe"
 )
+
+var _ = binary.LittleEndian
 
 // carcinizeDecode decodes JSON into target; floats may be {"$num": "NaN" | "Infinity" | ...}.
 func carcinizeDecode(raw json.RawMessage, target any) error {
@@ -130,6 +134,63 @@ func carcinizeErr(p *C.char) string {
 	return msg
 }
 
+// The binary wire: little endian; strings, slices, maps and structs start with 0 for nil.
+func cwU32(b []byte, n int) []byte   { return binary.LittleEndian.AppendUint32(b, uint32(n)) }
+func cwI64(b []byte, v int64) []byte { return binary.LittleEndian.AppendUint64(b, uint64(v)) }
+func cwF64(b []byte, v float64) []byte {
+	return binary.LittleEndian.AppendUint64(b, math.Float64bits(v))
+}
+func cwBool(b []byte, v bool) []byte {
+	if v {
+		return append(b, 1)
+	}
+	return append(b, 0)
+}
+func cwStr(b []byte, s string) []byte {
+	b = append(b, 1)
+	b = cwU32(b, len(s))
+	return append(b, s...)
+}
+
+type cwReader struct {
+	b []byte
+	i int
+}
+
+func (r *cwReader) u8() byte {
+	v := r.b[r.i]
+	r.i++
+	return v
+}
+func (r *cwReader) u32() int {
+	v := binary.LittleEndian.Uint32(r.b[r.i:])
+	r.i += 4
+	return int(v)
+}
+func (r *cwReader) i64() int64 {
+	v := binary.LittleEndian.Uint64(r.b[r.i:])
+	r.i += 8
+	return int64(v)
+}
+func (r *cwReader) f64() float64 { return math.Float64frombits(uint64(r.i64())) }
+func (r *cwReader) bool() bool   { return r.u8() != 0 }
+func (r *cwReader) str() string {
+	if r.u8() == 0 {
+		return ""
+	}
+	n := r.u32()
+	s := string(r.b[r.i : r.i+n])
+	r.i += n
+	return s
+}
+
+func cwPtr(b []byte) *C.uint8_t {
+	if len(b) == 0 {
+		return nil
+	}
+	return (*C.uint8_t)(unsafe.Pointer(&b[0]))
+}
+
 // Match is the Rust port of `func Match(pattern, name string) (matched bool, err error)` (`path/match.go:37`): a typed call, no JSON.
 func Match(pattern string, name string) (bool, error) {
 	var errp *C.char
@@ -158,19 +219,27 @@ func Clean(path string) string {
 	return string(buf[:n])
 }
 
-// Split is the Rust port of `func Split(path string) (dir, file string)` (`path/path.go:145`).
+// Split is the Rust port of `func Split(path string) (dir, file string)` (`path/path.go:145`): binary wire, no JSON.
 func Split(path string) (string, string) {
-	raw, err := carcinizeCall("Split", path)
-	carcinizeMust(err)
+	cwb := make([]byte, 0, 128)
+	cwb = cwStr(cwb, path)
 	var r0 string
 	var r1 string
-	var parts []json.RawMessage
-	carcinizeMust(json.Unmarshal(raw, &parts))
-	if len(parts) != 2 {
-		panic("carcinize: expected 2 results")
+	var cwStack [512]byte
+	cwOut := cwStack[:]
+	var n C.size_t
+	var errp *C.char
+	status := C.carcinize_w_Split(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
+	if status == 2 {
+		cwOut = make([]byte, int(n))
+		status = C.carcinize_w_Split(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&cwOut[0])), C.size_t(len(cwOut)), &n, &errp)
 	}
-	carcinizeMust(carcinizeDecode(parts[0], &r0))
-	carcinizeMust(carcinizeDecode(parts[1], &r1))
+	if status == 1 {
+		panic(carcinizeErr(errp))
+	}
+	cwr := &cwReader{b: cwOut[:n]}
+	r0 = cwr.str()
+	r1 = cwr.str()
 	return r0, r1
 }
 

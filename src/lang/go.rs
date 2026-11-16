@@ -611,6 +611,70 @@ pub fn type_decls(sources: &[String], names: &[String]) -> Vec<String> {
     out
 }
 
+/// The exported fields of struct type `name`: (field, Go type, JSON key). `None` when the type
+/// is not a plain struct (embedded fields, or not found).
+pub fn struct_fields(sources: &[String], name: &str) -> Option<Vec<(String, String, String)>> {
+    for source in sources {
+        let Some(tree) = syntax::parse(&language(), source) else {
+            continue;
+        };
+        for decl in named_children(tree.root_node())
+            .into_iter()
+            .filter(|n| n.kind() == "type_declaration")
+        {
+            for spec in named_children(decl)
+                .into_iter()
+                .filter(|n| n.kind() == "type_spec")
+            {
+                if spec.child_by_field_name("name").map(|n| text(n, source)) != Some(name) {
+                    continue;
+                }
+                let ty = spec.child_by_field_name("type")?;
+                if ty.kind() != "struct_type" {
+                    return None;
+                }
+                let mut out = Vec::new();
+                let mut ok = true;
+                syntax::walk(ty, |n| {
+                    if n.kind() != "field_declaration" {
+                        return;
+                    }
+                    let field_type = n
+                        .child_by_field_name("type")
+                        .map_or("", |t| text(t, source))
+                        .to_string();
+                    let tag = n.child_by_field_name("tag").map_or("", |t| text(t, source));
+                    let json = tag
+                        .split("json:\"")
+                        .nth(1)
+                        .and_then(|r| r.split('"').next())
+                        .map(|r| r.split(',').next().unwrap_or("").to_string());
+                    let mut cursor = n.walk();
+                    let names: Vec<String> = n
+                        .children_by_field_name("name", &mut cursor)
+                        .map(|f| text(f, source).to_string())
+                        .collect();
+                    if names.is_empty() {
+                        ok = false;
+                    }
+                    for field in names {
+                        if !field.starts_with(char::is_uppercase) || json.as_deref() == Some("-") {
+                            continue;
+                        }
+                        let key = json
+                            .clone()
+                            .filter(|j| !j.is_empty())
+                            .unwrap_or_else(|| field.clone());
+                        out.push((field, field_type.clone(), key));
+                    }
+                });
+                return ok.then_some(out);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

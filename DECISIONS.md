@@ -76,6 +76,7 @@ Choices made so far, with reasons. Each one can be revisited.
 | S1 | No JSON text on the hot path: Python converts objects in Rust (`pyconv.rs`), Ruby is a magnus extension, Java and Go get typed JNI and cgo functions for numbers, booleans and strings; JSON remains the fallback for other types in Java and Go. | JSON cost 10-50x the work: the colorsys port took 11.7 µs per call, CPython 0.5 µs. |
 | S2 | Ports of untyped Python can use `pynum::Num`, Python's int-or-float, instead of `serde_json::Value`. | A `Value` per number cost about 600 ns per call in colorsys; `Num` keeps ints as ints at native speed. |
 | S3 | `bench` decodes arguments once and times only the calls, in the original's process; C benchmarks link the original (renamed with `-D`) and the port into one C program. | Decoding per call, or calling through ctypes, hid the difference being measured. |
+| S5 | Go and Java: types beyond numbers, booleans and strings (lists, arrays, maps, structs, boxed and optional values, several results) cross as a compact binary wire, with encoders and decoders generated per type on both sides; the JSON dispatcher is only the fallback for types the wire cannot express. | `encoding/json` and the Java JSON codec cost 5-8 µs per call; the wire costs 0.4-1 µs, and a Java `List<String>` function became faster than Java. |
 | S4 | `bench` ends with a verdict: ship, keep the slower functions, port a bigger unit, or (for C) optimize the port. Faster is 1.1x or more, slower under 0.9x. | Numbers alone left the decision to the reader; Go and Java leaf functions cannot win per call, and the tool should say so. |
 
 ## Known limits
@@ -98,8 +99,9 @@ Choices made so far, with reasons. Each one can be revisited.
   needs Maven dependencies on the classpath cannot be recorded yet.
 - No way yet to mark a recorded case as undefined behavior that does not crash (`ispunct(1000)`);
   remove it from `cases.jsonl` by hand.
-- Go and Java: multiple results, structs, collections and boxed types still cross as JSON
-  (about 2-5 µs per call). Leaf functions in Go and Java are faster in their own language;
-  `bench` recommends porting bigger units there.
+- Go and Java: leaf functions are faster in their own language, since one call into Rust costs
+  more than their work; `bench` recommends porting bigger units there. Interfaces, pointers,
+  channels, Java objects other than strings, lists, arrays and maps, and Java primitive arrays
+  other than `int[]`, `long[]`, `double[]` and `boolean[]` still cross as JSON.
 - Ruby: aliases made with `alias` copy the original method, so shadow mode does not see calls
   through them.

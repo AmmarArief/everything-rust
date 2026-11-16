@@ -10,18 +10,18 @@ public final class Nums {
     /** The Rust port of `com.example.text.Nums.gcd(long a, long b)` (`src/main/java/com/example/text/Nums.java:7`). */
     @SuppressWarnings("unchecked")
     public static long gcd(long a, long b) {
-        return (Long) carcinize.TextRsNative.invoke("gcd", new carcinize.CarcinizeJson.TypeRef<Long>() {}.type(), a, b);
+        return carcinize.TextRsNative.call_gcd(a, b);
     }
 
     /** The Rust port of `com.example.text.Nums.mean(double[] values)` (`src/main/java/com/example/text/Nums.java:18`). */
     @SuppressWarnings("unchecked")
     public static double mean(double[] values) {
-        return (Double) carcinize.TextRsNative.invoke("mean", new carcinize.CarcinizeJson.TypeRef<Double>() {}.type(), values);
+        return carcinize.TextRsNative.call_mean(values);
     }
 
     /** The Rust port of `com.example.text.Nums.pages(int total, int perPage)` (`src/main/java/com/example/text/Nums.java:29`). */
     @SuppressWarnings("unchecked")
     public static int pages(int total, int perPage) {
-        return (Integer) carcinize.TextRsNative.invoke("pages", new carcinize.CarcinizeJson.TypeRef<Integer>() {}.type(), total, perPage);
+        return carcinize.TextRsNative.call_pages(total, perPage);
     }
 }

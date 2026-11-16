@@ -6,6 +6,7 @@ use std::ffi::{CStr, CString, c_char};
 use serde_json::{Value, json};
 
 pub mod port;
+pub mod wire;
 
 /// Argument `i`, decoded from JSON into the port's parameter type.
 fn arg<T: serde::de::DeserializeOwned>(args: &[Value], i: usize) -> Result<T, String> {
@@ -24,6 +25,14 @@ fn num(args: &[Value], i: usize) -> Result<f64, String> {
             Some("-0") => Ok(-0.0),
             _ => Err(format!("argument {i}: not a number")),
         },
+        _ => arg(args, i),
+    }
+}
+
+#[allow(dead_code)]
+fn num_vec(args: &[Value], i: usize) -> Result<Vec<f64>, String> {
+    match args.get(i) {
+        Some(Value::Array(items)) => (0..items.len()).map(|j| num(items, j)).collect(),
         _ => arg(args, i),
     }
 }
@@ -64,7 +73,7 @@ fn dispatch(name: &str, args: &[Value]) -> Result<Value, String> {
             Ok(serde_json::to_value(out).map_err(|e| e.to_string())?)
         }
         "Mean" => {
-            let out = port::mean(arg(args, 0)?)?;
+            let out = port::mean(num_vec(args, 0)?)?;
             Ok(out_num(out))
         }
         "Midpoint" => {
@@ -140,5 +149,347 @@ pub unsafe extern "C" fn carcinize_free(ptr: *mut c_char) {
     if !ptr.is_null() {
         // SAFETY: `ptr` was made by `CString::into_raw` in `carcinize_call` (see above).
         drop(unsafe { CString::from_raw(ptr) });
+    }
+}
+
+/// The port's result, or its error message; a panic becomes an error.
+#[allow(dead_code)]
+fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
+        let text = panic
+            .downcast_ref::<&str>()
+            .map(ToString::to_string)
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        Err(format!("Rust panic: {text}"))
+    })
+}
+
+/// A Go string argument.
+///
+/// # Safety
+///
+/// `ptr` points at `len` readable bytes, or `len` is 0.
+#[allow(dead_code)]
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn go_str(ptr: *const u8, len: usize) -> String {
+    if len == 0 {
+        return String::new();
+    }
+    // SAFETY: the caller passes a Go string's bytes and its length (see above).
+    String::from_utf8_lossy(unsafe { std::slice::from_raw_parts(ptr, len) }).into_owned()
+}
+
+/// Reports an error through `err`.
+///
+/// # Safety
+///
+/// `err` is a valid pointer to write to.
+#[allow(dead_code)]
+// SAFETY: unsafe to call; callers uphold the contract above.
+unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
+    let message = CString::new(message.replace('\0', " ")).unwrap_or_default();
+    // SAFETY: `err` is a valid out-pointer (see above).
+    unsafe { *err = message.into_raw() };
+    1
+}
+
+/// `func Slugify(s string, max int) string`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Slugify(
+    s_ptr: *const u8,
+    s_len: usize,
+    max: i64,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let s = unsafe { go_str(s_ptr, s_len) };
+    match run(|| port::slugify(s, max)) {
+        Ok(value) => {
+            let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func ParsePort(s string) (int, error)`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_ParsePort(
+    s_ptr: *const u8,
+    s_len: usize,
+    out: *mut i64,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let s = unsafe { go_str(s_ptr, s_len) };
+    match run(|| port::parse_port(s)) {
+        Ok(value) => {
+            // SAFETY: Go passes a valid `out`.
+            unsafe { *out = value };
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func Initials(name string) string`: a typed call.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_t_Initials(
+    name_ptr: *const u8,
+    name_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    // SAFETY: Go passes the string's bytes and length.
+    let name = unsafe { go_str(name_ptr, name_len) };
+    match run(|| port::initials(name)) {
+        Ok(value) => {
+            let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+static S_WORDFREQ_OUT: wire::Schema = wire::Schema::Map(&wire::Schema::I64);
+
+/// `func WordFreq(text string) map[string]int`: binary wire.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_w_WordFreq(
+    in_ptr: *const u8,
+    in_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    let input: &[u8] = if in_len == 0 {
+        &[]
+    } else {
+        // SAFETY: Go passes its buffer and length.
+        unsafe { std::slice::from_raw_parts(in_ptr, in_len) }
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(input);
+        let text: String = r.string()?;
+        let w = &mut wire::Writer::default();
+        let out = &port::word_freq(text)?;
+        wire::write_value(w, out, &S_WORDFREQ_OUT)?;
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => {
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+/// `func Mean(xs []float64) float64`: binary wire.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_w_Mean(
+    in_ptr: *const u8,
+    in_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    let input: &[u8] = if in_len == 0 {
+        &[]
+    } else {
+        // SAFETY: Go passes its buffer and length.
+        unsafe { std::slice::from_raw_parts(in_ptr, in_len) }
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(input);
+        let xs: Vec<f64> = r.list(|r| r.f64())?;
+        let w = &mut wire::Writer::default();
+        let out = &port::mean(xs)?;
+        w.f64(*out);
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => {
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+static S_MIDPOINT_0: wire::Schema =
+    wire::Schema::Struct(&[("x", wire::Schema::F64), ("y", wire::Schema::F64)]);
+static S_MIDPOINT_1: wire::Schema =
+    wire::Schema::Struct(&[("x", wire::Schema::F64), ("y", wire::Schema::F64)]);
+static S_MIDPOINT_OUT: wire::Schema =
+    wire::Schema::Struct(&[("x", wire::Schema::F64), ("y", wire::Schema::F64)]);
+
+/// `func Midpoint(a, b Point) Point`: binary wire.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_w_Midpoint(
+    in_ptr: *const u8,
+    in_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    let input: &[u8] = if in_len == 0 {
+        &[]
+    } else {
+        // SAFETY: Go passes its buffer and length.
+        unsafe { std::slice::from_raw_parts(in_ptr, in_len) }
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(input);
+        let a: Value = wire::read_value(r, &S_MIDPOINT_0)?;
+        let b: Value = wire::read_value(r, &S_MIDPOINT_1)?;
+        let w = &mut wire::Writer::default();
+        let out = &port::midpoint(a, b)?;
+        wire::write_value(w, out, &S_MIDPOINT_OUT)?;
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => {
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+static S_SPLITPAIR_OUT: wire::Schema =
+    wire::Schema::Tuple(&[wire::Schema::Str, wire::Schema::Str, wire::Schema::Bool]);
+
+/// `func SplitPair(s, sep string) (string, string, bool)`: binary wire.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_w_SplitPair(
+    in_ptr: *const u8,
+    in_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    let input: &[u8] = if in_len == 0 {
+        &[]
+    } else {
+        // SAFETY: Go passes its buffer and length.
+        unsafe { std::slice::from_raw_parts(in_ptr, in_len) }
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(input);
+        let s: String = r.string()?;
+        let sep: String = r.string()?;
+        let w = &mut wire::Writer::default();
+        let out = &port::split_pair(s, sep)?;
+        wire::write_value(w, out, &S_SPLITPAIR_OUT)?;
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => {
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
     }
 }

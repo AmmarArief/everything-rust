@@ -4,6 +4,7 @@
 use serde_json::{Value, json};
 
 pub mod port;
+pub mod wire;
 
 /// Argument `i`, decoded from JSON into the port's parameter type.
 fn arg<T: serde::de::DeserializeOwned>(args: &[Value], i: usize) -> Result<T, String> {
@@ -144,6 +145,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_call<'local>(
         .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw)
 }
 
+#[allow(dead_code)]
 /// Throws `"Type: message"` as that exception (java.lang, java.util, java.io, or a full
 /// name); anything else as a RuntimeException.
 fn throw(env: &mut jni::JNIEnv, message: &str) {
@@ -162,6 +164,7 @@ fn throw(env: &mut jni::JNIEnv, message: &str) {
 }
 
 /// Runs the port; a panic becomes an error instead of unwinding into the JVM.
+#[allow(dead_code)]
 fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
         let text = panic
@@ -174,6 +177,7 @@ fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
 }
 
 /// A `String` argument; `None` (with a NullPointerException thrown) for null.
+#[allow(dead_code)]
 fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String> {
     if s.is_null() {
         let _ = env.throw_new("java/lang/NullPointerException", "null String argument");

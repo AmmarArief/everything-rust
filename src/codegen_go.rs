@@ -205,7 +205,7 @@ pub fn wrapper(m: &Manifest, api: &crate::codegen::PortApi) -> String {
          #include <stdbool.h>\n#include <stdint.h>\n#include <stdlib.h>\n\
          char *carcinize_call(const char *name, const char *args);\n\
          void carcinize_free(char *ptr);\n{typed_c}*/\nimport \"C\"\n\n\
-         import (\n\t\"encoding/json\"\n\t\"errors\"\n\t\"math\"\n\t\"unsafe\"\n)\n",
+         import (\n\t\"encoding/binary\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"math\"\n\t\"unsafe\"\n)\n\nvar _ = binary.LittleEndian\n",
         pkg = package_name(m),
         unit = m.unit,
         typed_c = typed_prototypes(m, api),
@@ -265,9 +265,20 @@ func carcinizeMust(err error) {
     if !typed_fns.is_empty() {
         out.push_str(TYPED_HELPERS_GO);
     }
+    let wired = wire_fns(m, api);
+    if !wired.is_empty() {
+        if typed_fns.is_empty() {
+            out.push_str(TYPED_HELPERS_GO);
+        }
+        out.push_str(WIRE_HELPERS_GO);
+    }
     for f in &m.exports {
         if typed_fns.contains(&f.name.as_str()) {
             out.push_str(&typed_go(f));
+            continue;
+        }
+        if let Some((e, params, result, _)) = wired.iter().find(|(e, ..)| e.name == f.name) {
+            out.push_str(&wire_go(e, params, result.as_ref()));
             continue;
         }
         let (results, fallible) = results(f);
@@ -431,6 +442,13 @@ fn typed_prototypes(m: &Manifest, api: &crate::codegen::PortApi) -> String {
         params.push("char **err".into());
         let _ = writeln!(out, "int carcinize_t_{}({});", f.js_name, params.join(", "));
     }
+    for (e, ..) in wire_fns(m, api) {
+        let _ = writeln!(
+            out,
+            "int carcinize_w_{}(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_cap, size_t *out_len, char **err);",
+            e.name
+        );
+    }
     out
 }
 
@@ -591,6 +609,7 @@ pub fn typed_rs(m: &Manifest, api: &crate::codegen::PortApi) -> String {
     let mut out = String::from(
         r#"
 /// The port's result, or its error message; a panic becomes an error.
+#[allow(dead_code)]
 fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
         let text = panic
@@ -607,6 +626,7 @@ fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
 /// # Safety
 ///
 /// `ptr` points at `len` readable bytes, or `len` is 0.
+#[allow(dead_code)]
 // SAFETY: unsafe to call; callers uphold the contract above.
 unsafe fn go_str(ptr: *const u8, len: usize) -> String {
     if len == 0 {
@@ -621,6 +641,7 @@ unsafe fn go_str(ptr: *const u8, len: usize) -> String {
 /// # Safety
 ///
 /// `err` is a valid pointer to write to.
+#[allow(dead_code)]
 // SAFETY: unsafe to call; callers uphold the contract above.
 unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
     let message = CString::new(message.replace('\0', " ")).unwrap_or_default();
@@ -688,6 +709,373 @@ unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
         );
     }
     out
+}
+
+// ---- the binary wire: lists, maps, structs and several results, without JSON ----------------
+
+use crate::wire::Ty;
+
+/// The wire type of a Go type; `None` for types the wire does not carry.
+fn go_ty(go: &str, sources: &[String], depth: usize) -> Option<Ty> {
+    let go = go.trim();
+    if depth > 8 {
+        return None;
+    }
+    if let Some(t) = typed_type(go) {
+        return Some(match t.c {
+            "int64_t" => Ty::I64(go.into()),
+            "double" => Ty::F64(go.into()),
+            "bool" => Ty::Bool,
+            _ => Ty::Str,
+        });
+    }
+    if let Some(item) = go.strip_prefix("[]") {
+        return Some(Ty::List {
+            item: Box::new(go_ty(item, sources, depth + 1)?),
+            native: go.into(),
+            array: false,
+        });
+    }
+    if let Some(rest) = go.strip_prefix("map[string]") {
+        return Some(Ty::Map {
+            value: Box::new(go_ty(rest, sources, depth + 1)?),
+            native: go.into(),
+        });
+    }
+    if go.starts_with(char::is_uppercase) && !go.contains(['.', '[', '*']) {
+        let fields = crate::lang::go::struct_fields(sources, go)?;
+        let fields = fields
+            .into_iter()
+            .map(|(f, t, key)| Some((f, key, go_ty(&t, sources, depth + 1)?)))
+            .collect::<Option<Vec<_>>>()?;
+        return Some(Ty::Struct {
+            name: go.into(),
+            fields,
+        });
+    }
+    None
+}
+
+/// The parameter and result wire types of an export, when the wire carries all of them.
+/// A wire export: the export, its parameter and result wire types, and its Rust code.
+type WireFn<'m> = (&'m ExportedFn, Vec<(String, Ty)>, Option<Ty>, String);
+
+/// Wire types of an export's parameters, and of its result.
+type WireSig = (Vec<(String, Ty)>, Option<Ty>);
+
+fn wire_sig(e: &ExportedFn, sources: &[String]) -> Option<WireSig> {
+    let params = e
+        .params
+        .iter()
+        .map(|p| {
+            Some((
+                p.name.clone(),
+                go_ty(p.native_type.as_deref()?, sources, 0)?,
+            ))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let (results, _) = results(e);
+    let result = match results.len() {
+        0 => None,
+        1 => Some(go_ty(&results[0], sources, 0)?),
+        _ => Some(Ty::Tuple(
+            results
+                .iter()
+                .map(|r| go_ty(r, sources, 0))
+                .collect::<Option<Vec<_>>>()?,
+        )),
+    };
+    Some((params, result))
+}
+
+/// Go statements appending `expr` of type `t` to the byte slice `b`.
+fn go_enc(expr: &str, t: &Ty, depth: usize) -> String {
+    let v = format!("v{depth}");
+    match t {
+        Ty::I64(_) => format!("cwb = cwI64(cwb, int64({expr}))\n"),
+        Ty::F64(_) => format!("cwb = cwF64(cwb, float64({expr}))\n"),
+        Ty::Bool => format!("cwb = cwBool(cwb, {expr})\n"),
+        Ty::Str => format!("cwb = cwStr(cwb, {expr})\n"),
+        Ty::List { item, .. } => format!(
+            "if {expr} == nil {{\ncwb = append(cwb, 0)\n}} else {{\ncwb = append(cwb, 1)\ncwb = cwU32(cwb, len({expr}))\nfor _, {v} := range {expr} {{\n{}}}\n}}\n",
+            go_enc(&v, item, depth + 1)
+        ),
+        Ty::Map { value, .. } => format!(
+            "if {expr} == nil {{\ncwb = append(cwb, 0)\n}} else {{\ncwb = append(cwb, 1)\ncwb = cwU32(cwb, len({expr}))\nfor k{depth}, {v} := range {expr} {{\ncwb = cwStr(cwb, k{depth})\n{}}}\n}}\n",
+            go_enc(&v, value, depth + 1)
+        ),
+        Ty::Struct { fields, .. } => {
+            let mut out = String::from("cwb = append(cwb, 1)\n");
+            for (field, _, ft) in fields {
+                out.push_str(&go_enc(&format!("{expr}.{field}"), ft, depth + 1));
+            }
+            out
+        }
+        Ty::Opt { inner, .. } => go_enc(expr, inner, depth),
+        Ty::Tuple(_) => String::new(),
+    }
+}
+
+/// Go statements decoding a value of type `t` from reader `r` into `target`.
+fn go_dec(target: &str, t: &Ty, depth: usize) -> String {
+    match t {
+        Ty::I64(native) => format!("{target} = {native}(cwr.i64())\n"),
+        Ty::F64(native) => format!("{target} = {native}(cwr.f64())\n"),
+        Ty::Bool => format!("{target} = cwr.bool()\n"),
+        Ty::Str => format!("{target} = cwr.str()\n"),
+        Ty::List { item, native, .. } => format!(
+            "if cwr.u8() == 1 {{\nn{depth} := cwr.u32()\n{target} = make({native}, n{depth})\nfor i{depth} := range {target} {{\n{}}}\n}}\n",
+            go_dec(&format!("{target}[i{depth}]"), item, depth + 1)
+        ),
+        Ty::Map { value, native } => {
+            let item = native.strip_prefix("map[string]").unwrap_or("any");
+            format!(
+                "if cwr.u8() == 1 {{\nn{depth} := cwr.u32()\n{target} = make({native}, n{depth})\nfor j{depth} := 0; j{depth} < n{depth}; j{depth}++ {{\nk{depth} := cwr.str()\nvar v{depth} {item}\n{}{target}[k{depth}] = v{depth}\n}}\n}}\n",
+                go_dec(&format!("v{depth}"), value, depth + 1)
+            )
+        }
+        Ty::Struct { fields, .. } => {
+            let mut out = String::from("if cwr.u8() == 1 {\n");
+            for (field, _, ft) in fields {
+                out.push_str(&go_dec(&format!("{target}.{field}"), ft, depth + 1));
+            }
+            out.push_str("}\n");
+            out
+        }
+        Ty::Opt { inner, .. } => go_dec(target, inner, depth),
+        Ty::Tuple(_) => String::new(),
+    }
+}
+
+const WIRE_HELPERS_GO: &str = r#"
+// The binary wire: little endian; strings, slices, maps and structs start with 0 for nil.
+func cwU32(b []byte, n int) []byte { return binary.LittleEndian.AppendUint32(b, uint32(n)) }
+func cwI64(b []byte, v int64) []byte { return binary.LittleEndian.AppendUint64(b, uint64(v)) }
+func cwF64(b []byte, v float64) []byte {
+	return binary.LittleEndian.AppendUint64(b, math.Float64bits(v))
+}
+func cwBool(b []byte, v bool) []byte {
+	if v {
+		return append(b, 1)
+	}
+	return append(b, 0)
+}
+func cwStr(b []byte, s string) []byte {
+	b = append(b, 1)
+	b = cwU32(b, len(s))
+	return append(b, s...)
+}
+
+type cwReader struct {
+	b []byte
+	i int
+}
+
+func (r *cwReader) u8() byte {
+	v := r.b[r.i]
+	r.i++
+	return v
+}
+func (r *cwReader) u32() int {
+	v := binary.LittleEndian.Uint32(r.b[r.i:])
+	r.i += 4
+	return int(v)
+}
+func (r *cwReader) i64() int64 {
+	v := binary.LittleEndian.Uint64(r.b[r.i:])
+	r.i += 8
+	return int64(v)
+}
+func (r *cwReader) f64() float64 { return math.Float64frombits(uint64(r.i64())) }
+func (r *cwReader) bool() bool   { return r.u8() != 0 }
+func (r *cwReader) str() string {
+	if r.u8() == 0 {
+		return ""
+	}
+	n := r.u32()
+	s := string(r.b[r.i : r.i+n])
+	r.i += n
+	return s
+}
+
+func cwPtr(b []byte) *C.uint8_t {
+	if len(b) == 0 {
+		return nil
+	}
+	return (*C.uint8_t)(unsafe.Pointer(&b[0]))
+}
+"#;
+
+/// The Go wrapper function of a wire export: encode the arguments, one cgo call, decode.
+fn wire_go(e: &ExportedFn, params: &[(String, Ty)], result: Option<&Ty>) -> String {
+    let (results, fallible) = results(e);
+    let sig_params: Vec<String> = e
+        .params
+        .iter()
+        .map(|p| {
+            format!(
+                "{} {}",
+                p.name,
+                p.native_type.as_deref().unwrap_or_default()
+            )
+        })
+        .collect();
+    let mut sig_results = results.clone();
+    if fallible {
+        sig_results.push("error".into());
+    }
+    let ret = match sig_results.len() {
+        0 => String::new(),
+        1 => format!(" {}", sig_results[0]),
+        _ => format!(" ({})", sig_results.join(", ")),
+    };
+    let mut body = String::from("\tcwb := make([]byte, 0, 128)\n");
+    for (name, t) in params {
+        body.push_str(&go_enc(name, t, 0));
+    }
+    let names: Vec<String> = (0..results.len()).map(|i| format!("r{i}")).collect();
+    for (i, r) in results.iter().enumerate() {
+        let _ = writeln!(body, "\tvar r{i} {r}");
+    }
+    let call = |buf: &str| {
+        format!(
+            "C.carcinize_w_{}(cwPtr(cwb), C.size_t(len(cwb)), (*C.uint8_t)(unsafe.Pointer(&{buf}[0])), C.size_t(len({buf})), &n, &errp)",
+            e.name
+        )
+    };
+    let _ = writeln!(
+        body,
+        "\tvar cwStack [512]byte\n\tcwOut := cwStack[:]\n\tvar n C.size_t\n\tvar errp *C.char\n\tstatus := {}\n\
+         \tif status == 2 {{\n\t\tcwOut = make([]byte, int(n))\n\t\tstatus = {}\n\t}}",
+        call("cwOut"),
+        call("cwOut")
+    );
+    let mut fail_ret: Vec<String> = names.clone();
+    if fallible {
+        fail_ret.push("errors.New(carcinizeErr(errp))".into());
+        let _ = writeln!(
+            body,
+            "\tif status == 1 {{\n\t\treturn {}\n\t}}",
+            fail_ret.join(", ")
+        );
+    } else {
+        body.push_str("\tif status == 1 {\n\t\tpanic(carcinizeErr(errp))\n\t}\n");
+    }
+    if !results.is_empty() {
+        body.push_str("\tcwr := &cwReader{b: cwOut[:n]}\n");
+        match result {
+            Some(Ty::Tuple(items)) => {
+                for (i, t) in items.iter().enumerate() {
+                    body.push_str(&go_dec(&format!("r{i}"), t, 0));
+                }
+            }
+            Some(t) => body.push_str(&go_dec("r0", t, 0)),
+            None => {}
+        }
+    }
+    let mut ok = names;
+    if fallible {
+        ok.push("nil".into());
+    }
+    if !ok.is_empty() {
+        let _ = writeln!(body, "\treturn {}", ok.join(", "));
+    }
+    format!(
+        "\n// {} is the Rust port of `{}` (`{}:{}`): binary wire, no JSON.\nfunc {}({}){ret} {{\n{body}}}\n",
+        e.name,
+        e.prototype.as_deref().unwrap_or(&e.name),
+        e.file,
+        e.line,
+        e.name,
+        sig_params.join(", ")
+    )
+}
+
+/// The exports that cross the binary wire (not typed, but every type fits the wire and the port).
+fn wire_fns<'m>(
+    m: &'m Manifest,
+    api: &crate::codegen::PortApi,
+) -> Vec<WireFn<'m>> {
+    let sources = unit_sources(m);
+    let mut out = Vec::new();
+    for f in &api.functions {
+        if typed(m, f).is_some() {
+            continue;
+        }
+        let Some(e) = m.exports.iter().find(|e| e.name == f.js_name) else {
+            continue;
+        };
+        let Some((params, result)) = wire_sig(e, &sources) else {
+            continue;
+        };
+        if params.len() != f.params.len() {
+            continue;
+        }
+        if let Some(code) = wire_rs_fn(f, e, &params, result.as_ref()) {
+            out.push((e, params, result, code));
+        }
+    }
+    out
+}
+
+/// The Rust `extern "C"` function of a wire export, with its schema statics.
+fn wire_rs_fn(
+    f: &crate::codegen::PortFn,
+    e: &ExportedFn,
+    params: &[(String, Ty)],
+    result: Option<&Ty>,
+) -> Option<String> {
+    let mut statics = String::new();
+    let prefix = format!("S_{}", f.js_name.to_uppercase());
+    let reads = crate::wire::rust_read_args(params, &f.params, &prefix, &mut statics)?;
+    let args: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+    let call = format!("port::{}({})", f.rust_name, args.join(", "));
+    let call = if f.fallible { format!("{call}?") } else { call };
+    let write = match result {
+        None => {
+            if f.ret != "()" {
+                return None;
+            }
+            format!("        let () = {call};\n")
+        }
+        Some(t) => {
+            let schema = format!("{prefix}_OUT");
+            let w = crate::wire::rust_write(t, &f.ret, "out", &schema, 0)?;
+            if w.contains(&schema) {
+                let _ = writeln!(
+                    statics,
+                    "static {schema}: wire::Schema = {};",
+                    crate::wire::schema_expr(t)
+                );
+            }
+            format!("        let out = &{call};\n        {w}\n")
+        }
+    };
+    Some(format!(
+        "\n{statics}\n/// `{proto}`: binary wire.\n///\n/// # Safety\n///\n/// Called by the generated Go wrapper with valid pointers.\n\
+         // SAFETY: exported unmangled under a name only carcinize defines.\n#[unsafe(no_mangle)]\n\
+         // SAFETY: callers uphold the contract under `# Safety`.\n\
+         pub unsafe extern \"C\" fn carcinize_w_{name}(in_ptr: *const u8, in_len: usize, out: *mut u8, out_cap: usize, out_len: *mut usize, err: *mut *mut c_char) -> i32 {{\n    \
+         let input: &[u8] = if in_len == 0 {{\n        &[]\n    }} else {{\n        \
+         // SAFETY: Go passes its buffer and length.\n        unsafe {{ std::slice::from_raw_parts(in_ptr, in_len) }}\n    }};\n    \
+         let result = run(|| {{\n        let r = &mut wire::Reader::new(input);\n{reads}        let w = &mut wire::Writer::default();\n{write}        \
+         Ok(std::mem::take(&mut w.0))\n    }});\n    \
+         match result {{\n        Ok(bytes) => {{\n            \
+         // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.\n            unsafe {{\n                \
+         *out_len = bytes.len();\n                if bytes.len() > out_cap {{\n                    return 2;\n                }}\n                \
+         std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());\n            }}\n            0\n        }}\n        \
+         // SAFETY: Go passes a valid `err`.\n        Err(message) => unsafe {{ fail(err, message) }},\n    }}\n}}",
+        proto = e.prototype.as_deref().unwrap_or(&e.name),
+        name = f.js_name,
+    ))
+}
+
+/// Rust code of every wire export, for `lib.rs`.
+pub fn wire_rs(m: &Manifest, api: &crate::codegen::PortApi) -> String {
+    wire_fns(m, api)
+        .into_iter()
+        .map(|(_, _, _, code)| code)
+        .collect()
 }
 
 /// A `main` package that calls `import_path`'s functions by name: record, diff and bench.

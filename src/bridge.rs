@@ -1052,8 +1052,19 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
         }
         if m.language == crate::lang::Lang::Go {
             lib.push_str(&crate::codegen_go::typed_rs(m, api));
+            lib.push_str(&crate::codegen_go::wire_rs(m, api));
         }
-        vec![("src/lib.rs".to_string(), lib)]
+        if m.language == crate::lang::Lang::Java {
+            lib.push_str(&crate::codegen_java::wire_rs(m, api));
+        }
+        if matches!(m.language, crate::lang::Lang::Go | crate::lang::Lang::Java) {
+            lib = lib.replacen("pub mod port;", "pub mod port;\npub mod wire;", 1);
+        }
+        let mut files = vec![("src/lib.rs".to_string(), lib)];
+        if matches!(m.language, crate::lang::Lang::Go | crate::lang::Lang::Java) {
+            files.push(("src/wire.rs".to_string(), crate::wire::WIRE_RS.to_string()));
+        }
+        files
     };
     match m.language {
         crate::lang::Lang::Go => {
@@ -1081,6 +1092,10 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
             files.push((
                 "java/carcinize/CarcinizeJson.java".into(),
                 crate::codegen_java::JSON_JAVA.into(),
+            ));
+            files.push((
+                "java/carcinize/CarcinizeWire.java".into(),
+                crate::codegen_java::WIRE_JAVA.into(),
             ));
         }
         other => bail!("no wrapper generator for {}", other.name()),

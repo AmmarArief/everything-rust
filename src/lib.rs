@@ -25,3 +25,4 @@ pub mod report;
 pub mod risks;
 pub mod shadow;
 pub mod ts;
+pub mod wire;

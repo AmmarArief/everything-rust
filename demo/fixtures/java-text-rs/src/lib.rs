@@ -4,6 +4,7 @@
 use serde_json::{Value, json};
 
 pub mod port;
+pub mod wire;
 
 /// Argument `i`, decoded from JSON into the port's parameter type.
 fn arg<T: serde::de::DeserializeOwned>(args: &[Value], i: usize) -> Result<T, String> {
@@ -130,4 +131,239 @@ pub extern "system" fn Java_carcinize_TextRsNative_call<'local>(
     let args = read(&mut env, &args);
     env.new_string(call_json(&name, &args))
         .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw)
+}
+
+#[allow(dead_code)]
+/// Throws `"Type: message"` as that exception (java.lang, java.util, java.io, or a full
+/// name); anything else as a RuntimeException.
+fn throw(env: &mut jni::JNIEnv, message: &str) {
+    if let Some((kind, text)) = message.split_once(": ") {
+        let path = kind.replace('.', "/");
+        for prefix in ["java/lang/", "java/util/", "java/io/", ""] {
+            let name = format!("{prefix}{path}");
+            if env.find_class(name.as_str()).is_ok() {
+                let _ = env.throw_new(name.as_str(), text);
+                return;
+            }
+            let _ = env.exception_clear();
+        }
+    }
+    let _ = env.throw_new("java/lang/RuntimeException", message);
+}
+
+/// Runs the port; a panic becomes an error instead of unwinding into the JVM.
+#[allow(dead_code)]
+fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
+        let text = panic
+            .downcast_ref::<&str>()
+            .map(ToString::to_string)
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        Err(format!("RuntimeException: Rust panic: {text}"))
+    })
+}
+
+/// A `String` argument; `None` (with a NullPointerException thrown) for null.
+#[allow(dead_code)]
+fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String> {
+    if s.is_null() {
+        let _ = env.throw_new("java/lang/NullPointerException", "null String argument");
+        return None;
+    }
+    env.get_string(s).ok().map(Into::into)
+}
+
+/// `com.example.text.Nums.gcd(long a, long b)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.n_gcd`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_n_1gcd<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    a: jni::sys::jlong,
+    b: jni::sys::jlong,
+) -> jni::sys::jlong {
+    match run(|| port::gcd(a, b)) {
+        Ok(out) => out,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.text.Nums.pages(int total, int perPage)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.n_pages`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_n_1pages<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    total: jni::sys::jint,
+    per_page: jni::sys::jint,
+) -> jni::sys::jint {
+    match run(|| port::pages(i64::from(total), i64::from(per_page))) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.text.Strings.slugify(String text, int max)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.n_slugify`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_n_1slugify<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+    max: jni::sys::jint,
+) -> jni::sys::jstring {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return std::ptr::null_mut();
+    };
+    match run(|| port::slugify(text, i64::from(max))) {
+        Ok(out) => env
+            .new_string(out)
+            .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.text.Strings.parsePort(String text)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.n_parsePort`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_n_1parsePort<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+) -> jni::sys::jint {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return 0;
+    };
+    match run(|| port::parse_port(text)) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.text.Strings.hash(String text)`: typed, no JSON.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.n_hash`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_n_1hash<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    text: jni::objects::JString<'local>,
+) -> jni::sys::jint {
+    let Some(text) = string_arg(&mut env, &text) else {
+        return 0;
+    };
+    match run(|| port::hash(text)) {
+        Ok(out) => out as jni::sys::jint,
+        Err(message) => {
+            throw(&mut env, &message);
+            0
+        }
+    }
+}
+
+/// `com.example.text.Nums.mean(double[] values)`: binary wire.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.w_mean`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_w_1mean<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    args: jni::objects::JByteArray<'local>,
+) -> jni::sys::jbyteArray {
+    let Ok(input) = env.convert_byte_array(&args) else {
+        return std::ptr::null_mut();
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(&input);
+        let values: Vec<f64> = r.list(|r| r.f64())?;
+        let w = &mut wire::Writer::default();
+        let out = &port::mean(values)?;
+        w.f64(*out);
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => env
+            .byte_array_from_slice(&bytes)
+            .map_or(std::ptr::null_mut(), jni::objects::JByteArray::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// `com.example.text.Strings.words(String text)`: binary wire.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.w_words`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_w_1words<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    args: jni::objects::JByteArray<'local>,
+) -> jni::sys::jbyteArray {
+    let Ok(input) = env.convert_byte_array(&args) else {
+        return std::ptr::null_mut();
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(&input);
+        let text: String = r.string()?;
+        let w = &mut wire::Writer::default();
+        let out = &port::words(text)?;
+        w.tag(1);
+        w.count(out.len());
+        for x0 in out.iter() {
+            w.string(x0);
+        }
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => env
+            .byte_array_from_slice(&bytes)
+            .map_or(std::ptr::null_mut(), jni::objects::JByteArray::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
+}
+static S_FREQUENCIES_OUT: wire::Schema = wire::Schema::Map(&wire::Schema::Opt(&wire::Schema::I64));
+
+/// `com.example.text.Strings.frequencies(String text)`: binary wire.
+// SAFETY: the JNI symbol of `carcinize.TextRsNative.w_frequencies`; nothing else defines it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_carcinize_TextRsNative_w_1frequencies<'local>(
+    mut env: jni::JNIEnv<'local>,
+    _class: jni::objects::JClass<'local>,
+    args: jni::objects::JByteArray<'local>,
+) -> jni::sys::jbyteArray {
+    let Ok(input) = env.convert_byte_array(&args) else {
+        return std::ptr::null_mut();
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(&input);
+        let text: String = r.string()?;
+        let w = &mut wire::Writer::default();
+        let out = &port::frequencies(text)?;
+        wire::write_value(w, out, &S_FREQUENCIES_OUT)?;
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => env
+            .byte_array_from_slice(&bytes)
+            .map_or(std::ptr::null_mut(), jni::objects::JByteArray::into_raw),
+        Err(message) => {
+            throw(&mut env, &message);
+            std::ptr::null_mut()
+        }
+    }
 }

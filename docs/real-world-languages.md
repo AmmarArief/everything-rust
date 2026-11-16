@@ -29,8 +29,13 @@ whether to ship.
 | Ruby | 6.9-9.5 µs (Fiddle + JSON) | 0.36-1.15 µs (magnus extension) | **4.4x faster** (3.6-7x per function) | ship |
 | Python | 11.7 µs (JSON) | about 0.3 µs (direct PyO3 conversion) | **1.35x faster** (1.5-1.9x on most calls) | ship |
 | C | - | no crossing: linked directly | 0.87x: ctype 1.1-1.4x faster, glibc's tuned `strtod`, `strspn`, `strcmp` 0.5-0.7x | optimize or keep the slower ones |
-| Java | about 1.7 µs (JNI + JSON) | 30-800 ns (typed JNI) | 0.18x | port bigger units |
-| Go | 2.6 µs (cgo + JSON) | 0.11-0.42 µs (typed cgo) | 0.04x | port bigger units |
+| Java | about 1.7 µs (JNI + JSON) | 30-800 ns (typed JNI and binary wire) | 0.18x | port bigger units |
+| Go | 2.6 µs (cgo + JSON) | 0.11-0.42 µs (typed cgo and binary wire) | 0.04x | port bigger units |
+
+Lists, maps, structs and several results in Go and Java cross as a binary wire generated per
+type: Go's `WordFreq` (a map) went from 5.1 to 1.0 µs, `Midpoint` (a struct) from 7.2 to 1.0 µs;
+Java's `frequencies` (a `Map`) from 8.4 to 1.0 µs, and `words` (a `List<String>`) from 6.0 µs to
+0.57 µs, 1.39x faster than Java itself.
 
 What decides it:
 

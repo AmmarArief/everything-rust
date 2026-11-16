@@ -6,6 +6,7 @@ use std::ffi::{CStr, CString, c_char};
 use serde_json::{Value, json};
 
 pub mod port;
+pub mod wire;
 
 /// Argument `i`, decoded from JSON into the port's parameter type.
 fn arg<T: serde::de::DeserializeOwned>(args: &[Value], i: usize) -> Result<T, String> {
@@ -152,6 +153,7 @@ pub unsafe extern "C" fn carcinize_free(ptr: *mut c_char) {
 }
 
 /// The port's result, or its error message; a panic becomes an error.
+#[allow(dead_code)]
 fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|panic| {
         let text = panic
@@ -168,6 +170,7 @@ fn run<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
 /// # Safety
 ///
 /// `ptr` points at `len` readable bytes, or `len` is 0.
+#[allow(dead_code)]
 // SAFETY: unsafe to call; callers uphold the contract above.
 unsafe fn go_str(ptr: *const u8, len: usize) -> String {
     if len == 0 {
@@ -182,6 +185,7 @@ unsafe fn go_str(ptr: *const u8, len: usize) -> String {
 /// # Safety
 ///
 /// `err` is a valid pointer to write to.
+#[allow(dead_code)]
 // SAFETY: unsafe to call; callers uphold the contract above.
 unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
     let message = CString::new(message.replace('\0', " ")).unwrap_or_default();
@@ -377,6 +381,55 @@ pub unsafe extern "C" fn carcinize_t_Dir(
     match run(|| port::dir(path)) {
         Ok(value) => {
             let bytes = value.as_bytes();
+            // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
+            unsafe {
+                *out_len = bytes.len();
+                if bytes.len() > out_cap {
+                    return 2;
+                }
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len());
+            }
+            0
+        }
+        // SAFETY: Go passes a valid `err`.
+        Err(message) => unsafe { fail(err, message) },
+    }
+}
+
+static S_SPLIT_OUT: wire::Schema = wire::Schema::Tuple(&[wire::Schema::Str, wire::Schema::Str]);
+
+/// `func Split(path string) (dir, file string)`: binary wire.
+///
+/// # Safety
+///
+/// Called by the generated Go wrapper with valid pointers.
+// SAFETY: exported unmangled under a name only carcinize defines.
+#[unsafe(no_mangle)]
+// SAFETY: callers uphold the contract under `# Safety`.
+pub unsafe extern "C" fn carcinize_w_Split(
+    in_ptr: *const u8,
+    in_len: usize,
+    out: *mut u8,
+    out_cap: usize,
+    out_len: *mut usize,
+    err: *mut *mut c_char,
+) -> i32 {
+    let input: &[u8] = if in_len == 0 {
+        &[]
+    } else {
+        // SAFETY: Go passes its buffer and length.
+        unsafe { std::slice::from_raw_parts(in_ptr, in_len) }
+    };
+    let result = run(|| {
+        let r = &mut wire::Reader::new(input);
+        let path: String = r.string()?;
+        let w = &mut wire::Writer::default();
+        let out = &port::split(path)?;
+        wire::write_value(w, out, &S_SPLIT_OUT)?;
+        Ok(std::mem::take(&mut w.0))
+    });
+    match result {
+        Ok(bytes) => {
             // SAFETY: Go passes a buffer of `out_cap` bytes and a valid `out_len`.
             unsafe {
                 *out_len = bytes.len();
