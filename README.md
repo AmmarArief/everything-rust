@@ -30,7 +30,7 @@ used as numbers are inferred as numbers.
 
 | Step | Command | What it does |
 | --- | --- | --- |
-| 0. Profile | `carcinize profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler: hot functions by inclusive time, their callers, and which loops to batch |
+| 0. Profile | `carcinize profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler (node, cProfile, `go test` pprof, JFR, a Ruby tracer): hot functions by inclusive time, their callers, and which loops to batch |
 | 1. Plan | `carcinize analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, dependency-to-crate fit, best first ports |
 | 2. Bridge | `carcinize bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`); `--batch fn:param` adds a class that keeps many `param` values in Rust |
 | 3. Record | `carcinize record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and saves `cases.jsonl` |
@@ -78,8 +78,21 @@ items once (lowercased UTF-16 and a character mask per key). On x18n's sidebar s
 | `FuzzyScoreBatch` with `FuzzyScoreIndex` (napi, 4 cores) | 1.2 ms | **7.0x** |
 | The same with wasm (one thread) | 3.0 ms | 2.9x |
 
-Python batches gain more, since the original is interpreted: `SlugifyBatch` runs 14.5x faster
-than calling `slugify` per item. Demo: [`demo/x18n-search`](./demo/x18n-search/README.md).
+Every language gets batches, and they beat the original even where per-call ports lose. The
+same work on 4 cores, identical results and errors (benchmarks in each demo folder):
+
+| Language | Workload | Original | Per-call port vs original | Batch vs original |
+| --- | --- | ---: | ---: | ---: |
+| TS | x18n search, 50,000 keys | 8.5 ms | 0.2-0.4x | **7.0x** |
+| Python | `slugify`, 20,000 strings | 98 ms | - | **17x** |
+| Ruby | `slugify`, 20,000 strings | 110 ms | - | **12.7x** |
+| Ruby | `shellescape` (stdlib), 50,000 mixed values | 88 ms | - | **11.8x** |
+| Go | `Slugify`, 50,000 strings | 52 ms | 0.73x | **2.5x** |
+| Java | `slugify`, 50,000 strings | 43 ms | 0.46x | **1.7x** |
+
+Compiled originals gain less: the per-item work is already fast, so the batch wins by the number of
+cores. Batch crates allocate with mimalloc: with the system allocator the Go batch was slower than
+one thread. Demo: [`demo/x18n-search`](./demo/x18n-search/README.md).
 
 ## Real code in six languages
 

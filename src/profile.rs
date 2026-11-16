@@ -84,10 +84,12 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
     let (functions, total_ms) = match lang {
         Lang::Ts => node(&root, command, &work)?,
         Lang::Python => python(&root, command, &work)?,
-        other => bail!(
-            "`profile` runs TS/JS (node --cpu-prof) and Python (cProfile) workloads; for {} use its \
-             profiler (Go: pprof, Java: JFR, Ruby: stackprof, C: perf) and port the hot loops it shows",
-            other.name()
+        Lang::Go => go(&root, command, &work)?,
+        Lang::Java => java(&root, command, &work)?,
+        Lang::Ruby => ruby(&root, command, &work)?,
+        Lang::C => bail!(
+            "`profile` runs TS/JS, Python, Go, Java and Ruby workloads; for C, use `perf record -g` \
+             and port the hot loops it shows"
         ),
     };
     let _ = std::fs::remove_dir_all(&work);
@@ -101,12 +103,22 @@ fn relative(root: &Path, file: &str) -> Option<String> {
     if !path.starts_with('/') && !path.contains(":\\") {
         return None; // node:internal/..., <frozen ...>, ~
     }
+    // Installed libraries and runtimes: npm, Python, Ruby gems and stdlib, Go modules and GOROOT.
     if path.split(['/', '\\']).any(|p| {
         matches!(
             p,
-            "node_modules" | "site-packages" | "dist-packages" | ".venv" | "venv"
+            "node_modules"
+                | "site-packages"
+                | "dist-packages"
+                | ".venv"
+                | "venv"
+                | "gems"
+                | "vendor"
         )
-    }) || path.contains("/lib/python3")
+    }) || ["/lib/python3", "/lib/ruby/", "/pkg/mod/"]
+        .iter()
+        .any(|d| path.contains(d))
+        || goroot().is_some_and(|g| path.starts_with(g))
     {
         return None;
     }
@@ -115,6 +127,18 @@ fn relative(root: &Path, file: &str) -> Option<String> {
         Ok(rel) => rel.to_string_lossy().replace('\\', "/"),
         Err(_) => path.to_string(),
     })
+}
+
+/// Go's own sources, which are not user code.
+fn goroot() -> Option<&'static str> {
+    static GOROOT: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    GOROOT
+        .get_or_init(|| {
+            let out = Command::new("go").args(["env", "GOROOT"]).output().ok()?;
+            let root = String::from_utf8(out.stdout).ok()?.trim().to_string();
+            (!root.is_empty()).then(|| format!("{root}/"))
+        })
+        .as_deref()
 }
 
 /// Whether a frame file is inside the repository (relative).
@@ -307,8 +331,14 @@ fn python(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, 
         bail!("reading the cProfile output failed");
     }
     let entries: Vec<Value> = serde_json::from_str(&std::fs::read_to_string(&json)?)?;
+    Ok((ingest_entries(root, &entries), total_ms))
+}
+
+/// Function entries from a tracing profiler (cProfile, the Ruby tracer): file, line, name,
+/// calls, self and total ms, and callers with their calls and ms.
+fn ingest_entries(root: &Path, entries: &[Value]) -> HashMap<Key, Acc> {
     let mut functions: HashMap<Key, Acc> = HashMap::new();
-    for e in &entries {
+    for e in entries {
         let Some(file) = relative(root, e["file"].as_str().unwrap_or("")) else {
             continue;
         };
@@ -335,7 +365,412 @@ fn python(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, 
             slot.1 = Some(slot.1.unwrap_or(0) + c["calls"].as_u64().unwrap_or(0));
         }
     }
-    Ok((functions, total_ms))
+    functions
+}
+
+// ---- stack samples (Go pprof, Java JFR) -----------------------------------------------------
+
+/// Adds sampled stacks, each root first with `None` for frames outside user code, and the time
+/// it stands for. A function's total counts once per sample (recursion); its caller is the
+/// nearest named user frame above it (lambdas and closures are skipped).
+fn merge_samples(samples: &[(Vec<Option<Key>>, f64)], functions: &mut HashMap<Key, Acc>) {
+    for (stack, ms) in samples {
+        let mut seen: Vec<&Key> = Vec::new();
+        let mut named: Option<&Key> = None;
+        for frame in stack {
+            let Some(k) = frame else { continue };
+            if !seen.contains(&k) {
+                seen.push(k);
+                let acc = functions.entry(k.clone()).or_default();
+                acc.total_ms += ms;
+                if let Some(caller) = named.filter(|c| *c != k) {
+                    acc.callers.entry(caller.clone()).or_default().0 += ms;
+                }
+            }
+            if !k.1.starts_with("(anonymous)") {
+                named = Some(k);
+            }
+        }
+        if let Some(Some(leaf)) = stack.last() {
+            functions.entry(leaf.clone()).or_default().self_ms += ms;
+        }
+    }
+}
+
+/// A Go function's own name: `example.com/x/pkg.Slugify` is `Slugify`, `pkg.(*T).M` is `M`;
+/// closures (`Outer.func1`) are anonymous.
+fn go_name(full: &str) -> String {
+    let tail = full.rsplit('/').next().unwrap_or(full);
+    let rest = tail.split_once('.').map_or(tail, |(_, r)| r);
+    let parts: Vec<&str> = rest.split('.').collect();
+    match parts.as_slice() {
+        [.., outer, f] if f.starts_with("func") && f[4..].chars().all(|c| c.is_ascii_digit()) => {
+            format!("(anonymous) in {outer}")
+        }
+        [.., last] => last.to_string(),
+        [] => rest.to_string(),
+    }
+}
+
+/// `go tool pprof -raw` output: samples (leaf first, by location id) and locations (each one or
+/// more frames, innermost first: `func file:line:col s=start`).
+fn parse_pprof_raw(root: &Path, raw: &str) -> Vec<(Vec<Option<Key>>, f64)> {
+    let mut locations: HashMap<u64, Vec<Option<Key>>> = HashMap::new();
+    let mut samples: Vec<(Vec<u64>, f64)> = Vec::new();
+    let mut section = "";
+    let mut current: Option<u64> = None;
+    // Which sample value is CPU time: `samples/count cpu/nanoseconds` puts it second.
+    let mut value_index = 1;
+    for line in raw.lines() {
+        match line.trim_end() {
+            "Samples:" => {
+                section = "samples";
+                continue;
+            }
+            "Locations" => {
+                section = "locations";
+                continue;
+            }
+            "Mappings" => {
+                section = "";
+                continue;
+            }
+            _ => {}
+        }
+        match section {
+            "samples" if line.contains(':') => {
+                let (values, ids) = line.split_once(':').unwrap_or_default();
+                let values: Vec<f64> = values
+                    .split_whitespace()
+                    .filter_map(|v| v.parse().ok())
+                    .collect();
+                let ids: Vec<u64> = ids
+                    .split_whitespace()
+                    .filter_map(|v| v.parse().ok())
+                    .collect();
+                if let Some(ns) = values.get(value_index).or(values.last()) {
+                    samples.push((ids, ns / 1e6));
+                }
+            }
+            "samples" => {
+                let kinds: Vec<&str> = line.split_whitespace().collect();
+                if let Some(i) = kinds.iter().position(|k| k.ends_with("/nanoseconds")) {
+                    value_index = i;
+                }
+            }
+            "locations" => {
+                let text = line.trim_start();
+                let frame_text = match text.split_once(": ") {
+                    Some((id, rest)) if id.chars().all(|c| c.is_ascii_digit()) => {
+                        current = id.parse().ok();
+                        // `0x4c2ded M=1 func file:line:col s=start`
+                        rest.split_whitespace()
+                            .skip(2)
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    }
+                    _ => text.to_string(),
+                };
+                let Some(id) = current else { continue };
+                let mut parts = frame_text.split_whitespace();
+                let (Some(func), Some(place)) = (parts.next(), parts.next()) else {
+                    continue;
+                };
+                let start = parts
+                    .find_map(|p| p.strip_prefix("s="))
+                    .and_then(|s| s.parse::<u32>().ok())
+                    .unwrap_or(0);
+                let file = place.rsplitn(3, ':').nth(2).unwrap_or(place);
+                let key = relative(root, file).map(|f| (f, go_name(func), start));
+                locations.entry(id).or_default().push(key);
+            }
+            _ => {}
+        }
+    }
+    samples
+        .into_iter()
+        .map(|(ids, ms)| {
+            // Leaf first, and inlined frames innermost first: reversed, the stack is root first.
+            let mut stack: Vec<Option<Key>> = ids
+                .iter()
+                .flat_map(|id| locations.get(id).cloned().unwrap_or_default())
+                .collect();
+            stack.reverse();
+            (stack, ms)
+        })
+        .collect()
+}
+
+/// Go: `go test` with `-cpuprofile` (Go has no profiler to attach from outside), read with
+/// `go tool pprof -raw`.
+fn go(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Acc>, f64)> {
+    let program = Path::new(&command[0])
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    if program != "go" || command.get(1).map(String::as_str) != Some("test") {
+        bail!(
+            "for Go, profile a benchmark or test: `carcinize profile . -- go test -run XXX -bench . ./pkg` \
+             (Go profiles only from inside the process; `go test` adds -cpuprofile)"
+        );
+    }
+    let out = work.join("cpu.pprof");
+    let status = Command::new(&command[0])
+        .arg("test")
+        .arg(format!("-cpuprofile={}", out.display()))
+        .args(&command[2..])
+        .current_dir(root)
+        .status()
+        .with_context(|| format!("running {}", command[0]))?;
+    if !status.success() {
+        bail!("the workload failed ({status})");
+    }
+    let raw = Command::new("go")
+        .args(["tool", "pprof", "-raw"])
+        .arg(&out)
+        .current_dir(root)
+        .output()?;
+    if !raw.status.success() {
+        bail!(
+            "go tool pprof failed: {}",
+            String::from_utf8_lossy(&raw.stderr)
+        );
+    }
+    let samples = parse_pprof_raw(root, &String::from_utf8_lossy(&raw.stdout));
+    let total: f64 = samples.iter().map(|(_, ms)| ms).sum();
+    let mut functions = HashMap::new();
+    merge_samples(&samples, &mut functions);
+    Ok((functions, total))
+}
+
+/// The line declaring method `name` in Java source: the nearest declaration at or above `near`.
+fn java_declaration(text: &str, name: &str, near: u32) -> Option<u32> {
+    let needle = format!("{name}(");
+    let mut best = None;
+    for (i, line) in text.lines().enumerate() {
+        let n = u32::try_from(i + 1).unwrap_or(u32::MAX);
+        if n > near.max(1) {
+            break;
+        }
+        let Some(at) = line.find(&needle) else {
+            continue;
+        };
+        let before = line[..at].trim_end();
+        // A declaration names a type or modifier before the method: `static int pages(`.
+        let declares = before
+            .ends_with(|c: char| c.is_alphanumeric() || matches!(c, '>' | ']' | '_'))
+            && !before.contains('=')
+            && !before.contains("return")
+            && !before.contains("new ")
+            && !before.ends_with('.')
+            && !line.trim_end().ends_with(';');
+        if declares && at > 0 && line.as_bytes()[at - 1].is_ascii_whitespace() {
+            best = Some(n);
+        }
+    }
+    best
+}
+
+/// Java: Flight Recorder's execution samples, read with `jfr print --json`.
+fn java(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Acc>, f64)> {
+    let recording = work.join("profile.jfr");
+    let mut options = std::env::var("JAVA_TOOL_OPTIONS").unwrap_or_default();
+    options.push_str(&format!(
+        " -XX:StartFlightRecording=filename={},settings=profile -XX:FlightRecorderOptions=stackdepth=256",
+        recording.display()
+    ));
+    let status = Command::new(&command[0])
+        .args(&command[1..])
+        .current_dir(root)
+        .env("JAVA_TOOL_OPTIONS", options.trim())
+        .status()
+        .with_context(|| format!("running {}", command[0]))?;
+    if !status.success() {
+        bail!("the workload failed ({status})");
+    }
+    let out = Command::new("jfr")
+        .args([
+            "print",
+            "--json",
+            "--stack-depth",
+            "256",
+            "--events",
+            "jdk.ExecutionSample",
+        ])
+        .arg(&recording)
+        .output()
+        .context("running jfr (it comes with the JDK)")?;
+    if !out.status.success() {
+        bail!("jfr print failed: {}", String::from_utf8_lossy(&out.stderr));
+    }
+    let json: Value = serde_json::from_slice(&out.stdout).context("jfr output")?;
+    // Sources by class: `com/example/text/Strings` -> its file in the repository.
+    let mut sources: HashMap<String, String> = HashMap::new();
+    for entry in ignore::WalkBuilder::new(root).build() {
+        let Ok(entry) = entry else { continue };
+        let path = entry.path();
+        if path.extension().is_some_and(|e| e == "java")
+            && let Ok(rel) = path.strip_prefix(root)
+        {
+            let rel = rel.to_string_lossy().replace('\\', "/");
+            let text = std::fs::read_to_string(path).unwrap_or_default();
+            let package = text
+                .lines()
+                .find_map(|l| {
+                    l.trim()
+                        .strip_prefix("package ")
+                        .map(|p| p.trim_end_matches(';').trim().to_string())
+                })
+                .unwrap_or_default();
+            let class = path
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let fq = if package.is_empty() {
+                class
+            } else {
+                format!("{}/{class}", package.replace('.', "/"))
+            };
+            sources.insert(fq, rel);
+        }
+    }
+    const SAMPLE_MS: f64 = 10.0; // the `profile` settings sample Java threads every 10 ms
+    let mut raw: Vec<Vec<Option<(String, String, u32)>>> = Vec::new();
+    for event in json["recording"]["events"].as_array().into_iter().flatten() {
+        let frames = event["values"]["stackTrace"]["frames"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let mut stack: Vec<Option<(String, String, u32)>> = frames
+            .iter()
+            .map(|f| {
+                let class = f["method"]["type"]["name"].as_str()?;
+                let outer = class.split('$').next().unwrap_or(class);
+                let file = sources.get(outer)?;
+                let name = f["method"]["name"].as_str()?.to_string();
+                let line = u32::try_from(f["lineNumber"].as_i64().unwrap_or(0)).unwrap_or(0);
+                Some((file.clone(), name, line))
+            })
+            .collect();
+        stack.reverse();
+        raw.push(stack);
+    }
+    // Key each method by its declaration line, found from the lowest sampled line.
+    let mut lowest: HashMap<(String, String), u32> = HashMap::new();
+    for (file, name, line) in raw.iter().flatten().flatten() {
+        let e = lowest.entry((file.clone(), name.clone())).or_insert(*line);
+        *e = (*e).min(*line);
+    }
+    let mut texts: HashMap<String, String> = HashMap::new();
+    let mut key = |file: &str, name: &str| -> Key {
+        if name.starts_with("lambda$") {
+            return (file.to_string(), format!("(anonymous) {name}"), 0);
+        }
+        let text = texts
+            .entry(file.to_string())
+            .or_insert_with(|| std::fs::read_to_string(root.join(file)).unwrap_or_default());
+        let near = lowest
+            .get(&(file.to_string(), name.to_string()))
+            .copied()
+            .unwrap_or(0);
+        let line = java_declaration(text, name, near).unwrap_or(near);
+        (file.to_string(), name.to_string(), line)
+    };
+    let samples: Vec<(Vec<Option<Key>>, f64)> = raw
+        .iter()
+        .map(|stack| {
+            let keys = stack
+                .iter()
+                .map(|f| f.as_ref().map(|(file, name, _)| key(file, name)))
+                .collect();
+            (keys, SAMPLE_MS)
+        })
+        .collect();
+    let total = samples.len() as f64 * SAMPLE_MS;
+    if samples.is_empty() {
+        bail!("no samples were recorded: run the workload longer (Java is sampled every 10 ms)");
+    }
+    let mut functions = HashMap::new();
+    merge_samples(&samples, &mut functions);
+    Ok((functions, total))
+}
+
+// ---- Ruby: a call tracer --------------------------------------------------------------------
+
+/// Loaded with `RUBYOPT=-r`: times every Ruby method call on the main thread (inclusive, self,
+/// callers) and writes cProfile-like entries at exit. Tracing slows the program; the shares stay
+/// comparable.
+const RUBY_TRACER: &str = r#"
+require "json"
+
+module CarcinizeProfile
+  STATS = Hash.new { |h, k| h[k] = { calls: 0, self: 0.0, total: 0.0, callers: Hash.new { |c, ck| c[ck] = [0, 0.0] } } }
+  STACK = []
+  ACTIVE = Hash.new(0)
+  MAIN = Thread.current
+  TRACE = TracePoint.new(:call, :return) do |tp|
+    next unless Thread.current == MAIN
+    now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    if tp.event == :call
+      path = tp.path
+      path = File.expand_path(path) unless path.start_with?("<")
+      key = [path, tp.lineno, tp.method_id.to_s]
+      ACTIVE[key] += 1
+      STACK << [key, now, 0.0]
+    elsif (frame = STACK.pop)
+      key, start, child = frame
+      elapsed = now - start
+      ACTIVE[key] -= 1
+      outer = ACTIVE[key].zero?
+      s = STATS[key]
+      s[:calls] += 1
+      s[:self] += elapsed - child
+      s[:total] += elapsed if outer
+      if (parent = STACK.last)
+        parent[2] += elapsed
+        c = s[:callers][parent[0]]
+        c[0] += 1
+        c[1] += elapsed if outer
+      end
+    end
+  end
+  TRACE.enable
+
+  at_exit do
+    TRACE.disable
+    out = STATS.map do |(file, line, name), s|
+      { file: file, line: line, name: name, calls: s[:calls], self: s[:self] * 1000, total: s[:total] * 1000,
+        callers: s[:callers].map { |(f, l, n), (calls, total)| { file: f, line: l, name: n, calls: calls, total: total * 1000 } } }
+    end
+    File.write(ENV.fetch("CARCINIZE_PROFILE_OUT"), JSON.generate(out))
+  end
+end
+"#;
+
+/// Ruby: the tracer above, loaded into any Ruby command through `RUBYOPT`.
+fn ruby(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Acc>, f64)> {
+    let tracer = work.join("carcinize_profile.rb");
+    std::fs::write(&tracer, RUBY_TRACER)?;
+    let out = work.join("profile.json");
+    let mut rubyopt = std::env::var("RUBYOPT").unwrap_or_default();
+    rubyopt.push_str(&format!(" -r{}", tracer.display()));
+    let start = std::time::Instant::now();
+    let status = Command::new(&command[0])
+        .args(&command[1..])
+        .current_dir(root)
+        .env("RUBYOPT", rubyopt.trim())
+        .env("CARCINIZE_PROFILE_OUT", &out)
+        .status()
+        .with_context(|| format!("running {}", command[0]))?;
+    let total_ms = start.elapsed().as_secs_f64() * 1000.0;
+    if !status.success() {
+        bail!("the workload failed ({status})");
+    }
+    let entries: Vec<Value> = serde_json::from_str(
+        &std::fs::read_to_string(&out)
+            .context("the Ruby tracer wrote nothing: is the workload a Ruby process?")?,
+    )?;
+    Ok((ingest_entries(root, &entries), total_ms))
 }
 
 // ---- the report -----------------------------------------------------------------------------
@@ -376,6 +811,8 @@ fn batch_param(root: &Path, caller: &Key, callee: &str, params: &[String]) -> Op
             }
         }
     }
+    let (more, index_vars) = loop_variables(&body);
+    loop_vars.extend(more);
     let call = body.find(&format!("{callee}("))?;
     let args_text = &body[call + callee.len() + 1..];
     let mut depth = 0;
@@ -393,10 +830,81 @@ fn batch_param(root: &Path, caller: &Key, callee: &str, params: &[String]) -> Op
         }
         args.last_mut()?.push(c);
     }
-    let position = args
-        .iter()
-        .position(|a| loop_vars.iter().any(|v| v == a.trim()))?;
+    // The item itself (`t`), or the item at the loop index (`texts[i]`).
+    let per_item = |a: &str| {
+        let a = a.trim();
+        loop_vars.iter().any(|v| v == a)
+            || a.strip_suffix(']')
+                .and_then(|a| a.split_once('['))
+                .is_some_and(|(list, i)| {
+                    !list.is_empty() && index_vars.iter().any(|v| v == i.trim())
+                })
+    };
+    let position = args.iter().position(|a| per_item(a))?;
     params.get(position).cloned()
+}
+
+/// Loop variables in Go, Java and Ruby source: `(items, indexes)`. Items: `for _, t := range`,
+/// `for (String t : texts)`, `|t|`; indexes: `for i := range`, `for (int i = 0;`.
+fn loop_variables(body: &str) -> (Vec<String>, Vec<String>) {
+    let ident = |s: &str| -> String {
+        s.chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect()
+    };
+    let last_ident = |s: &str| -> String {
+        let s = s.trim_end();
+        let rev: String = s
+            .chars()
+            .rev()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        rev.chars().rev().collect()
+    };
+    let (mut items, mut indexes) = (Vec::new(), Vec::new());
+    for (i, _) in body.match_indices("for") {
+        if body[..i]
+            .chars()
+            .last()
+            .is_some_and(|c| c.is_alphanumeric() || c == '_')
+        {
+            continue;
+        }
+        let rest = &body[i + 3..];
+        let line = rest.split(['{', '\n']).next().unwrap_or(rest);
+        if let Some((vars, _)) = line.split_once(":= range") {
+            // Go: `for i, t := range xs` (t is the item), `for i := range xs` (an index).
+            let vars: Vec<String> = vars.split(',').map(|v| v.trim().to_string()).collect();
+            match vars.as_slice() {
+                [index, item] => {
+                    items.push(item.clone());
+                    indexes.push(index.clone());
+                }
+                [index] => indexes.push(index.clone()),
+                _ => {}
+            }
+        } else if let Some(inner) = line.trim_start().strip_prefix('(') {
+            // Java: `for (String t : texts)` or `for (int i = 0; ...)`.
+            if let Some((decl, _)) = inner.split_once(" : ").filter(|(d, _)| !d.contains(';')) {
+                items.push(last_ident(decl));
+            } else if let Some((decl, _)) = inner.split_once('=') {
+                indexes.push(last_ident(decl));
+            }
+        }
+    }
+    // Ruby blocks: `{ |t| ... }`, `do |t, i|`.
+    for (i, _) in body.match_indices('|') {
+        let before = body[..i].trim_end();
+        if before.ends_with('{') || before.ends_with("do") {
+            let first = ident(body[i + 1..].trim_start());
+            if !first.is_empty() {
+                items.push(first);
+            }
+        }
+    }
+    items.retain(|v| !v.is_empty() && v != "_");
+    indexes.retain(|v| !v.is_empty() && v != "_");
+    (items, indexes)
 }
 
 fn report(
@@ -644,5 +1152,64 @@ mod tests {
             None
         );
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn go_names_and_pprof() {
+        assert_eq!(go_name("example.com/strkit/strkit.Slugify"), "Slugify");
+        assert_eq!(go_name("testing.(*B).runN"), "runN");
+        assert_eq!(
+            go_name("example.com/x/pkg.Outer.func2"),
+            "(anonymous) in Outer"
+        );
+        let raw = "Samples:\nsamples/count cpu/nanoseconds\n          2   20000000: 1 2 \n          1   10000000: 3 2 \n\
+                   Locations\n     1: 0x1 M=1 golang.org/x/text.Map /home/u/go/pkg/mod/golang.org/x/text/map.go:568:0 s=528\n\
+                   \x20            example.com/x/pkg.Slugify /repo/pkg/a.go:21:0 s=18\n\
+                   \x20    2: 0x2 M=1 example.com/x/pkg.slugAll /repo/pkg/a_test.go:24:0 s=21\n\
+                   \x20    3: 0x3 M=1 example.com/x/pkg.Slugify /repo/pkg/a.go:25:0 s=18\nMappings\n";
+        let samples = parse_pprof_raw(Path::new("/repo"), raw);
+        assert_eq!(samples.len(), 2);
+        let key = |f: &str, n: &str, l: u32| Some((f.to_string(), n.to_string(), l));
+        // Root first; the inlined Slugify sits between slugAll and strings.Map (not user code).
+        assert_eq!(
+            samples[0],
+            (
+                vec![
+                    key("pkg/a_test.go", "slugAll", 21),
+                    key("pkg/a.go", "Slugify", 18),
+                    None
+                ],
+                20.0
+            )
+        );
+        let mut functions = HashMap::new();
+        merge_samples(&samples, &mut functions);
+        let slug = &functions[&("pkg/a.go".to_string(), "Slugify".to_string(), 18)];
+        assert_eq!((slug.total_ms, slug.self_ms), (30.0, 10.0));
+        assert_eq!(slug.callers.values().map(|c| c.0).sum::<f64>(), 30.0);
+    }
+
+    #[test]
+    fn java_declarations() {
+        let src = "class Strings {\n    public static String slugify(String text, int max) {\n        \
+                   String s = slugify(text, 0);\n        return s;\n    }\n}\n";
+        assert_eq!(java_declaration(src, "slugify", 4), Some(2));
+        assert_eq!(java_declaration(src, "slugify", 1), None);
+    }
+
+    #[test]
+    fn loop_variables_in_go_java_ruby() {
+        let (items, indexes) = loop_variables(
+            "for _, t := range texts {\n\tSlugify(t, 30)\n}\nfor i := range xs {}\n\
+             for (String w : words) {}\nfor (int j = 0; j < n; j++) {}\ntexts.map { |x| f(x) }\nxs.each do |y, k|\n",
+        );
+        assert_eq!(items, ["t", "w", "x", "y"]);
+        assert_eq!(
+            indexes,
+            ["_", "i", "j"]
+                .into_iter()
+                .filter(|v| *v != "_")
+                .collect::<Vec<_>>()
+        );
     }
 }

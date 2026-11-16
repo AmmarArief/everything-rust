@@ -82,16 +82,20 @@ Choices made so far, with reasons. Each one can be revisited.
 | S8 | `profile` runs a real workload under the language's own profiler (`node --cpu-prof`, `cProfile`) and ranks the repository's functions by inclusive time, with callers and the argument that varies per call. | Which code to port is a property of how it is called, not of the code: x18n's `fuzzyScore` is a leaf (slower in Rust per call) but a quarter of a search, called 50,000 times by one loop. |
 | S9 | Batch classes (`--batch fn:param`): the items cross once, then `run` maps the function over all of them and `rank` returns the indexes of results above a minimum, best first (stable, like JS `sort`). Items and results are scalars or strings; numbers come back as typed arrays. | Research and a prototype agreed: the gains come from keeping data on the Rust side and using all cores, not from faster crossings. Indexes, not strings, cross back: the caller already holds the items. |
 | S10 | A `<Function>Index` struct in `port.rs` (`new(items)`, `run(fixed args)`) replaces the default per-item loop; every crate with batches depends on rayon, wasm included, where it runs on one thread. | Preparing items once (lowercasing, masks) was the second 4x on x18n search; one `port.rs` then builds for napi and wasm. |
+| S11 | Batches in every bridged language: magnus classes in the original Ruby module (the original's defaults and keywords kept), a Go type over a Rust handle (`New…`, `Run`, `Rank`, `Close`, a finalizer), and a Java `AutoCloseable` class freed by `close` or a `Cleaner`. Go strings cross packed in one buffer; Go string results come back as one copy, sliced per item. | The same pattern pays everywhere: Go and Java, where per-call ports lose (0.5-0.7x), gain 1.7-2.5x. |
+| S12 | Crates with batches use mimalloc as Rust's global allocator (not wasm). | Ports allocate per item, and the system allocator serialized the threads: 1.6x on 4 cores in pure Rust, slower than one thread inside a Go process; 3.2x with mimalloc. Only Rust code uses that heap: every buffer that crosses is copied or freed by Rust. |
+| S13 | `profile` per runtime: node `--cpu-prof`, cProfile, `go test -cpuprofile` read through `go tool pprof -raw` (inlined frames kept), JFR execution samples (`jfr print --stack-depth 256`), and for Ruby a TracePoint call tracer loaded through `RUBYOPT`. Sampled stacks share one aggregator; the batch parameter is found from each language's loop forms. | Each is the profiler that ships with the runtime; Ruby has none built in that samples, and stackprof is a gem the repository may not have. |
 | S4 | `bench` ends with a verdict: ship, keep the slower functions, port a bigger unit, or (for C) optimize the port. Faster is 1.1x or more, slower under 0.9x. | Numbers alone left the decision to the reader; Go and Java leaf functions cannot win per call, and the tool should say so. |
 
 ## Known limits
 
 - Tests that import a package by name credit the package, not a unit.
-- `analyze` still guesses "compute-heavy" from loops and string work; `profile` measures, for TS and
-  Python workloads only.
+- `analyze` still guesses "compute-heavy" from loops and string work; `profile` measures (not for C:
+  use `perf`). Go workloads must be `go test` runs, since Go profiles only from inside the process.
+  The Ruby tracer slows the program several times; shares stay comparable.
 - The bridge copies strings and structured values on every call. For fine-grained functions this
-  dominates: measure with `bench`, and batch the loop around them. Batches are for TS (napi-rs,
-  wasm-bindgen) and Python, over one scalar or string parameter, with scalar or string results.
+  dominates: measure with `bench`, and batch the loop around them. Batches take one scalar or
+  string parameter (Ruby: any value) and return scalars or strings; not for C.
 - Shadow mode compares synchronous Rust results; functions that mutate their arguments are run on
   already-mutated input by the second implementation.
 - C: only scalar and `const char *` APIs cross the bridge; output buffers (`char *out, size_t *len`)

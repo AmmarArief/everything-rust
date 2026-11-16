@@ -13,9 +13,11 @@ First version: the full loop for TypeScript/JavaScript, Python, C, Go, Ruby and 
 - Direct bridges: PyO3 conversion without JSON and `pynum::Num`, a magnus extension for Ruby,
   typed JNI and cgo functions, and a generated binary wire for lists, maps, structs and several
   results in Go and Java, and for TS through napi-rs and wasm-bindgen; `bench` times calls in process and ends with a verdict.
-- `profile`: hot functions of a real workload (node `--cpu-prof`, `cProfile`) with callers, call
-  counts and advice. Batch classes (`--batch fn:param`) keep items in Rust and run on all cores;
-  a `<Function>Index` in `port.rs` prepares the items once. x18n's search: 7x faster than TS.
+- `profile`: hot functions of a real workload (node `--cpu-prof`, cProfile, `go test` pprof, JFR,
+  a Ruby tracer) with callers, call counts and advice. Batch classes (`--batch fn:param`) for TS,
+  Python, Ruby, Go and Java keep items in Rust and run on all cores, with mimalloc; a
+  `<Function>Index` in `port.rs` prepares the items once. x18n's search: 7x faster than TS; Go
+  and Java batches 2.5x and 1.7x faster than the originals.
 - Run end to end on Go's `path`, Ruby's `shellwords`, Python's `colorsys`, and JDK and glibc
   behavior; fixes from those runs: exact float parsing, crash isolation, `module_function :name`,
   numeric inference for untyped parameters, ints in Python inputs.

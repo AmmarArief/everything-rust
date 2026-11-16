@@ -129,11 +129,11 @@ fn tools() -> Value {
         },
         {
             "name": "profile",
-            "description": "Run a real workload (a command: node script, python3 script) under the language's profiler and rank the repository's hot functions by inclusive time, with their callers, call counts and advice: what to port together, and which loops to batch (`bridge` with `batch`). Profile before porting: leaf functions called one at a time are slower in Rust.",
+            "description": "Run a real workload (a command: node or python3 script, `go test -bench`, java, ruby) under the language's profiler and rank the repository's hot functions by inclusive time, with their callers, call counts and advice: what to port together, and which loops to batch (`bridge` with `batch`). Profile before porting: leaf functions called one at a time are slower in Rust.",
             "inputSchema": { "type": "object", "properties": {
                 "root": { "type": "string" },
                 "command": { "type": "array", "items": { "type": "string" }, "description": "The workload, run in root: [\"node\", \"bench.mjs\"]." },
-                "lang": { "type": "string", "enum": ["ts", "python"], "description": "Detected from the repository when omitted." },
+                "lang": { "type": "string", "enum": ["ts", "python", "go", "java", "ruby"], "description": "Detected from the repository when omitted." },
             }, "required": ["root", "command"] },
         },
         {

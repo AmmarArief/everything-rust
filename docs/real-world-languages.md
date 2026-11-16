@@ -70,8 +70,23 @@ are identical to the TS pipeline for every query:
 | Batch with `FuzzyScoreIndex`, wasm, 1 thread | 3.0 | 2.9x |
 
 Of the 1.2 ms, 0.4 ms is JS turning the returned indexes back into keys; the Rust ranking alone is
-10x faster than the TS pipeline. A Python batch over the fixture's `slugify` is 14.5x faster
-than calling it per item, raising the same exceptions.
+10x faster than the TS pipeline.
+
+The same pattern in the other languages, against the originals (4 cores, identical results and
+errors):
+
+| Language | Workload | Original | Per-call port vs original | Batch vs original |
+| --- | --- | ---: | ---: | ---: |
+| Python | fixture `slugify`, 20,000 strings | 98 ms | - | 17x |
+| Ruby | fixture `slugify`, 20,000 strings | 110 ms | - | 12.7x |
+| Ruby | `Shellwords.shellescape`, 50,000 mixed values | 88 ms | - | 11.8x |
+| Go | fixture `Slugify`, 50,000 strings | 52 ms | 0.73x | 2.5x |
+| Java | fixture `slugify`, 50,000 strings | 43 ms | 0.46x | 1.7x |
+
+The Go batch first ran slower than one thread: the port allocates per item and glibc's allocator
+serialized the threads inside the Go process. Batch crates now use mimalloc. The shellescape batch
+also found a port bug that per-call recording had missed: Ruby symbols (`shellescape(:sym)`) came
+back as their JSON marker. Fixed in the port.
 
 ## What the runs found
 

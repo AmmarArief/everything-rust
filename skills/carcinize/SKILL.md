@@ -45,9 +45,11 @@ Write the port in `src/port.rs` only; `src/lib.rs` is the thin binding layer.
 - Read each risk the plan lists for the unit, at its `file:line`, before writing code.
 - String offsets: use `src/utf16.rs`. JS indexes UTF-16 code units, Rust UTF-8 bytes.
 - Speed: before choosing what to port, profile a real workload: `carcinize profile <repo> -- node
-  bench.mjs` (or `python3 bench.py`). A hot function called in a loop is a batch, not a port:
+  bench.mjs` (or `python3 bench.py`, `go test -run X -bench . ./pkg`, `java -cp out Main`,
+  `ruby bench.rb`). A hot function called in a loop is a batch, not a port:
   `carcinize bridge <repo> <unit> --batch fn:param` (or `refresh <crate> --batch fn:param`), then
-  have the caller build `new FnBatch(items)` once and call `rank`/`run` per query. Define
+  have the caller build the batch once (`new FnBatch(items)`, `NewFnBatch(items)` in Go,
+  `Mod::FnBatch.new(items)` in Ruby) and call `rank`/`run` per query; close it in Go and Java. Define
   `pub struct FnIndex` in `port.rs` with `new(items)` and `run(...)` to prepare the items once
   (lowercase, masks, sorted tables); it must give the same result as the function, item by item.
 - Speed: run `carcinize bench` and follow its verdict. In Go and Java, a call into Rust costs more

@@ -146,7 +146,8 @@ enum Cmd {
         node_args: Vec<String>,
     },
     /// Run a real workload under the language's profiler and say what to port: hot functions,
-    /// their callers, and loops to batch. `carcinize profile <repo> -- node bench.mjs`
+    /// their callers, and loops to batch. `carcinize profile <repo> -- node bench.mjs` (also
+    /// `python3 x.py`, `go test -bench . ./pkg`, `java ...`, `ruby x.rb`)
     Profile {
         /// Repository root.
         root: PathBuf,
