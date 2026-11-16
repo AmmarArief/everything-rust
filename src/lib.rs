@@ -12,6 +12,7 @@ pub mod codegen_go;
 pub mod codegen_java;
 pub mod codegen_py;
 pub mod codegen_ruby;
+pub mod codegen_tswire;
 pub mod gate;
 pub mod harness;
 pub mod harness_c;

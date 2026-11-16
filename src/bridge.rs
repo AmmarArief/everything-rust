@@ -618,6 +618,19 @@ fn format_wrapper(crate_dir: &Path) {
     }
 }
 
+/// `lib.rs` of a JS crate: the bindings, and the binary wire when functions use it.
+fn js_lib_rs(m: &Manifest, api: &codegen::PortApi, modules: &codegen::Modules) -> String {
+    let lib = codegen::lib_rs(m, api, modules);
+    if m.kind != Kind::Napi || !crate::codegen_tswire::uses_wire(m, api) {
+        return lib;
+    }
+    lib.replacen(
+        "pub mod port;",
+        "pub mod port;\npub mod wire;\n\n#[allow(unused_imports)]\nuse serde_json::Value;",
+        1,
+    ) + &crate::codegen_tswire::napi_rs(m, api)
+}
+
 /// The language-side loader: `index.cjs` for JS, the wrapper package for Python.
 fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
     match m.kind {
@@ -625,7 +638,10 @@ fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
             format!("python/{}/__init__.py", m.lib_name()),
             crate::codegen_py::package_init(m, api),
         ),
-        _ => ("index.cjs".into(), codegen::index_cjs(m, api)),
+        _ => (
+            "index.cjs".into(),
+            codegen::index_cjs(m, api) + &crate::codegen_tswire::index_cjs(m, api),
+        ),
     }
 }
 
@@ -689,14 +705,14 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
         js: needs_js(&fns) || crate_dir.join("src/js.rs").exists(),
     };
     let mut files: Vec<(String, String)> = vec![
-        (
-            "src/lib.rs".into(),
-            codegen::lib_rs(&manifest, &fns, &modules),
-        ),
+        ("src/lib.rs".into(), js_lib_rs(&manifest, &fns, &modules)),
         loader_file(&manifest, &fns),
     ];
     if modules.js {
         files.push(("src/js.rs".into(), codegen::JS_RS.to_string()));
+    }
+    if manifest.kind == Kind::Napi && crate::codegen_tswire::uses_wire(&manifest, &fns) {
+        files.push(("src/wire.rs".into(), crate::wire::WIRE_RS.into()));
     }
     if manifest.kind == Kind::Pyo3 && fns.needs_json() {
         files.push(("src/pyconv.rs".into(), crate::codegen_py::PYCONV_RS.into()));
@@ -935,10 +951,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     };
     let mut files: Vec<(String, String)> = vec![
         ("Cargo.toml".into(), codegen::cargo_toml(&manifest, &fns)),
-        (
-            "src/lib.rs".into(),
-            codegen::lib_rs(&manifest, &fns, &modules),
-        ),
+        ("src/lib.rs".into(), js_lib_rs(&manifest, &fns, &modules)),
         ("src/port.rs".into(), port),
         loader_file(&manifest, &fns),
         (
@@ -962,6 +975,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     }
     if modules.js {
         files.push(("src/js.rs".into(), codegen::JS_RS.into()));
+    }
+    if manifest.kind == Kind::Napi && crate::codegen_tswire::uses_wire(&manifest, &fns) {
+        files.push(("src/wire.rs".into(), crate::wire::WIRE_RS.into()));
     }
     if manifest.kind == Kind::Pyo3 && fns.needs_json() {
         files.push(("src/pyconv.rs".into(), crate::codegen_py::PYCONV_RS.into()));

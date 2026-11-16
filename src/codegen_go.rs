@@ -812,7 +812,8 @@ fn go_enc(expr: &str, t: &Ty, depth: usize) -> String {
             out
         }
         Ty::Opt { inner, .. } => go_enc(expr, inner, depth),
-        Ty::Tuple(_) => String::new(),
+        // Tuples are handled by the caller; JS-only types never come from Go.
+        _ => String::new(),
     }
 }
 
@@ -843,7 +844,8 @@ fn go_dec(target: &str, t: &Ty, depth: usize) -> String {
             out
         }
         Ty::Opt { inner, .. } => go_dec(target, inner, depth),
-        Ty::Tuple(_) => String::new(),
+        // Tuples are handled by the caller; JS-only types never come from Go.
+        _ => String::new(),
     }
 }
 

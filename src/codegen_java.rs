@@ -1307,7 +1307,7 @@ fn java_enc(expr: &str, t: &Ty, depth: usize) -> String {
             "{{ var m{d} = {expr}; if (m{d} == null) {{ w.tag(0); }} else {{ w.tag(1); w.len(m{d}.size()); for (var e{d} : m{d}.entrySet()) {{ w.str(e{d}.getKey()); {} }} }} }}",
             java_enc(&format!("e{d}.getValue()"), value, d + 1)
         ),
-        Ty::Struct { .. } | Ty::Tuple(_) => String::new(),
+        _ => String::new(),
     }
 }
 
@@ -1347,7 +1347,7 @@ fn java_dec(t: &Ty) -> Option<String> {
         },
         Ty::List { item, .. } => format!("r.list(() -> {})", java_dec(item)?),
         Ty::Map { value, .. } => format!("r.map(() -> {})", java_dec(value)?),
-        Ty::Struct { .. } | Ty::Tuple(_) => return None,
+        _ => return None,
     })
 }
 
