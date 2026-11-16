@@ -41,8 +41,9 @@ fn signature(f: &PortFn, source: &[Param]) -> String {
 pub fn rust_literal(default: &str) -> Option<String> {
     let d = default.trim();
     match d {
-        "True" => return Some("true".into()),
-        "False" => return Some("false".into()),
+        // Python's `True`; Ruby's and Java's `true`.
+        "True" | "true" => return Some("true".into()),
+        "False" | "false" => return Some("false".into()),
         "None" => return None,
         _ => {}
     }

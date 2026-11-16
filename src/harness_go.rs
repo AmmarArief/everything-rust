@@ -199,19 +199,5 @@ pub fn bench(crate_dir: &Path, m: &Manifest, min_ms: u64) -> Result<Vec<BenchRow
             serde_json::from_str(&std::fs::read_to_string(&out)?)?;
         timings.push(parsed);
     }
-    Ok(m.exports
-        .iter()
-        .filter_map(|f| {
-            let old = timings[0].get(&f.name)?;
-            let new = timings[1].get(&f.name)?;
-            let (o, n) = (old["ns"].as_f64()?, new["ns"].as_f64()?);
-            Some(BenchRow {
-                name: f.name.clone(),
-                cases: old["cases"].as_u64().unwrap_or(0) as usize,
-                original_ns: o,
-                rust_ns: n,
-                speedup: o / n,
-            })
-        })
-        .collect())
+    Ok(crate::harness::bench_rows(m, &timings[0], &timings[1]))
 }

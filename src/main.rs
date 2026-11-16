@@ -354,7 +354,11 @@ fn run() -> Result<ExitCode> {
                 outcome.path.display(),
                 outcome.exports.join(", ")
             );
-            if outcome.path.extension().is_some_and(|e| e == "go") {
+            if outcome.path.extension().is_some_and(|e| e == "rb") {
+                say!(
+                    "Require it after the original files. CARCINIZE_MODE=old|shadow|new switches at runtime."
+                );
+            } else if outcome.path.extension().is_some_and(|e| e == "go") {
                 say!(
                     "Import it in place of the original package (require and replace both modules in go.mod). CARCINIZE_MODE=old|shadow|new switches at runtime."
                 );

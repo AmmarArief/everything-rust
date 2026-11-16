@@ -193,7 +193,11 @@ pub fn port_rs(m: &Manifest) -> String {
 /// A parameter's type in the port. Python parameters with a literal default (`sep="-"`) are
 /// plain values: PyO3 fills in the default, and an explicit `None` stays an error, as in Python.
 fn port_param_type(m: &Manifest, p: &crate::ts::exports::Param) -> RType {
-    if m.language == crate::lang::Lang::Python && crate::codegen_py::has_literal_default(p) {
+    if matches!(
+        m.language,
+        crate::lang::Lang::Python | crate::lang::Lang::Ruby
+    ) && crate::codegen_py::has_literal_default(p)
+    {
         RType::from_ts(&p.ts_type)
     } else {
         param_type(p)

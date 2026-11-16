@@ -29,6 +29,7 @@ fn arg_expr(f: &PortFn, i: usize) -> String {
     match f.params[i].1.as_str() {
         "f64" => format!("num(args, {i})?"),
         "Option<f64>" => format!("opt_num(args, {i})?"),
+        "Vec<f64>" => format!("num_vec(args, {i})?"),
         _ => format!("arg(args, {i})?"),
     }
 }
@@ -36,6 +37,8 @@ fn arg_expr(f: &PortFn, i: usize) -> String {
 fn out_expr(f: &PortFn) -> &'static str {
     match f.ret.as_str() {
         "f64" => "out_num(out)",
+        "Option<f64>" => "out.map_or(Value::Null, out_num)",
+        "Vec<f64>" => "Value::Array(out.into_iter().map(out_num).collect())",
         "()" => "Value::Null",
         _ => "serde_json::to_value(out).map_err(|e| e.to_string())?",
     }
@@ -153,6 +156,14 @@ fn num(args: &[Value], i: usize) -> Result<f64, String> {{
             Some("-0") => Ok(-0.0),
             _ => Err(format!("argument {{i}}: not a number")),
         }},
+        _ => arg(args, i),
+    }}
+}}
+
+#[allow(dead_code)]
+fn num_vec(args: &[Value], i: usize) -> Result<Vec<f64>, String> {{
+    match args.get(i) {{
+        Some(Value::Array(items)) => (0..items.len()).map(|j| num(items, j)).collect(),
         _ => arg(args, i),
     }}
 }}

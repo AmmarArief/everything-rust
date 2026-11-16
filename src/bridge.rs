@@ -1018,6 +1018,12 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 crate::codegen_go::wrapper(m),
             ));
         }
+        crate::lang::Lang::Ruby => {
+            files.push((
+                crate::harness_ruby::wrapper_path(m),
+                crate::codegen_ruby::wrapper(m),
+            ));
+        }
         other => bail!("no wrapper generator for {}", other.name()),
     }
     Ok(files)

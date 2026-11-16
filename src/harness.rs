@@ -175,6 +175,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         crate::harness_c::record(opts.crate_dir, &manifest, &cases)?
     } else if manifest.language == crate::lang::Lang::Go {
         crate::harness_go::record(opts.crate_dir, &manifest, &cases)?
+    } else if manifest.language == crate::lang::Lang::Ruby {
+        crate::harness_ruby::record(opts.crate_dir, &manifest, &cases)?
     } else {
         record_node(opts, &manifest, &cases)?
     };
@@ -343,6 +345,28 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
 }
 
 /// Per-function timing of the original against the Rust module.
+/// Rows from two `{ name: { cases, ns } }` timing maps: the original's and the port's.
+pub fn bench_rows(
+    m: &Manifest,
+    original: &serde_json::Map<String, Value>,
+    rust: &serde_json::Map<String, Value>,
+) -> Vec<BenchRow> {
+    m.exports
+        .iter()
+        .filter_map(|f| {
+            let (old, new) = (original.get(&f.name)?, rust.get(&f.name)?);
+            let (o, n) = (old["ns"].as_f64()?, new["ns"].as_f64()?);
+            Some(BenchRow {
+                name: f.name.clone(),
+                cases: usize::try_from(old["cases"].as_u64().unwrap_or(0)).unwrap_or(0),
+                original_ns: o,
+                rust_ns: n,
+                speedup: o / n,
+            })
+        })
+        .collect()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BenchRow {
     #[serde(rename = "fn")]
@@ -374,6 +398,9 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     }
     if manifest.language == crate::lang::Lang::Go {
         return crate::harness_go::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
+    if manifest.language == crate::lang::Lang::Ruby {
+        return crate::harness_ruby::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
@@ -463,6 +490,12 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         && opts.module.is_none()
     {
         return crate::harness_go::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Ruby
+        && opts.module.is_none()
+    {
+        return crate::harness_ruby::diff(opts.crate_dir, &manifest);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {

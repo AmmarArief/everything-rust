@@ -634,3 +634,70 @@ fn go_packages_bridge_record_and_diff() {
     assert_eq!(diff.total, recorded.cases);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+fn ruby_available() -> bool {
+    Command::new("ruby")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+}
+
+#[test]
+fn ruby_modules_bridge_record_and_diff() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ruby");
+    let dir = std::env::temp_dir().join(format!("carcinize-ruby-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "lib/textkit/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+    })
+    .unwrap();
+    assert_eq!(outcome.kind, Kind::Ffi);
+    let manifest = Manifest::load(&dir).unwrap();
+    let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
+    assert_eq!(kept, ["each_word"]);
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    // YARD types, a literal default kept as a plain value, and `nil` as an Option.
+    assert!(
+        port.contains("pub fn slugify(text: String, sep: String, max: Option<i64>)"),
+        "{port}"
+    );
+    let wrapper = std::fs::read_to_string(dir.join("ruby/textkit_rs.rb")).unwrap();
+    assert!(
+        wrapper.contains("def self.slugify(text, sep = \"-\", max: nil)"),
+        "{wrapper}"
+    );
+    if !ruby_available() {
+        return;
+    }
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 30,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(recorded.cases > 100, "{recorded:?}");
+    // `page_count` raises ArgumentError for a non-positive page size.
+    assert!(recorded.errors > 0);
+    harness::build(&dir).unwrap();
+    let diff = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        node_args: &[],
+    })
+    .unwrap();
+    // Unported functions panic, which Ruby sees as a RuntimeError: nothing can match.
+    assert_eq!(diff.passed, 0, "{diff:?}");
+    assert_eq!(diff.total, recorded.cases);
+    let _ = std::fs::remove_dir_all(&dir);
+}

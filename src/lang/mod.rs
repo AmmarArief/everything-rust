@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod c;
 pub mod go;
 pub mod python;
+pub mod ruby;
 pub mod syntax;
 
 #[derive(
@@ -103,6 +104,7 @@ pub fn discover(lang: Lang, root: &Path) -> anyhow::Result<crate::ts::discover::
         Lang::Python => python::discover(root),
         Lang::C => c::discover(root),
         Lang::Go => go::discover(root),
+        Lang::Ruby => ruby::discover(root),
         _ => anyhow::bail!("{} is not supported yet", lang.name()),
     }
 }
@@ -112,6 +114,7 @@ pub fn scan(lang: Lang, _path: &str, text: &str) -> crate::ts::scan::FileFacts {
         Lang::Python => python::scan(text),
         Lang::C => c::scan(text),
         Lang::Go => go::scan(text),
+        Lang::Ruby => ruby::scan(text),
         _ => crate::ts::scan::FileFacts::default(),
     }
 }
@@ -132,6 +135,7 @@ pub fn resolve(
         },
         Lang::C => c::resolve(from, spec, index),
         Lang::Go => go::resolve(spec, index, ws),
+        Lang::Ruby => ruby::resolve(from, spec, index, ws),
         _ => Resolution::Unresolved,
     }
 }
@@ -148,6 +152,7 @@ pub fn exports(
         Lang::Python => python::exports(path, text),
         Lang::C => (c::exports(path, text), Vec::new()),
         Lang::Go => (go::exports(path, text), Vec::new()),
+        Lang::Ruby => (ruby::exports(path, text), Vec::new()),
         _ => (Vec::new(), Vec::new()),
     }
 }
@@ -157,6 +162,7 @@ pub fn lookup(lang: Lang, name: &str) -> Option<crate::ts::deps::CrateMatch> {
     match lang {
         Lang::C => c::lookup(name),
         Lang::Go => go::lookup(name),
+        Lang::Ruby => ruby::lookup(name),
         _ => None,
     }
 }
