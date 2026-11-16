@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde_json::{Value, json};
 
-use crate::{analyze, app, bridge, gate, harness, shadow};
+use crate::{analyze, app, bridge, front_door, gate, harness, shadow};
 
 const PROTOCOL_VERSION: &str = "2025-06-18";
 
@@ -174,6 +174,25 @@ fn tools() -> Value {
                 "build": { "type": "string", "description": "Command line of the build to test; the original when omitted." },
             }, "required": ["repo"] },
         },
+        {
+            "name": "app_front_door",
+            "description": "Scaffold <repo>/rust/app, the Rust binary that owns the CLI's entry point: a clap parser for the recorded commands and flags, every command running the original with the same argv, stdin and env (each fallback counted). Builds it and replays the cases: 100% passed at 100% fallback. Needs app_record first; never overwrites rust/app.",
+            "inputSchema": { "type": "object", "properties": {
+                "repo": { "type": "string", "description": "Repository root." },
+                "check": { "type": "boolean", "description": "Build and replay (default true)." },
+            }, "required": ["repo"] },
+        },
+        {
+            "name": "app_wire",
+            "description": "After a unit passes gate, hand its commands to its port.rs: adds the unit crate to rust/app as a library, writes a glue stub (src/units/<unit>.rs, yours to write: parse args, call <crate>::port, print what the original prints), regenerates the routing with a kill switch RUST_ANYTHING_UNIT_<NAME>=original, then builds and replays. Run it again after writing the glue: 100% passed and a lower fallback rate.",
+            "inputSchema": { "type": "object", "properties": {
+                "repo": { "type": "string", "description": "Repository root." },
+                "unit": { "type": "string", "description": "Unit crate folder, its name under rust/, or the unit id it was bridged from." },
+                "commands": { "type": "array", "items": { "type": "string" }, "description": "Commands the unit answers; kept from the last wire when omitted." },
+                "skip_gate": { "type": "boolean", "description": "Do not run gate on the unit first." },
+                "check": { "type": "boolean", "description": "Build and replay (default true)." },
+            }, "required": ["repo", "unit"] },
+        },
     ])
 }
 
@@ -304,6 +323,23 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 timeout_secs: None,
             })?)?
         }
+        "app_front_door" => {
+            let repo = path("repo")?;
+            serde_json::to_value(front_door::front_door(&front_door::FrontDoorOptions {
+                repo: &repo,
+                check: args["check"].as_bool().unwrap_or(true),
+            })?)?
+        }
+        "app_wire" => {
+            let repo = path("repo")?;
+            serde_json::to_value(front_door::wire(&front_door::WireOptions {
+                repo: &repo,
+                unit: args["unit"].as_str().context("missing `unit`")?,
+                commands: &strings("commands"),
+                skip_gate: args["skip_gate"].as_bool().unwrap_or(false),
+                check: args["check"].as_bool().unwrap_or(true),
+            })?)?
+        }
         _ => anyhow::bail!("unknown tool `{name}`"),
     })
 }
@@ -340,7 +376,9 @@ mod tests {
                 "shadow",
                 "gate",
                 "app_record",
-                "app_replay"
+                "app_replay",
+                "app_front_door",
+                "app_wire"
             ]
         );
         let bad = handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "gate", "arguments": {} } })).unwrap();

@@ -552,7 +552,7 @@ pub fn shell_split(line: &str) -> Result<Vec<String>> {
     Ok(toks.into_iter().map(|t| t.text).collect())
 }
 
-fn shell_quote(word: &str) -> String {
+pub(crate) fn shell_quote(word: &str) -> String {
     let plain = !word.is_empty()
         && word
             .chars()
@@ -1032,7 +1032,7 @@ fn read_inputs(path: &Path) -> Result<Vec<(Option<String>, Case)>> {
     Ok(out)
 }
 
-fn is_word(arg: &str) -> bool {
+pub(crate) fn is_word(arg: &str) -> bool {
     let mut chars = arg.chars();
     chars.next().is_some_and(|c| c.is_ascii_alphabetic())
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
@@ -1662,6 +1662,39 @@ fn report_markdown(outcome: &ReplayOutcome) -> String {
     out
 }
 
+fn load_specs(dir: &Path) -> Result<Vec<Spec>> {
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
+        .with_context(|| {
+            format!(
+                "no cases in {}: run `rust-anything app record` first",
+                dir.display()
+            )
+        })?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file() && p.extension().is_some_and(|e| e == "toml"))
+        .collect();
+    paths.sort();
+    let specs = paths
+        .iter()
+        .map(|p| load_spec(dir, p))
+        .collect::<Result<Vec<_>>>()?;
+    ensure!(
+        !specs.is_empty(),
+        "no cases in {}: run `rust-anything app record` first",
+        dir.display()
+    );
+    Ok(specs)
+}
+
+/// The recorded cases' arguments, each with whether the original exited 0.
+pub(crate) fn recorded_args(repo: &Path) -> Result<Vec<(Vec<String>, bool)>> {
+    Ok(load_specs(&cases_dir(repo))?
+        .into_iter()
+        .map(|s| (s.case.args, matches!(s.status, Expect::Code(0))))
+        .collect())
+}
+
 pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
     let repo = opts
         .repo
@@ -1688,27 +1721,7 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         timeout_secs: default_timeout(),
     });
     let norm = Normalizers::new(&config)?;
-    let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
-        .with_context(|| {
-            format!(
-                "no cases in {}: run `rust-anything app record` first",
-                dir.display()
-            )
-        })?
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.is_file() && p.extension().is_some_and(|e| e == "toml"))
-        .collect();
-    paths.sort();
-    let specs = paths
-        .iter()
-        .map(|p| load_spec(&dir, p))
-        .collect::<Result<Vec<_>>>()?;
-    ensure!(
-        !specs.is_empty(),
-        "no cases in {}: run `rust-anything app record` first",
-        dir.display()
-    );
+    let specs = load_specs(&dir)?;
     let timeout = Duration::from_secs(opts.timeout_secs.unwrap_or(config.timeout_secs));
     let results = par_map(&specs, |spec| {
         if matches!(spec.status, Expect::Skip) {

@@ -17,13 +17,13 @@ macro_rules! say_raw {
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use rust_anything::{analyze, app, bridge, gate, harness, mcp, report, shadow};
+use rust_anything::{analyze, app, bridge, front_door, gate, harness, mcp, report, shadow};
 
 #[derive(Parser)]
 #[command(
     name = "rust-anything",
     version,
-    about = "Plan, bridge, verify and ship incremental TypeScript/JavaScript to Rust migrations",
+    about = "Rewrite TypeScript/JavaScript, Python, C, Go, Ruby or Java apps in Rust, one verified piece at a time",
     after_help = "Loop per unit: analyze -> bridge -> record -> port src/port.rs -> build -> diff -> shadow -> gate"
 )]
 struct Cli {
@@ -250,6 +250,59 @@ enum AppCmd {
         #[arg(long)]
         json: bool,
     },
+    /// Scaffold `<repo>/rust/app`, the Rust binary that owns the CLI's entry point: a clap parser
+    /// for the recorded commands and flags, every command running the original until a unit is
+    /// wired. Builds it and replays the cases (100% passed, 100% fallback).
+    FrontDoor {
+        /// Repository root.
+        #[arg(default_value = ".")]
+        repo: PathBuf,
+        /// Only write the files; skip the build and replay.
+        #[arg(long)]
+        no_check: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Hand commands to a unit's `port.rs` (after it passes gate): adds the crate to `rust/app`,
+    /// a glue file to write once, the routing and a kill switch
+    /// (`RUST_ANYTHING_UNIT_<NAME>=original`), then builds and replays.
+    Wire {
+        /// Repository root.
+        repo: PathBuf,
+        /// Unit crate: its folder, its name under `rust/`, or the unit id it was bridged from.
+        unit: String,
+        /// A command the unit answers. Repeatable; kept from the last wire when omitted.
+        #[arg(long = "command")]
+        commands: Vec<String>,
+        /// Do not run gate on the unit first (it just passed).
+        #[arg(long)]
+        skip_gate: bool,
+        /// Only write the files; skip the build and replay.
+        #[arg(long)]
+        no_check: bool,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+fn say_replay(replay: &app::ReplayOutcome) {
+    say!("{}/{} cases passed", replay.passed, replay.total);
+    if let Some(f) = &replay.fallback {
+        say!(
+            "Fallback rate: {:.1}% ({}/{})",
+            f.rate * 100.0,
+            f.cases,
+            f.total
+        );
+    }
+    for f in replay.failures.iter().take(20) {
+        let fields: Vec<&str> = f.problems.iter().map(|p| p.field.as_str()).collect();
+        say!("- {}: {}", f.case, fields.join(", "));
+    }
+    if replay.failures.len() > 20 {
+        say!("- ... and {} more", replay.failures.len() - 20);
+    }
+    say!("Report: {}", replay.report.display());
 }
 
 fn main() -> ExitCode {
@@ -621,25 +674,93 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
             } else {
-                say!("{}/{} cases passed", outcome.passed, outcome.total);
-                if let Some(f) = &outcome.fallback {
-                    say!(
-                        "Fallback rate: {:.1}% ({}/{})",
-                        f.rate * 100.0,
-                        f.cases,
-                        f.total
-                    );
-                }
-                for f in outcome.failures.iter().take(20) {
-                    let fields: Vec<&str> = f.problems.iter().map(|p| p.field.as_str()).collect();
-                    say!("- {}: {}", f.case, fields.join(", "));
-                }
-                if outcome.failures.len() > 20 {
-                    say!("- ... and {} more", outcome.failures.len() - 20);
-                }
-                say!("Report: {}", outcome.report.display());
+                say_replay(&outcome);
             }
             if !outcome.failures.is_empty() {
+                return Ok(ExitCode::FAILURE);
+            }
+        }
+        AppCmd::FrontDoor {
+            repo,
+            no_check,
+            json,
+        } => {
+            let outcome = front_door::front_door(&front_door::FrontDoorOptions {
+                repo: &repo,
+                check: !no_check,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                say!(
+                    "Created {} (binary `{}`), commands: {}",
+                    outcome.dir.display(),
+                    outcome.binary,
+                    if outcome.commands.is_empty() {
+                        "none (one root command)".to_string()
+                    } else {
+                        outcome.commands.join(", ")
+                    }
+                );
+                for file in &outcome.files {
+                    say!("  {file}");
+                }
+                if let Some(replay) = &outcome.replay {
+                    say_replay(replay);
+                }
+                say!(
+                    "Every command runs the original. After a unit passes gate: rust-anything app wire {} <unit> --command <name>",
+                    repo.display()
+                );
+            }
+            if outcome
+                .replay
+                .as_ref()
+                .is_some_and(|r| !r.failures.is_empty())
+            {
+                return Ok(ExitCode::FAILURE);
+            }
+        }
+        AppCmd::Wire {
+            repo,
+            unit,
+            commands,
+            skip_gate,
+            no_check,
+            json,
+        } => {
+            let outcome = front_door::wire(&front_door::WireOptions {
+                repo: &repo,
+                unit: &unit,
+                commands: &commands,
+                skip_gate,
+                check: !no_check,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                say!(
+                    "Wired {} ({}) to {}; {}=original sends it back to the original",
+                    outcome.unit,
+                    outcome.crate_dir.display(),
+                    outcome.commands.join(", "),
+                    outcome.switch
+                );
+                if outcome.glue_pending {
+                    say!(
+                        "Write the glue in {}, then run this again.",
+                        outcome.glue.display()
+                    );
+                }
+                if let Some(replay) = &outcome.replay {
+                    say_replay(replay);
+                }
+            }
+            if outcome
+                .replay
+                .as_ref()
+                .is_some_and(|r| !r.failures.is_empty())
+            {
                 return Ok(ExitCode::FAILURE);
             }
         }

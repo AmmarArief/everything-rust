@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `app front-door` and `app wire` (also MCP tools `app_front_door` and `app_wire`) for CLI apps.
+  `front-door` scaffolds `rust/app`, a Rust binary with a clap parser for the recorded commands
+  and flags where every command runs the original and counts the fallback; it builds and replays
+  (100% passed at 100% fallback). `wire` checks a unit with `gate`, adds its crate to `rust/app`,
+  writes a glue file to fill in, routes the unit's commands to it behind a
+  `RUST_ANYTHING_UNIT_<NAME>=original` kill switch, then builds and replays. Proved on the same
+  small CLI in all six languages.
 - `app record` and `app replay` (also MCP tools `app_record` and `app_replay`): app-level
   behavior for CLIs in all six languages. `record` runs the original on its documented examples,
   an `--inputs` file and semantic traps, twice each, turns what differs between runs into

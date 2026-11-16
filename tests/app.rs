@@ -4,10 +4,12 @@
 //! (everything matches), then replays a build whose division-by-zero message changed (only those
 //! cases fail, with a diff in the report). A test is skipped when its runtime is missing.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rust_anything::app::{self, RecordOptions, ReplayOptions};
+use rust_anything::front_door::{self, FrontDoorOptions, WireOptions};
 
 fn available(program: &str, arg: &str) -> bool {
     Command::new(program)
@@ -136,7 +138,133 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
     let report = std::fs::read_to_string(&bug.report).unwrap();
     assert!(report.contains("- error: division by zero"), "{report}");
     assert!(report.contains("+ error: divide by zero"), "{report}");
+
+    front_door_then_wire(repo);
     std::fs::remove_dir_all(repo).unwrap();
+}
+
+const WORDCOUNT_PORT: &str = "pub fn count_words(text: &[u8]) -> usize {
+    text.split(|b| b.is_ascii_whitespace() || *b == 0x0b)
+        .filter(|w| !w.is_empty())
+        .count()
+}
+";
+
+const WORDCOUNT_GLUE: &str = "use std::io::Read;
+use std::process::ExitCode;
+
+use clap::ArgMatches;
+
+pub fn run(_command: &str, _matches: &ArgMatches) -> ExitCode {
+    let mut input = Vec::new();
+    if std::io::stdin().read_to_end(&mut input).is_err() {
+        return ExitCode::from(1);
+    }
+    println!(\"{}\", wordcount_rs::port::count_words(&input));
+    ExitCode::SUCCESS
+}
+";
+
+/// The front door answers everything through the original; then a unit takes over `words`.
+fn front_door_then_wire(repo: &Path) {
+    let door = front_door::front_door(&FrontDoorOptions { repo, check: true }).unwrap();
+    assert_eq!(
+        door.commands,
+        ["copy", "div", "len", "now", "upper", "words"]
+    );
+    let replay = door.replay.unwrap();
+    assert_eq!(replay.passed, replay.total, "{:?}", replay.failures);
+    let fallback = replay.fallback.as_ref().unwrap();
+    assert_eq!(fallback.cases, replay.total);
+    let app_dir = repo.join(front_door::APP_DIR);
+    if available("cargo", "--version") {
+        sh(&app_dir, "cargo", &["fmt", "--check"]);
+    }
+
+    let unit = repo.join("rust/wordcount-rs");
+    std::fs::create_dir_all(unit.join("src")).unwrap();
+    std::fs::write(
+        unit.join("Cargo.toml"),
+        "[package]\nname = \"wordcount-rs\"\nversion = \"0.1.0\"\nedition = \"2024\"\npublish = false\n\n[lib]\ncrate-type = [\"cdylib\", \"rlib\"]\n",
+    )
+    .unwrap();
+    std::fs::write(unit.join("src/lib.rs"), "pub mod port;\n").unwrap();
+    std::fs::write(unit.join("src/port.rs"), WORDCOUNT_PORT).unwrap();
+    let wire = |commands: &[String]| {
+        front_door::wire(&WireOptions {
+            repo,
+            unit: "wordcount-rs",
+            commands,
+            skip_gate: true,
+            check: true,
+        })
+        .unwrap()
+    };
+
+    let stub = wire(&["words".to_string()]);
+    assert!(stub.glue_pending);
+    assert_eq!(stub.switch, "RUST_ANYTHING_UNIT_WORDCOUNT");
+    let failing = stub.replay.unwrap();
+    assert!(!failing.failures.is_empty());
+    assert!(
+        failing.failures.iter().all(|f| f.args[0] == "words"),
+        "{:?}",
+        failing.failures
+    );
+
+    std::fs::write(&stub.glue, WORDCOUNT_GLUE).unwrap();
+    let wired = wire(&[]);
+    assert!(!wired.glue_pending);
+    assert_eq!(wired.commands, ["words"]);
+    let replay = wired.replay.unwrap();
+    assert_eq!(
+        replay.passed,
+        replay.total,
+        "{}",
+        std::fs::read_to_string(&replay.report).unwrap()
+    );
+    if available("cargo", "--version") {
+        sh(&app_dir, "cargo", &["fmt", "--check"]);
+        sh(
+            &app_dir,
+            "cargo",
+            &["clippy", "--all-targets", "--", "-D", "warnings"],
+        );
+    }
+    let fallback = replay.fallback.as_ref().unwrap();
+    assert!(fallback.cases < fallback.total, "{fallback:?}");
+    assert!(fallback.cases >= fallback.total - 5, "{fallback:?}");
+
+    let exe = &replay.build[0];
+    let log = repo.join("fallback.log");
+    let run = |switch: Option<&str>| {
+        let _ = std::fs::remove_file(&log);
+        let mut cmd = Command::new(exe);
+        cmd.arg("words")
+            .env(rust_anything::app::FALLBACK_ENV, &log)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped());
+        if let Some(value) = switch {
+            cmd.env("RUST_ANYTHING_UNIT_WORDCOUNT", value);
+        }
+        let mut child = cmd.spawn().unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"one two  three\n")
+            .unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert!(out.status.success());
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "3\n");
+        std::fs::read_to_string(&log).unwrap()
+    };
+    assert_eq!(run(None), "", "Rust answered");
+    assert_eq!(
+        run(Some("original")),
+        "words\n",
+        "the kill switch fell back"
+    );
 }
 
 #[test]

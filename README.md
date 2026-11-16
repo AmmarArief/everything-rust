@@ -1,10 +1,11 @@
 <p align="center">
-  <img src="docs/assets/hero.png" alt="rust-anything: Your app isn't slow. One loop is. rust-anything finds it, moves it to Rust, and proves nothing else changed." width="820">
+  <img src="docs/assets/hero.png" alt="rust-anything: Rewrite anything in Rust. Keep it working the whole way. Piece by piece, checked against the original at every step, until it is pure Rust." width="820">
 </p>
 
-**Make the slow part of your app fast in Rust, without rewriting the app.** For TypeScript/JavaScript,
-Python, C, Go, Ruby and Java codebases, one hot path at a time, proven identical by recorded
-behavior.
+**Rewrite your app in Rust, one piece at a time, proving nothing changed.** For TypeScript/JavaScript,
+Python, C, Go, Ruby and Java apps: rust-anything ports your app piece by piece, checks every step
+against the original's recorded behavior, and hands you a pure Rust app. Only need the slow part
+fast? Port just that, one hot path at a time:
 
 | Real workload, same results as the original | Original | With rust-anything |
 | --- | ---: | ---: |
@@ -166,9 +167,29 @@ rust-anything app replay . --build "target/release/mytool"
 - `app replay` runs any build against the cases, prints `passed/total`, writes
   `rust/app-cases/replay-report.md` with a diff per failing case, and exits non-zero on any
   mismatch. A build that appends to the file named by `RUST_ANYTHING_FALLBACK_LOG` (one line per
-  fallback to the original) also gets its fallback rate reported.
+  fallback to the original), as the front door below does, also gets its fallback rate reported.
 
-Both are MCP tools too: `app_record` and `app_replay`.
+Then move the entry point to Rust and hand it commands one unit at a time:
+
+```sh
+rust-anything app front-door .                            # rust/app: every command runs the original
+rust-anything app wire . textkit --command upper          # after textkit-rs passes gate
+# write the glue in rust/app/src/units/textkit.rs, then:
+rust-anything app wire . textkit                          # 100% again, lower fallback rate
+```
+
+- `app front-door` scaffolds `rust/app`, a Rust binary named after the app: a clap parser for the
+  commands and flags in the recorded cases, where every command runs the original with the same
+  argv, stdin and environment and passes its output and exit code through. Each fallback is
+  counted, so replaying the fresh front door gives 100% passed at 100% fallback (it builds and
+  replays to show it). It never overwrites `rust/app`: the code is yours from then on.
+- `app wire <repo> <unit> --command <name>` runs `gate` on the unit crate (`--skip-gate` if it just
+  passed), adds it to `rust/app` as a library, writes `src/units/<unit>.rs` once for you or your
+  agent to fill in (parse the arguments, call `<crate>::port`, print what the original prints),
+  routes the commands to it, then builds and replays. `RUST_ANYTHING_UNIT_<NAME>=original` sends a
+  wired unit back to the original until the lift.
+
+All four are MCP tools too: `app_record`, `app_replay`, `app_front_door` and `app_wire`.
 
 ## Case study: x18n's core
 
