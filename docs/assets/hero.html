@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- The README header image. Edit, then run `node scripts/hero.mjs` to render docs/assets/hero.png. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rust-anything</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --card: #111317;
+    --line: #262a31;
+    --text: #f2f2f2;
+    --muted: #b9bdc4;
+    --dim: #8b9099;
+    --accent: #e8892f;
+    --green: #3fb950;
+    --badge-key: #4b5058;
+    --link: #58a6ff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: var(--bg); }
+  body { width: 1600px; padding: 40px; font-family: "Inter", sans-serif; color: var(--text); }
+  .card {
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 36px;
+    padding: 64px 80px 56px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .icon {
+    width: 196px; height: 196px; border-radius: 40px;
+    background: #15181d;
+    display: grid; place-items: center;
+  }
+  h1 {
+    font-family: "Inter Display", "Inter", sans-serif;
+    font-weight: 600; font-size: 84px; letter-spacing: -1.5px;
+    margin-top: 36px; line-height: 1;
+  }
+  hr { width: 82%; border: 0; border-top: 1.5px solid var(--line); margin: 34px 0 30px; }
+  .tagline { font-size: 31px; font-style: italic; color: var(--text); font-weight: 400; }
+  .sub { font-size: 26px; font-style: italic; color: var(--muted); margin-top: 14px; }
+  .badges { display: flex; gap: 14px; margin-top: 36px; }
+  .badge { display: flex; font-size: 19px; border-radius: 5px; overflow: hidden; line-height: 1; }
+  .badge span { padding: 8px 12px 9px; }
+  .badge .k { background: var(--badge-key); color: #fff; }
+  .badge .v { background: var(--accent); color: #fff; }
+  .badge .v.ok { background: var(--green); }
+  .stats { font-size: 28px; margin-top: 38px; color: var(--text); font-weight: 450; }
+  .stats b { font-weight: 600; color: #fff; }
+  .link { font-size: 24px; margin-top: 22px; color: var(--muted); }
+  .link a { color: var(--link); text-decoration: underline; text-underline-offset: 4px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon" aria-hidden="true">
+      <!-- A code window (any language) with its hot path struck through in orange. -->
+      <svg width="150" height="150" viewBox="0 0 150 150" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="14" y="22" width="96" height="106" rx="15" stroke="#ececec" stroke-width="7"/>
+        <line x1="31" y1="47" x2="72" y2="47" stroke="#9a9fa7" stroke-width="7"/>
+        <line x1="31" y1="67" x2="84" y2="67" stroke="#9a9fa7" stroke-width="7"/>
+        <line x1="31" y1="87" x2="64" y2="87" stroke="#9a9fa7" stroke-width="7"/>
+        <line x1="31" y1="107" x2="52" y2="107" stroke="#9a9fa7" stroke-width="7"/>
+        <!-- The bolt, with a cut-out border in the tile's colour so it sits cleanly on the edge. -->
+        <path id="bolt" d="M118 30 L96 80 H116 L104 124 L140 70 H120 L132 30 Z"/>
+        <use href="#bolt" stroke="#15181d" stroke-width="19" fill="#15181d"/>
+        <use href="#bolt" stroke="#e8892f" stroke-width="7" fill="#15181d"/>
+      </svg>
+    </div>
+    <h1>rust-anything</h1>
+    <hr>
+    <p class="tagline">Your app isn't slow. One loop is.</p>
+    <p class="sub">rust-anything finds it, moves it to Rust, and proves nothing else changed.</p>
+    <div class="badges">
+      <div class="badge"><span class="k">version</span><span class="v">0.1.0</span></div>
+      <div class="badge"><span class="k">languages</span><span class="v">6</span></div>
+      <div class="badge"><span class="k">works with</span><span class="v">4 agents</span></div>
+      <div class="badge"><span class="k">tests</span><span class="v ok">passing</span></div>
+      <div class="badge"><span class="k">license</span><span class="v">MIT</span></div>
+    </div>
+    <p class="stats">up to <b>20x</b> faster · <b>38,251</b> recorded cases replayed · <b>0</b> mismatches · one command</p>
+    <p class="link"><a>github.com/erkamyaman/rust-anything</a> · TypeScript, Python, C, Go, Ruby, Java · hot path first</p>
+  </div>
+</body>
+</html>

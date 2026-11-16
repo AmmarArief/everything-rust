@@ -1,4 +1,6 @@
-# rust-anything
+<p align="center">
+  <img src="docs/assets/hero.png" alt="rust-anything: Your app isn't slow. One loop is. rust-anything finds it, moves it to Rust, and proves nothing else changed." width="820">
+</p>
 
 **Make the slow part of your app fast in Rust, without rewriting the app.** For TypeScript/JavaScript,
 Python, C, Go, Ruby and Java codebases, one hot path at a time, proven identical by recorded
