@@ -625,7 +625,7 @@ fn bind_class(out: &mut String, kind: Kind, c: &PortClass) {
             out.push_str("}\n");
         }
         // PyO3 bindings come from `codegen_py`.
-        Kind::Wasm | Kind::Pyo3 | Kind::CAbi => {
+        Kind::Wasm | Kind::Pyo3 | Kind::CAbi | Kind::Ffi => {
             let _ = writeln!(
                 out,
                 "\nfn {snake}_new_inner({ctor_params}) -> Result<port::{name}, String> {{\n{}}}",
@@ -740,7 +740,7 @@ fn bind(out: &mut String, kind: Kind, f: &PortFn) {
             out.push_str("}\n");
         }
         // PyO3 bindings come from `codegen_py`.
-        Kind::Wasm | Kind::Pyo3 | Kind::CAbi => {
+        Kind::Wasm | Kind::Pyo3 | Kind::CAbi | Kind::Ffi => {
             // `?` needs a function boundary: the body lives in a private helper.
             let inner = format!("{}_inner", f.rust_name.trim_start_matches("r#"));
             let _ = writeln!(
@@ -823,7 +823,7 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
             "// Loads the native module built by `carcinize build`.\nconst native = require('./{}.node')\n",
             m.lib_name()
         ),
-        Kind::Wasm | Kind::Pyo3 | Kind::CAbi => format!(
+        Kind::Wasm | Kind::Pyo3 | Kind::CAbi | Kind::Ffi => format!(
             "// Loads the wasm-bindgen (nodejs target) output built by `carcinize build`.\nconst native = require('./pkg/{}.js')\n",
             m.lib_name()
         ),
@@ -1077,7 +1077,7 @@ pub fn required_deps(kind: Kind, api: &PortApi) -> Vec<(&'static str, String)> {
             ));
         }
         // The C ABI needs no binding crate.
-        Kind::CAbi => {}
+        Kind::CAbi | Kind::Ffi => {}
         Kind::Wasm => {
             deps.push(("wasm-bindgen", r#""0.2""#.into()));
             if any_async {

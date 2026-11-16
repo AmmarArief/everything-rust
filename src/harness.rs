@@ -173,6 +173,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         crate::harness_py::record(opts.crate_dir, &cases)?
     } else if manifest.kind == Kind::CAbi {
         crate::harness_c::record(opts.crate_dir, &manifest, &cases)?
+    } else if manifest.language == crate::lang::Lang::Go {
+        crate::harness_go::record(opts.crate_dir, &manifest, &cases)?
     } else {
         record_node(opts, &manifest, &cases)?
     };
@@ -186,7 +188,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         let class_error = case["results"]
             .as_array()
             .is_some_and(|r| r.iter().any(|x| x.get("error").is_some()));
-        errors += usize::from(case.get("error").is_some() || class_error);
+        errors +=
+            usize::from(case.get("error").is_some() || case.get("panic").is_some() || class_error);
         let name = case["fn"]
             .as_str()
             .or_else(|| case["class"].as_str())
@@ -259,7 +262,7 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
     let manifest = Manifest::load(crate_dir)?;
     match manifest.kind {
         Kind::Pyo3 => crate::harness_py::build(crate_dir, &manifest),
-        Kind::CAbi => crate::harness_c::build(crate_dir, &manifest),
+        Kind::CAbi | Kind::Ffi => crate::harness_c::build(crate_dir, &manifest),
         Kind::Napi => {
             let target = crate_dir.join("target");
             run(
@@ -369,6 +372,9 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if manifest.kind == Kind::CAbi {
         return crate::harness_c::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
+    if manifest.language == crate::lang::Lang::Go {
+        return crate::harness_go::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -451,6 +457,12 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         && opts.module.is_none()
     {
         return crate::harness_c::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Go
+        && opts.module.is_none()
+    {
+        return crate::harness_go::diff(opts.crate_dir, &manifest);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {

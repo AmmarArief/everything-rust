@@ -328,7 +328,7 @@ fn run() -> Result<ExitCode> {
                     "{:<24} {:>6} {:>12} {:>12} {:>9}",
                     "function",
                     "cases",
-                    "TS ns/call",
+                    "orig ns/call",
                     "Rust ns/call",
                     "speedup"
                 );
@@ -343,7 +343,7 @@ fn run() -> Result<ExitCode> {
                     );
                 }
                 say!(
-                    "Bridge included. Below 1x, Rust is slower than the original as called from JS."
+                    "Bridge included. Below 1x, Rust is slower than the original as its callers call it."
                 );
             }
         }
@@ -354,7 +354,11 @@ fn run() -> Result<ExitCode> {
                 outcome.path.display(),
                 outcome.exports.join(", ")
             );
-            if outcome.path.extension().is_some_and(|e| e == "c") {
+            if outcome.path.extension().is_some_and(|e| e == "go") {
+                say!(
+                    "Import it in place of the original package (require and replace both modules in go.mod). CARCINIZE_MODE=old|shadow|new switches at runtime."
+                );
+            } else if outcome.path.extension().is_some_and(|e| e == "c") {
                 say!(
                     "Compile the original with the -D flags in shadow/flags.txt, build the crate with --features shadow, and link all three."
                 );

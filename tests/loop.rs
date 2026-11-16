@@ -255,7 +255,7 @@ fn async_functions_get_async_bindings() {
                 assert!(cargo.contains("features = [\"async\"]") && cargo.contains("futures"))
             }
             Kind::Wasm => assert!(cargo.contains("wasm-bindgen-futures")),
-            Kind::Pyo3 | Kind::CAbi => {}
+            Kind::Pyo3 | Kind::CAbi | Kind::Ffi => {}
         }
         let index = std::fs::read_to_string(dir.join("index.cjs")).unwrap();
         // Only structured functions are wrapped; `countWords` passes its promise straight through.
@@ -566,5 +566,71 @@ fn c_units_bridge_record_and_diff() {
         diff.mismatches.iter().all(|m| m["fn"] == "vowels"),
         "{diff:?}"
     );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn go_available() -> bool {
+    Command::new("go")
+        .arg("version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+}
+
+#[test]
+fn go_packages_bridge_record_and_diff() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/go");
+    let dir = std::env::temp_dir().join(format!("carcinize-go-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "strkit/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+    })
+    .unwrap();
+    assert_eq!(outcome.kind, Kind::Ffi);
+    let manifest = Manifest::load(&dir).unwrap();
+    let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
+    assert_eq!(kept, ["Join"]);
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    assert!(
+        port.contains("pub fn parse_port(s: String) -> Result<i64, String>"),
+        "{port}"
+    );
+    let wrapper = std::fs::read_to_string(dir.join("go/strkit.go")).unwrap();
+    assert!(
+        wrapper.contains("func ParsePort(s string) (int, error) {"),
+        "{wrapper}"
+    );
+    assert!(wrapper.contains("type Point struct"), "{wrapper}");
+    if !go_available() {
+        return;
+    }
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 30,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(recorded.cases > 100, "{recorded:?}");
+    assert!(recorded.errors > 0, "ParsePort returns errors");
+    // A port where every function fails: the diff must run through the Go wrapper and say so.
+    harness::build(&dir).unwrap();
+    let diff = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        node_args: &[],
+    })
+    .unwrap();
+    assert_eq!(diff.passed, 0, "{diff:?}");
+    assert_eq!(diff.total, recorded.cases);
     let _ = std::fs::remove_dir_all(&dir);
 }

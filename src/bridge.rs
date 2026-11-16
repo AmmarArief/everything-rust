@@ -29,6 +29,8 @@ pub enum Kind {
     /// `extern "C"` functions with the original names: a drop-in replacement for C code.
     #[serde(rename = "c-abi")]
     CAbi,
+    /// A JSON dispatcher over the port, called from a generated Go, Ruby or Java wrapper.
+    Ffi,
 }
 
 /// What `bridge` generated; every later step starts from it.
@@ -606,6 +608,16 @@ fn format_rust(crate_dir: &Path) {
         .output();
 }
 
+/// Formats a generated Go wrapper with `gofmt`, best effort.
+fn format_wrapper(crate_dir: &Path) {
+    if crate_dir.join("go").is_dir() {
+        let _ = std::process::Command::new("gofmt")
+            .arg("-w")
+            .arg(crate_dir.join("go"))
+            .output();
+    }
+}
+
 /// The language-side loader: `index.cjs` for JS, the wrapper package for Python.
 fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
     match m.kind {
@@ -634,6 +646,19 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
         format_rust(crate_dir);
         return Ok(Refreshed {
             functions: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+            files: files.into_iter().map(|(p, _)| p).collect(),
+        });
+    }
+    if manifest.kind == Kind::Ffi {
+        let port = std::fs::read_to_string(crate_dir.join("src/port.rs"))
+            .context("reading src/port.rs")?;
+        let api = codegen::parse_port(&port);
+        let files = ffi_bindings(&manifest, &api)?;
+        write_files(crate_dir, &files)?;
+        format_rust(crate_dir);
+        format_wrapper(crate_dir);
+        return Ok(Refreshed {
+            functions: api.functions.iter().map(|f| f.js_name.clone()).collect(),
             files: files.into_iter().map(|(p, _)| p).collect(),
         });
     }
@@ -707,6 +732,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         Bridge::WasmBindgen => Kind::Wasm,
         Bridge::Pyo3 => Kind::Pyo3,
         Bridge::CAbi => Kind::CAbi,
+        Bridge::Cgo | Bridge::Fiddle | Bridge::Jni => Kind::Ffi,
         _ => Kind::Napi,
     });
 
@@ -877,6 +903,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     if kind == Kind::CAbi {
         return bridge_c(&manifest, &crate_dir, &js_only);
     }
+    if kind == Kind::Ffi {
+        return bridge_ffi(&manifest, &crate_dir, &js_only);
+    }
     let port = codegen::port_rs(&manifest);
     let fns = codegen::parse_port(&port);
     let modules = codegen::Modules {
@@ -978,6 +1007,63 @@ fn c_bindings(m: &Manifest) -> Vec<(String, String)> {
     ]
 }
 
+/// The generated layers of a JSON-dispatcher crate: `lib.rs` and the language-side wrapper.
+fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, String)>> {
+    let mut files = vec![("src/lib.rs".to_string(), crate::codegen_ffi::lib_rs(m, api))];
+    match m.language {
+        crate::lang::Lang::Go => {
+            files.push(("go/go.mod".into(), crate::harness_go::wrapper_go_mod(m)));
+            files.push((
+                format!("go/{}.go", crate::codegen_go::package_name(m)),
+                crate::codegen_go::wrapper(m),
+            ));
+        }
+        other => bail!("no wrapper generator for {}", other.name()),
+    }
+    Ok(files)
+}
+
+fn bridge_ffi(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Outcome> {
+    let port = codegen::port_rs(manifest);
+    let api = codegen::parse_port(&port);
+    let mut files = vec![
+        (
+            "Cargo.toml".to_string(),
+            crate::codegen_ffi::cargo_toml(manifest),
+        ),
+        ("src/port.rs".into(), port),
+        (".gitignore".into(), "target/\n.carcinize/\n".into()),
+        ("README.md".into(), readme(manifest)),
+        (
+            MANIFEST.into(),
+            serde_json::to_string_pretty(manifest)? + "\n",
+        ),
+    ];
+    files.extend(ffi_bindings(manifest, &api)?);
+    write_files(crate_dir, &files)?;
+    format_rust(crate_dir);
+    format_wrapper(crate_dir);
+    let mut notes = vec![format!(
+        "Port each function in src/port.rs, then: carcinize record {0} && carcinize build {0} && carcinize diff {0}",
+        crate_dir.display()
+    )];
+    for j in kept {
+        notes.push(format!(
+            "`{}` stays in {}: {}.",
+            j.name,
+            manifest.language.name(),
+            j.reason
+        ));
+    }
+    Ok(Outcome {
+        crate_dir: crate_dir.to_path_buf(),
+        kind: Kind::Ffi,
+        files: files.into_iter().map(|(p, _)| p).collect(),
+        exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+        notes,
+    })
+}
+
 fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Outcome> {
     let mut files = vec![
         (
@@ -1036,6 +1122,7 @@ fn readme(m: &Manifest) -> String {
             Kind::Wasm => "wasm-bindgen",
             Kind::Pyo3 => "PyO3",
             Kind::CAbi => "the C ABI",
+            Kind::Ffi => "a JSON dispatcher",
         },
     )
 }

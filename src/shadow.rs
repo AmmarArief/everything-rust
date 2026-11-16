@@ -29,6 +29,30 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
     if manifest.kind == crate::bridge::Kind::CAbi {
         return shadow_c(&crate_dir, &manifest, out);
     }
+    if manifest.language == crate::lang::Lang::Go {
+        let pkg = crate::codegen_go::package_name(&manifest);
+        let path = match out {
+            Some(p) => p.to_path_buf(),
+            None => crate_dir
+                .join("go")
+                .join("shadow")
+                .join(format!("{pkg}.go")),
+        };
+        if path.exists() {
+            bail!("{} exists; remove it first or pass --out", path.display());
+        }
+        std::fs::create_dir_all(path.parent().context("output path has no folder")?)?;
+        let original = crate::harness_go::import_path(&manifest)?;
+        std::fs::write(&path, crate::codegen_go::shadow(&manifest, &original))?;
+        let _ = std::process::Command::new("gofmt")
+            .arg("-w")
+            .arg(&path)
+            .output();
+        return Ok(ShadowOutcome {
+            path,
+            exports: manifest.exports.iter().map(|f| f.name.clone()).collect(),
+        });
+    }
     let mut files: Vec<&str> = manifest
         .exports
         .iter()

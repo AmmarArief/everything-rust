@@ -125,7 +125,7 @@ fn tools() -> Value {
         },
         {
             "name": "bench",
-            "description": "Time the recorded cases on the TS original and on the built Rust module, bridge included; speedup below 1 means the port is slower as called from JS.",
+            "description": "Time the recorded cases on the original and on the built Rust module, bridge included; speedup below 1 means the port is slower as its callers call it.",
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "resolve_from": { "type": "string" },
