@@ -1097,6 +1097,10 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 "java/carcinize/CarcinizeWire.java".into(),
                 crate::codegen_java::WIRE_JAVA.into(),
             ));
+            files.push((
+                "java/carcinize/CarcinizeError.java".into(),
+                crate::codegen_java::ERROR_JAVA.into(),
+            ));
         }
         other => bail!("no wrapper generator for {}", other.name()),
     }

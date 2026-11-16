@@ -992,10 +992,7 @@ fn wire_go(e: &ExportedFn, params: &[(String, Ty)], result: Option<&Ty>) -> Stri
 }
 
 /// The exports that cross the binary wire (not typed, but every type fits the wire and the port).
-fn wire_fns<'m>(
-    m: &'m Manifest,
-    api: &crate::codegen::PortApi,
-) -> Vec<WireFn<'m>> {
+fn wire_fns<'m>(m: &'m Manifest, api: &crate::codegen::PortApi) -> Vec<WireFn<'m>> {
     let sources = unit_sources(m);
     let mut out = Vec::new();
     for f in &api.functions {

@@ -1010,22 +1010,67 @@ pub fn typed_rs(m: &Manifest, api: &crate::codegen::PortApi) -> String {
     let class = java_native_class(m);
     let mut out = String::from(
         r#"
+/// `carcinize.CarcinizeError` and its `(String, String)` constructor, resolved once per process.
+type Exception = (jni::objects::GlobalRef, jni::objects::JMethodID);
+static CARCINIZE_ERROR: std::sync::OnceLock<Option<Exception>> = std::sync::OnceLock::new();
+
+fn carcinize_error(env: &mut jni::JNIEnv) -> Option<Exception> {
+    CARCINIZE_ERROR
+        .get_or_init(|| {
+            let class = env.find_class("carcinize/CarcinizeError").ok()?;
+            let ctor = env
+                .get_method_id(&class, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V")
+                .ok()?;
+            Some((env.new_global_ref(class).ok()?, ctor))
+        })
+        .clone()
+}
+
+/// Splits `"Type: message"`; anything else is a RuntimeException with the whole message.
+fn split_error(message: &str) -> (&str, &str) {
+    message
+        .split_once(": ")
+        .filter(|(k, _)| {
+            k.starts_with(|c: char| c.is_ascii_alphabetic())
+                && k.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '$'))
+        })
+        .unwrap_or(("RuntimeException", message))
+}
+
 #[allow(dead_code)]
-/// Throws `"Type: message"` as that exception (java.lang, java.util, java.io, or a full
-/// name); anything else as a RuntimeException.
-fn throw(env: &mut jni::JNIEnv, message: &str) {
-    if let Some((kind, text)) = message.split_once(": ") {
-        let path = kind.replace('.', "/");
-        for prefix in ["java/lang/", "java/util/", "java/io/", ""] {
-            let name = format!("{prefix}{path}");
-            if env.find_class(name.as_str()).is_ok() {
-                let _ = env.throw_new(name.as_str(), text);
-                return;
-            }
-            let _ = env.exception_clear();
-        }
+/// Hands an error back through the caller's `String[2]` slot: type and message. The Java side
+/// throws it, which is much cheaper than an exception raised from native code.
+fn report(env: &mut jni::JNIEnv, slot: &jni::objects::JObjectArray, message: &str) {
+    let (kind, text) = split_error(message);
+    if let (Ok(kind), Ok(text)) = (env.new_string(kind), env.new_string(text)) {
+        let _ = env.set_object_array_element(slot, 0, &kind);
+        let _ = env.set_object_array_element(slot, 1, &text);
     }
-    let _ = env.throw_new("java/lang/RuntimeException", message);
+}
+
+#[allow(dead_code)]
+/// Throws `"Type: message"` as a `CarcinizeError` without a stack trace, which is cheap from
+/// native code; the generated Java turns it into a `Type` exception, built in Java.
+fn throw(env: &mut jni::JNIEnv, message: &str) {
+    let (kind, text) = split_error(message);
+    let Some((class, ctor)) = carcinize_error(env) else {
+        let _ = env.exception_clear();
+        let _ = env.throw_new("java/lang/RuntimeException", message);
+        return;
+    };
+    let (Ok(kind), Ok(text)) = (env.new_string(kind), env.new_string(text)) else {
+        return;
+    };
+    let class: &jni::objects::JClass = class.as_obj().into();
+    let args = [
+        jni::objects::JValue::Object(&kind).as_jni(),
+        jni::objects::JValue::Object(&text).as_jni(),
+    ];
+    // SAFETY: `ctor` is the `(String, String)` constructor of `class`, looked up together, and
+    // both arguments are Strings.
+    if let Ok(object) = unsafe { env.new_object_unchecked(class, ctor, &args) } {
+        let _ = env.throw(jni::objects::JThrowable::from(object));
+    }
 }
 
 /// Runs the port; a panic becomes an error instead of unwinding into the JVM.
@@ -1080,6 +1125,7 @@ fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String
                 args.push((t.arg)(name));
             }
         }
+        params.push("slot: jni::objects::JObjectArray<'local>".to_string());
         let call = format!("port::{}({})", f.rust_name, args.join(", "));
         let call = if f.fallible {
             call
@@ -1103,7 +1149,7 @@ fn string_arg(env: &mut jni::JNIEnv, s: &jni::objects::JString) -> Option<String
             "\n/// `{proto}`: typed, no JSON.\n// SAFETY: the JNI symbol of `carcinize.{class}.n_{js}`; nothing else defines it.\n\
              #[unsafe(no_mangle)]\npub extern \"system\" fn Java_carcinize_{mclass}_n_1{mjs}<'local>({params}){ret_ty} {{\n\
              {prelude}    match run(|| {call}) {{\n        Ok(out) => {ok},\n        Err(message) => {{\n            \
-             throw(&mut env, &message);\n            {default}\n        }}\n    }}\n}}",
+             report(&mut env, &slot, &message);\n            {default}\n        }}\n    }}\n}}",
             proto = e.prototype.as_deref().unwrap_or(&e.name),
             js = f.js_name,
             mclass = mangle(&class),
@@ -1139,6 +1185,8 @@ fn typed_declarations(m: &Manifest, api: &crate::codegen::PortApi) -> String {
                 )
             })
             .collect();
+        let mut params = params;
+        params.push("String[] slot".into());
         let _ = writeln!(
             out,
             "    public static native {} n_{}({});",
@@ -1302,6 +1350,81 @@ fn java_dec(t: &Ty) -> Option<String> {
         Ty::Struct { .. } | Ty::Tuple(_) => return None,
     })
 }
+
+/// `carcinize/CarcinizeError.java`: the error the Rust side throws, turned into the real
+/// exception type in Java.
+pub const ERROR_JAVA: &str = r#"package carcinize;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+/** Generated by carcinize: a port's error, thrown from Rust without a stack trace (cheap from native code). */
+public final class CarcinizeError extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+    private static final ConcurrentHashMap<String, Optional<MethodHandle>> CONSTRUCTORS = new ConcurrentHashMap<>();
+
+    public final String type;
+
+    public CarcinizeError(String type, String message) {
+        super(message, null, false, false);
+        this.type = type;
+    }
+
+    private static Optional<MethodHandle> constructor(String type) {
+        for (String prefix : new String[] {"java.lang.", "java.util.", "java.io.", ""}) {
+            try {
+                Class<?> c = Class.forName(prefix + type);
+                if (RuntimeException.class.isAssignableFrom(c)) {
+                    return Optional.of(MethodHandles.publicLookup()
+                        .findConstructor(c, MethodType.methodType(void.class, String.class))
+                        .asType(MethodType.methodType(RuntimeException.class, String.class)));
+                }
+            } catch (ReflectiveOperationException | IllegalArgumentException e) {
+                // try the next package
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** The exception the original throws: `type` with the message, else a RuntimeException. */
+    public RuntimeException real() {
+        return make(type, getMessage());
+    }
+
+    private static final ThreadLocal<String[]> SLOTS = ThreadLocal.withInitial(() -> new String[2]);
+
+    /** This thread's error slot: the Rust side writes a failed call's type and message there. */
+    public static String[] slot() {
+        return SLOTS.get();
+    }
+
+    /** Throws the error a call left in `slot`, if any. */
+    public static void check(String[] slot) {
+        if (slot[0] != null) {
+            String type = slot[0];
+            String message = slot[1];
+            slot[0] = null;
+            slot[1] = null;
+            throw make(type, message);
+        }
+    }
+
+    private static RuntimeException make(String type, String message) {
+        Optional<MethodHandle> ctor = CONSTRUCTORS.computeIfAbsent(type, CarcinizeError::constructor);
+        if (ctor.isPresent()) {
+            try {
+                return (RuntimeException) ctor.get().invokeExact(message);
+            } catch (Throwable e) {
+                // fall through
+            }
+        }
+        return new RuntimeException(type + ": " + message);
+    }
+}
+"#;
 
 /// `carcinize/CarcinizeWire.java`: the Java half of the binary wire.
 pub const WIRE_JAVA: &str = r#"package carcinize;
@@ -1537,7 +1660,11 @@ fn java_wire_fns<'m>(
         for (name, t) in &params {
             let _ = writeln!(java, "        {}", java_enc(name, t, 0));
         }
-        let _ = writeln!(java, "        byte[] out = w_{}(w.bytes());", f.js_name);
+        let _ = writeln!(
+            java,
+            "        String[] slot = CarcinizeError.slot();\n        byte[] out = w_{}(w.bytes(), slot);\n        CarcinizeError.check(slot);",
+            f.js_name
+        );
         if let Some(t) = &result {
             let Some(dec) = java_dec(t) else { continue };
             let _ = writeln!(
@@ -1576,12 +1703,12 @@ fn java_wire_fns<'m>(
         let rust = format!(
             "\n{statics}\n/// `{proto}`: binary wire.\n// SAFETY: the JNI symbol of `carcinize.{class}.w_{js}`; nothing else defines it.\n\
              #[unsafe(no_mangle)]\npub extern \"system\" fn Java_carcinize_{mclass}_w_1{mjs}<'local>(mut env: jni::JNIEnv<'local>, \
-             _class: jni::objects::JClass<'local>, args: jni::objects::JByteArray<'local>) -> jni::sys::jbyteArray {{\n    \
+             _class: jni::objects::JClass<'local>, args: jni::objects::JByteArray<'local>, slot: jni::objects::JObjectArray<'local>) -> jni::sys::jbyteArray {{\n    \
              let Ok(input) = env.convert_byte_array(&args) else {{\n        return std::ptr::null_mut();\n    }};\n    \
              let result = run(|| {{\n        let r = &mut wire::Reader::new(&input);\n{reads}        let w = &mut wire::Writer::default();\n{write}        \
              Ok(std::mem::take(&mut w.0))\n    }});\n    match result {{\n        \
              Ok(bytes) => env.byte_array_from_slice(&bytes).map_or(std::ptr::null_mut(), jni::objects::JByteArray::into_raw),\n        \
-             Err(message) => {{\n            throw(&mut env, &message);\n            std::ptr::null_mut()\n        }}\n    }}\n}}",
+             Err(message) => {{\n            report(&mut env, &slot, &message);\n            std::ptr::null_mut()\n        }}\n    }}\n}}",
             proto = e.prototype.as_deref().unwrap_or(&e.name),
             js = f.js_name,
             mclass = mangle(&class),
@@ -1625,14 +1752,25 @@ fn call_methods(m: &Manifest, api: &crate::codegen::PortApi) -> String {
             .map(|p| p.name.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        let body = if ret == "void" {
-            format!("n_{}({args});", f.js_name)
+        let call_args = if args.is_empty() {
+            "slot".to_string()
         } else {
-            format!("return n_{}({args});", f.js_name)
+            format!("{args}, slot")
+        };
+        let body = if ret == "void" {
+            format!(
+                "String[] slot = CarcinizeError.slot();\n            n_{}({call_args});\n            CarcinizeError.check(slot);",
+                f.js_name
+            )
+        } else {
+            format!(
+                "String[] slot = CarcinizeError.slot();\n            {ret} out = n_{}({call_args});\n            CarcinizeError.check(slot);\n            return out;",
+                f.js_name
+            )
         };
         let _ = writeln!(
             out,
-            "\n    public static {ret} call_{}({}) {{\n        {body}\n    }}",
+            "\n    public static {ret} call_{}({}) {{\n        try {{\n            {body}\n        }} catch (CarcinizeError e) {{\n            throw e.real();\n        }}\n    }}",
             f.js_name,
             sig(e)
         );
@@ -1641,7 +1779,7 @@ fn call_methods(m: &Manifest, api: &crate::codegen::PortApi) -> String {
         let ret = e.native_return.as_deref().unwrap_or("void");
         let _ = writeln!(
             out,
-            "\n    private static native byte[] w_{name}(byte[] args);\n\n    @SuppressWarnings(\"unchecked\")\n    public static {ret} call_{name}({}) {{\n{body}    }}",
+            "\n    private static native byte[] w_{name}(byte[] args, String[] slot);\n\n    @SuppressWarnings(\"unchecked\")\n    public static {ret} call_{name}({}) {{\n        try {{\n{body}        }} catch (CarcinizeError e) {{\n            throw e.real();\n        }}\n    }}",
             sig(e),
             name = e.name,
         );

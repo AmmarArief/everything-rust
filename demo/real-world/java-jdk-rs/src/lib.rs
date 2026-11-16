@@ -145,22 +145,68 @@ pub extern "system" fn Java_carcinize_JdkRsNative_call<'local>(
         .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw)
 }
 
+/// `carcinize.CarcinizeError` and its `(String, String)` constructor, resolved once per process.
+type Exception = (jni::objects::GlobalRef, jni::objects::JMethodID);
+static CARCINIZE_ERROR: std::sync::OnceLock<Option<Exception>> = std::sync::OnceLock::new();
+
+fn carcinize_error(env: &mut jni::JNIEnv) -> Option<Exception> {
+    CARCINIZE_ERROR
+        .get_or_init(|| {
+            let class = env.find_class("carcinize/CarcinizeError").ok()?;
+            let ctor = env
+                .get_method_id(&class, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V")
+                .ok()?;
+            Some((env.new_global_ref(class).ok()?, ctor))
+        })
+        .clone()
+}
+
+/// Splits `"Type: message"`; anything else is a RuntimeException with the whole message.
+fn split_error(message: &str) -> (&str, &str) {
+    message
+        .split_once(": ")
+        .filter(|(k, _)| {
+            k.starts_with(|c: char| c.is_ascii_alphabetic())
+                && k.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '$'))
+        })
+        .unwrap_or(("RuntimeException", message))
+}
+
 #[allow(dead_code)]
-/// Throws `"Type: message"` as that exception (java.lang, java.util, java.io, or a full
-/// name); anything else as a RuntimeException.
-fn throw(env: &mut jni::JNIEnv, message: &str) {
-    if let Some((kind, text)) = message.split_once(": ") {
-        let path = kind.replace('.', "/");
-        for prefix in ["java/lang/", "java/util/", "java/io/", ""] {
-            let name = format!("{prefix}{path}");
-            if env.find_class(name.as_str()).is_ok() {
-                let _ = env.throw_new(name.as_str(), text);
-                return;
-            }
-            let _ = env.exception_clear();
-        }
+/// Hands an error back through the caller's `String[2]` slot: type and message. The Java side
+/// throws it, which is much cheaper than an exception raised from native code.
+fn report(env: &mut jni::JNIEnv, slot: &jni::objects::JObjectArray, message: &str) {
+    let (kind, text) = split_error(message);
+    if let (Ok(kind), Ok(text)) = (env.new_string(kind), env.new_string(text)) {
+        let _ = env.set_object_array_element(slot, 0, &kind);
+        let _ = env.set_object_array_element(slot, 1, &text);
     }
-    let _ = env.throw_new("java/lang/RuntimeException", message);
+}
+
+#[allow(dead_code)]
+/// Throws `"Type: message"` as a `CarcinizeError` without a stack trace, which is cheap from
+/// native code; the generated Java turns it into a `Type` exception, built in Java.
+fn throw(env: &mut jni::JNIEnv, message: &str) {
+    let (kind, text) = split_error(message);
+    let Some((class, ctor)) = carcinize_error(env) else {
+        let _ = env.exception_clear();
+        let _ = env.throw_new("java/lang/RuntimeException", message);
+        return;
+    };
+    let (Ok(kind), Ok(text)) = (env.new_string(kind), env.new_string(text)) else {
+        return;
+    };
+    let class: &jni::objects::JClass = class.as_obj().into();
+    let args = [
+        jni::objects::JValue::Object(&kind).as_jni(),
+        jni::objects::JValue::Object(&text).as_jni(),
+    ];
+    // SAFETY: `ctor` is the `(String, String)` constructor of `class`, looked up together, and
+    // both arguments are Strings.
+    if let Ok(object) = unsafe { env.new_object_unchecked(class, ctor, &args) } {
+        let _ = env.throw(jni::objects::JThrowable::from(object));
+    }
 }
 
 /// Runs the port; a panic becomes an error instead of unwinding into the JVM.
@@ -194,13 +240,14 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1toRadix<'local>(
     _class: jni::objects::JClass<'local>,
     value: jni::sys::jint,
     radix: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::to_radix(i64::from(value), i64::from(radix))) {
         Ok(out) => env
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }
@@ -214,6 +261,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1parseRadix<'local>(
     _class: jni::objects::JClass<'local>,
     text: jni::objects::JString<'local>,
     radix: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jint {
     let Some(text) = string_arg(&mut env, &text) else {
         return 0;
@@ -221,7 +269,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1parseRadix<'local>(
     match run(|| port::parse_radix(text, i64::from(radix))) {
         Ok(out) => out as jni::sys::jint,
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             0
         }
     }
@@ -234,13 +282,14 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1toBinary<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     value: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::to_binary(i64::from(value))) {
         Ok(out) => env
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }
@@ -253,13 +302,14 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1toHex<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     value: jni::sys::jlong,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::to_hex(value)) {
         Ok(out) => env
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }
@@ -272,11 +322,12 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1reverseBits<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     value: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jint {
     match run(|| port::reverse_bits(i64::from(value))) {
         Ok(out) => out as jni::sys::jint,
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             0
         }
     }
@@ -290,11 +341,12 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1floorMod<'local>(
     _class: jni::objects::JClass<'local>,
     a: jni::sys::jint,
     b: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jint {
     match run(|| port::floor_mod(i64::from(a), i64::from(b))) {
         Ok(out) => out as jni::sys::jint,
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             0
         }
     }
@@ -308,11 +360,12 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1addExact<'local>(
     _class: jni::objects::JClass<'local>,
     a: jni::sys::jint,
     b: jni::sys::jint,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jint {
     match run(|| port::add_exact(i64::from(a), i64::from(b))) {
         Ok(out) => out as jni::sys::jint,
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             0
         }
     }
@@ -325,13 +378,14 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1formatDouble<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     value: jni::sys::jdouble,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     match run(|| port::format_double(value)) {
         Ok(out) => env
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }
@@ -344,6 +398,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1urlEncode<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     text: jni::objects::JString<'local>,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     let Some(text) = string_arg(&mut env, &text) else {
         return std::ptr::null_mut();
@@ -353,7 +408,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1urlEncode<'local>(
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }
@@ -366,6 +421,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1base64<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     text: jni::objects::JString<'local>,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     let Some(text) = string_arg(&mut env, &text) else {
         return std::ptr::null_mut();
@@ -375,7 +431,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1base64<'local>(
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }
@@ -388,6 +444,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1upper<'local>(
     mut env: jni::JNIEnv<'local>,
     _class: jni::objects::JClass<'local>,
     text: jni::objects::JString<'local>,
+    slot: jni::objects::JObjectArray<'local>,
 ) -> jni::sys::jstring {
     let Some(text) = string_arg(&mut env, &text) else {
         return std::ptr::null_mut();
@@ -397,7 +454,7 @@ pub extern "system" fn Java_carcinize_JdkRsNative_n_1upper<'local>(
             .new_string(out)
             .map_or(std::ptr::null_mut(), jni::objects::JString::into_raw),
         Err(message) => {
-            throw(&mut env, &message);
+            report(&mut env, &slot, &message);
             std::ptr::null_mut()
         }
     }

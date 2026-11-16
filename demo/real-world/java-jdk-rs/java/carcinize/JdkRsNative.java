@@ -19,60 +19,137 @@ public final class JdkRsNative {
     private static native String call(String name, String args);
 
     // Typed methods: primitives and strings cross JNI directly, without JSON.
-    public static native String n_toRadix(int value, int radix);
-    public static native int n_parseRadix(String text, int radix);
-    public static native String n_toBinary(int value);
-    public static native String n_toHex(long value);
-    public static native int n_reverseBits(int value);
-    public static native int n_floorMod(int a, int b);
-    public static native int n_addExact(int a, int b);
-    public static native String n_formatDouble(double value);
-    public static native String n_urlEncode(String text);
-    public static native String n_base64(String text);
-    public static native String n_upper(String text);
+    public static native String n_toRadix(int value, int radix, String[] slot);
+    public static native int n_parseRadix(String text, int radix, String[] slot);
+    public static native String n_toBinary(int value, String[] slot);
+    public static native String n_toHex(long value, String[] slot);
+    public static native int n_reverseBits(int value, String[] slot);
+    public static native int n_floorMod(int a, int b, String[] slot);
+    public static native int n_addExact(int a, int b, String[] slot);
+    public static native String n_formatDouble(double value, String[] slot);
+    public static native String n_urlEncode(String text, String[] slot);
+    public static native String n_base64(String text, String[] slot);
+    public static native String n_upper(String text, String[] slot);
 
     public static String call_toRadix(int value, int radix) {
-        return n_toRadix(value, radix);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_toRadix(value, radix, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_parseRadix(String text, int radix) {
-        return n_parseRadix(text, radix);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_parseRadix(text, radix, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_toBinary(int value) {
-        return n_toBinary(value);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_toBinary(value, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_toHex(long value) {
-        return n_toHex(value);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_toHex(value, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_reverseBits(int value) {
-        return n_reverseBits(value);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_reverseBits(value, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_floorMod(int a, int b) {
-        return n_floorMod(a, b);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_floorMod(a, b, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_addExact(int a, int b) {
-        return n_addExact(a, b);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_addExact(a, b, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_formatDouble(double value) {
-        return n_formatDouble(value);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_formatDouble(value, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_urlEncode(String text) {
-        return n_urlEncode(text);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_urlEncode(text, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_base64(String text) {
-        return n_base64(text);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_base64(text, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_upper(String text) {
-        return n_upper(text);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_upper(text, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
 

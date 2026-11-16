@@ -19,63 +19,116 @@ public final class TextRsNative {
     private static native String call(String name, String args);
 
     // Typed methods: primitives and strings cross JNI directly, without JSON.
-    public static native long n_gcd(long a, long b);
-    public static native int n_pages(int total, int perPage);
-    public static native String n_slugify(String text, int max);
-    public static native int n_parsePort(String text);
-    public static native int n_hash(String text);
+    public static native long n_gcd(long a, long b, String[] slot);
+    public static native int n_pages(int total, int perPage, String[] slot);
+    public static native String n_slugify(String text, int max, String[] slot);
+    public static native int n_parsePort(String text, String[] slot);
+    public static native int n_hash(String text, String[] slot);
 
     public static long call_gcd(long a, long b) {
-        return n_gcd(a, b);
+        try {
+            String[] slot = CarcinizeError.slot();
+            long out = n_gcd(a, b, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_pages(int total, int perPage) {
-        return n_pages(total, perPage);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_pages(total, perPage, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static String call_slugify(String text, int max) {
-        return n_slugify(text, max);
+        try {
+            String[] slot = CarcinizeError.slot();
+            String out = n_slugify(text, max, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_parsePort(String text) {
-        return n_parsePort(text);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_parsePort(text, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
     public static int call_hash(String text) {
-        return n_hash(text);
+        try {
+            String[] slot = CarcinizeError.slot();
+            int out = n_hash(text, slot);
+            CarcinizeError.check(slot);
+            return out;
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
-    private static native byte[] w_mean(byte[] args);
+    private static native byte[] w_mean(byte[] args, String[] slot);
 
     @SuppressWarnings("unchecked")
     public static double call_mean(double[] values) {
+        try {
         CarcinizeWire.Writer w = new CarcinizeWire.Writer();
         { var a0 = values; if (a0 == null) { w.tag(0); } else { w.tag(1); w.len(a0.length); for (var v0 : a0) { w.f64(v0); } } }
-        byte[] out = w_mean(w.bytes());
+        String[] slot = CarcinizeError.slot();
+        byte[] out = w_mean(w.bytes(), slot);
+        CarcinizeError.check(slot);
         CarcinizeWire.Reader r = new CarcinizeWire.Reader(out);
         return r.f64();
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
-    private static native byte[] w_words(byte[] args);
+    private static native byte[] w_words(byte[] args, String[] slot);
 
     @SuppressWarnings("unchecked")
     public static List<String> call_words(String text) {
+        try {
         CarcinizeWire.Writer w = new CarcinizeWire.Writer();
         w.str(text);
-        byte[] out = w_words(w.bytes());
+        String[] slot = CarcinizeError.slot();
+        byte[] out = w_words(w.bytes(), slot);
+        CarcinizeError.check(slot);
         CarcinizeWire.Reader r = new CarcinizeWire.Reader(out);
         return r.list(() -> r.str());
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
-    private static native byte[] w_frequencies(byte[] args);
+    private static native byte[] w_frequencies(byte[] args, String[] slot);
 
     @SuppressWarnings("unchecked")
     public static Map<String, Integer> call_frequencies(String text) {
+        try {
         CarcinizeWire.Writer w = new CarcinizeWire.Writer();
         w.str(text);
-        byte[] out = w_frequencies(w.bytes());
+        String[] slot = CarcinizeError.slot();
+        byte[] out = w_frequencies(w.bytes(), slot);
+        CarcinizeError.check(slot);
         CarcinizeWire.Reader r = new CarcinizeWire.Reader(out);
         return r.map(() -> (r.tag() == 0 ? null : (Integer) ((int) r.i64())));
+        } catch (CarcinizeError e) {
+            throw e.real();
+        }
     }
 
 
