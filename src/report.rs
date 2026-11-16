@@ -10,7 +10,71 @@ pub fn markdown(report: &Report, title: &str) -> String {
     let mut out = String::new();
     // Writing to a String cannot fail.
     let _ = render(&mut out, report, title);
+    if let Some(w) = &report.whole_app {
+        let _ = whole_app(&mut out, w);
+    }
     out
+}
+
+fn whole_app(out: &mut String, w: &crate::whole_app::WholeApp) -> std::fmt::Result {
+    writeln!(out, "\n## Whole app\n")?;
+    writeln!(out, "Shape: **{}**.\n", w.shape)?;
+    writeln!(out, "| Entry point | Kind | Found from |")?;
+    writeln!(out, "| --- | --- | --- |")?;
+    for e in &w.entry_points {
+        let name = e.name.as_ref().map_or(String::new(), |n| format!("{n}: "));
+        writeln!(out, "| {name}`{}` | {} | {} |", e.path, e.kind, e.evidence)?;
+    }
+    writeln!(out, "\n### Every dependency\n")?;
+    if w.dependencies.is_empty() {
+        writeln!(out, "None.")?;
+    } else {
+        writeln!(
+            out,
+            "| Dependency | Declared | Used by | Rust | Fit | Note |"
+        )?;
+        writeln!(out, "| --- | --- | --- | --- | --- | --- |")?;
+        for d in &w.dependencies {
+            writeln!(
+                out,
+                "| `{}` | {} | {} | {} | {} | {} |",
+                d.name,
+                if d.declared { "yes" } else { "no" },
+                d.used_by,
+                d.crates.unwrap_or("?"),
+                d.fit,
+                d.note
+            )?;
+        }
+    }
+    writeln!(out, "\n### Pieces, in port order\n")?;
+    for p in &w.pieces {
+        writeln!(
+            out,
+            "- wave {}: {}{} ({} lines)",
+            p.wave,
+            p.units
+                .iter()
+                .map(|u| format!("`{u}`"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            if p.tangled {
+                ", tangled: one piece"
+            } else {
+                ""
+            },
+            p.loc
+        )?;
+    }
+    writeln!(out, "\n### Decisions for the user\n")?;
+    for d in &w.decisions {
+        writeln!(
+            out,
+            "**{}** ({}): {}\n\n> {}\n",
+            d.id, d.topic, d.question, d.recommendation
+        )?;
+    }
+    Ok(())
 }
 
 fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {

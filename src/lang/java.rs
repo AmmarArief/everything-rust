@@ -293,7 +293,7 @@ pub fn scan(source: &str) -> FileFacts {
 
 pub fn resolve(spec: &str, index: &HashMap<&str, usize>, ws: &Workspace) -> super::Resolution {
     let first = spec.split('.').next().unwrap_or("");
-    if matches!(first, "java" | "javax" | "jdk" | "sun") {
+    if matches!(first, "java" | "javax" | "jdk" | "sun") || spec.starts_with("com.sun.") {
         return super::Resolution::Stdlib;
     }
     let path = spec.trim_end_matches(".*").replace('.', "/");

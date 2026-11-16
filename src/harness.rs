@@ -63,6 +63,8 @@ pub struct RecordOutcome {
     pub path: PathBuf,
     pub cases: usize,
     pub errors: usize,
+    /// Cases from the semantic traps (added to the generated ones for every function).
+    pub traps: usize,
     pub per_function: BTreeMap<String, usize>,
 }
 
@@ -103,6 +105,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         Ok(path.to_string_lossy().into_owned())
     };
     let mut scopes: BTreeMap<String, Vec<LocalType>> = BTreeMap::new();
+    let mut traps = 0;
     for f in &manifest.exports {
         let module = module_for(&f.file)?;
         if !scopes.contains_key(&f.file) {
@@ -113,7 +116,24 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             );
         }
         let types = &scopes[&f.file];
-        for (i, mut args) in generate(f, opts.count, types).into_iter().enumerate() {
+        let mut all = generate(f, opts.count, types);
+        let mut seen: std::collections::HashSet<String> = all
+            .iter()
+            .map(|a| serde_json::to_string(a).unwrap_or_default())
+            .collect();
+        let base: Vec<Value> = all
+            .first()
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for args in trap_args(&f.params, &base) {
+            let args = Value::Array(args);
+            if seen.insert(serde_json::to_string(&args).unwrap_or_default()) {
+                all.push(args);
+                traps += 1;
+            }
+        }
+        for (i, mut args) in all.into_iter().enumerate() {
             // Python callers pass ints where floats are expected, and int-ness can leak into
             // results: every fourth case passes integral `number` arguments as ints.
             if manifest.language == crate::lang::Lang::Python && i % 4 == 3 {
@@ -209,6 +229,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         path: out,
         cases: count,
         errors,
+        traps,
         per_function,
     })
 }
@@ -644,6 +665,93 @@ pub fn generate(
         let key = serde_json::to_string(&args).unwrap_or_default();
         if seen.insert(key) {
             out.push(Value::Array(args));
+        }
+    }
+    out
+}
+
+/// The semantic traps for a value of type `t`: what most often behaves differently once ported
+/// (string length and case, signed division and overflow, float printing, map and sort order).
+fn trap_values(t: &RType) -> Vec<Value> {
+    match t {
+        RType::Str => crate::app::STRING_TRAPS
+            .iter()
+            .chain(["ΣΊΣΥΦΟΣ", "a😀b", "\u{FEFF}bom"].iter())
+            .map(|s| json!(s))
+            .collect(),
+        RType::Int => [
+            -7,
+            -1,
+            0,
+            2_147_483_648,
+            -2_147_483_649,
+            9_007_199_254_740_993,
+            i64::MAX,
+            i64::MIN,
+        ]
+        .iter()
+        .map(|n| json!(n))
+        .collect(),
+        RType::F64 => {
+            let mut out: Vec<Value> = [
+                -7.5,
+                0.1,
+                0.30000000000000004,
+                1e21,
+                1e-7,
+                5e-324,
+                1.797_693_134_862_315_7e308,
+                9_007_199_254_740_992.0,
+            ]
+            .iter()
+            .map(|n| json!(n))
+            .collect();
+            out.push(json!({ "$num": "-0" }));
+            out
+        }
+        RType::Vec(inner) => match inner.as_ref() {
+            RType::Str => vec![json!([]), json!(["b", "a", "B", "é", "10", "9", "a"])],
+            RType::Int => vec![json!([]), json!([-7, 3, 0, i64::MAX, -1])],
+            RType::F64 => vec![json!([]), json!([0.1, 0.2, -0.5, 1e21])],
+            _ => vec![json!([])],
+        },
+        RType::Opt(inner) => {
+            let mut out = vec![json!({ "$undefined": true })];
+            out.extend(trap_values(inner));
+            out
+        }
+        RType::Json => crate::app::JSON_TRAPS
+            .iter()
+            .filter_map(|t| serde_json::from_str(t).ok())
+            .chain([json!([3, 1, 2]), json!({})])
+            .collect(),
+        RType::Bool | RType::Unit => Vec::new(),
+    }
+}
+
+/// Every trap value in every parameter, one at a time, the other arguments as in `base`.
+/// Structured parameters (objects with a known shape) are left as generated.
+pub fn trap_args(params: &[crate::ts::exports::Param], base: &[Value]) -> Vec<Vec<Value>> {
+    let mut out = Vec::new();
+    if base.len() < params.iter().filter(|p| !p.rest).count() {
+        return out;
+    }
+    for (i, p) in params.iter().enumerate() {
+        if p.rest || i >= base.len() {
+            continue;
+        }
+        let t = param_type(p);
+        let structured = t.contains_json() && !matches!(t, RType::Json);
+        let any = matches!(p.ts_type.trim(), "any" | "unknown" | "object" | "Object");
+        if structured || (matches!(t, RType::Json) && !any) {
+            continue;
+        }
+        for v in trap_values(&t) {
+            if base[i] != v {
+                let mut args = base.to_vec();
+                args[i] = v;
+                out.push(args);
+            }
         }
     }
     out

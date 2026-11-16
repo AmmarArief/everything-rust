@@ -116,7 +116,8 @@ fn record_and_diff_catch_a_behavior_change() {
         node_args: &[],
     })
     .unwrap();
-    assert_eq!(recorded.cases, 360);
+    assert_eq!(recorded.cases - recorded.traps, 360);
+    assert!(recorded.traps > 0);
 
     let diff = |dir: &Path| {
         harness::diff(&DiffOptions {
@@ -134,7 +135,7 @@ fn record_and_diff_catch_a_behavior_change() {
 
     stand_in(&dir, false);
     let fixed = diff(&dir);
-    assert_eq!((fixed.passed, fixed.failed), (360, 0));
+    assert_eq!((fixed.passed, fixed.failed), (recorded.cases, 0));
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -223,7 +224,8 @@ fn record_follows_bundler_style_imports() {
     })
     .unwrap();
     // The paths do not exist: every call throws, but the module loaded and ran.
-    assert_eq!((recorded.cases, recorded.errors), (5, 5));
+    assert_eq!(recorded.cases - recorded.traps, 5);
+    assert_eq!(recorded.errors, recorded.cases);
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -382,7 +384,7 @@ fn tsconfig_aliases_are_followed() {
         node_args: &[],
     })
     .unwrap();
-    assert_eq!((recorded.cases, recorded.errors), (5, 0));
+    assert_eq!((recorded.cases - recorded.traps, recorded.errors), (5, 0));
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -416,7 +418,7 @@ fn record_resolves_workspace_packages_to_source() {
         node_args: &[],
     })
     .unwrap();
-    assert_eq!((recorded.cases, recorded.errors), (10, 0));
+    assert_eq!((recorded.cases - recorded.traps, recorded.errors), (10, 0));
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -425,6 +427,18 @@ fn python_available() -> bool {
         .arg("--version")
         .output()
         .is_ok_and(|o| o.status.success())
+}
+
+fn error_checks(dir: &Path, fails: &str) -> Vec<rust_anything::gate::Check> {
+    let checks = rust_anything::error_paths::checks(dir, &Manifest::load(dir).unwrap());
+    let errors = &checks[0];
+    assert_eq!(errors.name, "error cases");
+    assert!(errors.passed, "{errors:?}");
+    assert!(
+        errors.detail.starts_with("each of the"),
+        "{fails} fails in the original: {errors:?}"
+    );
+    checks
 }
 
 #[test]
@@ -473,6 +487,20 @@ fn python_modules_bridge_record_and_diff() {
     })
     .unwrap();
     assert!(recorded.cases > 200);
+    error_checks(&dir, "chunk");
+    let port_path = dir.join("src/port.rs");
+    let port = std::fs::read_to_string(&port_path).unwrap();
+    let start = port.find("pub fn chunk(").unwrap();
+    let body = start + port[start..].find('{').unwrap() + 1;
+    let mut panicky = port.clone();
+    panicky.insert_str(body, "\n    let _ = \"1\".parse::<i64>().unwrap();");
+    std::fs::write(&port_path, &panicky).unwrap();
+    let checks = error_checks(&dir, "chunk");
+    assert!(
+        !checks[1].passed && checks[1].detail.contains("in chunk"),
+        "{checks:?}"
+    );
+    std::fs::write(&port_path, &port).unwrap();
     // A pure-Python stand-in for the built package: `page_count` truncates instead of flooring.
     let package = dir.join("python/textkit_rs");
     std::fs::create_dir_all(&package).unwrap();
@@ -555,7 +583,7 @@ fn c_units_bridge_record_and_diff() {
         node_args: &[],
     })
     .unwrap();
-    assert_eq!(recorded.cases, 120);
+    assert_eq!(recorded.cases - recorded.traps, 120);
     // `vowels` forgets upper case: the diff must notice.
     std::fs::write(
         dir.join("src/port.rs"),
@@ -652,6 +680,7 @@ fn go_packages_bridge_record_and_diff() {
     .unwrap();
     assert!(recorded.cases > 100, "{recorded:?}");
     assert!(recorded.errors > 0, "ParsePort returns errors");
+    assert!(error_checks(&dir, "ParsePort")[1].passed);
     // A port where every function fails: the diff must run through the Go wrapper and say so.
     harness::build(&dir).unwrap();
     let diff = harness::diff(&DiffOptions {
@@ -732,6 +761,7 @@ fn ruby_modules_bridge_record_and_diff() {
     assert!(recorded.cases > 100, "{recorded:?}");
     // `page_count` raises ArgumentError for a non-positive page size.
     assert!(recorded.errors > 0);
+    assert!(error_checks(&dir, "the fixture")[1].passed);
     harness::build(&dir).unwrap();
     let diff = harness::diff(&DiffOptions {
         crate_dir: &dir,
@@ -821,6 +851,7 @@ fn java_classes_bridge_record_and_diff() {
     assert!(recorded.cases > 100, "{recorded:?}");
     // `parsePort` throws NumberFormatException for text.
     assert!(recorded.errors > 0);
+    assert!(error_checks(&dir, "the fixture")[1].passed);
     harness::build(&dir).unwrap();
     let diff = harness::diff(&DiffOptions {
         crate_dir: &dir,

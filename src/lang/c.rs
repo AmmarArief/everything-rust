@@ -305,6 +305,23 @@ pub fn lookup(header: &str) -> Option<CrateMatch> {
             m("regex, fancy-regex", Fit::Partial, "Syntax differs.")
         }
         "<pthread.h>" => m("std::thread", Fit::Good, ""),
+        "<sys/socket.h>" | "<netinet/in.h>" | "<arpa/inet.h>" | "<netdb.h>" => m(
+            "std::net, socket2",
+            Fit::Good,
+            "std covers TCP and UDP; socket2 for raw socket options.",
+        ),
+        "<unistd.h>" | "<fcntl.h>" | "<sys/stat.h>" | "<sys/types.h>" | "<dirent.h>" => {
+            m("std::fs, std::process, libc", Fit::Good, "")
+        }
+        "<sys/wait.h>" => m("std::process", Fit::Good, ""),
+        "<poll.h>" | "<sys/select.h>" | "<sys/epoll.h>" | "<sys/event.h>" => {
+            m("mio, tokio", Fit::Good, "")
+        }
+        "<getopt.h>" => m("clap", Fit::Good, ""),
+        "<dlfcn.h>" => m("libloading", Fit::Good, ""),
+        "<sys/mman.h>" => m("memmap2", Fit::Good, ""),
+        "<syslog.h>" => m("syslog, tracing", Fit::Partial, ""),
+        "<iconv.h>" => m("encoding_rs", Fit::Good, ""),
         "<math.h>" | "<string.h>" | "<stdlib.h>" | "<stdio.h>" | "<ctype.h>" | "<stdint.h>"
         | "<stdbool.h>" | "<stddef.h>" | "<limits.h>" | "<errno.h>" | "<assert.h>" => {
             m("std", Fit::Good, "")

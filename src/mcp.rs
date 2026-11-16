@@ -80,7 +80,10 @@ fn tools() -> Value {
         {
             "name": "analyze",
             "description": "Map a repository (TypeScript/JavaScript, Python, C, Go, Ruby or Java): units, port order (waves), risks with file:line, bridge per unit, dependency-to-crate fit, and `start_here`: the best first ports.",
-            "inputSchema": { "type": "object", "properties": { "root": { "type": "string", "description": "Repository root." } }, "required": ["root"] },
+            "inputSchema": { "type": "object", "properties": {
+                "root": { "type": "string", "description": "Repository root." },
+                "whole_app": { "type": "boolean", "description": "Plan a whole-app port: entry points and shape (cli, server, library), every dependency imported or declared with its crate and fit, pieces in port order (units that import each other together), and numbered decisions with a recommended answer for the grilling round." },
+            }, "required": ["root"] },
         },
         {
             "name": "bridge",
@@ -227,7 +230,14 @@ fn call(name: &str, args: &Value) -> Result<Value> {
     };
     let no_node_args: [String; 0] = [];
     Ok(match name {
-        "analyze" => serde_json::to_value(analyze::analyze(&path("root")?)?)?,
+        "analyze" => {
+            let root = path("root")?;
+            let mut report = analyze::analyze(&root)?;
+            if args["whole_app"].as_bool().unwrap_or(false) {
+                report.whole_app = Some(crate::whole_app::whole_app(&root, &report));
+            }
+            serde_json::to_value(report)?
+        }
         "bridge" => {
             let kind = match args["kind"].as_str() {
                 Some("napi") => Some(bridge::Kind::Napi),

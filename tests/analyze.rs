@@ -101,3 +101,114 @@ fn json_output_is_versioned() {
     assert_eq!(json["units"][0]["status"], "ready");
     assert_eq!(json["units"][0]["bridge"], "napi-rs");
 }
+
+fn whole(dir: &str) -> rust_anything::whole_app::WholeApp {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(dir);
+    let report = analyze(&root).unwrap();
+    rust_anything::whole_app::whole_app(&root, &report)
+}
+
+#[test]
+fn whole_app_finds_the_shape_and_entry_points_in_every_language() {
+    let cases = [
+        ("cli/ts", "cli", "tcli.js"),
+        ("cli/python", "cli", "tcli.py"),
+        ("cli/c", "cli", "tcli.c"),
+        ("cli/go", "cli", "main.go"),
+        ("cli/ruby", "cli", "tcli.rb"),
+        ("cli/java", "cli", "Tcli.java"),
+        ("http/ts", "server", "server.js"),
+        ("http/python", "server", "server.py"),
+        ("http/c", "server", "server.c"),
+        ("http/go", "server", "main.go"),
+        ("http/ruby", "server", "server.rb"),
+        ("http/java", "server", "Server.java"),
+        ("go", "cli", "cmd/strkit"),
+        ("c", "cli", "src/main.c"),
+        ("mini", "library", "a"),
+        ("python", "library", "textkit"),
+        ("ruby", "library", "textkit"),
+        ("java", "library", "textkit"),
+    ];
+    for (dir, shape, path) in cases {
+        let w = whole(dir);
+        assert_eq!(w.shape, shape, "{dir}: {:?}", w.entry_points);
+        assert!(
+            w.entry_points
+                .iter()
+                .any(|e| e.path.ends_with(path) || e.name.as_deref() == Some(path)),
+            "{dir}: {:?}",
+            w.entry_points
+        );
+        assert_eq!(w.decisions[0].topic, "shape");
+        assert!(
+            w.dependencies.iter().all(|d| d.fit != "unknown"),
+            "{dir}: {:?}",
+            w.dependencies
+        );
+    }
+}
+
+#[test]
+fn whole_app_lists_declared_dependencies_keeps_and_decisions() {
+    let python = whole("python");
+    let requests = python
+        .dependencies
+        .iter()
+        .find(|d| d.name == "requests")
+        .unwrap();
+    assert!(requests.declared);
+    assert_eq!(requests.fit, "good");
+
+    let mini = whole("mini");
+    let topics: Vec<&str> = mini.decisions.iter().map(|d| d.topic.as_str()).collect();
+    assert!(topics.contains(&"keep packages/a/src/view/"), "{topics:?}");
+    assert!(
+        topics.contains(&"blocked packages/a/src/svelte.ts"),
+        "{topics:?}"
+    );
+    assert!(topics.contains(&"dependency svelte"), "{topics:?}");
+    assert!(mini.decisions.iter().all(|d| !d.recommendation.is_empty()));
+    let ids: Vec<&str> = mini.decisions.iter().map(|d| d.id.as_str()).collect();
+    assert_eq!(ids[..3], ["D1", "D2", "D3"]);
+}
+
+#[test]
+fn whole_app_ports_units_that_import_each_other_as_one_piece() {
+    let root = std::env::temp_dir().join(format!("rust-anything-tangled-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(root.join("package.json"), r#"{"name":"tangled"}"#).unwrap();
+    std::fs::write(
+        root.join("src/ping.ts"),
+        "import { pong } from './pong'\nexport function ping(n: number): number { return n > 0 ? pong(n - 1) : 0 }\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("src/pong.ts"),
+        "import { ping } from './ping'\nexport function pong(n: number): number { return n > 0 ? ping(n - 1) : 1 }\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("src/leaf.ts"),
+        "export function leaf(s: string): string { return s.trim() }\n",
+    )
+    .unwrap();
+    let report = analyze(&root).unwrap();
+    let w = rust_anything::whole_app::whole_app(&root, &report);
+    let tangled: Vec<&Vec<String>> = w
+        .pieces
+        .iter()
+        .filter(|p| p.tangled)
+        .map(|p| &p.units)
+        .collect();
+    assert_eq!(
+        tangled,
+        [&vec!["src/ping.ts".to_string(), "src/pong.ts".to_string()]]
+    );
+    assert_eq!(w.pieces.len(), 2);
+    assert!(w.decisions.iter().any(|d| d.topic == "tangled units"));
+    std::fs::remove_dir_all(&root).unwrap();
+}

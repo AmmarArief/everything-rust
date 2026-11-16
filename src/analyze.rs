@@ -97,6 +97,9 @@ pub struct Report {
     /// Unit ids suggested as the first ports, best first.
     pub start_here: Vec<String>,
     pub dependencies: Vec<DependencyReport>,
+    /// `analyze --whole-app`: entry points, every dependency, pieces and decisions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whole_app: Option<crate::whole_app::WholeApp>,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -512,6 +515,7 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -
         units: reports,
         start_here,
         dependencies,
+        whole_app: None,
     }
 }
 
@@ -936,7 +940,7 @@ fn normalize(path: &str) -> Option<String> {
 
 /// Port waves from strongly connected components: a unit comes after everything it imports.
 /// Returns each node's wave and the members of its component.
-fn waves(edges: &[Vec<usize>]) -> (Vec<usize>, Vec<Vec<usize>>) {
+pub(crate) fn waves(edges: &[Vec<usize>]) -> (Vec<usize>, Vec<Vec<usize>>) {
     struct Tarjan<'e> {
         edges: &'e [Vec<usize>],
         index: Vec<Option<usize>>,

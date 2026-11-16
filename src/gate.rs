@@ -43,6 +43,7 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         },
     });
 
+    checks.extend(crate::error_paths::checks(crate_dir, &manifest));
     let built = harness::build(crate_dir);
     let built_ok = built.is_ok();
     checks.push(Check {

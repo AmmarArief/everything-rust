@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- `analyze --whole-app` (also `whole_app` on the MCP `analyze` tool): the app's shape (CLI, server
+  or library) and entry points, from manifests (`bin`, scripts, `cmd/`, gemspec executables) and
+  code (a `main`, a server starting); every external dependency, imported or declared in
+  package.json, pyproject or requirements.txt, go.mod, Gemfile or gemspec, pom.xml or Gradle, with
+  its crate and fit; the port order as pieces, units that import each other in one piece; and
+  numbered decisions with a recommended answer for the grilling round. POSIX headers and
+  `com.sun.*` now map to their Rust counterparts.
+- `gate` checks error paths: every place the original fails on purpose (`throw`, `raise`, an
+  `error` result) needs a recorded failing case, and `port.rs` may not `unwrap`, `expect` or
+  `panic!` in a function whose original returns an error, unless marked `// INFALLIBLE: <why>`.
+- `record` adds the semantic traps to every function: each trap value of a parameter's type, one
+  parameter at a time (string length and case, signed division, overflow edges, float printing,
+  map and sort order), next to the generated cases.
 - HTTP servers, in all six languages: `app record --http` (or `--port`) starts the original,
   sends requests from the `curl` lines in its docs, `--inputs` and traps (path segments, query
   values, bodies, an unknown route), twice, and stores each request and response in

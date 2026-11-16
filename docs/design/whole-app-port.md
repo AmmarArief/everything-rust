@@ -1,6 +1,6 @@
 # Design: whole app to a pure Rust app
 
-Status: milestones 1 to 4 built (CLIs and HTTP servers: record, replay, front door, wire, lift); 5 and 6 to come.
+Status: milestones 1 to 5 built (CLIs and HTTP servers end to end, `analyze --whole-app`, gate error paths, record traps); 6 to come.
 
 ## Goal
 
@@ -186,6 +186,22 @@ Taken while building, without a question to the user (the conventional option, w
     other methods back to the original (front door) or to `*` (lifted).
 26. **Lift of a server has no trycmd test**: trycmd runs command lines only, so the checklist
     asks for `app replay --build` in CI instead of writing a client into the app.
+27. **`--whole-app` adds to the analyze@1 JSON** (a `whole_app` object) instead of a new schema:
+    existing readers keep working.
+28. **Shape is server, else CLI, else library**: a server that also has a `main` is ported as a
+    server; the library shape waits for milestone 6.
+29. **Every dependency means imported or declared**: a declared one no unit imports is listed with
+    `used_by: 0` (often an import name that differs from the package name, or a dead dependency).
+30. **Decisions are generated only where a fact cannot decide**: the shape, each keep and blocked
+    unit, each dependency with fit `none`, `unknown` or `partial`, and each tangled piece; each
+    comes with the recommended answer, as the grilling round asks.
+31. **"The original handled an error" means it fails on purpose**: `throw` (TS, Java), `raise`
+    (Python, Ruby), an `error` result (Go), found in the export's body; C has no such signal and
+    relies on recorded results. A function with a recorded failing case counts too.
+32. **A panic is allowed with `// INFALLIBLE: <why>`**, on the line or just above, as `unsafe` is
+    with `// SAFETY:`: the convention reviewers already know.
+33. **Traps go one parameter at a time**, the others as in the first generated case, so a
+    mismatch points at one value; structured parameters keep their generated, well-typed values.
 
 ## Draft pitch
 

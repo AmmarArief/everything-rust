@@ -26,8 +26,11 @@ give your recommended answer, and word it so "yes" accepts the recommendation:
 Wait for the answers, recompute the frontier, ask the next round. A question that depends on
 another open question waits for a later round.
 
-Facts are yours to find, never the user's: run `analyze` and `profile`, read the code, and send
-subagents for the rest. Questions downstream of a running lookup wait; ask the rest now.
+Facts are yours to find, never the user's: run `analyze --whole-app` and `profile`, read the code,
+and send subagents for the rest. `analyze --whole-app` gives the shape and entry points, every
+dependency with its crate and fit, the pieces in port order, and a numbered list of decisions with
+a recommended answer (keep units, blocked units, dependencies with no or partial crate, tangled
+units): start the tree from them. Questions downstream of a running lookup wait; ask the rest now.
 
 Seed branches (the tree grows from the answers):
 
@@ -117,7 +120,8 @@ to 5 of SKILL.md, then:
 Translate faithfully first, with the original's structure, types and error paths; make it
 idiomatic only after `replay` passes, and run `replay` again. Where the original returns or throws
 an error, return an error: `unwrap`, `expect` and `panic!` are for states the original also
-treats as impossible.
+treats as impossible, marked `// INFALLIBLE: <why>`; `gate` fails on any other in a function whose
+original returns an error, and on an error path no recorded case reaches.
 
 Stop at the checkpoints from `DECISIONS.md`, and report the units done, gate results, `replay`
 results, the fallback rate and what is left.

@@ -142,7 +142,11 @@ rust-anything gate <crate>
 ```
 
 fmt, clippy with warnings as errors, cargo tests, `unsafe` only with SAFETY comments, nothing
-`unimplemented!`, the module builds, every export present, every recorded case matches.
+`unimplemented!`, every place the original fails on purpose (`throw`, `raise`, an `error` result)
+reached by a recorded failing case (add one with `record --inputs` when gate names it), no
+`unwrap`, `expect` or `panic!` in a function whose original returns an error (return `Err`; for a
+state the original also treats as impossible, a `// INFALLIBLE: <why>` comment), the module builds,
+every export present, every recorded case matches.
 
 Then report to the user, and **wait for their go-ahead before the next unit**:
 

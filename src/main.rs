@@ -53,6 +53,10 @@ enum Cmd {
         /// Source language; detected from the repository when omitted.
         #[arg(long, value_enum)]
         lang: Option<rust_anything::lang::Lang>,
+        /// Plan a whole-app port: entry points and shape, every dependency (imported or
+        /// declared) with its crate, pieces in port order, and decisions for the user.
+        #[arg(long)]
+        whole_app: bool,
     },
     /// 2. Scaffold a Rust crate with JS bindings for one unit.
     Bridge {
@@ -348,10 +352,14 @@ fn run() -> Result<ExitCode> {
             json,
             out,
             lang,
+            whole_app,
         } => {
             let lang = lang.unwrap_or_else(|| rust_anything::lang::Lang::detect(&root));
-            let report = analyze::analyze_lang(&root, lang)
+            let mut report = analyze::analyze_lang(&root, lang)
                 .with_context(|| format!("analyzing {}", root.display()))?;
+            if whole_app {
+                report.whole_app = Some(rust_anything::whole_app::whole_app(&root, &report));
+            }
             let text = if json {
                 serde_json::to_string_pretty(&report)? + "\n"
             } else {
