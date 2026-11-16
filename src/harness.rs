@@ -1,0 +1,619 @@
+//! Steps 3 and 5's runtime half: record what the TS code does, build the Rust module, and
+//! replay the recorded cases against it.
+//!
+//! Both sides run in Node through small generated scripts, so the comparison sees exactly
+//! what a JS caller sees. Values are encoded so `undefined`, `NaN`, `-0`, `Map`, `Set`,
+//! `BigInt` and key order survive JSON.
+
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use anyhow::{Context, Result, bail};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+
+use crate::bridge::{Kind, Manifest, RType, param_type};
+
+pub const CASES: &str = "cases.jsonl";
+const WORK_DIR: &str = ".carcinize";
+
+/// Strings that break naive ports: empty, case, whitespace, non-ASCII, astral, combining.
+const STRINGS: &[&str] = &[
+    "",
+    "a",
+    "ab",
+    "abc",
+    "hello",
+    "hello world",
+    "Hello World",
+    "HELLO",
+    "  padded  ",
+    "a.b.c",
+    "key_name-1",
+    "{name} has {count} items",
+    "line1\nline2",
+    "tab\tseparated",
+    "ünïcödé",
+    "straße",
+    "İstanbul",
+    "ΣΊΣΥΦΟΣ",
+    "日本語のテキスト",
+    "emoji 👍🏽 mix",
+    "😀",
+    "a😀b😀c",
+    "e\u{301}",
+    "\u{FEFF}bom",
+];
+const JSON_VALUES: &str =
+    r#"[null, true, 0, "x", [], {}, {"a": "b"}, {"a": {"b": "c"}}, ["a", 1]]"#;
+
+#[derive(Debug, Serialize)]
+pub struct RecordOutcome {
+    pub path: PathBuf,
+    pub cases: usize,
+    pub errors: usize,
+    pub per_function: BTreeMap<String, usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiffOutcome {
+    pub total: usize,
+    pub passed: usize,
+    pub failed: usize,
+    /// Exports the Rust module does not provide.
+    pub missing: Vec<String>,
+    /// The first mismatches: `{ fn, args, expected, actual }`.
+    pub mismatches: Vec<Value>,
+}
+
+pub struct RecordOptions<'a> {
+    pub crate_dir: &'a Path,
+    /// Generated cases per function.
+    pub count: usize,
+    /// Extra cases, one `{"fn": name, "args": [...]}` JSON object per line.
+    pub inputs: Option<&'a Path>,
+    /// Import the original from this JS module instead of the TS source files.
+    pub module: Option<&'a Path>,
+    pub node_args: &'a [String],
+}
+
+pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
+    let manifest = Manifest::load(opts.crate_dir)?;
+    let mut cases: Vec<Value> = Vec::new();
+    let module_for = |file: &str| -> Result<String> {
+        let path = match opts.module {
+            Some(m) => m
+                .canonicalize()
+                .with_context(|| format!("resolving {}", m.display()))?,
+            None => manifest.root.join(file),
+        };
+        Ok(path.to_string_lossy().into_owned())
+    };
+    for f in &manifest.exports {
+        let module = module_for(&f.file)?;
+        for args in generate(f, opts.count) {
+            cases.push(json!({ "fn": f.name, "module": module, "args": args }));
+        }
+    }
+    if let Some(path) = opts.inputs {
+        let text =
+            std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+        for (i, line) in text
+            .lines()
+            .enumerate()
+            .filter(|(_, l)| !l.trim().is_empty())
+        {
+            let mut case: Value = serde_json::from_str(line)
+                .with_context(|| format!("{}:{}", path.display(), i + 1))?;
+            let name = case["fn"].as_str().unwrap_or_default().to_string();
+            let Some(f) = manifest.exports.iter().find(|f| f.name == name) else {
+                bail!(
+                    "{}:{}: `{name}` is not an export of this unit",
+                    path.display(),
+                    i + 1
+                );
+            };
+            case["module"] = Value::String(module_for(&f.file)?);
+            cases.push(case);
+        }
+    }
+
+    let work = opts.crate_dir.join(WORK_DIR);
+    std::fs::create_dir_all(&work)?;
+    let inputs_path = work.join("inputs.json");
+    std::fs::write(&inputs_path, serde_json::to_string(&cases)?)?;
+    let script = work.join("record.mjs");
+    std::fs::write(&script, format!("{CODEC_JS}\n{RECORD_JS}"))?;
+    let out = opts.crate_dir.join(CASES);
+    run_node(
+        opts.node_args,
+        &script,
+        &[inputs_path.as_os_str(), out.as_os_str()],
+    )?;
+
+    let text = std::fs::read_to_string(&out)?;
+    let mut per_function = BTreeMap::new();
+    let mut errors = 0;
+    let mut count = 0;
+    for line in text.lines().filter(|l| !l.is_empty()) {
+        let case: Value = serde_json::from_str(line)?;
+        count += 1;
+        errors += usize::from(case.get("error").is_some());
+        *per_function
+            .entry(case["fn"].as_str().unwrap_or_default().to_string())
+            .or_default() += 1;
+    }
+    Ok(RecordOutcome {
+        path: out,
+        cases: count,
+        errors,
+        per_function,
+    })
+}
+
+pub fn build(crate_dir: &Path) -> Result<PathBuf> {
+    let manifest = Manifest::load(crate_dir)?;
+    match manifest.kind {
+        Kind::Napi => {
+            let target = crate_dir.join("target");
+            run(
+                Command::new("cargo")
+                    .args(["build", "--release", "--manifest-path"])
+                    .arg(crate_dir.join("Cargo.toml"))
+                    .env("CARGO_TARGET_DIR", &target),
+                "cargo build",
+            )?;
+            let lib = manifest.lib_name();
+            let release = target.join("release");
+            let built = [
+                format!("lib{lib}.so"),
+                format!("lib{lib}.dylib"),
+                format!("{lib}.dll"),
+            ]
+            .iter()
+            .map(|name| release.join(name))
+            .find(|p| p.exists())
+            .with_context(|| format!("no native library for `{lib}` in {}", release.display()))?;
+            let artifact = crate_dir.join(format!("{lib}.node"));
+            std::fs::copy(&built, &artifact)?;
+            Ok(artifact)
+        }
+        Kind::Wasm => {
+            let target = crate_dir.join("target");
+            run(
+                Command::new("cargo")
+                    .args([
+                        "build",
+                        "--release",
+                        "--target",
+                        "wasm32-unknown-unknown",
+                        "--manifest-path",
+                    ])
+                    .arg(crate_dir.join("Cargo.toml"))
+                    .env("CARGO_TARGET_DIR", &target),
+                "cargo build --target wasm32-unknown-unknown (needs `rustup target add wasm32-unknown-unknown`)",
+            )?;
+            // wasm-bindgen's CLI must match the crate's wasm-bindgen version exactly.
+            let lock = std::fs::read_to_string(crate_dir.join("Cargo.lock")).unwrap_or_default();
+            let wanted = locked_version(&lock, "wasm-bindgen")
+                .context("wasm-bindgen missing from Cargo.lock")?;
+            let installed = Command::new("wasm-bindgen")
+                .arg("--version")
+                .output()
+                .ok()
+                .map(|o| {
+                    String::from_utf8_lossy(&o.stdout)
+                        .trim()
+                        .rsplit(' ')
+                        .next()
+                        .unwrap_or_default()
+                        .to_string()
+                });
+            if installed.as_deref() != Some(wanted.as_str()) {
+                bail!(
+                    "the crate uses wasm-bindgen {wanted}; the CLI must match:\n  cargo install wasm-bindgen-cli --version {wanted} --locked{}",
+                    installed
+                        .map(|v| format!(" (found {v})"))
+                        .unwrap_or_default()
+                );
+            }
+            let lib = manifest.lib_name();
+            let wasm = target
+                .join("wasm32-unknown-unknown/release")
+                .join(format!("{lib}.wasm"));
+            run(
+                Command::new("wasm-bindgen")
+                    .args(["--target", "nodejs", "--out-dir"])
+                    .arg(crate_dir.join("pkg"))
+                    .arg(&wasm),
+                "wasm-bindgen",
+            )?;
+            Ok(crate_dir.join("pkg").join(format!("{lib}.js")))
+        }
+    }
+}
+
+pub struct DiffOptions<'a> {
+    pub crate_dir: &'a Path,
+    /// The module to test; defaults to the crate's `index.cjs`.
+    pub module: Option<&'a Path>,
+    /// Compare objects regardless of key order.
+    pub ignore_key_order: bool,
+    pub node_args: &'a [String],
+}
+
+pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
+    let cases = opts.crate_dir.join(CASES);
+    if !cases.exists() {
+        bail!(
+            "no {CASES} in {} (run `carcinize record` first)",
+            opts.crate_dir.display()
+        );
+    }
+    let module = match opts.module {
+        Some(m) => m.to_path_buf(),
+        None => opts.crate_dir.join("index.cjs"),
+    };
+    let module = module
+        .canonicalize()
+        .with_context(|| format!("resolving {}", module.display()))?;
+    let work = opts.crate_dir.join(WORK_DIR);
+    std::fs::create_dir_all(&work)?;
+    let script = work.join("diff.mjs");
+    std::fs::write(&script, format!("{CODEC_JS}\n{DIFF_JS}"))?;
+    let out = work.join("diff.json");
+    let flag = if opts.ignore_key_order {
+        "sort"
+    } else {
+        "keep"
+    };
+    run_node(
+        opts.node_args,
+        &script,
+        &[
+            module.as_os_str(),
+            cases.as_os_str(),
+            out.as_os_str(),
+            flag.as_ref(),
+        ],
+    )?;
+    let text = std::fs::read_to_string(&out)?;
+    Ok(serde_json::from_str(&text)?)
+}
+
+/// The version of `package` in a Cargo.lock.
+fn locked_version(lock: &str, package: &str) -> Option<String> {
+    let mut lines = lock.lines();
+    while let Some(line) = lines.next() {
+        if line.trim() == format!("name = \"{package}\"") {
+            let version = lines
+                .next()?
+                .trim()
+                .strip_prefix("version = \"")?
+                .strip_suffix('"')?;
+            return Some(version.to_string());
+        }
+    }
+    None
+}
+
+/// Deterministic inputs for one function: edge cases first, then seeded random mixes.
+pub fn generate(f: &crate::ts::exports::ExportedFn, count: usize) -> Vec<Value> {
+    let mut rng = Rng::new(f.name.bytes().fold(0x9E37_79B9_7F4A_7C15, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
+    }));
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    let mut attempts = 0;
+    while out.len() < count && attempts < count * 20 {
+        attempts += 1;
+        let mut args: Vec<Value> = Vec::new();
+        for p in &f.params {
+            let t = param_type(p);
+            if p.rest {
+                let inner = match t {
+                    RType::Vec(inner) => *inner,
+                    other => other,
+                };
+                for _ in 0..rng.below(3) {
+                    args.push(value(&inner, &mut rng));
+                }
+            } else {
+                args.push(value(&t, &mut rng));
+            }
+        }
+        // Search-like functions rarely hit on random text: often derive one string from another.
+        let strings: Vec<usize> = (0..args.len()).filter(|&i| args[i].is_string()).collect();
+        if strings.len() >= 2 && rng.below(10) < 5 {
+            let from = strings[rng.below(strings.len())];
+            let to = strings[rng.below(strings.len())];
+            if from != to {
+                let source: Vec<char> = args[from].as_str().unwrap_or_default().chars().collect();
+                if !source.is_empty() {
+                    let start = rng.below(source.len());
+                    let end = start + 1 + rng.below(source.len() - start);
+                    let mut piece: String = source[start..end].iter().collect();
+                    if rng.below(4) == 0 {
+                        piece = piece.to_uppercase();
+                    }
+                    args[to] = Value::String(piece);
+                }
+            }
+        }
+        // Trailing optional arguments: sometimes omit them, the way JS callers do.
+        while args.last().is_some_and(|a| a.get("$undefined").is_some()) && rng.below(2) == 0 {
+            args.pop();
+        }
+        let key = serde_json::to_string(&args).unwrap_or_default();
+        if seen.insert(key) {
+            out.push(Value::Array(args));
+        }
+    }
+    out
+}
+
+fn value(t: &RType, rng: &mut Rng) -> Value {
+    match t {
+        RType::Str => {
+            let a = STRINGS[rng.below(STRINGS.len())];
+            if rng.below(5) == 0 {
+                Value::String(format!("{a}{}", STRINGS[rng.below(STRINGS.len())]))
+            } else {
+                Value::String(a.into())
+            }
+        }
+        RType::F64 => {
+            let n = [
+                0.0,
+                1.0,
+                -1.0,
+                2.0,
+                3.0,
+                10.0,
+                0.5,
+                -2.5,
+                42.0,
+                100.0,
+                1000.0,
+                1e6,
+                2_147_483_648.0,
+                9_007_199_254_740_992.0,
+            ];
+            match rng.below(n.len() + 4) {
+                i if i < n.len() => json!(n[i]),
+                i if i == n.len() => json!({ "$num": "-0" }),
+                i if i == n.len() + 1 => json!({ "$num": "NaN" }),
+                i if i == n.len() + 2 => json!({ "$num": "Infinity" }),
+                _ => json!({ "$num": "-Infinity" }),
+            }
+        }
+        RType::Bool => Value::Bool(rng.below(2) == 0),
+        RType::Unit => json!({ "$undefined": true }),
+        RType::Vec(inner) => Value::Array((0..rng.below(4)).map(|_| value(inner, rng)).collect()),
+        RType::Opt(inner) => {
+            if rng.below(4) == 0 {
+                json!({ "$undefined": true })
+            } else {
+                value(inner, rng)
+            }
+        }
+        RType::Json => {
+            let values: Vec<Value> = serde_json::from_str(JSON_VALUES).unwrap_or_default();
+            values
+                .get(rng.below(values.len().max(1)))
+                .cloned()
+                .unwrap_or(Value::Null)
+        }
+    }
+}
+
+/// xorshift64*: deterministic, so a recording is reproducible.
+struct Rng(u64);
+
+impl Rng {
+    fn new(seed: u64) -> Self {
+        Self(seed | 1)
+    }
+
+    fn below(&mut self, n: usize) -> usize {
+        if n == 0 {
+            return 0;
+        }
+        self.0 ^= self.0 >> 12;
+        self.0 ^= self.0 << 25;
+        self.0 ^= self.0 >> 27;
+        let x = self.0.wrapping_mul(0x2545_F491_4F6C_DD1D);
+        usize::try_from(x >> 33).unwrap_or(0) % n
+    }
+}
+
+fn run_node(node_args: &[String], script: &Path, args: &[&std::ffi::OsStr]) -> Result<()> {
+    run(
+        Command::new("node").args(node_args).arg(script).args(args),
+        "node",
+    )
+}
+
+fn run(cmd: &mut Command, what: &str) -> Result<()> {
+    let output = cmd.output().with_context(|| format!("running {what}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let tail: Vec<&str> = stderr.lines().rev().take(25).collect();
+        bail!(
+            "{what} failed ({}):\n{}",
+            output.status,
+            tail.into_iter().rev().collect::<Vec<_>>().join("\n")
+        );
+    }
+    Ok(())
+}
+
+/// Encoding shared by the record, diff and shadow scripts. Lossless for what a JS caller
+/// can observe: `undefined`, `NaN`, `-0`, BigInt, Map/Set order, key order, lone surrogates.
+pub const CODEC_JS: &str = r#"
+const enc = (v, stack = []) => {
+  if (v === undefined) return { $undefined: true }
+  if (typeof v === 'number') {
+    if (Number.isNaN(v)) return { $num: 'NaN' }
+    if (!Number.isFinite(v)) return { $num: v > 0 ? 'Infinity' : '-Infinity' }
+    if (Object.is(v, -0)) return { $num: '-0' }
+    return v
+  }
+  // Strings JS split inside a surrogate pair are not valid Unicode: keep their code units.
+  if (typeof v === 'string' && !v.isWellFormed()) return { $utf16: Array.from({ length: v.length }, (_, i) => v.charCodeAt(i)) }
+  if (typeof v === 'bigint') return { $bigint: String(v) }
+  if (typeof v === 'function') return { $function: v.name }
+  if (typeof v === 'symbol') return { $symbol: String(v.description) }
+  if (v === null || typeof v !== 'object') return v
+  if (stack.includes(v)) return { $cycle: true }
+  const next = [...stack, v]
+  if (Array.isArray(v)) return v.map(x => enc(x, next))
+  if (v instanceof Map) return { $map: [...v].map(([k, x]) => [enc(k, next), enc(x, next)]) }
+  if (v instanceof Set) return { $set: [...v].map(x => enc(x, next)) }
+  if (v instanceof Date) return { $date: Number.isNaN(v.getTime()) ? 'Invalid' : v.toISOString() }
+  if (v instanceof RegExp) return { $regexp: String(v) }
+  if (v instanceof Error) return { $error: v.message }
+  const out = {}
+  for (const k of Object.keys(v)) out[k] = enc(v[k], next)
+  return out
+}
+const dec = (v) => {
+  if (Array.isArray(v)) return v.map(dec)
+  if (v === null || typeof v !== 'object') return v
+  if (v.$undefined) return undefined
+  if ('$num' in v) return Number(v.$num)
+  if ('$bigint' in v) return BigInt(v.$bigint)
+  if ('$utf16' in v) return String.fromCharCode(...v.$utf16)
+  if ('$map' in v) return new Map(v.$map.map(([k, x]) => [dec(k), dec(x)]))
+  if ('$set' in v) return new Set(v.$set.map(dec))
+  if ('$date' in v) return new Date(v.$date)
+  const out = {}
+  for (const [k, x] of Object.entries(v)) out[k] = dec(x)
+  return out
+}
+const canon = (v, sort) => {
+  if (Array.isArray(v)) return v.map(x => canon(x, sort))
+  if (v === null || typeof v !== 'object') return v
+  const keys = Object.keys(v)
+  if (sort) keys.sort()
+  const out = {}
+  for (const k of keys) out[k] = canon(v[k], sort)
+  return out
+}
+const same = (a, b, sort = false) => JSON.stringify(canon(a, sort)) === JSON.stringify(canon(b, sort))
+"#;
+
+const RECORD_JS: &str = r#"
+import { readFileSync, writeFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+
+const [inputsPath, outPath] = process.argv.slice(2)
+const inputs = JSON.parse(readFileSync(inputsPath, 'utf8'))
+const modules = new Map()
+const lines = []
+for (const c of inputs) {
+  let mod = modules.get(c.module)
+  if (!mod) {
+    mod = await import(pathToFileURL(c.module).href)
+    modules.set(c.module, mod)
+  }
+  const fn = mod[c.fn] ?? mod.default?.[c.fn]
+  if (typeof fn !== 'function') {
+    console.error(`${c.fn} is not a function exported by ${c.module}`)
+    process.exit(2)
+  }
+  try {
+    const value = await fn(...c.args.map(dec))
+    lines.push(JSON.stringify({ fn: c.fn, args: c.args, ok: enc(value) }))
+  }
+  catch (error) {
+    lines.push(JSON.stringify({ fn: c.fn, args: c.args, error: String(error?.message ?? error) }))
+  }
+}
+writeFileSync(outPath, `${lines.join('\n')}\n`)
+"#;
+
+const DIFF_JS: &str = r#"
+import { readFileSync, writeFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+
+const [modulePath, casesPath, outPath, keyOrder] = process.argv.slice(2)
+const loaded = await import(pathToFileURL(modulePath).href)
+const mod = { ...(loaded.default && typeof loaded.default === 'object' ? loaded.default : {}), ...loaded }
+const cases = readFileSync(casesPath, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
+const summary = { total: cases.length, passed: 0, failed: 0, missing: [], mismatches: [] }
+for (const c of cases) {
+  const fn = mod[c.fn]
+  let actual
+  if (typeof fn !== 'function') {
+    if (!summary.missing.includes(c.fn)) summary.missing.push(c.fn)
+    actual = { missing: true }
+  }
+  else {
+    try {
+      actual = { ok: enc(await fn(...c.args.map(dec))) }
+    }
+    catch (error) {
+      actual = { error: String(error?.message ?? error) }
+    }
+  }
+  const expected = 'error' in c ? { error: c.error } : { ok: c.ok }
+  // Both sides throwing counts as agreement: error messages are not part of the contract.
+  const pass = ('error' in expected && 'error' in actual) || ('ok' in expected && 'ok' in actual && same(expected.ok, actual.ok, keyOrder === 'sort'))
+  if (pass) {
+    summary.passed++
+  }
+  else {
+    summary.failed++
+    if (summary.mismatches.length < 20) summary.mismatches.push({ fn: c.fn, args: c.args, expected, actual })
+  }
+}
+writeFileSync(outPath, JSON.stringify(summary, null, 2))
+"#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ts::exports::{ExportedFn, Param};
+
+    fn f(params: &[(&str, &str)]) -> ExportedFn {
+        ExportedFn {
+            name: "f".into(),
+            file: "a.ts".into(),
+            line: 1,
+            params: params
+                .iter()
+                .map(|(n, t)| Param {
+                    name: (*n).into(),
+                    ts_type: (*t).into(),
+                    optional: false,
+                    rest: false,
+                })
+                .collect(),
+            returns: "number".into(),
+            is_async: false,
+        }
+    }
+
+    #[test]
+    fn generates_deterministic_distinct_inputs() {
+        let a = generate(&f(&[("q", "string"), ("t", "string")]), 50);
+        let b = generate(&f(&[("q", "string"), ("t", "string")]), 50);
+        assert_eq!(a, b);
+        assert_eq!(a.len(), 50);
+        let unique: std::collections::HashSet<String> = a.iter().map(|v| v.to_string()).collect();
+        assert_eq!(unique.len(), 50);
+        assert!(
+            a.iter()
+                .any(|args| args.to_string().contains('😀') || args.to_string().contains('👍'))
+        );
+    }
+
+    #[test]
+    fn covers_number_edge_cases() {
+        let cases = generate(&f(&[("n", "number")]), 18);
+        let text = serde_json::to_string(&cases).unwrap();
+        assert!(text.contains("NaN") && text.contains("-0"));
+    }
+}

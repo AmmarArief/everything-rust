@@ -28,8 +28,30 @@ Choices made so far, with reasons. Each one can be revisited.
 | A9 | npm to crate table is hand-curated; unknown packages are reported as `unknown`, never guessed. | The prompt: flag missing equivalents instead of hand-rolling silently. |
 | A10 | JSON output carries `schema: carcinize/analyze@1`. | Agents read it; it is a wire contract and gets versioned. |
 
+## The loop
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| L1 | `bridge` splits `lib.rs` (bindings) from `port.rs` (plain Rust, `#![forbid(unsafe_code)]`). | Binding macros expand to unsafe code; the port itself never needs it, and it stays testable without a JS runtime. |
+| L2 | `bridge` refuses to write into a non-empty folder, and refuses `blocked`/`keep` units without `--force`. | A port in progress is the user's work; the plan's verdicts should not be bypassed by accident. |
+| L3 | napi bindings catch panics and throw JS errors. | A panic unwinding into Node aborts the process; in shadow mode that would take the app down. |
+| L4 | TS types map to `String`, `f64`, `bool`, `Vec`, `Option`; anything structured crosses as JSON. | Faithful to JS (numbers are f64) and always compiles; the port can introduce real types behind the binding. |
+| L5 | `record` generates deterministic inputs from parameter types, with edge-case corpora, and derives one string argument from another half the time. | Reproducible recordings; search-like functions rarely hit on unrelated random strings. |
+| L6 | Recording and diffing run in Node through generated scripts, with a lossless codec (`undefined`, `NaN`, `-0`, BigInt, Map/Set, key order, lone surrogates). | The comparison sees exactly what a JS caller sees. Lone surrogates were found by the fixture tests: JS `slice` can split emoji. |
+| L7 | Both sides throwing counts as agreement; messages are not compared. | Error text is rarely a contract and would make every port fail on wording. |
+| L8 | wasm builds use `cargo` + `wasm-bindgen-cli` (version-checked), not wasm-pack. | wasm-pack downloads tools at run time, which fails offline and in locked-down CI. |
+| L9 | Shadow mode returns the original's result, runs Rust second, and never lets Rust errors reach callers. | Shipping shadow code must not change behavior; only the report sees Rust. |
+| L10 | The MCP server is a small hand-written JSON-RPC loop on serde_json. | The stdio transport needs four methods; an SDK would add churn for no gain. |
+
 ## Known limits
 
 - tsconfig `paths` aliases (`~/`, `@/`, `#`) are not followed; they are counted per unit.
 - Tests that import a package by name credit the package, not a unit.
 - No runtime profiling yet: "compute-heavy" is a static guess from loops and string work.
+- `record` generates inputs for strings, numbers, booleans, arrays and optionals; structured
+  arguments need `--inputs` with real cases.
+- TS sources must be runnable by Node's type stripping (explicit `.ts` or no imports), or recorded
+  from built output (`--module`) or with a loader (`--node-arg=--import=tsx`).
+- Shadow mode compares synchronous Rust results; functions that mutate their arguments are run on
+  already-mutated input by the second implementation.
+- Only TS/JS sources so far; the core is shaped for more language plugins.
