@@ -2,11 +2,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const [version, binDir, outDir] = process.argv.slice(2)
-if (!version || !binDir || !outDir) {
+const [version, binDirArg, outDirArg] = process.argv.slice(2)
+if (!version || !binDirArg || !outDirArg) {
   console.error('usage: node scripts/npm-packages.mjs <version> <binaries dir> <out dir>')
   process.exit(2)
 }
+const binDir = path.resolve(binDirArg)
+const outDir = path.resolve(outDirArg)
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const cargo = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8')
 const cargoVersion = cargo.match(/^version = "(.*)"/m)[1]

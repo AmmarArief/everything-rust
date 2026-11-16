@@ -96,7 +96,7 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           while read -r dir; do
-            name=$(node -p "require('./$dir/package.json').name")
+            name=$(node -p "require('$dir/package.json').name")
             if npm view "$name@$version" version > /dev/null 2>&1; then
               echo "$name@$version is already on npm"
             else
