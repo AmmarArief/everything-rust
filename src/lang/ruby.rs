@@ -175,6 +175,26 @@ fn join(dir: &str, rest: &str) -> String {
 
 // ---- risks and imports -----------------------------------------------------------------------
 
+const CORE_CLASSES: &[&str] = &[
+    "String",
+    "Array",
+    "Hash",
+    "Integer",
+    "Float",
+    "Numeric",
+    "Object",
+    "Kernel",
+    "Symbol",
+    "NilClass",
+    "Comparable",
+    "Enumerable",
+    "Module",
+    "Class",
+    "Time",
+    "Range",
+    "Proc",
+];
+
 const METAPROGRAMMING: &[&str] = &[
     "define_method",
     "method_missing",
@@ -265,9 +285,17 @@ pub fn scan(source: &str) -> FileFacts {
                 _ => {}
             }
         }
-        "class" => {
+        "class" | "module" => {
             if node.child_by_field_name("superclass").is_some() {
                 add(&mut facts, Risk::ClassInheritance, node);
+            }
+            // Reopening a core class changes it for every caller.
+            let name = node
+                .child_by_field_name("name")
+                .map_or("", |n| text(n, source));
+            if CORE_CLASSES.contains(&name) && node.parent().is_some_and(|p| p.kind() == "program")
+            {
+                add(&mut facts, Risk::Monkeypatching, node);
             }
         }
         "singleton_class" => add(&mut facts, Risk::Monkeypatching, node),
@@ -633,6 +661,7 @@ fn method_fn(
             });
         }
     }
+    infer_numbers(&mut params, node, source);
     // A method that yields takes a block, even without `&block`.
     if let Some(body) = node.child_by_field_name("body") {
         let mut yields = false;
@@ -654,6 +683,44 @@ fn method_fn(
         blocker,
         ..Default::default()
     })
+}
+
+/// Parameters without a YARD type that the body uses in arithmetic become `number`.
+fn infer_numbers(params: &mut [Param], node: Node, source: &str) {
+    let Some(body) = node.child_by_field_name("body") else {
+        return;
+    };
+    let mut numeric: Vec<String> = Vec::new();
+    syntax::walk(body, |n| {
+        if n.kind() != "binary" {
+            return;
+        }
+        let op = n
+            .child_by_field_name("operator")
+            .map_or("", |o| text(o, source));
+        let (Some(l), Some(r)) = (
+            n.child_by_field_name("left"),
+            n.child_by_field_name("right"),
+        ) else {
+            return;
+        };
+        let literal = |x: Node| matches!(x.kind(), "integer" | "float");
+        if matches!(op, "-" | "*" | "/" | "**")
+            || (matches!(op, "+" | "%" | "<" | ">" | "<=" | ">=") && (literal(l) || literal(r)))
+        {
+            for side in [l, r] {
+                if side.kind() == "identifier" {
+                    numeric.push(text(side, source).to_string());
+                }
+            }
+        }
+    });
+    for p in params
+        .iter_mut()
+        .filter(|p| p.ts_type == "unknown" && numeric.contains(&p.name))
+    {
+        p.ts_type = "number".into();
+    }
 }
 
 /// Module functions: `def self.name` in a module or class, and methods after `module_function`
@@ -695,6 +762,8 @@ fn namespace(
     let mut private = false;
     let mut hidden: Vec<String> = Vec::new();
     let mut found = Vec::new();
+    // Instance methods so far, for `module_function :name` after them.
+    let mut instance: Vec<Node> = Vec::new();
     for item in node
         .child_by_field_name("body")
         .map(named_children)
@@ -710,6 +779,17 @@ fn namespace(
             "call" if text(item, source).starts_with("private_class_method") => {
                 hidden.push(text(item, source).to_string());
             }
+            "call" if is_module && text(item, source).starts_with("module_function") => {
+                let call = text(item, source);
+                for m in &instance {
+                    let name = m
+                        .child_by_field_name("name")
+                        .map_or("", |n| text(n, source));
+                    if call.contains(&format!(":{name}")) {
+                        found.extend(method_fn(path, &receiver, *m, source, lines));
+                    }
+                }
+            }
             "singleton_method"
                 if item
                     .child_by_field_name("object")
@@ -720,6 +800,7 @@ fn namespace(
             "method" if module_function && !private => {
                 found.extend(method_fn(path, &receiver, item, source, lines));
             }
+            "method" if !private => instance.push(item),
             "singleton_class" => {
                 let mut private_here = false;
                 for m in item
@@ -801,5 +882,16 @@ mod tests {
         assert_eq!(signature(slug), "text, sep = \"-\", max: nil");
         assert!(fns[1].blocker.is_some());
         assert_eq!(fns[2].params[1].ts_type, "int");
+    }
+
+    #[test]
+    fn module_function_with_names_and_inferred_numbers() {
+        let src = "module Shellwords\n  def shellsplit(line)\n    line\n  end\n  module_function :shellsplit\n\n  \
+                   def helper(x) = x\n\n  def scale(x, factor)\n    x * factor\n  end\n  module_function :scale\nend\n";
+        let fns = exports("lib/shellwords.rb", src);
+        let names: Vec<&str> = fns.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, ["shellsplit", "scale"]);
+        assert_eq!(fns[0].params[0].ts_type, "unknown");
+        assert_eq!(fns[1].params[0].ts_type, "number");
     }
 }

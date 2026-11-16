@@ -8,9 +8,9 @@ Choices made so far, with reasons. Each one can be revisited.
 | --- | --- | --- |
 | D1 | A toolkit your agent drives, not a translator that calls a model itself. | No model cost or vendor lock-in; works with any agent. The checks are the part an agent cannot do reliably. Same shape as REA. |
 | D2 | TypeScript/JavaScript first. | No existing tool covers TS/JS to Rust. C/C++ and Python are crowded (DARPA TRACTOR, C2Rust, Depyler). |
-| D3 | Core plus one plugin per source language (`src/ts/` today). | The plan, ordering, scoring and report are the same for every language; parsers, bridges and risks are not. Python (PyO3) is the likely second plugin. |
+| D3 | Core plus one plugin per source language: `src/ts/`, then `src/lang/{python,c,go,ruby,java}.rs` on tree-sitter. | The plan, ordering, scoring and report are the same for every language; parsers, bridges and risks are not. |
 | D4 | Written in Rust, parsing with oxc. | Fast (x18n, 27k lines, in about 0.1 s), and the tool uses the language it moves people to. |
-| D5 | Shadow mode is on the roadmap. | Cloudflare FL2 ran old and new side by side in one process and moved traffic gradually. Tests prove a port; production traffic confirms it. |
+| D5 | Shadow mode for every language. | Cloudflare FL2 ran old and new side by side in one process and moved traffic gradually. Tests prove a port; production traffic confirms it. |
 | D6 | Working name `carcinize`. | Placeholder. Name to be decided. |
 
 ## `analyze`
@@ -54,18 +54,40 @@ Choices made so far, with reasons. Each one can be revisited.
 | X5 | `bench` is a separate step, not part of `gate`. | Speed is not correctness, but it decides whether a port should ship: every x18n core port was correct and slower. |
 | X6 | Risk guidance names `shift_remove` and UTF-16 string ordering. | `serde_json::Map::remove` reorders keys under `preserve_order`; JS `<` on strings compares UTF-16 units. |
 
+## More languages
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| M1 | Every language maps its types into the TS-like dialect (`string`, `number`, `int`, `T[]`, `Record<string, T>`, `T \| undefined`). | The planner, input generator and port stubs stay one implementation; a language plugin only discovers, scans, resolves and lists exports. |
+| M2 | Python uses PyO3 (abi3), C a plain C ABI, and Go, Ruby and Java one JSON dispatcher (`carcinize_call`, or one JNI method) behind a generated wrapper with the original API. | PyO3 and the C ABI are each language's native extension path. For the other three, one dispatcher keeps the Rust side identical, and the generated wrapper keeps callers unchanged. |
+| M3 | `diff` goes through the same wrapper callers will use (cgo package, Fiddle file, JNI classes, PyO3 package). | The test must see what callers see: wrapper bugs, type conversions and exception mapping included. |
+| M4 | Record and diff run in the source language's own runtime, with generated drivers; nothing is written into the original repository (Go builds its driver as a separate module with `replace`). | The original must run exactly as it does for its callers, and carcinize must not edit code it is migrating. |
+| M5 | C records each case in a forked child; a crash is recorded as `crash: <signal>` and accepts any port behavior. | Inputs outside a C function's contract are undefined behavior: real glibc segfaults on `isalpha(INT_MAX)`. |
+| M6 | C strings arrive in the port as `Option<&[u8]>`; pointer parameters other than `const char *`, pointer returns, structs and variadics stay in C. All `unsafe` is in the generated `lib.rs`, each with a `// SAFETY:` comment. | Ownership of buffers and structs has to be designed, not guessed; the port itself stays `#![forbid(unsafe_code)]`. |
+| M7 | Errors compare by exception type (Python, Ruby, Java), Go `error` values by message, Go panics by being panics. A port signals one with `Err("TypeName: message")`. | Messages are rarely a contract, except Go's error strings, which callers often compare. |
+| M8 | Unannotated parameters used as numbers become `number` (Python, Ruby); Python recording passes integral numbers as ints in every fourth case. | `colorsys` got 1,709 garbage cases out of 1,800 without inference, and its int results were never recorded without ints. |
+| M9 | `serde_json` runs with `float_roundtrip` in carcinize and in every generated crate. | The default parser can be one ULP off; Java's `Double.toString` exposed it in 43 cases. |
+| M10 | Shadow per language: a Go package, a Ruby file that `prepend`s, `<Class>Shadow` Java classes, a C file with `-D` renames and a `shadow` crate feature. | Each is the least invasive drop-in that language allows. |
+
 ## Known limits
 
-- tsconfig `paths` aliases (`~/`, `@/`, `#`) are not followed; they are counted per unit.
 - Tests that import a package by name credit the package, not a unit.
 - No runtime profiling yet: "compute-heavy" is a static guess from loops and string work.
-- `record` generates inputs for strings, numbers, booleans, arrays and optionals; structured
-  arguments need `--inputs` with real cases.
-- TS path aliases (`~/`, `@/`) are not resolved by the record hook; record from built output
-  (`--module`) or with a loader (`--node-arg=--import=tsx`).
 - The bridge copies strings and structured values on every call. For fine-grained functions this
   dominates: measure with `bench`. A JSON-free fast path (typed arrays, flat results) is not
   generated yet.
 - Shadow mode compares synchronous Rust results; functions that mutate their arguments are run on
   already-mutated input by the second implementation.
-- Only TS/JS sources so far; the core is shaped for more language plugins.
+- C: only scalar and `const char *` APIs cross the bridge; output buffers (`char *out, size_t *len`)
+  and state structs stay in C. Functions defined through macros are not seen.
+- Go: methods, generics, variadics, pointers, interfaces and channels stay in Go; struct
+  parameters cross as JSON with their exported fields.
+- Ruby: module functions only (`def self.x`, `module_function`); classes and methods that take
+  blocks stay in Ruby. Without YARD tags, parameters not used as numbers cross as untyped JSON.
+- Java: `public static` methods of public classes only; overloads, generics, `char` and object
+  types stay in Java. `record` compiles the module's sources with `javac` alone, so code that
+  needs Maven dependencies on the classpath cannot be recorded yet.
+- No way yet to mark a recorded case as undefined behavior that does not crash (`ispunct(1000)`);
+  remove it from `cases.jsonl` by hand.
+- The JSON bridges cost about 2-10 µs per call; leaf functions are slower in Rust as called from
+  the original language. Measure with `bench`.

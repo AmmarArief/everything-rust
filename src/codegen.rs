@@ -1091,10 +1091,11 @@ pub fn required_deps(kind: Kind, api: &PortApi) -> Vec<(&'static str, String)> {
     }
     if json {
         deps.push(("serde", r#""1""#.into()));
-        // JS objects keep insertion order; serde_json sorts keys unless told otherwise.
+        // JS objects keep insertion order; serde_json sorts keys unless told otherwise. Its
+        // default float parser can be off by one ULP; `float_roundtrip` makes it exact.
         deps.push((
             "serde_json",
-            r#"{ version = "1", features = ["preserve_order"] }"#.into(),
+            r#"{ version = "1", features = ["preserve_order", "float_roundtrip"] }"#.into(),
         ));
     }
     deps

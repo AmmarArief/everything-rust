@@ -1,9 +1,13 @@
 ---
 name: carcinize
-description: Migrate a TypeScript/JavaScript codebase to Rust incrementally with the carcinize CLI or MCP tools - plan, bridge one unit at a time, record TS behavior, port, diff, shadow and gate. Use when asked to rewrite, port or migrate JS/TS code to Rust, or to plan such a migration.
+description: Migrate a TypeScript/JavaScript, Python, C, Go, Ruby or Java codebase to Rust incrementally with the carcinize CLI or MCP tools - plan, bridge one unit at a time, record the original's behavior, port, diff, shadow and gate. Use when asked to rewrite, port or migrate code to Rust, or to plan such a migration.
 ---
 
-# Incremental TS/JS to Rust with carcinize
+# Incremental migration to Rust with carcinize
+
+Works for TypeScript/JavaScript, Python, C, Go, Ruby and Java; the language is detected (or pass
+`--lang`). The steps are the same; the bridge and the wrapper the original's callers load differ
+(see the README's language table). Examples below use TS terms; read "the source language" for TS.
 
 carcinize gives you ground truth; you write the Rust. Never port a whole codebase at once, and never
 call a port done before `gate` passes.
@@ -27,7 +31,7 @@ carcinize analyze <repo> --json            # you: schema carcinize/analyze@1
 
 ```sh
 carcinize bridge <repo> <unit-id>          # crate in <repo>/rust/<name>; never overwrites
-carcinize record <crate>                   # TS behavior on edge-case inputs -> cases.jsonl
+carcinize record <crate>                   # the original's behavior on edge-case inputs -> cases.jsonl
 ```
 
 - Add real-world inputs with `--inputs cases.jsonl` (`{"fn": name, "args": [...]}` per line) when the
@@ -40,6 +44,10 @@ Write the port in `src/port.rs` only; `src/lib.rs` is the thin binding layer.
 
 - Read each risk the plan lists for the unit, at its `file:line`, before writing code.
 - String offsets: use `src/utf16.rs`. JS indexes UTF-16 code units, Rust UTF-8 bytes.
+- Errors: return `Err("TypeName: message")` (Python, Ruby, Java exception types; Go `error` text).
+- Dynamic languages: inputs that are ints in Python or Ruby must come back as ints where the
+  original passes them through; `diff` shows where. C: inputs recorded as `crash:` are undefined
+  behavior; any result passes.
 - Ordered maps and object keys: use `indexmap` where order reaches output.
 - Regex lookaround or backreferences: `fancy-regex`, not `regex`.
 - No `unsafe`. If truly needed: minimal, isolated, with a `// SAFETY:` comment.

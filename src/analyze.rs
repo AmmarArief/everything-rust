@@ -625,8 +625,9 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
             unit.direct_tests
         ));
     } else if package_tests == 0 && !keep {
-        notes
-            .push("No tests found: write characterization tests against the TS code first.".into());
+        notes.push(
+            "No tests found: write characterization tests against the original code first.".into(),
+        );
     }
 
     let string_ops = unit.risks.get(&Risk::StringOffsets).map_or(0, |r| r.0);

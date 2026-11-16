@@ -2,24 +2,41 @@
 
 > Working name. To be decided.
 
-Move a TypeScript/JavaScript codebase to Rust one module at a time, without breaking it.
+Move a codebase to Rust one module at a time, without breaking it. TypeScript/JavaScript,
+Python, C, Go, Ruby and Java.
 
 carcinize does not translate code: your coding agent (Claude Code, Codex, Cursor, ...) or you write
 the Rust. carcinize supplies what an agent cannot guess reliably: what to port first and in which
-order, a bridge so JS can call the Rust, the exact behavior the port must match, a safe way to
-ship it, and a gate that says when a port is done.
+order, a bridge so the rest of the code can call the Rust with its API unchanged, the exact
+behavior the port must match, a safe way to ship it, and a gate that says when a port is done.
+
+## Languages
+
+| Language | Unit | Bridge | Recorded and replayed by |
+| --- | --- | --- | --- |
+| TypeScript/JavaScript | folder or file | napi-rs or wasm-bindgen, classes and async included | Node, running the `.ts` sources |
+| Python | package or module | PyO3 (abi3), typed exceptions | Python, importing the original |
+| C | `.c` file | `extern "C"` functions with the original names and a header | the original compiled to a shared library, called through ctypes, one fork per case |
+| Go | package | JSON dispatcher + generated cgo package with the original API | a generated Go driver, built as its own module |
+| Ruby | file or folder of module functions | JSON dispatcher + generated Fiddle wrapper defining the same modules | a generated Ruby driver |
+| Java | package of `public static` methods | JSON dispatcher over JNI + generated wrapper classes | a generated reflection driver |
+
+The language is detected from the repository (`go.mod`, `pom.xml`, `pyproject.toml`, `Gemfile`,
+`package.json`, else the most common source files); `--lang` overrides it. Types come from the
+source: TS types, Python hints, C and Go and Java signatures, Ruby YARD tags; untyped parameters
+used as numbers are inferred as numbers.
 
 ## The loop
 
 | Step | Command | What it does |
 | --- | --- | --- |
-| 1. Plan | `carcinize analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, npm-to-crate fit, best first ports |
-| 2. Bridge | `carcinize bridge <repo> <unit>` | Crate with napi-rs or wasm-bindgen bindings (`lib.rs`) and stubs to port (`port.rs`); UTF-16 helpers when needed |
-| 3. Record | `carcinize record <crate>` | Runs the TS original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ...) and saves `cases.jsonl` |
-| 3. Build | `carcinize build <crate>` | Builds the `.node` (napi-rs) or the wasm-bindgen package |
-| 3. Diff | `carcinize diff <crate>` | Replays the recorded cases against Rust, lists mismatches |
-| 3. Bench | `carcinize bench <crate>` | Times the recorded cases on the TS original and on Rust, bridge included |
-| 4. Shadow | `carcinize shadow <crate>` | Drop-in module: runs both, returns the original's result, reports mismatches; `CARCINIZE_MODE=old\|shadow\|new` |
+| 1. Plan | `carcinize analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, dependency-to-crate fit, best first ports |
+| 2. Bridge | `carcinize bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`) |
+| 3. Record | `carcinize record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and saves `cases.jsonl` |
+| 3. Build | `carcinize build <crate>` | Builds the Rust side: `.node`, wasm package, Python extension or shared library |
+| 3. Diff | `carcinize diff <crate>` | Replays the recorded cases against Rust, called the way the original's callers call it; lists mismatches |
+| 3. Bench | `carcinize bench <crate>` | Times the recorded cases on the original and on Rust, bridge included |
+| 4. Shadow | `carcinize shadow <crate>` | Drop-in that runs both, returns the original's result, reports mismatches; `CARCINIZE_MODE=old\|shadow\|new` |
 | 5. Gate | `carcinize gate <crate>` | fmt, clippy `-D warnings`, tests, `unsafe` audit, nothing unported, build, API, behavior |
 | Agents | `carcinize mcp` | Every step as an MCP tool over stdio; workflow skill in `skills/carcinize/SKILL.md` |
 
@@ -30,6 +47,14 @@ every gate passes and 7,925 recorded cases match exactly. `carcinize bench` then
 are slower than the TS as called from JS, because the bridge costs more than the work. Full report:
 [`demo/x18n-core`](./demo/x18n-core/README.md). The lesson is built in: measure with `bench` before
 shipping a port.
+
+## Real code in six languages
+
+Go's `path`, Ruby's `shellwords`, Python's `colorsys`, JDK and glibc behavior behind small
+facades: every port passes its gate, 13,010 recorded cases in all. The runs found and fixed
+bugs in carcinize (floats off by one ULP through `serde_json`, C crashes during recording,
+untyped code getting garbage inputs) and showed where the bridges cost more than the work.
+Report: [`docs/real-world-languages.md`](./docs/real-world-languages.md).
 
 ## Example: a real module from x18n
 
@@ -63,8 +88,9 @@ The plan carcinize writes for all of x18n: [`docs/examples/x18n.md`](./docs/exam
 cargo install --path .
 ```
 
-Needs Node 22.6+ for `record`, `diff` and `shadow` (it runs `.ts` sources directly).
-wasm bridges also need `rustup target add wasm32-unknown-unknown` and
+`record`, `diff` and `bench` run the original in its own runtime: Node 22.6+ for TS (it runs `.ts`
+sources directly), Python 3.9+ for Python and C (ctypes), Go 1.21+, Ruby 3+ with Fiddle, JDK 17+
+(`javac` and `java`). C also needs a C compiler. wasm bridges also need `rustup target add wasm32-unknown-unknown` and
 `cargo install wasm-bindgen-cli --version <the crate's wasm-bindgen version> --locked`; `build` names
 the exact version.
 
@@ -76,7 +102,8 @@ For agents, add the MCP server (`.mcp.json`):
 
 ## What `bridge` decides
 
-- Exports that cannot cross a bridge stay in TS, and the shadow module re-exports the original:
+- Exports that cannot cross a bridge stay in the source language, with the reason, and the shadow
+  module re-exports the original. For TS:
   functions that take or return functions, generators and iterators, RegExp, `instanceof` checks,
   generics, and values whose types (followed through imports, re-exports and `extends`) hold
   functions. `--keep "name: reason"` keeps more, e.g. code that depends on `Intl` data.

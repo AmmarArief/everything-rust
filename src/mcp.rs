@@ -79,7 +79,7 @@ fn tools() -> Value {
     json!([
         {
             "name": "analyze",
-            "description": "Map a TS/JS repository: units, port order (waves), risks with file:line, bridge per unit, npm-to-crate fit, and `start_here`: the best first ports.",
+            "description": "Map a repository (TypeScript/JavaScript, Python, C, Go, Ruby or Java): units, port order (waves), risks with file:line, bridge per unit, dependency-to-crate fit, and `start_here`: the best first ports.",
             "inputSchema": { "type": "object", "properties": { "root": { "type": "string", "description": "Repository root." } }, "required": ["root"] },
         },
         {
@@ -91,7 +91,7 @@ fn tools() -> Value {
                 "kind": { "type": "string", "enum": ["napi", "wasm"], "description": "Defaults to the plan's bridge." },
                 "out": { "type": "string", "description": "Crate folder; defaults to <root>/rust/<name>." },
                 "force": { "type": "boolean", "description": "Bridge a unit the plan marks blocked or keep." },
-                "keep": { "type": "array", "items": { "type": "string" }, "description": "Exports to keep in TS: `name` or `name: reason`." },
+                "keep": { "type": "array", "items": { "type": "string" }, "description": "Exports to keep in the source language: `name` or `name: reason`." },
             }, "required": ["root", "unit"] },
         },
         {
@@ -101,18 +101,18 @@ fn tools() -> Value {
         },
         {
             "name": "record",
-            "description": "Run the original TS functions on generated edge-case inputs (non-ASCII, emoji, -0, NaN, ...) plus optional extra inputs, and save the results as cases.jsonl: the behavior the port must match.",
+            "description": "Run the original functions on generated edge-case inputs (non-ASCII, emoji, -0, NaN, ...) plus optional extra inputs, and save the results as cases.jsonl: the behavior the port must match.",
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "count": { "type": "integer", "description": "Generated cases per function (default 200)." },
                 "inputs": { "type": "string", "description": "JSONL file of extra cases: {\"fn\": name, \"args\": [...]}." },
-                "module": { "type": "string", "description": "Import the original from this JS module instead of the TS source." },
+                "module": { "type": "string", "description": "JS only: import the original from this JS module instead of the TS source." },
                 "resolve_from": { "type": "string", "description": "Resolve npm packages from this folder's node_modules." },
             }, "required": ["crate"] },
         },
         {
             "name": "build",
-            "description": "Build the crate's JS module (napi-rs .node or wasm-bindgen output).",
+            "description": "Build the crate: the napi-rs .node, wasm-bindgen output, Python extension or shared library.",
             "inputSchema": { "type": "object", "properties": { "crate": crate_dir }, "required": ["crate"] },
         },
         {
@@ -133,7 +133,7 @@ fn tools() -> Value {
         },
         {
             "name": "shadow",
-            "description": "Generate a drop-in TS module that runs the original and the Rust port side by side and reports mismatches; CARCINIZE_MODE=old|shadow|new switches at runtime.",
+            "description": "Generate a drop-in shadow (a TS or Python module, Go package, Ruby file, Java classes or C file) that runs the original and the Rust port side by side and reports mismatches; CARCINIZE_MODE=old|shadow|new switches at runtime.",
             "inputSchema": { "type": "object", "properties": { "crate": crate_dir, "out": { "type": "string" } }, "required": ["crate"] },
         },
         {

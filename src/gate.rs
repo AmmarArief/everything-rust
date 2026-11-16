@@ -1,7 +1,7 @@
 //! Step 5: the definition of done for one port.
 //!
 //! fmt, clippy (warnings are errors), cargo tests, no unexplained `unsafe`, every function
-//! ported, the built module exposes the TS API, and the recorded TS behavior replays cleanly.
+//! ported, the built module exposes the original API, and the recorded behavior replays cleanly.
 
 use std::path::Path;
 use std::process::Command;

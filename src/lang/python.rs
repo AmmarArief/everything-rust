@@ -658,6 +658,75 @@ fn unwrap_decorated<'t>(node: Node<'t>, source: &str) -> (Vec<String>, Node<'t>)
     )
 }
 
+/// Unannotated parameters the body uses as numbers (`r - g`, `x * 0.5`, `max(r, g)`, `x < 1`)
+/// become `number`: generated inputs then fit what the code expects.
+pub fn infer_numbers(params: &mut [Param], body: Node, source: &str) {
+    let unknown: Vec<String> = params
+        .iter()
+        .filter(|p| p.ts_type == "unknown" && p.default.is_none())
+        .map(|p| p.name.clone())
+        .collect();
+    if unknown.is_empty() {
+        return;
+    }
+    let mut numeric: Vec<String> = Vec::new();
+    let is_number = |n: Node| matches!(n.kind(), "integer" | "float");
+    syntax::walk(body, |n| {
+        let operands: Vec<Node> = match n.kind() {
+            "binary_operator" => {
+                let op = n
+                    .child_by_field_name("operator")
+                    .map_or("", |o| text(o, source));
+                let (Some(l), Some(r)) = (
+                    n.child_by_field_name("left"),
+                    n.child_by_field_name("right"),
+                ) else {
+                    return;
+                };
+                match op {
+                    "-" | "*" | "/" | "//" | "**" => vec![l, r],
+                    "+" | "%" if is_number(l) || is_number(r) => vec![l, r],
+                    _ => return,
+                }
+            }
+            "comparison_operator" => {
+                let parts = named_children(n);
+                if !parts.iter().any(|p| is_number(*p)) {
+                    return;
+                }
+                parts
+            }
+            "call" => {
+                let f = n
+                    .child_by_field_name("function")
+                    .map_or("", |f| text(f, source));
+                if !matches!(
+                    f,
+                    "min" | "max" | "abs" | "round" | "float" | "int" | "divmod"
+                ) && !f.starts_with("math.")
+                {
+                    return;
+                }
+                n.child_by_field_name("arguments")
+                    .map(named_children)
+                    .unwrap_or_default()
+            }
+            _ => return,
+        };
+        for o in operands {
+            if o.kind() == "identifier" {
+                let name = text(o, source).to_string();
+                if unknown.contains(&name) && !numeric.contains(&name) {
+                    numeric.push(name);
+                }
+            }
+        }
+    });
+    for p in params.iter_mut().filter(|p| numeric.contains(&p.name)) {
+        p.ts_type = "number".into();
+    }
+}
+
 fn function(
     path: &str,
     node: Node,
@@ -666,8 +735,12 @@ fn function(
     method: bool,
 ) -> Option<ExportedFn> {
     let name = text(node.child_by_field_name("name")?, source).to_string();
-    let (params, mut blocker) = parameters(node.child_by_field_name("parameters")?, source, method);
+    let (mut params, mut blocker) =
+        parameters(node.child_by_field_name("parameters")?, source, method);
     let body = node.child_by_field_name("body");
+    if let Some(body) = body {
+        infer_numbers(&mut params, body, source);
+    }
     let mut generator = false;
     if let Some(body) = body {
         syntax::walk(body, |n| {
@@ -1037,5 +1110,15 @@ mod tests {
         assert!(facts.risks.contains_key(&Risk::DivisionSemantics));
         assert!(facts.risks.contains_key(&Risk::RegexSyntax));
         assert_eq!(facts.loops, 1);
+    }
+
+    #[test]
+    fn infers_numbers_from_arithmetic() {
+        let src = "def rgb_to_hsv(r, g, b):\n    maxc = max(r, g, b)\n    return maxc - r\n\n\
+                   def greet(name):\n    return 'hi ' + name\n";
+        let (fns, _) = exports("colorsys.py", src);
+        let types: Vec<&str> = fns[0].params.iter().map(|p| p.ts_type.as_str()).collect();
+        assert_eq!(types, ["number", "number", "number"]);
+        assert_eq!(fns[1].params[0].ts_type, "unknown");
     }
 }

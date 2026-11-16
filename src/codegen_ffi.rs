@@ -227,10 +227,11 @@ pub fn cargo_toml(m: &Manifest) -> String {
         _ => ("\"cdylib\", \"staticlib\", \"rlib\"", ""),
     };
     // Ruby hashes and Java's LinkedHashMap keep insertion order; Go's encoder sorts map keys.
+    // `float_roundtrip`: the default float parser can be off by one ULP.
     let serde_json = if m.language == Lang::Go {
-        "serde_json = \"1\"\n"
+        "serde_json = { version = \"1\", features = [\"float_roundtrip\"] }\n"
     } else {
-        "serde_json = { version = \"1\", features = [\"preserve_order\"] }\n"
+        "serde_json = { version = \"1\", features = [\"preserve_order\", \"float_roundtrip\"] }\n"
     };
     format!(
         "[package]\nname = \"{}\"\nversion = \"0.1.0\"\nedition = \"2024\"\npublish = false\n\

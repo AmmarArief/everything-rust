@@ -585,7 +585,7 @@ fn keep_reason(keep: &[String], name: &str) -> Option<String> {
             .map_or((k.as_str(), ""), |(n, r)| (n.trim(), r.trim()));
         (kept == name).then(|| {
             if reason.is_empty() {
-                "kept in TS on request".to_string()
+                "kept on request".to_string()
             } else {
                 reason.to_string()
             }
@@ -837,8 +837,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     }
     if exports.is_empty() && classes.is_empty() && !js_only.is_empty() {
         bail!(
-            "every export of `{}` must stay in JS: {}",
+            "every export of `{}` must stay in {}: {}",
             unit.id,
+            lang.name(),
             js_only
                 .iter()
                 .map(|j| format!("{} ({})", j.name, j.reason))

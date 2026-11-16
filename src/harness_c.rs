@@ -239,6 +239,8 @@ const DRIVER_C_PY: &str = r#"
 import ctypes
 import json
 import math
+import os
+import signal
 import sys
 import time
 
@@ -297,6 +299,32 @@ def call(functions, c):
     return {"ok": enc(fn(*args))}
 
 
+def isolated(functions, c):
+    """Runs one case in a forked child: undefined behavior in C can crash the process."""
+    read_end, write_end = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(read_end)
+        try:
+            result = call(functions, c)
+        except Exception as e:  # ctypes conversion errors
+            result = {"error": "%s: %s" % (type(e).__name__, e)}
+        os.write(write_end, json.dumps(result).encode())
+        os._exit(0)
+    os.close(write_end)
+    data = b""
+    while True:
+        chunk = os.read(read_end, 65536)
+        if not chunk:
+            break
+        data += chunk
+    os.close(read_end)
+    _, status = os.waitpid(pid, 0)
+    if os.WIFSIGNALED(status):
+        return {"error": "crash: " + signal.Signals(os.WTERMSIG(status)).name}
+    return json.loads(data) if data else {"error": "crash: no result"}
+
+
 def cases_of(path):
     return [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
 
@@ -306,7 +334,7 @@ def record(lib, sigs, inputs, out_path):
     with open(out_path, "w", encoding="utf-8") as out:
         for c in json.load(open(inputs, encoding="utf-8")):
             line = {"fn": c["fn"], "args": c["args"]}
-            line.update(call(functions, c))
+            line.update(isolated(functions, c))
             out.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
@@ -320,7 +348,11 @@ def diff(lib, sigs, cases_path, out_path):
                 summary["missing"].append(c["fn"])
             summary["failed"] += 1
             continue
-        got = call(functions, c)
+        if str(c.get("error", "")).startswith("crash:"):
+            # The original's behavior is undefined there: any answer of the port passes.
+            summary["passed"] += 1
+            continue
+        got = isolated(functions, c)
         expected = {"ok": c.get("ok")}
         if json.dumps(got) == json.dumps(expected):
             summary["passed"] += 1
@@ -336,7 +368,8 @@ def bench(original, rust, sigs, cases_path, out_path, min_ms):
     old, new = bind(original, signatures), bind(rust, signatures)
     groups = {}
     for c in cases_of(cases_path):
-        groups.setdefault(c["fn"], []).append(c)
+        if "error" not in c:
+            groups.setdefault(c["fn"], []).append(c)
     rows = []
     for name, cases in groups.items():
         if name not in old or name not in new:

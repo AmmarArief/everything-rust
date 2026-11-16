@@ -1,4 +1,4 @@
-//! Steps 3 and 5's runtime half: record what the TS code does, build the Rust module, and
+//! Steps 3 and 5's runtime half: record what the original code does, build the Rust module, and
 //! replay the recorded cases against it.
 //!
 //! Both sides run in Node through small generated scripts, so the comparison sees exactly
@@ -113,7 +113,12 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             );
         }
         let types = &scopes[&f.file];
-        for args in generate(f, opts.count, types) {
+        for (i, mut args) in generate(f, opts.count, types).into_iter().enumerate() {
+            // Python callers pass ints where floats are expected, and int-ness can leak into
+            // results: every fourth case passes integral `number` arguments as ints.
+            if manifest.language == crate::lang::Lang::Python && i % 4 == 3 {
+                intify(&f.params, &mut args);
+            }
             let mut case = json!({ "fn": f.name, "module": module, "args": args });
             split_keyword_only(&f.params, &mut case);
             cases.push(case);
@@ -389,7 +394,7 @@ pub struct BenchOptions<'a> {
     pub node_args: &'a [String],
 }
 
-/// Times the recorded cases against the TS original and the built Rust module, bridge included.
+/// Times the recorded cases against the original and the built Rust module, bridge included.
 pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     let manifest = Manifest::load(opts.crate_dir)?;
     if manifest.language == crate::lang::Lang::Python {
@@ -863,6 +868,23 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
 
 /// Python keyword-only parameters (after `*`) are passed by name: they move from `args` into
 /// `kwargs`, and an omitted (`undefined`) one is left out.
+/// Integral float arguments of `number` parameters, as ints.
+fn intify(params: &[crate::ts::exports::Param], args: &mut Value) {
+    let Some(items) = args.as_array_mut() else {
+        return;
+    };
+    for (p, v) in params.iter().zip(items.iter_mut()) {
+        if p.ts_type == "number"
+            && let Some(x) = v.as_f64()
+            && x.fract() == 0.0
+            && x.abs() < 1e15
+            && !(x == 0.0 && x.is_sign_negative())
+        {
+            *v = json!(x as i64);
+        }
+    }
+}
+
 fn split_keyword_only(params: &[crate::ts::exports::Param], case: &mut Value) {
     if !params.iter().any(|p| p.keyword_only) {
         return;
