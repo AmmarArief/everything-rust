@@ -413,7 +413,6 @@ fn run_in(
         if start.elapsed() > timeout {
             #[cfg(unix)]
             {
-                // Descendants can retain the pipes even after the immediate child exits.
                 let _ = Command::new("/bin/kill")
                     .args(["-KILL", "--", &format!("-{}", child.id())])
                     .stderr(Stdio::null())
