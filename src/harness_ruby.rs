@@ -87,7 +87,9 @@ pub fn record(crate_dir: &Path, m: &Manifest, cases: &[Value]) -> Result<PathBuf
     std::fs::create_dir_all(crate_dir.join(WORK_DIR))?;
     std::fs::write(&inputs, serde_json::to_string(cases)?)?;
     let out = crate_dir.join(CASES);
-    driver(crate_dir, m, "record", &inputs, &out, 0, false)?;
+    let pending = crate_dir.join(WORK_DIR).join("recording.jsonl");
+    driver(crate_dir, m, "record", &inputs, &pending, 0, false)?;
+    std::fs::rename(&pending, &out).with_context(|| format!("publishing {}", out.display()))?;
     Ok(out)
 }
 

@@ -249,8 +249,8 @@ when "record"
       line.merge!(call(c))
       begin
         out.puts(JSON.generate(line))
-      rescue JSON::GeneratorError, Encoding::UndefinedConversionError
-        next
+      rescue JSON::GeneratorError, Encoding::UndefinedConversionError => e
+        raise "cannot encode recorded result for #{c.fetch("fn")}: #{e.message}"
       end
     end
   end
