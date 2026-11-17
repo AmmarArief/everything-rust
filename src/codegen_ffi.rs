@@ -224,6 +224,7 @@ pub fn call_json(name: &str, args: &str) -> String {{
 pub fn cargo_toml(m: &Manifest) -> String {
     let (crate_types, extra) = match m.language {
         Lang::Java => ("\"cdylib\", \"rlib\"", "jni = \"0.21\"\n"),
+        Lang::Go => ("\"cdylib\", \"rlib\"", ""),
         _ => ("\"cdylib\", \"staticlib\", \"rlib\"", ""),
     };
     // Ruby hashes and Java's LinkedHashMap keep insertion order; Go's encoder sorts map keys.

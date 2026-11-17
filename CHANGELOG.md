@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Go: crates no longer build a static library. Go 1.26.11 and 1.27.4 refuse to link archives
+  that carry LLVM bitcode, which every Rust static library does; cgo links the shared library
+  anyway. Run `rust-anything refresh <crate>` on a Go crate bridged by an earlier version.
+
 ## 1.1.0 (2026-11-16)
 
 Whole-app ports: rust-anything now takes a TypeScript/JavaScript, Python, C, Go, Ruby or Java app

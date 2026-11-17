@@ -122,6 +122,15 @@ fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
         std::fs::write(dir.join("go.sum"), sum)?;
     }
     std::fs::write(dir.join("main.go"), crate::codegen_go::driver(m, &import))?;
+    if rust {
+        let stale = crate_dir
+            .join("target/release")
+            .join(format!("lib{}.a", m.lib_name()));
+        if stale.is_file() {
+            std::fs::remove_file(&stale)
+                .with_context(|| format!("removing {}", stale.display()))?;
+        }
+    }
     let bin = dir.join("driver");
     run(
         go().args(["build", "-o"])

@@ -666,6 +666,8 @@ fn go_packages_bridge_record_and_diff() {
     );
     let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
     assert!(lib.contains("static GLOBAL: mimalloc::MiMalloc"), "{lib}");
+    let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
+    assert!(!cargo.contains("staticlib"), "{cargo}");
     if !go_available() {
         return;
     }
