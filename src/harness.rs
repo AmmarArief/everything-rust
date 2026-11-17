@@ -637,6 +637,10 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         outcome = crate::tolerance::apply(outcome, crate::tolerance::check(t)?);
     }
     outcome.mismatches.truncate(SHOWN_MISMATCHES);
+    anyhow::ensure!(
+        outcome.total > 0,
+        "no recorded cases to compare; run `rust-anything record` first"
+    );
     Ok(outcome)
 }
 
