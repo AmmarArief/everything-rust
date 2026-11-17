@@ -860,6 +860,9 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     if crate::codegen_tswire::uses_wire(&manifest, &fns) {
         files.push(("src/wire.rs".into(), crate::wire::WIRE_RS.into()));
     }
+    if manifest.kind == Kind::Pyo3 && !crate_dir.join("build.rs").exists() {
+        files.push(("build.rs".into(), DYNAMIC_LOOKUP_BUILD_RS.into()));
+    }
     if manifest.kind == Kind::Pyo3 && fns.needs_json() {
         files.push(("src/pyconv.rs".into(), crate::codegen_py::PYCONV_RS.into()));
         files.push(("src/pynum.rs".into(), crate::codegen_py::PYNUM_RS.into()));
@@ -887,6 +890,15 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
         files: files.into_iter().map(|(p, _)| p).collect(),
     })
 }
+
+/// `build.rs` for Python and Ruby extensions: on macOS their `cdylib` links against symbols the
+/// interpreter provides only at load time.
+pub(crate) const DYNAMIC_LOOKUP_BUILD_RS: &str = r#"fn main() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+        println!("cargo:rustc-cdylib-link-arg=-Wl,-undefined,dynamic_lookup");
+    }
+}
+"#;
 
 pub fn bridge(opts: &Options) -> Result<Outcome> {
     let root = opts
@@ -1124,11 +1136,13 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             serde_json::to_string_pretty(&manifest)? + "\n",
         ),
     ];
-    if kind == Kind::Napi {
-        files.push((
+    match kind {
+        Kind::Napi => files.push((
             "build.rs".into(),
             "fn main() {\n    napi_build::setup();\n}\n".into(),
-        ));
+        )),
+        Kind::Pyo3 => files.push(("build.rs".into(), DYNAMIC_LOOKUP_BUILD_RS.into())),
+        _ => {}
     }
     if utf16 {
         files.push(("src/utf16.rs".into(), UTF16_RS.into()));
@@ -1223,10 +1237,7 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 "src/rbconv.rs".to_string(),
                 crate::codegen_ruby::RBCONV_RS.to_string(),
             ),
-            (
-                "build.rs".to_string(),
-                crate::codegen_ruby::BUILD_RS.to_string(),
-            ),
+            ("build.rs".to_string(), DYNAMIC_LOOKUP_BUILD_RS.to_string()),
         ]
     } else {
         let mut lib = crate::codegen_ffi::lib_rs(m, api);

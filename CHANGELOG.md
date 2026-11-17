@@ -17,6 +17,10 @@
   `analyze` says so instead of returning an empty plan.
 - PHP's built-in server echoes a `Host` header with the port it ran on; HTTP recordings now skip
   it, like `Date`.
+- Fix ([#4](https://github.com/erkamyaman/rust-anything/issues/4)): Python units bridged on macOS
+  failed to link (`Undefined symbols ... _Py_IsInitialized`). The PyO3 crate now gets the same
+  `build.rs` the Ruby bridge has, which lets the interpreter provide Python's symbols at load time.
+  `rust-anything refresh <crate>` adds it to crates bridged before this fix.
 - A `.github/FUNDING.yml` turns on the repository's Sponsor button.
 
 ## 1.2.0 (2026-11-17)
