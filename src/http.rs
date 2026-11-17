@@ -1030,20 +1030,6 @@ mod tests {
     }
 
     #[test]
-    fn responses_parse_with_length_chunks_or_close() {
-        let fixed =
-            b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nhelloEXTRA";
-        let r = read_response(&mut &fixed[..], false).unwrap();
-        assert_eq!((r.status, r.body.as_slice()), (200, &b"hello"[..]));
-        assert_eq!(r.headers["content-type"], "text/plain");
-        let chunked = b"HTTP/1.1 404 Not Found\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nnot \r\n5;x=y\r\nfound\r\n0\r\n\r\n";
-        let r = read_response(&mut &chunked[..], false).unwrap();
-        assert_eq!((r.status, r.body.as_slice()), (404, &b"not found"[..]));
-        let close = b"HTTP/1.0 500 Oops\r\n\r\nbye";
-        assert_eq!(read_response(&mut &close[..], false).unwrap().body, b"bye");
-    }
-
-    #[test]
     fn informational_responses_do_not_replace_the_final_response() {
         let raw = b"HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 103 Early Hints\r\nLink: </app.js>\r\n\r\nHTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nok";
         let response = read_response(&mut &raw[..], false).unwrap();
@@ -1056,6 +1042,20 @@ mod tests {
             read_response(&mut &switching[..], false).unwrap().status,
             101
         );
+    }
+
+    #[test]
+    fn responses_parse_with_length_chunks_or_close() {
+        let fixed =
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nhelloEXTRA";
+        let r = read_response(&mut &fixed[..], false).unwrap();
+        assert_eq!((r.status, r.body.as_slice()), (200, &b"hello"[..]));
+        assert_eq!(r.headers["content-type"], "text/plain");
+        let chunked = b"HTTP/1.1 404 Not Found\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nnot \r\n5;x=y\r\nfound\r\n0\r\n\r\n";
+        let r = read_response(&mut &chunked[..], false).unwrap();
+        assert_eq!((r.status, r.body.as_slice()), (404, &b"not found"[..]));
+        let close = b"HTTP/1.0 500 Oops\r\n\r\nbye";
+        assert_eq!(read_response(&mut &close[..], false).unwrap().body, b"bye");
     }
 
     #[test]
