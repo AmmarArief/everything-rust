@@ -98,26 +98,38 @@ fn fill(stream: &mut impl Read, buf: &mut Vec<u8>, need: usize) -> Result<()> {
     Ok(())
 }
 
+fn chunk_line_end(stream: &mut impl Read, buf: &mut Vec<u8>) -> Result<usize> {
+    loop {
+        if let Some(end) = find(buf, b"\r\n") {
+            return Ok(end);
+        }
+        let need = buf.len() + 1;
+        fill(stream, buf, need)?;
+    }
+}
+
 fn read_chunked(stream: &mut impl Read, mut buf: Vec<u8>) -> Result<Vec<u8>> {
     let mut body = Vec::new();
     loop {
-        let line_end = loop {
-            if let Some(i) = find(&buf, b"\r\n") {
-                break i;
-            }
-            let need = buf.len() + 1;
-            fill(stream, &mut buf, need)?;
-        };
+        let line_end = chunk_line_end(stream, &mut buf)?;
         let size_text = String::from_utf8_lossy(&buf[..line_end]).into_owned();
         let size = usize::from_str_radix(size_text.split(';').next().unwrap_or("").trim(), 16)
             .with_context(|| format!("bad chunk size `{size_text}`"))?;
         buf.drain(..line_end + 2);
         if size == 0 {
-            return Ok(body);
+            loop {
+                let line_end = chunk_line_end(stream, &mut buf)?;
+                if line_end == 0 {
+                    return Ok(body);
+                }
+                buf.drain(..line_end + 2);
+            }
         }
-        fill(stream, &mut buf, size + 2)?;
+        let end = size.checked_add(2).context("chunk size is too large")?;
+        fill(stream, &mut buf, end)?;
+        ensure!(&buf[size..end] == b"\r\n", "bad chunk terminator");
         body.extend_from_slice(&buf[..size]);
-        buf.drain(..size + 2);
+        buf.drain(..end);
     }
 }
 
@@ -169,7 +181,9 @@ fn read_response(stream: &mut impl Read, head_only: bool) -> Result<Resp> {
         rest.truncate(len);
         rest
     } else {
-        let _ = stream.read_to_end(&mut rest);
+        stream
+            .read_to_end(&mut rest)
+            .context("reading close-delimited HTTP body")?;
         rest
     };
     Ok(Resp {
@@ -1035,6 +1049,32 @@ mod tests {
         assert_eq!((r.status, r.body.as_slice()), (404, &b"not found"[..]));
         let close = b"HTTP/1.0 500 Oops\r\n\r\nbye";
         assert_eq!(read_response(&mut &close[..], false).unwrap().body, b"bye");
+    }
+
+    #[test]
+    fn malformed_http_chunks_are_errors() {
+        let mut bad_ending = &b"1\r\naXX0\r\n\r\n"[..];
+        assert!(read_chunked(&mut bad_ending, Vec::new()).is_err());
+        let max = format!("{:x}\r\n", usize::MAX);
+        assert!(read_chunked(&mut max.as_bytes(), Vec::new()).is_err());
+        let mut truncated = &b"1\r\na\r\n0\r\n"[..];
+        assert!(read_chunked(&mut truncated, Vec::new()).is_err());
+        let mut trailers = &b"1\r\na\r\n0\r\nX-Trailer: present\r\n\r\n"[..];
+        assert_eq!(read_chunked(&mut trailers, Vec::new()).unwrap(), b"a");
+    }
+
+    #[test]
+    fn interrupted_close_delimited_body_is_an_error() {
+        struct BrokenBody;
+
+        impl Read for BrokenBody {
+            fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+                Err(std::io::ErrorKind::TimedOut.into())
+            }
+        }
+
+        let response = &b"HTTP/1.0 200 OK\r\n\r\npartial"[..];
+        assert!(read_response(&mut response.chain(BrokenBody), false).is_err());
     }
 
     #[test]
