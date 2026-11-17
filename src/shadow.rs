@@ -208,8 +208,7 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
         codec = CODEC_JS.trim().replace("const enc = (v, stack = [])", "const enc = (v: any, stack: any[] = []): any")
             .replace("const dec = (v)", "const dec = (v: any): any")
             .replace("const canon = (v, sort)", "const canon = (v: any, sort: boolean): any")
-            .replace("const same = (a, b, sort = false)", "const same = (a: unknown, b: unknown, sort = false): boolean")
-            .replace("const out = {}", "const out: any = {}"),
+            .replace("const same = (a, b, sort = false)", "const same = (a: unknown, b: unknown, sort = false): boolean"),
     ));
     for f in &manifest.exports {
         let i = files.iter().position(|file| *file == f.file).unwrap_or(0);
