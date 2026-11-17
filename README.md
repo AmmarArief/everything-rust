@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/hero.png" alt="rust-anything: Rewrite anything in Rust. Keep it working the whole way. Piece by piece, checked against the original at every step, until it is pure Rust." width="820">
+  <img src="docs/assets/hero.png" alt="rust-anything: Rewrite your whole app in Rust. Keep it working the whole way. CLIs, servers and libraries, piece by piece, checked against the original at every step." width="820">
 </p>
 
 **Rewrite your whole app in Rust, one piece at a time, proving nothing changed.** For CLIs, HTTP
