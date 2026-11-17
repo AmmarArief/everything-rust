@@ -840,7 +840,7 @@ fn java_batches<'a>(m: &'a Manifest, api: &'a PortApi) -> Result<Vec<JavaBatch<'
 
 /// The JNI symbol of `method` in `package.class`.
 fn jni_symbol(package: &str, class: &str, method: &str) -> String {
-    let mangle = |s: &str| s.replace('_', "_1");
+    let mangle = crate::codegen_java::mangle_jni_component;
     let mut parts: Vec<String> = package
         .split('.')
         .filter(|p| !p.is_empty())
