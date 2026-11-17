@@ -97,7 +97,23 @@ fn params_of<'m>(m: &'m Manifest, f: &PortFn, class: Option<&str>) -> &'m [Param
     }
 }
 
+/// The inner type of `Option<...>`, if that is what the port declares.
+fn option_inner(ty: &str) -> Option<&str> {
+    ty.strip_prefix("Option<").and_then(|t| t.strip_suffix('>'))
+}
+
+/// Whether the binding for a port parameter is `Option<Bound>`: an optional parameter whose
+/// default is `None` and whose value crosses as a Python object. PyO3 needs `Option<...>` to
+/// accept `None`; a plain `Bound` rejects it and the generated crate does not compile
+/// (`E0308: expected Bound<'_, PyAny>, found Option<_>`).
+fn is_option_bound(ty: &str) -> bool {
+    option_inner(ty).is_some_and(|inner| wire(inner) == Wire::Json)
+}
+
 fn binding_type(ty: &str) -> String {
+    if is_option_bound(ty) {
+        return "Option<Bound<'_, PyAny>>".to_string();
+    }
     match wire(ty) {
         // Structured values arrive as Python objects and are converted in Rust: no JSON text.
         Wire::Json => "Bound<'_, PyAny>".to_string(),
@@ -133,7 +149,20 @@ fn body(f: &PortFn, target: &str, constructor: bool) -> String {
     let mut body = String::new();
     for (n, t) in &f.params {
         if wire(t) == Wire::Json {
-            if direct(t) {
+            if is_option_bound(t) {
+                // The binding is `Option<Bound>`: `None` stays `None`, a value converts.
+                if direct(t) {
+                    let _ = writeln!(
+                        body,
+                        "    let {n}: {t} = match &{n} {{\n        None => None,\n        Some(v) => Some(crate::pyconv::FromPy::from_py(v)?),\n    }};"
+                    );
+                } else {
+                    let _ = writeln!(
+                        body,
+                        "    let {n}: {t} = match &{n} {{\n        None => None,\n        Some(v) => Some(crate::pyconv::arg(v)?),\n    }};"
+                    );
+                }
+            } else if direct(t) {
                 let _ = writeln!(
                     body,
                     "    let {n}: {t} = crate::pyconv::FromPy::from_py(&{n})?;"
@@ -1044,7 +1073,11 @@ impl PartialOrd for Num {
 
 #[cfg(test)]
 mod tests {
-    use super::rust_literal;
+    use super::*;
+    use crate::bridge::{Kind, Manifest};
+    use crate::codegen::{Modules, PortApi, PortFn};
+    use crate::lang::Lang;
+    use crate::ts::exports::{ExportedFn, Param};
 
     #[test]
     fn converts_python_literals() {
@@ -1056,5 +1089,97 @@ mod tests {
         assert_eq!(rust_literal("None"), None);
         assert_eq!(rust_literal("[]"), None);
         assert_eq!(rust_literal("'a\\nb'"), None);
+    }
+
+    #[test]
+    fn optional_object_params_bind_as_option_bound() {
+        // `thresholds=None` must bind as `Option<Bound>` so PyO3 accepts `None`;
+        // required structured parameters stay a plain `Bound`, native options are untouched.
+        assert_eq!(
+            binding_type("Option<serde_json::Value>").as_str(),
+            "Option<Bound<'_, PyAny>>"
+        );
+        assert_eq!(
+            binding_type("serde_json::Value").as_str(),
+            "Bound<'_, PyAny>"
+        );
+        assert_eq!(binding_type("Option<i64>").as_str(), "Option<i64>");
+        assert_eq!(binding_type("String").as_str(), "String");
+    }
+
+    fn verdict_port() -> PortFn {
+        PortFn {
+            js_name: "verdict".into(),
+            rust_name: "verdict".into(),
+            params: vec![
+                ("readings".into(), "serde_json::Value".into()),
+                ("thresholds".into(), "Option<serde_json::Value>".into()),
+            ],
+            ret: "serde_json::Value".into(),
+            fallible: true,
+            is_async: false,
+        }
+    }
+
+    fn verdict_manifest() -> Manifest {
+        let param = |name: &str, ts_type: &str, optional: bool, default: Option<&str>| Param {
+            name: name.into(),
+            ts_type: ts_type.into(),
+            optional,
+            default: default.map(str::to_string),
+            ..Default::default()
+        };
+        Manifest {
+            schema: "1".into(),
+            root: std::path::PathBuf::from("/tmp"),
+            root_written: None,
+            unit: "hpdet/".into(),
+            language: Lang::Python,
+            kind: Kind::Pyo3,
+            crate_name: "hpdet-rs".into(),
+            exports: vec![ExportedFn {
+                name: "verdict".into(),
+                file: "hpdet/verdict.py".into(),
+                line: 1,
+                params: vec![
+                    param("readings", "Record<string, number>", false, None),
+                    param("thresholds", "Thresholds | undefined", true, Some("None")),
+                ],
+                returns: "Record<string, number>".into(),
+                ..Default::default()
+            }],
+            classes: Vec::new(),
+            js_only: Vec::new(),
+            batches: Vec::new(),
+            float_tolerance: None,
+        }
+    }
+
+    #[test]
+    fn optional_object_wrapper_accepts_none() {
+        let api = PortApi {
+            functions: vec![verdict_port()],
+            ..Default::default()
+        };
+        let modules = Modules {
+            utf16: false,
+            js: false,
+        };
+        let lib = lib_rs(&verdict_manifest(), &api, &modules);
+        // The signature still defaults to `None`, and the Rust parameter takes `Option`.
+        assert!(
+            lib.contains("#[pyo3(name = \"verdict\", signature = (readings, thresholds=None))]"),
+            "{lib}"
+        );
+        assert!(
+            lib.contains(
+                "fn verdict_inner(readings: Bound<'_, PyAny>, \
+                 thresholds: Option<Bound<'_, PyAny>>)"
+            ),
+            "{lib}"
+        );
+        // `None` converts to `None`; a value converts through the port's type.
+        assert!(lib.contains("match &thresholds"), "{lib}");
+        assert!(lib.contains("None => None,"), "{lib}");
     }
 }

@@ -516,7 +516,7 @@ fn python_modules_bridge_record_and_diff() {
     assert_eq!(outcome.kind, Kind::Pyo3);
     let manifest = Manifest::load(&dir).unwrap();
     let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
-    assert_eq!(kept, ["walk", "apply", "configure"]);
+    assert_eq!(kept, ["walk", "apply", "configure", "Limits"]);
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
     // A literal default stays a plain value; `None` as default is an Option.
     assert!(
@@ -528,6 +528,9 @@ fn python_modules_bridge_record_and_diff() {
         lib.contains(r#"signature = (text, sep=String::from("-"), *, max_length=None)"#),
         "{lib}"
     );
+    // An optional object parameter binds as `Option<Bound>` so `None` is accepted.
+    assert!(lib.contains("limits: Option<Bound<'_, PyAny>>"), "{lib}");
+    assert!(lib.contains(r#"signature = (text, limits=None)"#), "{lib}");
     assert!(lib.contains("#[pyclass(name = \"Stack\")]"));
     let build_rs = std::fs::read_to_string(dir.join("build.rs")).unwrap();
     assert!(build_rs.contains("dynamic_lookup"), "{build_rs}");
