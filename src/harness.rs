@@ -593,7 +593,7 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
                     crate::lang::Lang::Ts | crate::lang::Lang::Python
                 )
             });
-        outcome = crate::tolerance::apply_with_order(
+        outcome = crate::tolerance::apply(
             outcome,
             crate::tolerance::check(t)?,
             opts.ignore_key_order || !preserve_key_order,

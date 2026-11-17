@@ -134,11 +134,7 @@ pub fn line_close(expected: &str, actual: &str, tolerance: f64) -> bool {
 }
 
 /// A diff outcome with the mismatches that are within the tolerance counted as passed.
-pub fn apply(outcome: crate::harness::DiffOutcome, tolerance: f64) -> crate::harness::DiffOutcome {
-    apply_with_order(outcome, tolerance, true)
-}
-
-pub(crate) fn apply_with_order(
+pub fn apply(
     mut outcome: crate::harness::DiffOutcome,
     tolerance: f64,
     ignore_key_order: bool,
@@ -220,7 +216,7 @@ mod tests {
                 json!({"fn": "f", "args": [3], "expected": 0.1, "actual": 0.2}),
             ],
         };
-        let out = apply(outcome, 1e-9);
+        let out = apply(outcome, 1e-9, true);
         assert_eq!((out.passed, out.failed, out.mismatches.len()), (3, 1, 1));
         assert_eq!(out.mismatches[0]["args"], json!([3]));
     }
