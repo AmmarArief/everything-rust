@@ -1440,17 +1440,19 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         if !seen.insert(case.key()) {
             return false;
         }
-        let mut name = match given {
+        let base_name = match given {
             Some(g) if !slug(&g).is_empty() => slug(&g),
             _ => match case.args.first().map(|a| slug(a)).filter(|s| !s.is_empty()) {
                 Some(s) => format!("{prefix}-{n:03}-{s}"),
                 None => format!("{prefix}-{n:03}"),
             },
         };
-        if taken.contains(&name) {
-            name = format!("{name}-{n}");
+        let mut name = base_name.clone();
+        let mut suffix = n;
+        while !taken.insert(name.clone()) {
+            name = format!("{base_name}-{suffix}");
+            suffix += 1;
         }
-        taken.insert(name.clone());
         planned.push((name, case));
         true
     };
@@ -2188,6 +2190,41 @@ mod tests {
         );
         let text = trap_cases(&[Case::new(vec!["upper".into(), "hi".into()])]);
         assert!(text.iter().any(|c| c.args[1] == "👍🏽 thumbs"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn recording_keeps_all_cases_when_a_generated_name_is_already_used() {
+        let repo = temp_dir("case-name-collisions").unwrap();
+        let inputs = repo.join("cases.jsonl");
+        std::fs::write(
+            &inputs,
+            concat!(
+                "{\"name\":\"x\",\"args\":[\"one\"]}\n",
+                "{\"name\":\"x-3\",\"args\":[\"two\"]}\n",
+                "{\"name\":\"x\",\"args\":[\"three\"]}\n"
+            ),
+        )
+        .unwrap();
+        let recorded = record(&RecordOptions {
+            repo: &repo,
+            run: &["/bin/echo".into()],
+            inputs: Some(&inputs),
+            normalize: &[],
+            name: None,
+            traps: false,
+            timeout_secs: None,
+            http: false,
+            port: None,
+            float_tolerance: None,
+        })
+        .unwrap();
+        let read = |name: &str| std::fs::read_to_string(recorded.dir.join(name)).unwrap();
+        assert_eq!(recorded.cases, 3);
+        assert_eq!(read("x.stdout"), "one\n");
+        assert_eq!(read("x-3.stdout"), "two\n");
+        assert_eq!(read("x-4.stdout"), "three\n");
+        std::fs::remove_dir_all(repo).unwrap();
     }
 
     #[test]
