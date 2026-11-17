@@ -36,6 +36,9 @@ pub enum Risk {
     Monkeypatching,
     /// Code already compiled to machine code (numba, Cython, JAX): Rust gains little speed.
     AlreadyCompiled,
+    /// C that depends on the target: inline assembly, `volatile` hardware access, bitfields,
+    /// packed layouts, compiler extensions, integers cast to addresses.
+    PlatformSpecific,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -70,7 +73,10 @@ impl Risk {
             | Self::Reflection
             | Self::Callbacks => Severity::Medium,
             Self::Exceptions | Self::NumberSemantics | Self::Json => Severity::Low,
-            Self::Pointers | Self::Monkeypatching | Self::UnorderedIteration => Severity::High,
+            Self::Pointers
+            | Self::Monkeypatching
+            | Self::UnorderedIteration
+            | Self::PlatformSpecific => Severity::High,
             Self::IntegerSemantics
             | Self::DivisionSemantics
             | Self::Concurrency
@@ -103,6 +109,7 @@ impl Risk {
             Self::NullReferences => "Null references",
             Self::Monkeypatching => "Runtime changes to code",
             Self::AlreadyCompiled => "Already compiled (numba, Cython, JAX)",
+            Self::PlatformSpecific => "Platform-specific C (asm, volatile, bitfields, packing)",
         }
     }
 
@@ -200,6 +207,12 @@ impl Risk {
                  Rust app, not for speed, and profile first. Its floats may not match Rust's bit for \
                  bit (fastmath, operation order): record with `--float-tolerance`."
             }
+            Self::PlatformSpecific => {
+                "This C depends on its target: register access, memory layout, the compiler's \
+                 type sizes or its assembly. A recording on this machine says nothing about the \
+                 target, and battle-tested driver or firmware code gains little from a rewrite: \
+                 keep it in C and port the portable logic around it."
+            }
         }
     }
 }
@@ -260,6 +273,7 @@ pub fn uses_regex(lang: crate::lang::Lang, source: &str) -> bool {
         ]),
         Lang::C => has(&["<regex.h>", "pcre", "regcomp("]),
         Lang::Php => has(&["preg_", "mb_ereg"]),
+        Lang::Csharp => has(&["Regex", "RegularExpressions"]),
     }
 }
 

@@ -268,12 +268,11 @@ fn async_functions_get_async_bindings() {
             Kind::Pyo3 | Kind::CAbi | Kind::Ffi => {}
         }
         let index = std::fs::read_to_string(dir.join("index.cjs")).unwrap();
-        // Only structured functions are wrapped; `countWords` passes its promise straight through.
         assert!(
             index.contains("normalize: [[1, 0], 'json', true]"),
             "{index}"
         );
-        assert!(!index.contains("countWords:"));
+        assert!(index.contains("  countWords: [true, [0]],"), "{index}");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

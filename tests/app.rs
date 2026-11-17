@@ -386,6 +386,27 @@ fn java_cli_records_and_replays() {
     );
 }
 
+fn dotnet_build(repo: &Path, out: &str) {
+    sh(
+        repo,
+        "dotnet",
+        &["build", "-c", "Release", "--nologo", "-v", "q", "-o", out],
+    );
+}
+
+#[test]
+fn csharp_cli_records_and_replays() {
+    if !available("dotnet", "--version") {
+        eprintln!("skipped: dotnet not found");
+        return;
+    }
+    let repo = fixture("csharp");
+    dotnet_build(&repo, "out");
+    add_bug(&repo, "Program.cs", None);
+    dotnet_build(&repo, "out-bug");
+    record_then_replay(&repo, "dotnet out/tcli.dll", "dotnet out-bug/tcli.dll");
+}
+
 #[test]
 fn the_command_exits_non_zero_on_a_mismatch() {
     if !available("python3", "--version") {
@@ -830,6 +851,22 @@ fn java_cli_lifts_to_pure_rust() {
     let repo = fixture("java");
     sh(&repo, "javac", &["-d", "classes", "Tcli.java"]);
     lift_end_to_end(&repo, "java -cp ./classes Tcli", &CHARS, "classes");
+}
+
+#[test]
+fn csharp_cli_lifts_to_pure_rust() {
+    if !available("dotnet", "--version") || !available("cargo", "--version") {
+        eprintln!("skipped: dotnet or cargo not found");
+        return;
+    }
+    let repo = fixture("csharp");
+    dotnet_build(&repo, "out");
+    let invariant = Semantics {
+        count: "Count::Chars",
+        upper: "Upper::Simple",
+        unit: "characters",
+    };
+    lift_end_to_end(&repo, "dotnet out/tcli.dll", &invariant, "out");
 }
 
 #[test]

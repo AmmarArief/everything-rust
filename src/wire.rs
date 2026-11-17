@@ -430,7 +430,7 @@ impl<'a> Reader<'a> {
         }
         let n = self.count()?;
         let bytes = self.take(n.checked_mul(2).ok_or(SHORT)?)?;
-        Ok(bytes.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect())
+        Ok(bytes.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes(*b)).collect())
     }
 
     /// A JS string; lone surrogates become U+FFFD, as napi's own conversion does.
@@ -678,7 +678,7 @@ pub fn read_dyn(r: &mut Reader) -> Result<Value, String> {
     let units = |r: &mut Reader| -> Result<Vec<u16>, String> {
         let n = r.count()?;
         let bytes = r.take(n.checked_mul(2).ok_or(SHORT)?)?;
-        Ok(bytes.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect())
+        Ok(bytes.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes(*b)).collect())
     };
     Ok(match r.tag()? {
         0 => json!({"$undefined": true}),

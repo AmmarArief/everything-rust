@@ -2,6 +2,7 @@
 //! functions by name: with the original files loaded to record, and with the Fiddle wrapper
 //! over the Rust library loaded to diff.
 
+use crate::walk::Canonical;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -35,7 +36,7 @@ pub fn wrapper_path(m: &Manifest) -> String {
 /// The files to load: the unit's sources, or the wrapper.
 fn files(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Vec<PathBuf>> {
     if rust {
-        return Ok(vec![crate_dir.join(wrapper_path(m)).canonicalize()?]);
+        return Ok(vec![crate_dir.join(wrapper_path(m)).canonical()?]);
     }
     let mut files: Vec<PathBuf> = m
         .exports

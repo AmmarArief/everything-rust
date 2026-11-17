@@ -91,13 +91,18 @@ pub fn build(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
     let (dir, name) = package(crate_dir, manifest);
     let package_dir = dir.join(&name);
     std::fs::create_dir_all(&package_dir)?;
-    let file = if cfg!(windows) {
+    crate::harness::install(&built, &native_file(crate_dir, manifest))?;
+    Ok(package_dir)
+}
+
+/// The built extension module inside the Python package.
+pub(crate) fn native_file(crate_dir: &Path, manifest: &Manifest) -> PathBuf {
+    let (dir, name) = package(crate_dir, manifest);
+    dir.join(name).join(if cfg!(windows) {
         "_native.pyd"
     } else {
         "_native.abi3.so"
-    };
-    std::fs::copy(&built, package_dir.join(file))?;
-    Ok(package_dir)
+    })
 }
 
 pub fn diff(crate_dir: &Path, manifest: &Manifest, ignore_key_order: bool) -> Result<DiffOutcome> {
@@ -279,19 +284,25 @@ def run_case(mod, c):
         try:
             instance = cls(*call_args(c["ctor"]))
             results.append({"ok": True})
-        except Exception as e:  # noqa: BLE001
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as e:  # noqa: BLE001
             results.append({"error": error_text(e)})
             return {"results": results}
         for call in c["calls"]:
             try:
                 results.append({"ok": enc(getattr(instance, call["method"])(*call_args(call["args"])))})
-            except Exception as e:  # noqa: BLE001
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except BaseException as e:  # noqa: BLE001
                 results.append({"error": error_text(e)})
         return {"results": results}
     kwargs = {k: dec(v) for k, v in c.get("kwargs", {}).items()}
     try:
         return {"ok": enc(getattr(mod, c["fn"])(*call_args(c["args"]), **kwargs))}
-    except Exception as e:  # noqa: BLE001
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException as e:  # noqa: BLE001
         return {"error": error_text(e)}
 
 
@@ -387,7 +398,9 @@ def bench(cases_path, out_path, package_dir, name, modules_path, min_ms):
                     for args, kwargs in prepared:
                         try:
                             fn(*args, **kwargs)
-                        except Exception:  # noqa: BLE001
+                        except (KeyboardInterrupt, SystemExit):
+                            raise
+                        except BaseException:  # noqa: BLE001
                             pass
             once()
             passes, start = 0, time.perf_counter()

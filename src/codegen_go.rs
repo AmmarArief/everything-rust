@@ -1161,6 +1161,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 	"time"
 
 	pkg "IMPORT_PATH"
@@ -1302,7 +1303,9 @@ func diff(cases, out string) {
 			}
 		}
 		same := false
-		if _, ok := expected["panic"]; ok {
+		if p, ok := got["panic"]; ok && strings.Contains(fmt.Sprint(p), "Rust panic:") {
+			same = false
+		} else if _, ok := expected["panic"]; ok {
 			// Panic messages differ between Go and Rust; that it panicked is the behavior.
 			_, same = got["panic"]
 		} else {

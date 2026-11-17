@@ -1,6 +1,7 @@
 //! The C side of record, build, diff and bench: the original is compiled into a shared
 //! library, and Python's ctypes calls it and the Rust library with the same signatures.
 
+use crate::walk::Canonical;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -216,8 +217,8 @@ pub fn bench(crate_dir: &Path, manifest: &Manifest, min_ms: u64) -> Result<Vec<B
             crate_dir.display()
         );
     }
-    let rust = built_library(crate_dir, manifest)?.canonicalize()?;
-    let work = crate_dir.canonicalize()?.join(WORK_DIR);
+    let rust = built_library(crate_dir, manifest)?.canonical()?;
+    let work = crate_dir.canonical()?.join(WORK_DIR);
     std::fs::create_dir_all(&work)?;
     let cases: Vec<Value> = std::fs::read_to_string(&cases_path)?
         .lines()

@@ -120,6 +120,7 @@ fn whole_app_finds_the_shape_and_entry_points_in_every_language() {
         ("cli/ruby", "cli", "tcli.rb"),
         ("cli/java", "cli", "Tcli.java"),
         ("cli/php", "cli", "tcli.php"),
+        ("cli/csharp", "cli", "tcli"),
         ("http/ts", "server", "server.js"),
         ("http/python", "server", "server.py"),
         ("http/c", "server", "server.c"),
@@ -127,6 +128,7 @@ fn whole_app_finds_the_shape_and_entry_points_in_every_language() {
         ("http/ruby", "server", "server.rb"),
         ("http/java", "server", "Server.java"),
         ("http/php", "server", "server.php"),
+        ("http/csharp", "server", "server"),
         ("go", "cli", "cmd/strkit"),
         ("c", "cli", "src/main.c"),
         ("mini", "library", "a"),
@@ -134,6 +136,7 @@ fn whole_app_finds_the_shape_and_entry_points_in_every_language() {
         ("ruby", "library", "textkit"),
         ("java", "library", "textkit"),
         ("php", "library", "acme/textkit"),
+        ("csharp", "library", "Acme.Textkit"),
     ];
     for (dir, shape, path) in cases {
         let w = whole(dir);
@@ -276,4 +279,93 @@ fn ignore_rules_above_the_repository_are_skipped_and_hiding_everything_warns() {
     assert!(report.warnings[0].contains("1 TypeScript/JavaScript files"));
 
     std::fs::remove_dir_all(&tmp).unwrap();
+}
+
+#[test]
+fn platform_specific_c_stays_in_c_and_compiled_apps_are_refused() {
+    let root = std::env::temp_dir().join(format!("ra-platform-c-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    };
+    write(
+        "hw/regs.c",
+        "#include <stdint.h>\n\
+         struct flags { unsigned ready : 1; unsigned mode : 3; };\n\
+         void led_on(void) { *(volatile uint32_t *)0x40021000 = 1; }\n\
+         void wait(void) { __asm__ volatile (\"nop\"); }\n",
+    );
+    write(
+        "util/sum.c",
+        "int sum(const int *xs, int n) { int t = 0; for (int i = 0; i < n; i++) t += xs[i]; return t; }\n",
+    );
+    let report = analyze(&root).unwrap();
+    let hw = report.units.iter().find(|u| u.id.contains("hw")).unwrap();
+    assert_eq!(hw.status, Status::Keep, "{hw:?}");
+    assert!(
+        hw.risks.iter().any(|r| r.risk == Risk::PlatformSpecific),
+        "{hw:?}"
+    );
+    let util = report.units.iter().find(|u| u.id.contains("util")).unwrap();
+    assert_ne!(util.status, Status::Keep, "{util:?}");
+
+    write("RealCalc.apk", "PK");
+    let err = analyze(&root.join("RealCalc.apk")).unwrap_err();
+    assert!(err.to_string().contains("compiled .apk"), "{err}");
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn electron_apps_get_a_main_process_decision() {
+    let root = std::env::temp_dir().join(format!("ra-electron-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(
+        root.join("package.json"),
+        r#"{"name":"charts","main":"src/main.ts","devDependencies":{"electron":"^30.0.0"}}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("src/main.ts"),
+        "export function sma(xs: number[], n: number): number[] { return xs.slice(n - 1).map((_, i) => xs.slice(i, i + n).reduce((a, b) => a + b, 0) / n) }\n",
+    )
+    .unwrap();
+    let report = analyze(&root).unwrap();
+    let app = rust_anything::whole_app::whole_app(&root, &report);
+    std::fs::remove_dir_all(&root).unwrap();
+    let shell = app
+        .decisions
+        .iter()
+        .find(|d| d.topic == "desktop shell")
+        .unwrap_or_else(|| panic!("{:#?}", app.decisions));
+    assert!(shell.recommendation.contains("Tauri"), "{shell:?}");
+}
+
+#[test]
+fn csharp_units_resolve_namespaces_and_map_nuget_packages() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/csharp");
+    let report = analyze(&root).unwrap();
+    assert_eq!(report.language, rust_anything::lang::Lang::Csharp);
+    assert_eq!(report.summary.test_files, 1);
+    let text = unit(&report, "src/Text/");
+    let util = unit(&report, "src/Util/");
+    assert_eq!(text.internal_deps, ["src/Util/"]);
+    assert_eq!((util.wave, text.wave), (0, 1));
+    assert_eq!(text.bridge, Bridge::DotnetFfi);
+    assert!(text.risks.iter().any(|r| r.risk == Risk::RegexSyntax));
+    assert_eq!(util.external_deps, ["Newtonsoft.Json"]);
+    let json = report
+        .dependencies
+        .iter()
+        .find(|d| d.name == "Newtonsoft.Json")
+        .unwrap();
+    assert_eq!(json.crates, Some("serde_json"));
+    let app = rust_anything::whole_app::whole_app(&root, &report);
+    assert!(
+        app.dependencies.iter().all(|d| d.name != "xunit"),
+        "test packages are not runtime dependencies: {:?}",
+        app.dependencies
+    );
 }

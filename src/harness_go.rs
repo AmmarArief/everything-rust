@@ -3,6 +3,7 @@
 //! wrapper over the Rust library to diff. Both builds are separate modules under `.rust-anything/`
 //! with `replace` directives, so nothing is written into the original repository.
 
+use crate::walk::Canonical;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -93,7 +94,7 @@ fn go() -> Command {
 
 /// Writes and builds a driver module for the original (`rust: false`) or the wrapper.
 fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
-    let crate_dir = &crate_dir.canonicalize()?;
+    let crate_dir = &crate_dir.canonical()?;
     let (module_dir, go_mod, module) = module_of(m)?;
     let name = if rust { "go-rust" } else { "go-original" };
     let dir = crate_dir.join(WORK_DIR).join(name);
@@ -101,7 +102,7 @@ fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
     let (target_module, target_dir, import) = if rust {
         (
             wrapper_module(m),
-            crate_dir.join("go").canonicalize()?,
+            crate_dir.join("go").canonical()?,
             wrapper_module(m),
         )
     } else {

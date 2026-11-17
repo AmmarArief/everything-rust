@@ -218,6 +218,11 @@ case matches to the bar in `DECISIONS.md`. A library is proved before its lift: 
 `app replay` at 100%; after it, `cargo test` and the Rust tests you added. A mismatch is a bug in the port, never in the cases;
 change a case only with the user's approval, and record why in `DECISIONS.md`.
 
+After the lift, the Rust app no longer has to mirror the original's structure: the cases check
+behavior at the app's edges, not its internals. Offer the user a reshape pass (merge units that
+only existed because of the old layout, replace ported workarounds with idiomatic Rust, drop
+indirection the bridge needed), one change at a time, with `app replay` passing after each.
+
 Report to the user: replay results, gate results for every crate, speed against the original, and
 every known behavior difference. The user decides the cutover. Leave the original in place as
 reference until they say otherwise.

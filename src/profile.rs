@@ -5,6 +5,7 @@
 //! cores. This step finds those: hot functions in the repository, by inclusive time, with the
 //! callers that spend it, call counts where the profiler has them, and a recommendation each.
 
+use crate::walk::Canonical;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -171,7 +172,7 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
         );
     }
     let root = root
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("resolving {}", root.display()))?;
     let lang = lang.unwrap_or_else(|| Lang::detect(&root));
     let work = std::env::temp_dir().join(format!("rust-anything-profile-{}", std::process::id()));
@@ -190,6 +191,10 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
         Lang::Php => bail!(
             "`profile` does not run PHP workloads yet; use SPX or Xdebug's profiler and port the \
              hot loops it shows"
+        ),
+        Lang::Csharp => bail!(
+            "`profile` does not run C# workloads yet; use `dotnet-trace` or your IDE's profiler and \
+             port the hot loops it shows"
         ),
     };
     let _ = std::fs::remove_dir_all(&work);

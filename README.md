@@ -129,19 +129,27 @@ done.
 | Ruby | file or folder of module functions | a magnus extension under the original modules | a generated Ruby driver |
 | Java | package of `public static` methods | typed JNI and a generated binary wire, in wrapper classes with the original methods | a generated reflection driver |
 | PHP (preview) | folder of functions and `public static` methods | coming next: PHP FFI over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
+| C# (preview) | folder of `public static` methods | coming next: P/Invoke over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and ASP.NET servers (`dotnet <app>.dll`) |
 
 Every language except C also gets batch classes (`--batch`): the items cross once and stay in
 Rust, and each call runs over all of them on all cores.
 
-The language is detected from the repository (`go.mod`, `pom.xml`, `pyproject.toml`, `Gemfile`,
-`composer.json`, `package.json`, else the most common source files); `--lang` overrides it. Types
-come from the source: TS types, Python hints, C and Go and Java signatures, Ruby YARD tags, PHP
-types and phpdoc; untyped parameters used as numbers are inferred as numbers.
+The language is detected from the repository (`go.mod`, `pom.xml`, a `.csproj` or `.sln`,
+`pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, else the most common source files);
+`--lang` overrides it. Types come from the source: TS types, Python hints, C, Go, Java and C#
+signatures, Ruby YARD tags, PHP types and phpdoc; untyped parameters used as numbers are inferred
+as numbers.
 
 PHP is in preview: `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
 such as loose comparison and integer overflow into floats, Composer packages mapped to crates),
 and a PHP CLI or server can be recorded, replayed and put behind a Rust front door. Porting its
 units into Rust through PHP's FFI is the next step ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
+
+C# is in preview the same way: `analyze` reads `.csproj` projects and their NuGet packages
+(mapped to crates), resolves `using` directives to folders, and flags what C# does differently
+(`decimal`, `dynamic`, LINQ's deferred queries, `Task`, `lock`, reflection). A C# CLI or ASP.NET
+server can be recorded, replayed and put behind a Rust front door; porting units through P/Invoke
+comes next.
 
 ## How it works
 
@@ -538,6 +546,9 @@ usually lives outside the recording, so know where the edges are:
 - **Anything not in the output.** Timing, memory, concurrency under load, and side effects other
   than stdout, stderr, exit codes, written files and HTTP responses (network calls, databases,
   signals) are not compared.
+- **Other platforms.** A recording proves behavior on the machine that ran it. C whose results
+  depend on type sizes, endianness or the compiler can behave differently on the target; `analyze`
+  keeps hardware-facing C in C for that reason.
 
 ## FAQ
 
@@ -558,6 +569,39 @@ code too: `profile` and `analyze` flag it, since porting it buys little speed.
 multiply-add and the math library differ between compilers. Record with `--float-tolerance 1e-9`
 (`record` or `app record`), and floats match within that share of the larger value (absolute below
 1). Integers, text and structure still have to match exactly.
+
+**Can it port an app I only have as an APK, a JAR or an .exe?** No. It ports source code: it
+parses the functions, records what each one does, and checks the Rust against the running
+original. A compiled app has none of that to work with, and `analyze` says so. Writing a new Rust
+app from a binary's visible behavior is a different project.
+
+**Should I port battle-tested C?** Often not, and `analyze` tells you where. C that touches
+hardware registers, relies on its compiler's type sizes or memory layout, or uses inline assembly
+(`volatile`, bitfields, packed structs, `__asm__`, integers cast to addresses) is marked "keep in
+C": a recording on your machine proves nothing about the target, and stable driver or firmware
+code gains little from a rewrite. The portable logic around it (parsing, protocols, data handling)
+is what moves well.
+
+**Can it port my Electron app?** The logic, yes; the windows stay web pages. `analyze
+--whole-app` spots Electron and plans the main process piece by piece while the renderer stays as
+it is. Moving the UI to Tauri (the same web UI on a Rust backend) is a separate step once the logic
+is Rust.
+
+**What about C#, Kotlin or Swift?** C# is in preview (see [Languages](#languages)); Kotlin and
+Swift are not supported yet. Each language needs a parser, a recorder, a bridge and a replay
+driver, all tested end to end. Open an issue (or upvote one) for the language you need.
+
+**Won't the Rust be much bigger than the original?** It shouldn't be. `gate` compares the port's
+lines with the original's and fails above 3x (plus 50 lines for imports and signatures): that usually means hand-writing what a crate already
+does, or handling cases one by one. `analyze` lists the crates to use.
+
+**Doesn't porting piece by piece lock the Rust into the old app's design?** Only while both run
+side by side. The recordings check behavior at the app's edges (a CLI's output, a server's
+responses, a module's exported functions), not its internals. Mirror the old structure while
+units still cross the bridge; once `app lift` has removed the original, restructure the Rust
+freely, and `app replay` still proves the behavior. Nothing calls back into the original either:
+the front door runs it as a separate process (or forwards HTTP to it), bridged units are called
+by the original and never the other way round, and callbacks stay in the source language.
 
 **Does my code leave my machine?** No: rust-anything runs locally and sends none of your code
 anywhere. Cargo downloads crates as usual, and your agent's model provider sees what your agent

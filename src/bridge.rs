@@ -5,6 +5,7 @@
 //! `#[wasm_bindgen]` wrappers, `src/port.rs` holds the port in plain Rust with
 //! `#![forbid(unsafe_code)]`, so it can be tested without a JS runtime.
 
+use crate::walk::Canonical;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -169,7 +170,7 @@ impl Manifest {
             serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
         if manifest.root.is_relative() {
             let resolved = crate_dir.join(&manifest.root);
-            let resolved = resolved.canonicalize().unwrap_or(resolved);
+            let resolved = resolved.canonical().unwrap_or(resolved);
             manifest.root_written = Some(std::mem::replace(&mut manifest.root, resolved));
         }
         Ok(manifest)
@@ -771,7 +772,9 @@ fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
         ),
         _ => (
             "index.cjs".into(),
-            codegen::index_cjs(m, api) + &crate::codegen_tswire::index_cjs(m, api),
+            codegen::index_cjs(m, api)
+                + &crate::codegen_tswire::index_cjs(m, api)
+                + &codegen::guard_cjs(api),
         ),
     }
 }
@@ -860,7 +863,9 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     if crate::codegen_tswire::uses_wire(&manifest, &fns) {
         files.push(("src/wire.rs".into(), crate::wire::WIRE_RS.into()));
     }
-    if manifest.kind == Kind::Pyo3 && !crate_dir.join("build.rs").exists() {
+    let extension = manifest.kind == Kind::Pyo3
+        || (manifest.kind == Kind::Ffi && manifest.language == crate::lang::Lang::Ruby);
+    if extension && !crate_dir.join("build.rs").exists() {
         files.push(("build.rs".into(), DYNAMIC_LOOKUP_BUILD_RS.into()));
     }
     if manifest.kind == Kind::Pyo3 && fns.needs_json() {
@@ -891,11 +896,11 @@ pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     })
 }
 
-/// `build.rs` for Python and Ruby extensions: on macOS their `cdylib` links against symbols the
-/// interpreter provides only at load time.
+/// `build.rs` for Python and Ruby extensions: on macOS the library (and its test binary) links
+/// against symbols the interpreter provides only at load time.
 pub(crate) const DYNAMIC_LOOKUP_BUILD_RS: &str = r#"fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
-        println!("cargo:rustc-cdylib-link-arg=-Wl,-undefined,dynamic_lookup");
+        println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
     }
 }
 "#;
@@ -903,7 +908,7 @@ pub(crate) const DYNAMIC_LOOKUP_BUILD_RS: &str = r#"fn main() {
 pub fn bridge(opts: &Options) -> Result<Outcome> {
     let root = opts
         .root
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("resolving {}", opts.root.display()))?;
     let lang = opts
         .lang
@@ -926,6 +931,13 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     if unit.bridge == Bridge::PhpFfi {
         bail!(
             "bridging PHP units into Rust comes next (PHP FFI over a C ABI); for now a PHP app can \
+             be analyzed, recorded and replayed (`app record`, `app replay`) and get a Rust front \
+             door (`app front-door`) that hands everything to the original"
+        );
+    }
+    if unit.bridge == Bridge::DotnetFfi {
+        bail!(
+            "bridging C# units into Rust comes next (P/Invoke over a C ABI); for now a C# app can \
              be analyzed, recorded and replayed (`app record`, `app replay`) and get a Rust front \
              door (`app front-door`) that hands everything to the original"
         );

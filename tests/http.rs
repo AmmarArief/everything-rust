@@ -121,6 +121,13 @@ fn prepare(lang: &Lang, repo: &Path, buggy: bool) -> String {
                 std::fs::write(repo.join("bug/Server.java"), text).unwrap();
                 "bug/Server.java".to_string()
             }
+            "csharp" => {
+                let dir = repo.join("bug");
+                std::fs::create_dir_all(&dir).unwrap();
+                std::fs::copy(repo.join("server.csproj"), dir.join("server.csproj")).unwrap();
+                std::fs::write(dir.join("Program.cs"), text).unwrap();
+                "bug".to_string()
+            }
             _ => {
                 let (stem, ext) = lang.source.rsplit_once('.').unwrap();
                 let bug = format!("{stem}_bug.{ext}");
@@ -455,6 +462,40 @@ fn java_server() {
         source: "Server.java",
         build: |repo, source, out| sh(repo, "javac", &["-d", out, source]),
         run: |s| format!("java -cp ./{s} Server"),
+        original: "server",
+    });
+}
+
+#[test]
+fn csharp_server() {
+    check_language(&Lang {
+        name: "csharp",
+        compiled: true,
+        runtime: ("dotnet", "--version"),
+        source: "Program.cs",
+        build: |repo, source, out| {
+            let dir = if source == "bug" {
+                repo.join("bug")
+            } else {
+                repo.to_path_buf()
+            };
+            let out = repo.join(out);
+            sh(
+                &dir,
+                "dotnet",
+                &[
+                    "build",
+                    "-c",
+                    "Release",
+                    "--nologo",
+                    "-v",
+                    "q",
+                    "-o",
+                    &out.to_string_lossy(),
+                ],
+            );
+        },
+        run: |s| format!("dotnet {s}/server.dll --urls http://127.0.0.1:{{port}}"),
         original: "server",
     });
 }

@@ -121,8 +121,10 @@ impl<'a> Reader<'a> {
         let n = self.count()?;
         let bytes = self.take(n.checked_mul(2).ok_or(SHORT)?)?;
         Ok(bytes
-            .chunks_exact(2)
-            .map(|b| u16::from_le_bytes([b[0], b[1]]))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| u16::from_le_bytes(*b))
             .collect())
     }
 
@@ -401,8 +403,10 @@ pub fn read_dyn(r: &mut Reader) -> Result<Value, String> {
         let n = r.count()?;
         let bytes = r.take(n.checked_mul(2).ok_or(SHORT)?)?;
         Ok(bytes
-            .chunks_exact(2)
-            .map(|b| u16::from_le_bytes([b[0], b[1]]))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| u16::from_le_bytes(*b))
             .collect())
     };
     Ok(match r.tag()? {

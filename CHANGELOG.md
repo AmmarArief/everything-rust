@@ -21,6 +21,51 @@
   failed to link (`Undefined symbols ... _Py_IsInitialized`). The PyO3 crate now gets the same
   `build.rs` the Ruby bridge has, which lets the interpreter provide Python's symbols at load time.
   `rust-anything refresh <crate>` adds it to crates bridged before this fix.
+- Fix: a Rust panic no longer passes `diff` where the original also threw. An unfinished port
+  (`unimplemented!`) used to "match" every recorded error case in TS, Ruby (a panic arrives as
+  `RuntimeError`), Java (`RuntimeException`) and Go (a panic where the original panicked). Python's
+  driver crashed on the first `PanicException` instead of reporting it, and `shadow` let it reach
+  the app. Each language now has a test that an unported crate passes no case.
+- The napi bridge, after a study of napi-rs:
+  - errors keep their JS class: a port's `Err("TypeError: ...")` throws a real `TypeError`, a
+    wrong argument type is a `TypeError`, and a panic carries `code: 'RUST_PANIC'`;
+  - async exports reject their promise instead of throwing at the call;
+  - `Uint8Array`, `Buffer`, `Map`, `Set`, `Date` and `bigint` cross the bridge with the markers
+    recordings use, instead of turning into plain objects or throwing;
+  - a string with a lone surrogate is refused with a `TypeError` instead of silently becoming
+    U+FFFD in a Rust `String`;
+  - `build` replaces the `.node` (and the PyO3 module) by renaming, and `diff` refuses to run when
+    the built module is older than the crate's sources.
+- From Reddit feedback:
+  - `analyze` refuses a compiled app (APK, JAR, .exe and the like) with an explanation instead of
+    an empty plan, and warns when a folder holds only compiled files.
+  - Platform-dependent C (inline assembly, `volatile`, bitfields, packed layouts, compiler
+    extensions, integers cast to addresses) is a new `platform-specific` risk, and its unit is
+    kept in C: a recording on this machine says nothing about the target.
+  - `analyze --whole-app` recognizes Electron apps and plans the main process, keeping the web UI.
+  - `gate` has a `size` check: the port fails above 3x the original's lines (plus 50).
+  - README FAQ: APKs, battle-tested C, Electron, C#, and code growth.
+- C#, in preview: detected from a `.csproj` or `.sln`. `analyze` reads projects and their NuGet
+  packages (mapped to crates, test projects left out), resolves `using` directives to folders,
+  finds `public static` methods with their types, and flags C#'s risks (`decimal`, `dynamic`,
+  LINQ queries, `Task`, `lock`, `unsafe`, reflection, regex features the `regex` crate lacks).
+  `analyze --whole-app` finds CLIs (`<OutputType>Exe`) and ASP.NET servers (the web SDK,
+  `WebApplication.CreateBuilder`). `app record`, `app replay` and `app front-door` run built C#
+  apps (`dotnet out/app.dll`). Bridging C# units (P/Invoke over a C ABI) comes next; `bridge` says
+  so for now.
+- Fix ([#25](https://github.com/erkamyaman/rust-anything/issues/25)): a bridge crate in its default
+  place inside the project (`rust/<crate>`) was read as source, so Java `record` compiled its
+  generated wrappers next to the originals ("duplicate class"). Every source walk now skips
+  folders holding a `rust-anything.json`.
+- Fix ([#26](https://github.com/erkamyaman/rust-anything/issues/26)): on Windows, paths handed to
+  `java -cp`, `-D` library paths and the other runtimes carried the `\\?\` verbatim prefix, so
+  Java `record`, `diff` and `bench` could not find their classes. Paths are now made absolute
+  without it everywhere.
+- Fixes found by gating every demo port ([#27](https://github.com/erkamyaman/rust-anything/issues/27)
+  reported the first): the generated binary wire tripped the new
+  `chunks_exact_to_as_chunks` lint (every Go and Java port failed `gate`), and on macOS the
+  Python and Ruby extension's test binary failed to link; the generated `build.rs` now covers it,
+  and `refresh` adds it to Ruby crates too. CI now gates all demo ports on macOS.
 - CI also runs every test on macOS, and a new `tests/native.rs` builds a napi addon and a PyO3
   extension for real, loads them from Node and Python and replays the recording, so link problems
   like #4 fail CI instead of reaching users.

@@ -903,14 +903,80 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
     )
 }
 
+/// The last layer of `index.cjs`: errors keep their JS class (`TypeError: x` from Rust throws a
+/// `TypeError`), panics carry `code: 'RUST_PANIC'`, async exports reject instead of throwing, and
+/// a string a Rust `String` cannot hold (a lone surrogate) is refused instead of altered.
+pub fn guard_cjs(api: &PortApi) -> String {
+    let guards: Vec<String> = api
+        .functions
+        .iter()
+        .map(|f| {
+            let strings: Vec<String> = f
+                .params
+                .iter()
+                .enumerate()
+                .filter(|(_, (_, t))| {
+                    let t: String = t.chars().filter(|c| !c.is_whitespace()).collect();
+                    matches!(t.as_str(), "String" | "Option<String>" | "Vec<String>")
+                })
+                .map(|(i, _)| i.to_string())
+                .collect();
+            format!(
+                "  {}: [{}, [{}]],",
+                f.js_name,
+                f.is_async,
+                strings.join(", ")
+            )
+        })
+        .collect();
+    if guards.is_empty() {
+        return String::new();
+    }
+    format!("const guards = {{\n{}\n}}\n{GUARD_CJS}", guards.join("\n"))
+}
+
+const GUARD_CJS: &str = r#"const JS_ERRORS = /^(TypeError|RangeError|SyntaxError|ReferenceError|URIError|EvalError): ([\s\S]*)$/
+const jsError = e => {
+  const message = typeof e?.message === 'string' ? e.message : ''
+  const typed = JS_ERRORS.exec(message)
+  if (typed) return new globalThis[typed[1]](typed[2])
+  if (/Expected$/.test(e?.code)) return Object.assign(new TypeError(message), { code: e.code })
+  if (message.startsWith('Rust panic:')) e.code = 'RUST_PANIC'
+  return e
+}
+const illFormed = v => typeof v === 'string' ? !v.isWellFormed() : Array.isArray(v) && v.some(illFormed)
+for (const [name, [isAsync, strings]] of Object.entries(guards)) {
+  const f = module.exports[name]
+  if (typeof f !== 'function') continue
+  const check = a => {
+    for (const i of strings) {
+      if (illFormed(a[i])) throw new TypeError(`argument ${i + 1} of ${name} has a lone surrogate, which a Rust String cannot hold`)
+    }
+  }
+  module.exports[name] = isAsync
+    ? { [name]: async function (...a) { check(a); try { return await f(...a) } catch (e) { throw jsError(e) } } }[name]
+    : { [name]: function (...a) { check(a); try { return f(...a) } catch (e) { throw jsError(e) } } }[name]
+}
+"#;
+
 const CODEC_CJS: &str = r#"
-// Structured values cross as JSON text. JSON has no `undefined`, NaN or -0, and Rust strings no
-// lone surrogates: those travel as `{"$undefined": true}`, `{"$num": "NaN"}` and
-// `{"$utf16": [...]}` (see `js.rs`), so `{ a: undefined }`, `null` and half an emoji survive.
-const replacer = (_, v) => v === undefined ? { $undefined: true }
-  : typeof v === 'number' ? (Number.isFinite(v) && !Object.is(v, -0) ? v : { $num: Object.is(v, -0) ? '-0' : String(v) })
-  : typeof v === 'string' && !v.isWellFormed() ? { $utf16: Array.from({ length: v.length }, (_, i) => v.charCodeAt(i)) }
-  : v
+// Structured values cross as JSON text. JSON has no `undefined`, NaN, -0, bigint, Date, Map, Set
+// or bytes, and Rust strings no lone surrogates: those travel as one-key marker objects
+// (`{"$undefined": true}`, `{"$num": "NaN"}`, `{"$map": [[k, v]]}`, `{"$bytes": [...]}`, ...),
+// the same markers recordings use.
+const replacer = function (k, v) {
+  const raw = this[k]
+  if (raw instanceof Date) return { $date: Number.isNaN(raw.getTime()) ? 'Invalid' : raw.toISOString() }
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(raw)) return { $buffer: Array.from(raw) }
+  if (raw instanceof Uint8Array) return { $bytes: Array.from(raw) }
+  if (raw instanceof Map) return { $map: [...raw] }
+  if (raw instanceof Set) return { $set: [...raw] }
+  return v === undefined ? { $undefined: true }
+    : typeof v === 'bigint' ? { $bigint: String(v) }
+    : typeof v === 'number' ? (Number.isFinite(v) && !Object.is(v, -0) ? v : { $num: Object.is(v, -0) ? '-0' : String(v) })
+    : typeof v === 'string' && !v.isWellFormed() ? { $utf16: Array.from({ length: v.length }, (_, i) => v.charCodeAt(i)) }
+    : v
+}
 const encode = v => JSON.stringify(v, replacer)
 const single = (v, key) => Object.keys(v).length === 1 && key in v
 const revive = v => Array.isArray(v) ? v.map(revive)
@@ -918,6 +984,12 @@ const revive = v => Array.isArray(v) ? v.map(revive)
     ? (single(v, '$undefined') ? undefined
       : single(v, '$utf16') ? String.fromCharCode(...v.$utf16)
       : single(v, '$num') ? Number(v.$num)
+      : single(v, '$bigint') ? BigInt(v.$bigint)
+      : single(v, '$date') ? new Date(v.$date)
+      : single(v, '$bytes') ? Uint8Array.from(v.$bytes)
+      : single(v, '$buffer') ? Buffer.from(v.$buffer)
+      : single(v, '$map') ? new Map(v.$map.map(([k, x]) => [revive(k), revive(x)]))
+      : single(v, '$set') ? new Set(v.$set.map(revive))
       : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, revive(x)])))
     : v
 // Most results carry no marker: skip the walk unless the text has one.

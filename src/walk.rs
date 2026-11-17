@@ -17,7 +17,7 @@ struct Outer {
 
 impl Outer {
     fn new(root: &Path) -> Option<Self> {
-        let base = root.canonicalize().ok()?;
+        let base = root.canonical().ok()?;
         if base.join(".git").exists() {
             return None;
         }
@@ -62,6 +62,30 @@ impl Outer {
     }
 }
 
+/// `canonicalize` without Windows' `\\?\` verbatim prefix, which `java -cp`, `-D` library
+/// paths and other tools reject. Elsewhere it is `canonicalize` itself.
+pub trait Canonical {
+    fn canonical(&self) -> std::io::Result<PathBuf>;
+}
+
+impl Canonical for Path {
+    fn canonical(&self) -> std::io::Result<PathBuf> {
+        let path = self.canonicalize()?;
+        Ok(match path.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
+            Some(rest) if !rest.starts_with(r"UNC\") => PathBuf::from(rest),
+            _ => path,
+        })
+    }
+}
+
+/// A crate `bridge` generated inside the project: its wrappers reuse the original's names, so a
+/// source walk that entered it would find every class or module twice.
+fn bridge_crate(entry: &DirEntry) -> bool {
+    entry.depth() > 0
+        && entry.file_type().is_some_and(|t| t.is_dir())
+        && entry.path().join(crate::bridge::MANIFEST).is_file()
+}
+
 /// A walk of `root` that keeps an entry when `keep` says so and git would not ignore it.
 pub fn filtered<F>(root: &Path, keep: F) -> WalkBuilder
 where
@@ -70,7 +94,9 @@ where
     let mut walk = WalkBuilder::new(root);
     walk.parents(false);
     let outer = Outer::new(root).map(Arc::new);
-    walk.filter_entry(move |e| keep(e) && !outer.as_ref().is_some_and(|o| o.ignores(e)));
+    walk.filter_entry(move |e| {
+        keep(e) && !bridge_crate(e) && !outer.as_ref().is_some_and(|o| o.ignores(e))
+    });
     walk
 }
 
@@ -158,6 +184,23 @@ mod tests {
             "folder inside the repository"
         );
 
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
+
+    #[test]
+    fn bridge_crates_inside_the_project_are_not_source() {
+        let tmp = std::env::temp_dir().join(format!("ra-walk-bridge-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(tmp.join("src")).unwrap();
+        std::fs::create_dir_all(tmp.join("rust/x-rs/java")).unwrap();
+        std::fs::write(tmp.join("src/A.java"), "").unwrap();
+        std::fs::write(tmp.join("rust/x-rs/rust-anything.json"), "{}").unwrap();
+        std::fs::write(tmp.join("rust/x-rs/java/A.java"), "").unwrap();
+        assert_eq!(files(&tmp), ["src/A.java"]);
+        assert!(
+            files(&tmp.join("rust/x-rs")).contains(&"java/A.java".to_string()),
+            "a walk of the crate itself still sees its files"
+        );
         std::fs::remove_dir_all(&tmp).unwrap();
     }
 }

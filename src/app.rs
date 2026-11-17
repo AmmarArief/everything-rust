@@ -4,6 +4,7 @@
 //! twice, marks what differs between the two runs as noise, and writes each case as trycmd files
 //! in `rust/app-cases/`. `replay` runs any build against those files and reports what differs.
 
+use crate::walk::Canonical;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -71,10 +72,10 @@ pub(crate) const JSON_TRAPS: [&str; 2] = [
     r#"{"zebra":1,"apple":2,"10":3,"2":4,"é":5,"Apple":6}"#,
     r#"{"n":9007199254740993,"f":1e21,"t":0.1,"neg":-7}"#,
 ];
-const NOT_APP_NAMES: [&str; 28] = [
+const NOT_APP_NAMES: [&str; 29] = [
     "node", "nodejs", "python", "python3", "py", "ruby", "java", "go", "deno", "bun", "tsx",
     "ts-node", "sh", "bash", "zsh", "cargo", "npx", "npm", "pnpm", "yarn", "uv", "poetry",
-    "bundle", "run", "exec", "env", "sudo", "php",
+    "bundle", "run", "exec", "env", "sudo", "php", "dotnet",
 ];
 
 /// `rust/app-cases/rust-anything.json`: how to run the original, and the normalizers.
@@ -324,7 +325,7 @@ pub(crate) fn resolve_word(repo: &Path, word: &str) -> String {
     let looks_like_path = word.contains('/') || word.contains('\\') || path.is_file();
     if looks_like_path && path.exists() {
         return path
-            .canonicalize()
+            .canonical()
             .unwrap_or(path)
             .to_string_lossy()
             .into_owned();
@@ -410,7 +411,7 @@ fn run_in(
     let stderr = err_reader.join().unwrap_or_default();
 
     let mut cwd_forms = vec![work.to_string_lossy().into_owned()];
-    if let Ok(real) = work.canonicalize() {
+    if let Ok(real) = work.canonical() {
         cwd_forms.insert(0, real.to_string_lossy().into_owned());
     }
     let redact = |bytes: Vec<u8>| -> Vec<u8> {
@@ -1342,7 +1343,7 @@ fn write_case(dir: &Path, bin: &str, name: &str, case: &Case, rec: &Recorded) ->
 pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let repo = opts
         .repo
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let existing = Config::load(&repo)?;
     let run = if !opts.run.is_empty() {
@@ -1887,7 +1888,7 @@ pub(crate) fn recorded_args(repo: &Path) -> Result<Vec<(Vec<String>, bool)>> {
 pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
     let repo = opts
         .repo
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let dir = cases_dir(&repo);
     let config = Config::load(&repo)?;

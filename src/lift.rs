@@ -4,6 +4,7 @@
 //! The lift is made on a copy of `rust/` and only copied back when every check passes, so a lift
 //! that fails leaves the repository as it was.
 
+use crate::walk::Canonical;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -591,7 +592,7 @@ fn asset_items(repo: &Path, sources: &[PathBuf]) -> Vec<Item> {
 pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
     let repo = opts
         .repo
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let mut state = State::load(&repo)?;
     if state.lifted {
@@ -623,7 +624,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
     for unit in &state.units {
         let dir = app_dir
             .join(&unit.path)
-            .canonicalize()
+            .canonical()
             .with_context(|| format!("unit crate {} not found", unit.path))?;
         if !dir.starts_with(&rust_dir) {
             blockers.push(format!(

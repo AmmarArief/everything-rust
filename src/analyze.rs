@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use serde::Serialize;
 
 use crate::lang::Lang;
@@ -51,6 +51,7 @@ pub enum Bridge {
     Jni,
     /// PHP through its FFI extension over a C ABI.
     PhpFfi,
+    DotnetFfi,
 }
 
 impl Bridge {
@@ -65,6 +66,7 @@ impl Bridge {
             Self::Fiddle => "Fiddle (C ABI)",
             Self::Jni => "JNI",
             Self::PhpFfi => "PHP FFI (C ABI)",
+            Self::DotnetFfi => "P/Invoke (C ABI)",
         }
     }
 
@@ -78,6 +80,7 @@ impl Bridge {
             Lang::Ruby => Self::Fiddle,
             Lang::Java => Self::Jni,
             Lang::Php => Self::PhpFfi,
+            Lang::Csharp => Self::DotnetFfi,
         }
     }
 }
@@ -220,7 +223,38 @@ pub fn analyze(root: &Path) -> Result<Report> {
     analyze_lang(root, Lang::detect(root))
 }
 
+/// Compiled or packaged files: what someone may point `analyze` at instead of source.
+const COMPILED: [&str; 17] = [
+    "apk", "aab", "ipa", "xapk", "jar", "war", "aar", "class", "dex", "exe", "dll", "so", "dylib",
+    "wasm", "pyc", "msi", "appimage",
+];
+
+fn compiled_hint() -> &'static str {
+    "rust-anything ports source code: it parses functions, records what they do, and checks the \
+     Rust port against the running original. A compiled app (an APK, a JAR, an .exe) has no \
+     source to port and no way to record it function by function. Point it at the app's source \
+     folder instead; for an app you only have as a binary, writing a new Rust app from its \
+     visible behavior is a separate project"
+}
+
 pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
+    if root.is_file() {
+        let ext = root
+            .extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        if COMPILED.contains(&ext.as_str()) {
+            bail!(
+                "{} is a compiled .{ext} file. {}",
+                root.display(),
+                compiled_hint()
+            );
+        }
+        bail!(
+            "{} is a file; `analyze` takes the folder of a project's source code",
+            root.display()
+        );
+    }
     let ws = match lang {
         Lang::Ts => discover::discover(root)?,
         _ => crate::lang::discover(lang, root)?,
@@ -517,6 +551,23 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -
     let mut warnings = Vec::new();
     if ws.files.is_empty() {
         let hidden = crate::walk::ignored_files(root, lang.extensions());
+        let compiled = crate::walk::builder(root)
+            .standard_filters(false)
+            .max_depth(Some(4))
+            .build()
+            .flatten()
+            .filter(|e| {
+                e.path().extension().is_some_and(|x| {
+                    COMPILED.contains(&x.to_string_lossy().to_lowercase().as_str())
+                })
+            })
+            .count();
+        if hidden == 0 && compiled > 0 {
+            warnings.push(format!(
+                "no source files were found, only {compiled} compiled or packaged files. {}",
+                compiled_hint()
+            ));
+        }
         if hidden > 0 {
             warnings.push(format!(
                 "no source files were analyzed, but {hidden} {} files under {} are excluded by \
@@ -593,7 +644,15 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
         + test_bonus)
         .clamp(0.0, 100.0);
 
-    let status = if keep {
+    let platform = unit.risks.contains_key(&Risk::PlatformSpecific);
+    let status = if platform {
+        notes.push(
+            "Depends on the target (hardware registers, memory layout, inline assembly): keep in \
+             C, since a recording on this machine cannot vouch for the target."
+                .to_string(),
+        );
+        Status::Keep
+    } else if keep {
         notes.push(if unit.platforms.contains(&Platform::Editor) {
             "Runs in the editor's extension host: keep in TS.".to_string()
         } else {

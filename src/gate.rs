@@ -19,6 +19,92 @@ pub struct Check {
     pub detail: String,
 }
 
+/// Bindings `bridge` writes into `src/`; everything else there is the port.
+const GENERATED: [&str; 7] = [
+    "lib.rs",
+    "js.rs",
+    "pyconv.rs",
+    "pynum.rs",
+    "rbconv.rs",
+    "utf16.rs",
+    "wire.rs",
+];
+
+/// How many times the source's lines the port may take before `gate` calls it bloated, plus a
+/// fixed allowance for the imports and signatures every port has.
+pub const MAX_GROWTH: f64 = 3.0;
+const ALLOWANCE: f64 = 50.0;
+
+fn code_lines(text: &str, comment: &[&str]) -> usize {
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !comment.iter().any(|c| l.starts_with(c)))
+        .count()
+}
+
+fn files_under(path: &Path, extensions: &[&str]) -> Vec<std::path::PathBuf> {
+    if path.is_file() {
+        return vec![path.to_path_buf()];
+    }
+    crate::walk::builder(path)
+        .build()
+        .flatten()
+        .map(ignore::DirEntry::into_path)
+        .filter(|p| {
+            p.extension()
+                .is_some_and(|e| extensions.contains(&e.to_string_lossy().as_ref()))
+        })
+        .collect()
+}
+
+/// Lines of Rust in the port against lines of the source unit: a port several times larger
+/// usually re-implements what a crate already does.
+fn size_check(crate_dir: &Path, manifest: &Manifest) -> Option<Check> {
+    let source_comments: &[&str] = match manifest.language {
+        crate::lang::Lang::Python | crate::lang::Lang::Ruby => &["#"],
+        crate::lang::Lang::Php => &["//", "#", "/*", "*"],
+        _ => &["//", "/*", "*"],
+    };
+    let source: usize = files_under(
+        &manifest.root.join(&manifest.unit),
+        manifest.language.extensions(),
+    )
+    .iter()
+    .filter_map(|p| std::fs::read_to_string(p).ok())
+    .map(|t| code_lines(&t, source_comments))
+    .sum();
+    if source == 0 {
+        return None;
+    }
+    let rust: usize = files_under(&crate_dir.join("src"), &["rs"])
+        .iter()
+        .filter(|p| {
+            p.file_name()
+                .is_none_or(|n| !GENERATED.contains(&n.to_string_lossy().as_ref()))
+        })
+        .filter_map(|p| std::fs::read_to_string(p).ok())
+        .map(|t| code_lines(&t, &["//"]))
+        .sum();
+    let growth = rust as f64 / source as f64;
+    let passed = rust as f64 <= MAX_GROWTH * source as f64 + ALLOWANCE;
+    Some(Check {
+        name: "size",
+        passed,
+        detail: format!(
+            "{rust} lines of Rust for {source} lines of {} ({growth:.1}x){}",
+            manifest.language.name(),
+            if passed {
+                String::new()
+            } else {
+                format!(
+                    "; over {MAX_GROWTH}x usually means code a crate already provides, or a case \
+                     handled one by one: use the crates `analyze` lists and fold repeated code"
+                )
+            }
+        ),
+    })
+}
+
 #[derive(Debug, Serialize)]
 pub struct GateOutcome {
     pub passed: bool,
@@ -43,6 +129,7 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         },
     });
 
+    checks.extend(size_check(crate_dir, &manifest));
     checks.extend(crate::error_paths::checks(crate_dir, &manifest));
     let built = harness::build(crate_dir);
     let built_ok = built.is_ok();

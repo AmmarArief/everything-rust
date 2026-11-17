@@ -5,6 +5,7 @@
 //! what a JS caller sees. Values are encoded so `undefined`, `NaN`, `-0`, `Map`, `Set`,
 //! `BigInt` and key order survive JSON.
 
+use crate::walk::Canonical;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -101,7 +102,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let module_for = |file: &str| -> Result<String> {
         let path = match opts.module {
             Some(m) => m
-                .canonicalize()
+                .canonical()
                 .with_context(|| format!("resolving {}", m.display()))?,
             None => manifest.root.join(file),
         };
@@ -261,7 +262,7 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
     // lets Node follow them, so the original runs as it is.
     std::fs::write(work.join("resolve.mjs"), RESOLVE_JS)?;
     std::fs::write(work.join("register.mjs"), REGISTER_JS)?;
-    let register = work.canonicalize()?.join("register.mjs");
+    let register = work.canonical()?.join("register.mjs");
     let mut node_args = vec![format!("--import={}", file_url(&register))];
     node_args.extend(opts.node_args.iter().cloned());
     let aliases = alias_env(manifest);
@@ -274,7 +275,7 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
         .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
     if let Some(dir) = opts.resolve_from {
         let dir = dir
-            .canonicalize()
+            .canonical()
             .with_context(|| format!("resolving {}", dir.display()))?;
         cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
     }
@@ -294,12 +295,58 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
             .env("RUST_ANYTHING_PATHS", &aliases)
             .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
         if let Some(dir) = opts.resolve_from {
-            retry.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonicalize()?);
+            retry.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonical()?);
         }
         run(&mut retry, "node --experimental-transform-types")?;
     }
 
     Ok(out)
+}
+
+/// Copies a freshly built library into place by renaming, so a process that has the old one
+/// loaded keeps a valid file.
+pub(crate) fn install(built: &Path, dest: &Path) -> Result<()> {
+    let tmp = dest.with_extension(format!("tmp-{}", std::process::id()));
+    std::fs::copy(built, &tmp).with_context(|| format!("copying {}", built.display()))?;
+    std::fs::rename(&tmp, dest).with_context(|| format!("installing {}", dest.display()))
+}
+
+/// The library `diff` loads, when it is older than the crate's sources: a forgotten `build`
+/// would otherwise test the previous port.
+fn stale_build(crate_dir: &Path, manifest: &Manifest) -> Option<PathBuf> {
+    let built = match manifest.kind {
+        Kind::Napi => crate_dir.join(format!("{}.node", manifest.lib_name())),
+        Kind::Pyo3 => crate::harness_py::native_file(crate_dir, manifest),
+        _ => return None,
+    };
+    let built_at = std::fs::metadata(&built).and_then(|m| m.modified()).ok()?;
+    let mut sources = vec![crate_dir.join("Cargo.toml")];
+    sources.extend(
+        walkdir_rs(&crate_dir.join("src"))
+            .into_iter()
+            .filter(|p| p.extension().is_some_and(|e| e == "rs")),
+    );
+    sources
+        .iter()
+        .filter_map(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok())
+        .any(|changed| changed > built_at)
+        .then_some(built)
+}
+
+fn walkdir_rs(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            out.extend(walkdir_rs(&path));
+        } else {
+            out.push(path);
+        }
+    }
+    out
 }
 
 pub fn build(crate_dir: &Path) -> Result<PathBuf> {
@@ -331,7 +378,7 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
             .find(|p| p.exists())
             .with_context(|| format!("no native library for `{lib}` in {}", release.display()))?;
             let artifact = crate_dir.join(format!("{lib}.node"));
-            std::fs::copy(&built, &artifact)?;
+            install(&built, &artifact)?;
             Ok(artifact)
         }
         Kind::Wasm => {
@@ -545,8 +592,8 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     let script = work.join("bench.mjs");
     std::fs::write(&script, format!("{CODEC_JS}\n{BENCH_JS}"))?;
     let out = work.join("bench.json");
-    let native = opts.crate_dir.join("index.cjs").canonicalize()?;
-    let register = work.canonicalize()?.join("register.mjs");
+    let native = opts.crate_dir.join("index.cjs").canonical()?;
+    let register = work.canonical()?.join("register.mjs");
     let mut cmd = Command::new("node");
     cmd.arg("--experimental-transform-types")
         .arg("--no-warnings")
@@ -561,7 +608,7 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
         .env("RUST_ANYTHING_PATHS", alias_env(&manifest))
         .env("RUST_ANYTHING_WORKSPACE", workspace_env(&manifest));
     if let Some(dir) = opts.resolve_from {
-        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonicalize()?);
+        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonical()?);
     }
     run(&mut cmd, "node")?;
     Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
@@ -594,6 +641,17 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
 }
 
 fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
+    if opts.module.is_none()
+        && let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && let Some(built) = stale_build(opts.crate_dir, &manifest)
+    {
+        bail!(
+            "{} is older than the crate's sources, so diff would test the previous port; run \
+             `rust-anything build {}` first",
+            built.display(),
+            opts.crate_dir.display()
+        );
+    }
     if let Ok(manifest) = Manifest::load(opts.crate_dir)
         && manifest.language == crate::lang::Lang::Python
         && opts.module.is_none()
@@ -636,7 +694,7 @@ fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
         None => opts.crate_dir.join("index.cjs"),
     };
     let module = module
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("resolving {}", module.display()))?;
     let work = opts.crate_dir.join(WORK_DIR);
     std::fs::create_dir_all(&work)?;
@@ -1260,6 +1318,8 @@ const enc = (v, stack = []) => {
   if (stack.includes(v)) return { $cycle: true }
   const next = [...stack, v]
   if (Array.isArray(v)) return v.map(x => enc(x, next))
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(v)) return { $buffer: [...v] }
+  if (v instanceof Uint8Array) return { $bytes: [...v] }
   if (v instanceof Map) return { $map: [...v].map(([k, x]) => [enc(k, next), enc(x, next)]) }
   if (v instanceof Set) return { $set: [...v].map(x => enc(x, next)) }
   if (v instanceof Date) return { $date: Number.isNaN(v.getTime()) ? 'Invalid' : v.toISOString() }
@@ -1279,6 +1339,8 @@ const dec = (v) => {
   if ('$map' in v) return new Map(v.$map.map(([k, x]) => [dec(k), dec(x)]))
   if ('$set' in v) return new Set(v.$set.map(dec))
   if ('$date' in v) return new Date(v.$date)
+  if ('$bytes' in v) return Uint8Array.from(v.$bytes)
+  if ('$buffer' in v) return Buffer.from(v.$buffer)
   const out = {}
   for (const [k, x] of Object.entries(v)) out[k] = dec(x)
   return out
@@ -1457,7 +1519,7 @@ const scenario = async (Class, c) => {
   return results
 }
 const stepsMatch = (want, got) => want.length === got.length && want.every((w, i) =>
-  ('error' in w && 'error' in got[i]) || ('ok' in w && 'ok' in got[i] && same(w.ok, got[i].ok, keyOrder === 'sort')))
+  ('error' in w && 'error' in got[i] && !got[i].error.startsWith('Rust panic:')) || ('ok' in w && 'ok' in got[i] && same(w.ok, got[i].ok, keyOrder === 'sort')))
 for (const c of cases) {
   if (c.class) {
     const Class = mod[c.class]
@@ -1492,7 +1554,8 @@ for (const c of cases) {
   }
   const expected = 'error' in c ? { error: c.error } : { ok: c.ok }
   // Both sides throwing counts as agreement: error messages are not part of the contract.
-  const pass = ('error' in expected && 'error' in actual) || ('ok' in expected && 'ok' in actual && same(expected.ok, actual.ok, keyOrder === 'sort'))
+  const panicked = 'error' in actual && actual.error.startsWith('Rust panic:')
+  const pass = !panicked && ('error' in expected && 'error' in actual) || ('ok' in expected && 'ok' in actual && same(expected.ok, actual.ok, keyOrder === 'sort'))
   if (pass) {
     summary.passed++
   }

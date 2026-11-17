@@ -235,6 +235,7 @@ def lines(path)
 end
 
 def same?(expected, got)
+  return false if got["error"].to_s.start_with?("Rust panic:")
   return got.key?("error") && expected["error_type"] == got["error_type"] if expected.key?("error")
 
   !got.key?("error") && JSON.generate(expected["ok"]) == JSON.generate(got["ok"])

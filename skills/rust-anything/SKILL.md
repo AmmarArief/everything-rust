@@ -19,7 +19,9 @@ overrides it. The steps are the same everywhere; only the bridge differs (napi-r
 TS, PyO3, a C ABI, cgo, a magnus extension, JNI), and the original's callers keep their API.
 PHP is in preview: `analyze`, and for a whole app `app record`, `app replay` and
 `app front-door` (CLIs, and servers run with `php -S 127.0.0.1:{port} router.php`); `bridge` does not
-take PHP units yet, so tell the user before planning a PHP port past the front door.
+take PHP units yet, so tell the user before planning a PHP port past the front door. C# is in
+preview the same way: record a built app (`dotnet out/app.dll`, servers with
+`--urls http://127.0.0.1:{port}`); `bridge` does not take C# units yet.
 
 Tools: the `rust-anything` CLI, or the same steps as MCP tools (`rust-anything mcp`): `profile`,
 `analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`, and for a
@@ -164,12 +166,14 @@ fmt, clippy with warnings as errors, cargo tests, `unsafe` only with SAFETY comm
 `unimplemented!`, every place the original fails on purpose (`throw`, `raise`, an `error` result)
 reached by a recorded failing case (add one with `record --inputs` when gate names it), no
 `unwrap`, `expect` or `panic!` in a function whose original returns an error (return `Err`; for a
-state the original also treats as impossible, a `// INFALLIBLE: <why>` comment), the module builds,
-every export present, every recorded case matches.
+state the original also treats as impossible, a `// INFALLIBLE: <why>` comment), the port at most
+3x the original's lines (over that, use the crates `analyze` lists and fold repeated code), the
+module builds, every export present, every recorded case matches. A Rust panic never matches a
+recorded error: return `Err` where the original throws.
 
 Then report to the user, and **wait for their go-ahead before the next unit**:
 
 - what changed (files, functions, bridge, batches),
 - gate output, diff counts and bench numbers,
-- behavior differences or risks left (e.g. error messages differ, lone surrogates become U+FFFD
-  in a napi `String`), and what is left in the plan.
+- behavior differences or risks left (e.g. error messages differ, a napi `String` refuses lone
+  surrogates), and what is left in the plan.

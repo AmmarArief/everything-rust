@@ -2,6 +2,7 @@
 //! the original for every command not ported yet, and `wire`, which hands commands to a unit's
 //! `port.rs` behind a kill switch.
 
+use crate::walk::Canonical;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -323,7 +324,7 @@ fn resolve(word: &str) -> OsString {{
     let path = Path::new(ROOT).join(word);
     let looks_like_path = word.contains('/') || word.contains('\\\\') || path.is_file();
     if looks_like_path && path.exists() {{
-        return path.canonicalize().unwrap_or(path).into_os_string();
+        return std::path::absolute(&path).unwrap_or(path).into_os_string();
     }}
     word.into()
 }}
@@ -526,7 +527,7 @@ pub struct FrontDoorOutcome {
 pub fn front_door(opts: &FrontDoorOptions) -> Result<FrontDoorOutcome> {
     let repo = opts
         .repo
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let config = app::Config::load(&repo)?;
     let config = match config {
@@ -804,7 +805,7 @@ fn find_unit(repo: &Path, unit: &str) -> Result<PathBuf> {
         PathBuf::from(unit),
     ] {
         if candidate.join("Cargo.toml").is_file() && candidate != repo.join(APP_DIR) {
-            return Ok(candidate.canonicalize()?);
+            return Ok(candidate.canonical()?);
         }
     }
     let wanted = unit.trim_end_matches('/');
@@ -813,7 +814,7 @@ fn find_unit(repo: &Path, unit: &str) -> Result<PathBuf> {
             if let Ok(m) = crate::bridge::Manifest::load(&entry.path())
                 && m.unit.trim_end_matches('/') == wanted
             {
-                return Ok(entry.path().canonicalize()?);
+                return Ok(entry.path().canonical()?);
             }
         }
     }
@@ -855,7 +856,7 @@ pub struct WireOutcome {
 pub fn wire(opts: &WireOptions) -> Result<WireOutcome> {
     let repo = opts
         .repo
-        .canonicalize()
+        .canonical()
         .with_context(|| format!("no folder {}", opts.repo.display()))?;
     let mut state = State::load(&repo)?;
     ensure!(

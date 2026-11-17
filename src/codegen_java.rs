@@ -680,6 +680,9 @@ public final class RustAnythingDriver {
     }
 
     private static boolean same(Map<String, Object> expected, Map<String, Object> got) {
+        if (String.valueOf(got.get("error")).contains("Rust panic:")) {
+            return false;
+        }
         if (expected.containsKey("error")) {
             return got.containsKey("error") && String.valueOf(expected.get("error_type")).equals(String.valueOf(got.get("error_type")));
         }

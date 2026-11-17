@@ -1,3 +1,4 @@
+use rust_anything::walk::Canonical;
 use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -384,7 +385,7 @@ fn run() -> Result<ExitCode> {
                 serde_json::to_string_pretty(&report)? + "\n"
             } else {
                 let title = root
-                    .canonicalize()
+                    .canonical()
                     .ok()
                     .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
                     .unwrap_or_else(|| root.display().to_string());
@@ -660,7 +661,7 @@ fn run() -> Result<ExitCode> {
         } => {
             let home = rust_anything::setup::home()?;
             let command = std::env::current_exe()
-                .and_then(|p| p.canonicalize())
+                .and_then(|p| p.canonical())
                 .context("finding the rust-anything executable")?;
             let report = rust_anything::setup::setup(&rust_anything::setup::Options {
                 home: &home,

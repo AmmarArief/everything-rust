@@ -209,7 +209,7 @@ fn resolve(word: &str, port: u16) -> OsString {{
     let path = Path::new(ROOT).join(&word);
     let looks_like_path = word.contains('/') || word.contains('\\\\') || path.is_file();
     if looks_like_path && path.exists() {{
-        return path.canonicalize().unwrap_or(path).into_os_string();
+        return std::path::absolute(&path).unwrap_or(path).into_os_string();
     }}
     word.into()
 }}

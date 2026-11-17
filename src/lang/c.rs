@@ -209,7 +209,35 @@ pub fn scan(source: &str) -> FileFacts {
                 _ => {}
             }
         }
-        "cast_expression" => add(&mut facts, Risk::IntegerSemantics, node),
+        "cast_expression" => {
+            add(&mut facts, Risk::IntegerSemantics, node);
+            let value = node.child_by_field_name("value");
+            let ty = node
+                .child_by_field_name("type")
+                .map_or("", |t| text(t, source));
+            if ty.contains('*') && value.is_some_and(|v| v.kind() == "number_literal") {
+                add(&mut facts, Risk::PlatformSpecific, node);
+            }
+        }
+        "gnu_asm_expression" | "bitfield_clause" | "ms_declspec_modifier" => {
+            add(&mut facts, Risk::PlatformSpecific, node)
+        }
+        "type_qualifier" if text(node, source) == "volatile" => {
+            add(&mut facts, Risk::PlatformSpecific, node)
+        }
+        "attribute_specifier" | "attribute_declaration"
+            if ["packed", "aligned", "section", "interrupt", "naked"]
+                .iter()
+                .any(|a| text(node, source).contains(a)) =>
+        {
+            add(&mut facts, Risk::PlatformSpecific, node)
+        }
+        "preproc_call"
+            if text(node, source).trim_start().starts_with("#pragma")
+                && text(node, source).contains("pack") =>
+        {
+            add(&mut facts, Risk::PlatformSpecific, node)
+        }
         "null" => add(&mut facts, Risk::NullReferences, node),
         "goto_statement" => add(&mut facts, Risk::DynamicCode, node),
         "preproc_function_def" => add(&mut facts, Risk::Reflection, node),

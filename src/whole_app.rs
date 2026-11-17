@@ -69,7 +69,7 @@ pub struct Decision {
     pub recommendation: String,
 }
 
-const SERVER: &str = r#"\$_SERVER\[\s*['"]REQUEST_(?:METHOD|URI)|\$_(?:GET|POST)\[|\.listen\(|createServer\(|ListenAndServe|HTTPServer\(|HttpServer\.create|uvicorn\.run|\bapp\.run\(|SpringApplication\.run|TCPServer\.new|WEBrick::HTTPServer|Sinatra::Base|FastAPI\(|Flask\(|\bexpress\(\)|\blisten\(\s*\w+\s*,\s*\w+\s*\)|\bserve\(\s*listener"#;
+const SERVER: &str = r#"WebApplication\.Create(?:Slim)?Builder|\bHttpListener\(|\.UseKestrel\(|\$_SERVER\[\s*['"]REQUEST_(?:METHOD|URI)|\$_(?:GET|POST)\[|\.listen\(|createServer\(|ListenAndServe|HTTPServer\(|HttpServer\.create|uvicorn\.run|\bapp\.run\(|SpringApplication\.run|TCPServer\.new|WEBrick::HTTPServer|Sinatra::Base|FastAPI\(|Flask\(|\bexpress\(\)|\blisten\(\s*\w+\s*,\s*\w+\s*\)|\bserve\(\s*listener"#;
 
 fn main_pattern(lang: Lang) -> Option<&'static str> {
     Some(match lang {
@@ -80,6 +80,7 @@ fn main_pattern(lang: Lang) -> Option<&'static str> {
         Lang::Ruby => r"^#!.*\bruby\b|\bARGV\b|__FILE__\s*==\s*\$0",
         Lang::Java => r"public\s+static\s+void\s+main\s*\(",
         Lang::Php => r#"^#!.*\bphp\b|\$argv\b|PHP_SAPI\s*===?\s*['"]cli['"]"#,
+        Lang::Csharp => r"\bstatic\s+(?:async\s+)?(?:void|int|Task(?:<int>)?)\s+Main\s*\(",
     })
 }
 
@@ -191,6 +192,35 @@ fn manifest_entries(root: &Path, lang: Lang) -> Vec<EntryPoint> {
             }
         }
     }
+    if lang == Lang::Csharp {
+        for project in csproj_files(root) {
+            let text = read(root, &project);
+            let dir = project
+                .rsplit_once('/')
+                .map_or(".".to_string(), |(d, _)| d.to_string());
+            let name = project
+                .rsplit('/')
+                .next()
+                .unwrap_or(&project)
+                .trim_end_matches(".csproj")
+                .to_string();
+            if text.contains("Microsoft.NET.Sdk.Web") {
+                out.push(EntryPoint {
+                    kind: "server",
+                    path: dir,
+                    name: Some(name),
+                    evidence: format!("`{project}` uses the web SDK"),
+                });
+            } else if text.contains("<OutputType>Exe</OutputType>") {
+                out.push(EntryPoint {
+                    kind: "cli",
+                    path: dir,
+                    name: Some(name),
+                    evidence: format!("`{project}` builds an executable"),
+                });
+            }
+        }
+    }
     if lang == Lang::Ruby {
         let gemspec = std::fs::read_dir(root)
             .into_iter()
@@ -256,6 +286,26 @@ fn code_entries(root: &Path, report: &Report) -> Vec<EntryPoint> {
         }
     }
     out
+}
+
+/// Project files under `root`, relative to it, outside build output.
+fn csproj_files(root: &Path) -> Vec<String> {
+    crate::walk::filtered(root, |e| {
+        !matches!(
+            e.file_name().to_string_lossy().as_ref(),
+            "bin" | "obj" | "node_modules"
+        )
+    })
+    .build()
+    .flatten()
+    .filter(|e| e.path().extension().is_some_and(|x| x == "csproj"))
+    .filter_map(|e| {
+        e.path()
+            .strip_prefix(root)
+            .ok()
+            .map(|p| p.to_string_lossy().replace('\\', "/"))
+    })
+    .collect()
 }
 
 fn normalize(lang: Lang, name: &str) -> String {
@@ -395,6 +445,14 @@ pub fn declared(root: &Path, lang: Lang) -> BTreeSet<String> {
                         .filter(|k| k.contains('/') && !k.starts_with("ext-"))
                         .cloned(),
                 );
+            }
+        }
+        Lang::Csharp => {
+            for project in csproj_files(root) {
+                let text = read(root, &project);
+                if !crate::lang::csharp::is_test_project(&text) {
+                    out.extend(crate::lang::csharp::package_references(&text));
+                }
             }
         }
         Lang::C => {}
@@ -550,11 +608,29 @@ pub fn whole_app(root: &Path, report: &Report) -> WholeApp {
             _ => "Yes: the Rust crate's public API becomes the library's front door".into(),
         },
     );
+    let electron = lang == Lang::Ts
+        && serde_json::from_str::<Value>(&read(root, "package.json")).is_ok_and(|pkg| {
+            ["dependencies", "devDependencies"]
+                .iter()
+                .any(|f| pkg[f].get("electron").is_some())
+        });
+    if electron {
+        ask(
+            "desktop shell".into(),
+            "This is an Electron app. Its main process is Node code that can move to Rust; its \
+             windows are web pages. Port the main-process logic and keep the web UI?"
+                .into(),
+            "Yes: port the main process piece by piece and keep the renderer as it is. Whether \
+             the UI later moves to Tauri (the same web UI on a Rust backend) is a separate \
+             choice, made once the logic is Rust"
+                .into(),
+        );
+    }
     for unit in report.units.iter().filter(|u| u.status == Status::Keep) {
         ask(
             format!("keep {}", unit.id),
             format!(
-                "{} is UI or editor code ({}). What replaces it in the Rust app, or does it stay outside?",
+                "{} stays in the source language ({}). What replaces it in the Rust app, or does it stay outside?",
                 unit.id,
                 unit.notes
                     .first()

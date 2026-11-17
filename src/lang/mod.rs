@@ -7,6 +7,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 pub mod c;
+pub mod csharp;
 pub mod go;
 pub mod java;
 pub mod php;
@@ -27,6 +28,7 @@ pub enum Lang {
     Ruby,
     Java,
     Php,
+    Csharp,
 }
 
 impl Lang {
@@ -39,6 +41,7 @@ impl Lang {
             Self::Ruby => "Ruby",
             Self::Java => "Java",
             Self::Php => "PHP",
+            Self::Csharp => "C#",
         }
     }
 
@@ -50,6 +53,15 @@ impl Lang {
         }
         if has("pom.xml") || has("build.gradle") || has("build.gradle.kts") {
             return Self::Java;
+        }
+        let dotnet = std::fs::read_dir(root).is_ok_and(|entries| {
+            entries.flatten().any(|e| {
+                let name = e.file_name().to_string_lossy().into_owned();
+                name.ends_with(".csproj") || name.ends_with(".sln") || name.ends_with(".slnx")
+            })
+        });
+        if dotnet || has("Directory.Build.props") {
+            return Self::Csharp;
         }
         if has("pyproject.toml") || has("setup.py") || has("setup.cfg") {
             return Self::Python;
@@ -63,7 +75,7 @@ impl Lang {
         if has("package.json") {
             return Self::Ts;
         }
-        let mut counts = [0usize; 7];
+        let mut counts = [0usize; 8];
         for entry in crate::walk::builder(root)
             .hidden(true)
             .require_git(false)
@@ -79,11 +91,11 @@ impl Lang {
                 counts[i] += 1;
             }
         }
-        let best = (0..7).max_by_key(|&i| counts[i]).unwrap_or(0);
+        let best = (0..8).max_by_key(|&i| counts[i]).unwrap_or(0);
         Self::ALL[best]
     }
 
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 8] = [
         Self::Ts,
         Self::Python,
         Self::C,
@@ -91,6 +103,7 @@ impl Lang {
         Self::Ruby,
         Self::Java,
         Self::Php,
+        Self::Csharp,
     ];
 
     /// File extensions of the language's source files.
@@ -103,6 +116,7 @@ impl Lang {
             Self::Ruby => &["rb"],
             Self::Java => &["java"],
             Self::Php => &["php"],
+            Self::Csharp => &["cs"],
         }
     }
 }
@@ -123,6 +137,7 @@ pub fn discover(lang: Lang, root: &Path) -> anyhow::Result<crate::ts::discover::
         Lang::Ruby => ruby::discover(root),
         Lang::Java => java::discover(root),
         Lang::Php => php::discover(root),
+        Lang::Csharp => csharp::discover(root),
         _ => anyhow::bail!("{} is not supported yet", lang.name()),
     }
 }
@@ -135,6 +150,7 @@ pub fn scan(lang: Lang, _path: &str, text: &str) -> crate::ts::scan::FileFacts {
         Lang::Ruby => ruby::scan(text),
         Lang::Java => java::scan(text),
         Lang::Php => php::scan(text),
+        Lang::Csharp => csharp::scan(text),
         _ => crate::ts::scan::FileFacts::default(),
     }
 }
@@ -158,6 +174,7 @@ pub fn resolve(
         Lang::Ruby => ruby::resolve(from, spec, index, ws),
         Lang::Java => java::resolve(spec, index, ws),
         Lang::Php => php::resolve(from, spec, index, ws),
+        Lang::Csharp => csharp::resolve(spec, index, ws),
         _ => Resolution::Unresolved,
     }
 }
@@ -177,6 +194,7 @@ pub fn exports(
         Lang::Ruby => (ruby::exports(path, text), Vec::new()),
         Lang::Java => (java::exports(path, text), Vec::new()),
         Lang::Php => (php::exports(path, text), Vec::new()),
+        Lang::Csharp => (csharp::exports(path, text), Vec::new()),
         _ => (Vec::new(), Vec::new()),
     }
 }
@@ -189,6 +207,7 @@ pub fn lookup(lang: Lang, name: &str) -> Option<crate::ts::deps::CrateMatch> {
         Lang::Ruby => ruby::lookup(name),
         Lang::Java => java::lookup(name),
         Lang::Php => php::lookup(name),
+        Lang::Csharp => csharp::lookup(name),
         _ => None,
     }
 }

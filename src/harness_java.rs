@@ -2,6 +2,7 @@
 //! methods by reflection: compiled with the original sources to record, and with the JNI
 //! wrapper classes over the Rust library to diff.
 
+use crate::walk::Canonical;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -48,7 +49,7 @@ fn java_files(dir: &Path) -> Vec<PathBuf> {
 
 /// Compiles the driver with the original sources (`rust: false`) or the wrapper classes.
 fn compile(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
-    let work = crate_dir.canonicalize()?.join(WORK_DIR);
+    let work = crate_dir.canonical()?.join(WORK_DIR);
     let support = work.join("java-support/rust-anything");
     std::fs::create_dir_all(&support)?;
     std::fs::write(
@@ -115,7 +116,7 @@ fn driver(
         cmd.arg(format!(
             "-Drust-anything.lib.{}={}",
             m.lib_name(),
-            lib.canonicalize()?.display()
+            lib.canonical()?.display()
         ));
     }
     cmd.arg("-cp")

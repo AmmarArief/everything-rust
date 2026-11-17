@@ -1,5 +1,6 @@
 //! Finds the packages and source files of a JS/TS repository.
 
+use crate::walk::Canonical;
 use std::path::Path;
 
 use anyhow::{Context, Result};
@@ -89,7 +90,7 @@ pub fn discover(root: &Path) -> Result<Workspace> {
         .collect::<Result<Vec<_>>>()?;
     if !packages.iter().any(|p| p.dir.is_empty()) {
         let name = root
-            .canonicalize()
+            .canonical()
             .ok()
             .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
             .unwrap_or_else(|| "root".into());
