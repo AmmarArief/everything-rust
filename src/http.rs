@@ -479,10 +479,16 @@ fn parse_curl(line: &str, repo: &Path, doc_dir: &Path) -> Option<Req> {
         i += 1;
     }
     let url = url?;
-    let rest = url.split_once("://").map_or(url.as_str(), |(_, r)| r);
-    let (host, path) = match rest.find('/') {
-        Some(i) => (&rest[..i], rest[i..].to_string()),
-        None => (rest, "/".to_string()),
+    let (scheme, rest) = url.split_once("://").unwrap_or(("http", &url));
+    if !matches!(scheme, "http" | "https") {
+        return None;
+    }
+    let rest = rest.split('#').next()?;
+    let (host, target) = rest.split_at(rest.find(['/', '?']).unwrap_or(rest.len()));
+    let path = if target.starts_with('/') {
+        target.to_string()
+    } else {
+        format!("/{target}")
     };
     let host = if host.starts_with('[') {
         host.split_inclusive(']').next().unwrap_or(host)
@@ -1039,6 +1045,11 @@ mod tests {
             "application/x-www-form-urlencoded"
         );
         assert!(parse_curl("curl https://example.com/x", here, here).is_none());
+        let query = parse_curl("curl 'http://localhost?x=y#section'", here, here).unwrap();
+        assert_eq!(query.path, "/?x=y");
+        let fragment = parse_curl("curl 'http://[::1]:8080/path#section'", here, here).unwrap();
+        assert_eq!(fragment.path, "/path");
+        assert!(parse_curl("curl ftp://localhost/file", here, here).is_none());
         assert!(parse_curl("curl --unknown x http://localhost/", here, here).is_none());
         assert!(parse_curl("curl http://localhost/ | jq .", here, here).is_none());
     }
