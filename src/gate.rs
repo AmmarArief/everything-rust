@@ -262,6 +262,7 @@ mod tests {
         assert_eq!(unexplained.len(), 1);
         assert!(unexplained[0].ends_with("a.rs:4"));
     }
+
     #[test]
     fn missing_port_source_fails_the_ported_check() {
         let dir = crate::app::temp_dir("gate-port").unwrap();
