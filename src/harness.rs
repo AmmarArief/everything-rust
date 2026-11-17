@@ -630,11 +630,21 @@ const SHOWN_MISMATCHES: usize = 20;
 
 pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
     let mut outcome = diff_exact(opts)?;
-    let saved = Manifest::load(opts.crate_dir)
-        .ok()
-        .and_then(|m| m.float_tolerance);
+    let manifest = Manifest::load(opts.crate_dir).ok();
+    let saved = manifest.as_ref().and_then(|m| m.float_tolerance);
     if let Some(t) = opts.float_tolerance.or(saved) {
-        outcome = crate::tolerance::apply(outcome, crate::tolerance::check(t)?);
+        let preserve_key_order = opts.module.is_some()
+            || manifest.as_ref().is_none_or(|m| {
+                matches!(
+                    m.language,
+                    crate::lang::Lang::Ts | crate::lang::Lang::Python
+                )
+            });
+        outcome = crate::tolerance::apply(
+            outcome,
+            crate::tolerance::check(t)?,
+            opts.ignore_key_order || !preserve_key_order,
+        );
     }
     outcome.mismatches.truncate(SHOWN_MISMATCHES);
     anyhow::ensure!(
