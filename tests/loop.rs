@@ -648,7 +648,7 @@ fn go_packages_bridge_record_and_diff() {
     );
     let wrapper = std::fs::read_to_string(dir.join("go/strkit.go")).unwrap();
     assert!(
-        wrapper.contains("func ParsePort(s string) (int, error) {"),
+        wrapper.contains("func ParsePort(raArg0 string) (int, error) {"),
         "{wrapper}"
     );
     assert!(wrapper.contains("type Point struct"), "{wrapper}");

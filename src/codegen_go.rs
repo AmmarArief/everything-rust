@@ -279,11 +279,7 @@ func rustAnythingMust(err error) {
             continue;
         }
         let (results, fallible) = results(f);
-        let params: Vec<String> = f
-            .params
-            .iter()
-            .map(|p| format!("{} {}", p.name, p.native_type.as_deref().unwrap_or("any")))
-            .collect();
+        let params = wrapper_params(f);
         let mut all_results = results.clone();
         if fallible {
             all_results.push("error".into());
@@ -293,7 +289,7 @@ func rustAnythingMust(err error) {
             1 => format!(" {}", all_results[0]),
             _ => format!(" ({})", all_results.join(", ")),
         };
-        let args: Vec<&str> = f.params.iter().map(|p| p.name.as_str()).collect();
+        let args: Vec<String> = (0..f.params.len()).map(wrapper_arg).collect();
         let call_args = if args.is_empty() {
             String::new()
         } else {
@@ -307,7 +303,7 @@ func rustAnythingMust(err error) {
             f.file,
             f.line,
             f.name,
-            params.join(", ")
+            params
         );
         let names: Vec<String> = (0..results.len()).map(|i| format!("r{i}")).collect();
         let decls: String = results
@@ -426,12 +422,13 @@ fn typed_prototypes(m: &Manifest, api: &crate::codegen::PortApi) -> String {
     for f in &api.functions {
         let Some(e) = typed(m, f) else { continue };
         let mut params: Vec<String> = Vec::new();
-        for p in &e.params {
+        for (index, p) in e.params.iter().enumerate() {
+            let name = format!("ra_arg{index}");
             let t = typed_type(p.native_type.as_deref().unwrap_or_default()).expect("typed");
             if t.c == "string" {
-                params.push(format!("const uint8_t *{0}_ptr, size_t {0}_len", p.name));
+                params.push(format!("const uint8_t *{name}_ptr, size_t {name}_len"));
             } else {
-                params.push(format!("{} {}", t.c, p.name));
+                params.push(format!("{} {name}", t.c));
             }
         }
         match results(e).0.first().and_then(|r| typed_type(r)) {
@@ -477,22 +474,34 @@ func rustAnythingErr(p *C.char) string {
 }
 "#;
 
+// Parameter names are local to the wrapper. Positional names keep them out of the
+// generated locals and imports (for example, `status`, `out`, and `C`).
+fn wrapper_arg(index: usize) -> String {
+    format!("raArg{index}")
+}
+
+fn wrapper_params(export: &ExportedFn) -> String {
+    export
+        .params
+        .iter()
+        .enumerate()
+        .map(|(index, param)| {
+            format!(
+                "{} {}",
+                wrapper_arg(index),
+                param.native_type.as_deref().unwrap_or("any")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// The Go wrapper function of a typed export: one cgo call, retried once with a bigger buffer
 /// when a string result does not fit.
 fn typed_go(e: &ExportedFn) -> String {
     let (results, fallible) = results(e);
     let result = results.first().cloned();
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|p| {
-            format!(
-                "{} {}",
-                p.name,
-                p.native_type.as_deref().unwrap_or_default()
-            )
-        })
-        .collect();
+    let params = wrapper_params(e);
     let mut sig_results: Vec<String> = result.iter().cloned().collect();
     if fallible {
         sig_results.push("error".into());
@@ -503,16 +512,17 @@ fn typed_go(e: &ExportedFn) -> String {
         _ => format!(" ({})", sig_results.join(", ")),
     };
     let mut args: Vec<String> = Vec::new();
-    for p in &e.params {
+    for (index, p) in e.params.iter().enumerate() {
+        let name = wrapper_arg(index);
         let t = typed_type(p.native_type.as_deref().unwrap_or_default()).expect("typed");
         match t.c {
             "string" => {
-                args.push(format!("rustAnythingStr({})", p.name));
-                args.push(format!("C.size_t(len({}))", p.name));
+                args.push(format!("rustAnythingStr({name})"));
+                args.push(format!("C.size_t(len({name}))"));
             }
-            "int64_t" => args.push(format!("C.int64_t({})", p.name)),
-            "double" => args.push(format!("C.double({})", p.name)),
-            _ => args.push(format!("C.bool({})", p.name)),
+            "int64_t" => args.push(format!("C.int64_t({name})")),
+            "double" => args.push(format!("C.double({name})")),
+            _ => args.push(format!("C.bool({name})")),
         }
     }
     let rt = result.as_deref().and_then(typed_type);
@@ -607,7 +617,7 @@ fn typed_go(e: &ExportedFn) -> String {
         e.file,
         e.line,
         e.name,
-        params.join(", ")
+        params
     )
 }
 
@@ -664,7 +674,8 @@ unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
         let mut params = Vec::new();
         let mut convert = String::new();
         let mut args = Vec::new();
-        for (p, (name, _)) in e.params.iter().zip(&f.params) {
+        for (index, p) in e.params.iter().enumerate() {
+            let name = format!("ra_arg{index}");
             let t = typed_type(p.native_type.as_deref().unwrap_or_default()).expect("typed");
             if t.c == "string" {
                 params.push(format!("{name}_ptr: *const u8, {name}_len: usize"));
@@ -675,7 +686,7 @@ unsafe fn fail(err: *mut *mut c_char, message: String) -> i32 {
             } else {
                 params.push(format!("{name}: {}", t.rust));
             }
-            args.push(name.clone());
+            args.push(name);
         }
         let rt = results(e).0.first().and_then(|r| typed_type(r));
         match rt.as_ref().map(|t| t.c) {
@@ -919,17 +930,7 @@ func cwPtr(b []byte) *C.uint8_t {
 /// The Go wrapper function of a wire export: encode the arguments, one cgo call, decode.
 fn wire_go(e: &ExportedFn, params: &[(String, Ty)], result: Option<&Ty>) -> String {
     let (results, fallible) = results(e);
-    let sig_params: Vec<String> = e
-        .params
-        .iter()
-        .map(|p| {
-            format!(
-                "{} {}",
-                p.name,
-                p.native_type.as_deref().unwrap_or_default()
-            )
-        })
-        .collect();
+    let sig_params = wrapper_params(e);
     let mut sig_results = results.clone();
     if fallible {
         sig_results.push("error".into());
@@ -940,8 +941,8 @@ fn wire_go(e: &ExportedFn, params: &[(String, Ty)], result: Option<&Ty>) -> Stri
         _ => format!(" ({})", sig_results.join(", ")),
     };
     let mut body = String::from("\tcwb := make([]byte, 0, 128)\n");
-    for (name, t) in params {
-        body.push_str(&go_enc(name, t, 0));
+    for (index, (_, t)) in params.iter().enumerate() {
+        body.push_str(&go_enc(&wrapper_arg(index), t, 0));
     }
     let names: Vec<String> = (0..results.len()).map(|i| format!("r{i}")).collect();
     for (i, r) in results.iter().enumerate() {
@@ -997,7 +998,7 @@ fn wire_go(e: &ExportedFn, params: &[(String, Ty)], result: Option<&Ty>) -> Stri
         e.file,
         e.line,
         e.name,
-        sig_params.join(", ")
+        sig_params
     )
 }
 
@@ -1034,8 +1035,14 @@ fn wire_rs_fn(
 ) -> Option<String> {
     let mut statics = String::new();
     let prefix = format!("S_{}", f.js_name.to_uppercase());
-    let reads = crate::wire::rust_read_args(params, &f.params, &prefix, &mut statics)?;
-    let args: Vec<&str> = f.params.iter().map(|(n, _)| n.as_str()).collect();
+    let bindings: Vec<_> = f
+        .params
+        .iter()
+        .enumerate()
+        .map(|(index, (_, ty))| (format!("ra_arg{index}"), ty.clone()))
+        .collect();
+    let reads = crate::wire::rust_read_args(params, &bindings, &prefix, &mut statics)?;
+    let args: Vec<&str> = bindings.iter().map(|(n, _)| n.as_str()).collect();
     let call = format!("port::{}({})", f.rust_name, args.join(", "));
     let call = if f.fallible { format!("{call}?") } else { call };
     let write = match result {
@@ -1516,6 +1523,45 @@ pub fn shadow(m: &Manifest, original: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn go_codegen_reserves_its_own_bindings() {
+        let exports = crate::lang::go::exports(
+            "names.go",
+            r#"package names
+func Typed(out int, C string) int { return out + len(C) }
+func Wire(cwb []int, r []int) []int { return append(cwb, r...) }
+func Json(raw uint64) uint64 { return raw }"#,
+        );
+        let manifest = Manifest {
+            schema: String::new(),
+            root: std::path::PathBuf::new(),
+            root_written: None,
+            unit: "names.go".into(),
+            language: crate::lang::Lang::Go,
+            kind: crate::bridge::Kind::Ffi,
+            crate_name: "names-rs".into(),
+            exports,
+            classes: vec![],
+            js_only: vec![],
+            batches: vec![],
+            float_tolerance: None,
+        };
+        let mut api = crate::codegen::parse_port(&crate::codegen::port_rs(&manifest));
+        crate::bridge::match_export_names(&manifest, &mut api);
+        let go = wrapper(&manifest, &api);
+        assert!(go.contains("func Typed(raArg0 int, raArg1 string) int {"));
+        assert!(go.contains("C.rust_anything_t_Typed(C.int64_t(raArg0),"));
+        assert!(go.contains("int64_t ra_arg0, const uint8_t *ra_arg1_ptr"));
+        assert!(go.contains("func Wire(raArg0 []int, raArg1 []int) []int {"));
+        assert!(go.contains("C.rust_anything_w_Wire(cwPtr(cwb)"));
+        assert!(go.contains("func Json(raArg0 uint64) uint64 {"));
+        assert!(go.contains(r#"raw, err := rustAnythingCall("Json", raArg0)"#));
+        let typed = typed_rs(&manifest, &api);
+        assert!(typed.contains("port::typed(ra_arg0, ra_arg1)"));
+        let wire = wire_rs(&manifest, &api);
+        assert!(wire.contains("port::wire(ra_arg0, ra_arg1)"));
+    }
 
     #[test]
     fn qualifies_local_types() {
