@@ -88,7 +88,23 @@ pub fn record(crate_dir: &Path, m: &Manifest, cases: &[Value]) -> Result<PathBuf
     std::fs::create_dir_all(crate_dir.join(WORK_DIR))?;
     std::fs::write(&inputs, serde_json::to_string(cases)?)?;
     let out = crate_dir.join(CASES);
-    driver(crate_dir, m, "record", &inputs, &out, 0, false)?;
+    let pending = crate_dir.join(WORK_DIR).join("recording.jsonl");
+    driver(crate_dir, m, "record", &inputs, &pending, 0, false)?;
+    let recorded: std::collections::HashSet<String> = std::fs::read_to_string(&pending)?
+        .lines()
+        .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        .filter_map(|c| c["fn"].as_str().map(str::to_string))
+        .collect();
+    let mut asked: Vec<&str> = cases.iter().filter_map(|c| c["fn"].as_str()).collect();
+    asked.sort_unstable();
+    asked.dedup();
+    if let Some(name) = asked.into_iter().find(|name| !recorded.contains(*name)) {
+        bail!(
+            "cannot encode recorded result for {name}: no case could be written as JSON \
+             (a binary String result?); kept the previous {CASES}"
+        );
+    }
+    std::fs::rename(&pending, &out).with_context(|| format!("publishing {}", out.display()))?;
     Ok(out)
 }
 
