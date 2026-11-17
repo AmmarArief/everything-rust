@@ -534,4 +534,4 @@ especially welcome.
 
 ## License
 
-[MIT](./LICENSE). Ports and generated code in your repository are yours.
+[MIT](./LICENSE) © [Erkam Yaman](https://github.com/erkamyaman). Ports and generated code in your repository are yours.
