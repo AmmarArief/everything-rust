@@ -22,6 +22,15 @@ fn near(e: f64, a: f64, tolerance: f64) -> bool {
 
 /// JSON results: numbers within the tolerance, everything else equal.
 pub fn values_close(expected: &Value, actual: &Value, tolerance: f64) -> bool {
+    values_close_with_order(expected, actual, tolerance, true)
+}
+
+fn values_close_with_order(
+    expected: &Value,
+    actual: &Value,
+    tolerance: f64,
+    ignore_key_order: bool,
+) -> bool {
     match (expected, actual) {
         (Value::Number(e), Value::Number(a)) => {
             if e == a {
@@ -36,12 +45,18 @@ pub fn values_close(expected: &Value, actual: &Value, tolerance: f64) -> bool {
             }
         }
         (Value::Array(e), Value::Array(a)) => {
-            e.len() == a.len() && e.iter().zip(a).all(|(x, y)| values_close(x, y, tolerance))
+            e.len() == a.len()
+                && e.iter()
+                    .zip(a)
+                    .all(|(x, y)| values_close_with_order(x, y, tolerance, ignore_key_order))
         }
         (Value::Object(e), Value::Object(a)) => {
             e.len() == a.len()
-                && e.iter()
-                    .all(|(k, x)| a.get(k).is_some_and(|y| values_close(x, y, tolerance)))
+                && (ignore_key_order || e.keys().eq(a.keys()))
+                && e.iter().all(|(k, x)| {
+                    a.get(k)
+                        .is_some_and(|y| values_close_with_order(x, y, tolerance, ignore_key_order))
+                })
         }
         _ => expected == actual,
     }
@@ -119,14 +134,19 @@ pub fn line_close(expected: &str, actual: &str, tolerance: f64) -> bool {
 }
 
 /// A diff outcome with the mismatches that are within the tolerance counted as passed.
-pub fn apply(
+pub fn apply(outcome: crate::harness::DiffOutcome, tolerance: f64) -> crate::harness::DiffOutcome {
+    apply_with_order(outcome, tolerance, true)
+}
+
+pub(crate) fn apply_with_order(
     mut outcome: crate::harness::DiffOutcome,
     tolerance: f64,
+    ignore_key_order: bool,
 ) -> crate::harness::DiffOutcome {
     let before = outcome.mismatches.len();
-    outcome
-        .mismatches
-        .retain(|m| !values_close(&m["expected"], &m["actual"], tolerance));
+    outcome.mismatches.retain(|m| {
+        !values_close_with_order(&m["expected"], &m["actual"], tolerance, ignore_key_order)
+    });
     let forgiven = before - outcome.mismatches.len();
     outcome.passed += forgiven;
     outcome.failed = outcome.failed.saturating_sub(forgiven);
