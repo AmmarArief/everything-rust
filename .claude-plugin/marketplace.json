@@ -1,7 +1,7 @@
 {
   "name": "rust-anything",
   "owner": {
-    "name": "rust-anything authors"
+    "name": "Erkam Yaman"
   },
   "description": "rust-anything: find the hot loop in your TypeScript, Python, C, Go, Ruby or Java code, move it to Rust, and prove nothing else changed.",
   "plugins": [

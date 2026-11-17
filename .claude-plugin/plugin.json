@@ -2,7 +2,7 @@
   "name": "rust-anything",
   "version": "1.1.0",
   "description": "Rewrite your app in Rust, one piece at a time, proving nothing changed: profile, bridge, record, diff, bench, shadow and gate, for TypeScript/JavaScript, Python, C, Go, Ruby and Java.",
-  "author": { "name": "rust-anything authors" },
+  "author": { "name": "Erkam Yaman", "url": "https://github.com/erkamyaman" },
   "homepage": "https://github.com/erkamyaman/rust-anything",
   "repository": "https://github.com/erkamyaman/rust-anything",
   "license": "MIT",
