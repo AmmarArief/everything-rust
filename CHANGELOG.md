@@ -1,7 +1,20 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 (2026-11-18)
 
+Two new languages in preview (PHP and C#), a stricter `diff`, a sturdier napi bridge, and 18
+fixes from the first outside contributor.
+
+- 18 pull requests from @rudycelekli, merged with their history: HTTP responses that end early
+  or carry informational headers (#7, #8), empty recordings no longer pass (#9), float tolerance
+  keeps key order (#10), own `__proto__` keys survive (#11), curl examples with a query right
+  after the host (#12), TS projects without a manifest and `.mts`/`.cts` (#13), `setup` keeps
+  custom MCP server options (#14), replay deadlines cover child processes (#15), colliding case
+  names (#16), binary CLI cases keep both streams exactly (#17), the Rust 1.97 minimum is declared
+  and checked (#18), a missing port source fails `gate` (#19), Ruby recordings are published
+  only when complete (#20), JNI names with `$` and non-ASCII (#21), Go internal packages and
+  versioned modules (#22), generated Go names that clash with parameters (#23), and invalid Java
+  replay arguments (#24).
 - PHP, in preview: detected from `composer.json` or `.php` files. `analyze` reads Composer
   packages and PSR-4 roots, resolves `require` and `use`, finds functions and public static
   methods with native and phpdoc types, flags PHP's risks (loose `==`, `/` returning floats, byte
