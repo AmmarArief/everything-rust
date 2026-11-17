@@ -16,6 +16,24 @@ fn unit<'r>(report: &'r Report, id: &str) -> &'r UnitReport {
 }
 
 #[test]
+fn detects_manifestless_typescript_modules_and_defaults_to_typescript_when_empty() {
+    use rust_anything::lang::Lang;
+    let root = std::env::temp_dir().join(format!(
+        "rust-anything-detect-modules-{}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&root).unwrap();
+    let empty = Lang::detect(&root);
+    std::fs::create_dir(root.join("generated.java")).unwrap();
+    std::fs::write(root.join("main.mts"), "export function main() {}").unwrap();
+    std::fs::write(root.join("util.cts"), "export function util() {}").unwrap();
+    let modules = analyze(&root);
+    std::fs::remove_dir_all(root).unwrap();
+    assert_eq!(empty, Lang::Ts);
+    assert_eq!(modules.unwrap().summary.source_files, 2);
+}
+
+#[test]
 fn groups_files_into_units_and_skips_fixtures() {
     let report = mini();
     let ids: Vec<&str> = report.units.iter().map(|u| u.id.as_str()).collect();

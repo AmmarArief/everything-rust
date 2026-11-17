@@ -87,11 +87,16 @@ impl Lang {
                 .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("");
+            if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+                continue;
+            }
             if let Some(i) = Self::ALL.iter().position(|l| l.extensions().contains(&ext)) {
                 counts[i] += 1;
             }
         }
-        let best = (0..8).max_by_key(|&i| counts[i]).unwrap_or(0);
+        let best = (0..8)
+            .max_by_key(|&i| (counts[i], std::cmp::Reverse(i)))
+            .unwrap_or(0);
         Self::ALL[best]
     }
 
@@ -109,7 +114,9 @@ impl Lang {
     /// File extensions of the language's source files.
     pub fn extensions(self) -> &'static [&'static str] {
         match self {
-            Self::Ts => &["ts", "tsx", "js", "mjs", "cjs", "jsx"],
+            Self::Ts => &[
+                "ts", "mts", "cts", "js", "mjs", "cjs", "tsx", "jsx", "vue", "svelte", "astro",
+            ],
             Self::Python => &["py"],
             Self::C => &["c", "h"],
             Self::Go => &["go"],
