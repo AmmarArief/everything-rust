@@ -2002,6 +2002,35 @@ mod tests {
         text_matches(e, a, None)
     }
 
+    #[test]
+    fn matching_follows_trycmd() {
+        assert!(text_matches_exact("a\nb\n", "a\nb\n"));
+        assert!(text_matches_exact("now: [..]\n", "now: 1234\n"));
+        assert!(text_matches_exact("x [..] y [..] z\n", "x 1 y 2 y 3 z\n"));
+        assert!(!text_matches_exact("x [..] z\n", "x 1 y\n"));
+        assert!(text_matches_exact(
+            "head\n...\ntail\n",
+            "head\n1\n2\ntail\n"
+        ));
+        assert!(text_matches_exact("head\n...\ntail\n", "head\ntail\n"));
+        assert!(!text_matches_exact("head\ntail\n", "head\nmid\ntail\n"));
+        assert!(text_matches_exact("a\r\nb", "a\nb\n"));
+    }
+
+    #[test]
+    fn numbers_match_within_the_tolerance() {
+        let e = "step 1\nenergy 0.3\nat [..]\n";
+        let a = "step 1\nenergy 0.30000000000000004\nat 12:00\n";
+        assert!(!text_matches(e, a, None));
+        assert!(text_matches(e, a, Some(1e-9)));
+        assert!(!text_matches(
+            e,
+            "step 2\nenergy 0.3\nat 12:00\n",
+            Some(1e-9)
+        ));
+        assert!(!render_diff(e, a, Some(1e-9)).contains("energy"));
+    }
+
     #[cfg(unix)]
     #[test]
     fn binary_capture_replays_its_text_companion_byte_for_byte() {
@@ -2040,35 +2069,6 @@ mod tests {
             replayed.failures
         );
         std::fs::remove_dir_all(repo).unwrap();
-    }
-
-    #[test]
-    fn matching_follows_trycmd() {
-        assert!(text_matches_exact("a\nb\n", "a\nb\n"));
-        assert!(text_matches_exact("now: [..]\n", "now: 1234\n"));
-        assert!(text_matches_exact("x [..] y [..] z\n", "x 1 y 2 y 3 z\n"));
-        assert!(!text_matches_exact("x [..] z\n", "x 1 y\n"));
-        assert!(text_matches_exact(
-            "head\n...\ntail\n",
-            "head\n1\n2\ntail\n"
-        ));
-        assert!(text_matches_exact("head\n...\ntail\n", "head\ntail\n"));
-        assert!(!text_matches_exact("head\ntail\n", "head\nmid\ntail\n"));
-        assert!(text_matches_exact("a\r\nb", "a\nb\n"));
-    }
-
-    #[test]
-    fn numbers_match_within_the_tolerance() {
-        let e = "step 1\nenergy 0.3\nat [..]\n";
-        let a = "step 1\nenergy 0.30000000000000004\nat 12:00\n";
-        assert!(!text_matches(e, a, None));
-        assert!(text_matches(e, a, Some(1e-9)));
-        assert!(!text_matches(
-            e,
-            "step 2\nenergy 0.3\nat 12:00\n",
-            Some(1e-9)
-        ));
-        assert!(!render_diff(e, a, Some(1e-9)).contains("energy"));
     }
 
     #[test]
