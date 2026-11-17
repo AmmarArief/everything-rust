@@ -1242,8 +1242,6 @@ pub(crate) fn settle_text(
 }
 
 fn settle(norm: &Normalizers, case: &Case, one: &Run, two: &Run) -> Recorded {
-    // trycmd's binary flag applies to both streams. Store both byte-for-byte whenever
-    // either contains invalid UTF-8 so normalization cannot create a false mismatch.
     let binary = [&one.stdout, &one.stderr, &two.stdout, &two.stderr]
         .iter()
         .any(|bytes| std::str::from_utf8(bytes).is_err());
