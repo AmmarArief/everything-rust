@@ -119,18 +119,21 @@ fn whole_app_finds_the_shape_and_entry_points_in_every_language() {
         ("cli/go", "cli", "main.go"),
         ("cli/ruby", "cli", "tcli.rb"),
         ("cli/java", "cli", "Tcli.java"),
+        ("cli/php", "cli", "tcli.php"),
         ("http/ts", "server", "server.js"),
         ("http/python", "server", "server.py"),
         ("http/c", "server", "server.c"),
         ("http/go", "server", "main.go"),
         ("http/ruby", "server", "server.rb"),
         ("http/java", "server", "Server.java"),
+        ("http/php", "server", "server.php"),
         ("go", "cli", "cmd/strkit"),
         ("c", "cli", "src/main.c"),
         ("mini", "library", "a"),
         ("python", "library", "textkit"),
         ("ruby", "library", "textkit"),
         ("java", "library", "textkit"),
+        ("php", "library", "acme/textkit"),
     ];
     for (dir, shape, path) in cases {
         let w = whole(dir);
@@ -149,6 +152,38 @@ fn whole_app_finds_the_shape_and_entry_points_in_every_language() {
             w.dependencies
         );
     }
+}
+
+#[test]
+fn php_units_resolve_psr4_imports_and_map_composer_packages() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/php");
+    let report = analyze(&root).unwrap();
+    assert_eq!(report.language, rust_anything::lang::Lang::Php);
+    let slug = report
+        .units
+        .iter()
+        .find(|u| u.files.iter().any(|f| f.ends_with("Slug.php")))
+        .unwrap();
+    assert_eq!(slug.bridge, Bridge::PhpFfi);
+    let ascii = report
+        .units
+        .iter()
+        .find(|u| u.files.iter().any(|f| f.ends_with("Ascii.php")))
+        .unwrap();
+    assert!(slug.wave > ascii.wave, "Slug imports Ascii: {slug:?}");
+    let w = rust_anything::whole_app::whole_app(&root, &report);
+    let carbon = w
+        .dependencies
+        .iter()
+        .find(|d| d.name == "nesbot/carbon")
+        .unwrap();
+    assert!(carbon.declared);
+    assert_eq!(carbon.fit, "good");
+    assert!(
+        w.dependencies
+            .iter()
+            .all(|d| d.name != "php" && !d.name.starts_with("ext-"))
+    );
 }
 
 #[test]
@@ -211,4 +246,34 @@ fn whole_app_ports_units_that_import_each_other_as_one_piece() {
     assert_eq!(w.pieces.len(), 2);
     assert!(w.decisions.iter().any(|d| d.topic == "tangled units"));
     std::fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn ignore_rules_above_the_repository_are_skipped_and_hiding_everything_warns() {
+    let tmp = std::env::temp_dir().join(format!("ra-ignore-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&tmp);
+    let repo = tmp.join("home/proj");
+    std::fs::create_dir_all(repo.join("src")).unwrap();
+    std::fs::write(tmp.join("home/.gitignore"), "*\n").unwrap();
+    std::fs::write(repo.join("package.json"), r#"{"name":"x"}"#).unwrap();
+    std::fs::write(
+        repo.join("src/a.ts"),
+        "export function f(t: string): string { return t; }\n",
+    )
+    .unwrap();
+
+    let report = analyze(&repo).unwrap();
+    assert_eq!(report.summary.source_files, 1);
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+
+    std::fs::create_dir(repo.join(".git")).unwrap();
+    assert_eq!(analyze(&repo).unwrap().summary.source_files, 1);
+
+    std::fs::write(repo.join(".gitignore"), "*\n").unwrap();
+    let report = analyze(&repo).unwrap();
+    assert_eq!(report.summary.source_files, 0);
+    assert_eq!(report.warnings.len(), 1);
+    assert!(report.warnings[0].contains("1 TypeScript/JavaScript files"));
+
+    std::fs::remove_dir_all(&tmp).unwrap();
 }

@@ -259,6 +259,7 @@ pub fn uses_regex(lang: crate::lang::Lang, source: &str) -> bool {
             ".split(",
         ]),
         Lang::C => has(&["<regex.h>", "pcre", "regcomp("]),
+        Lang::Php => has(&["preg_", "mb_ereg"]),
     }
 }
 

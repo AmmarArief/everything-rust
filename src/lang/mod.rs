@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod c;
 pub mod go;
 pub mod java;
+pub mod php;
 pub mod python;
 pub mod ruby;
 pub mod syntax;
@@ -25,6 +26,7 @@ pub enum Lang {
     Go,
     Ruby,
     Java,
+    Php,
 }
 
 impl Lang {
@@ -36,6 +38,7 @@ impl Lang {
             Self::Go => "Go",
             Self::Ruby => "Ruby",
             Self::Java => "Java",
+            Self::Php => "PHP",
         }
     }
 
@@ -54,11 +57,14 @@ impl Lang {
         if has("Gemfile") {
             return Self::Ruby;
         }
+        if has("composer.json") {
+            return Self::Php;
+        }
         if has("package.json") {
             return Self::Ts;
         }
-        let mut counts = [0usize; 6];
-        for entry in ignore::WalkBuilder::new(root)
+        let mut counts = [0usize; 7];
+        for entry in crate::walk::builder(root)
             .hidden(true)
             .require_git(false)
             .build()
@@ -69,26 +75,35 @@ impl Lang {
                 .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("");
-            let i = match ext {
-                "ts" | "tsx" | "js" | "mjs" | "cjs" | "jsx" => 0,
-                "py" => 1,
-                "c" | "h" => 2,
-                "go" => 3,
-                "rb" => 4,
-                "java" => 5,
-                _ => continue,
-            };
-            counts[i] += 1;
+            if let Some(i) = Self::ALL.iter().position(|l| l.extensions().contains(&ext)) {
+                counts[i] += 1;
+            }
         }
-        let best = (0..6).max_by_key(|&i| counts[i]).unwrap_or(0);
-        [
-            Self::Ts,
-            Self::Python,
-            Self::C,
-            Self::Go,
-            Self::Ruby,
-            Self::Java,
-        ][best]
+        let best = (0..7).max_by_key(|&i| counts[i]).unwrap_or(0);
+        Self::ALL[best]
+    }
+
+    const ALL: [Self; 7] = [
+        Self::Ts,
+        Self::Python,
+        Self::C,
+        Self::Go,
+        Self::Ruby,
+        Self::Java,
+        Self::Php,
+    ];
+
+    /// File extensions of the language's source files.
+    pub fn extensions(self) -> &'static [&'static str] {
+        match self {
+            Self::Ts => &["ts", "tsx", "js", "mjs", "cjs", "jsx"],
+            Self::Python => &["py"],
+            Self::C => &["c", "h"],
+            Self::Go => &["go"],
+            Self::Ruby => &["rb"],
+            Self::Java => &["java"],
+            Self::Php => &["php"],
+        }
     }
 }
 
@@ -107,6 +122,7 @@ pub fn discover(lang: Lang, root: &Path) -> anyhow::Result<crate::ts::discover::
         Lang::Go => go::discover(root),
         Lang::Ruby => ruby::discover(root),
         Lang::Java => java::discover(root),
+        Lang::Php => php::discover(root),
         _ => anyhow::bail!("{} is not supported yet", lang.name()),
     }
 }
@@ -118,6 +134,7 @@ pub fn scan(lang: Lang, _path: &str, text: &str) -> crate::ts::scan::FileFacts {
         Lang::Go => go::scan(text),
         Lang::Ruby => ruby::scan(text),
         Lang::Java => java::scan(text),
+        Lang::Php => php::scan(text),
         _ => crate::ts::scan::FileFacts::default(),
     }
 }
@@ -140,6 +157,7 @@ pub fn resolve(
         Lang::Go => go::resolve(spec, index, ws),
         Lang::Ruby => ruby::resolve(from, spec, index, ws),
         Lang::Java => java::resolve(spec, index, ws),
+        Lang::Php => php::resolve(from, spec, index, ws),
         _ => Resolution::Unresolved,
     }
 }
@@ -158,6 +176,7 @@ pub fn exports(
         Lang::Go => (go::exports(path, text), Vec::new()),
         Lang::Ruby => (ruby::exports(path, text), Vec::new()),
         Lang::Java => (java::exports(path, text), Vec::new()),
+        Lang::Php => (php::exports(path, text), Vec::new()),
         _ => (Vec::new(), Vec::new()),
     }
 }
@@ -169,6 +188,7 @@ pub fn lookup(lang: Lang, name: &str) -> Option<crate::ts::deps::CrateMatch> {
         Lang::Go => go::lookup(name),
         Lang::Ruby => ruby::lookup(name),
         Lang::Java => java::lookup(name),
+        Lang::Php => php::lookup(name),
         _ => None,
     }
 }

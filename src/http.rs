@@ -20,8 +20,9 @@ use crate::app::{
 
 pub const HTTP_DIR: &str = "http";
 const READY: Duration = Duration::from_secs(60);
-const SKIP_HEADERS: [&str; 11] = [
+const SKIP_HEADERS: [&str; 12] = [
     "date",
+    "host",
     "server",
     "connection",
     "keep-alive",

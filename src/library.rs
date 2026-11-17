@@ -285,14 +285,13 @@ pub(crate) fn original_references(repo: &Path, state: &State) -> Vec<String> {
         .flat_map(|u| [u.crate_name.clone(), u.crate_name.replace('-', "_")])
         .collect();
     let mut out = Vec::new();
-    let walker = ignore::WalkBuilder::new(repo)
-        .filter_entry(|e| {
-            !matches!(
-                e.file_name().to_string_lossy().as_ref(),
-                "rust" | "target" | "node_modules" | ".git"
-            )
-        })
-        .build();
+    let walker = crate::walk::filtered(repo, |e| {
+        !matches!(
+            e.file_name().to_string_lossy().as_ref(),
+            "rust" | "target" | "node_modules" | ".git"
+        )
+    })
+    .build();
     for entry in walker.flatten() {
         let path = entry.path();
         if !path.is_file() || std::fs::metadata(path).is_ok_and(|m| m.len() > 1 << 20) {

@@ -3,7 +3,6 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use ignore::WalkBuilder;
 
 /// A folder with a `package.json`.
 #[derive(Clone, Debug)]
@@ -61,14 +60,13 @@ const TEST_DIRS: &[&str] = &["test", "tests", "__tests__", "e2e"];
 pub fn discover(root: &Path) -> Result<Workspace> {
     let mut manifests = Vec::new();
     let mut candidates = Vec::new();
-    let walker = WalkBuilder::new(root)
-        .hidden(true)
-        .require_git(false)
-        .filter_entry(|entry| {
-            !(entry.file_type().is_some_and(|t| t.is_dir())
-                && SKIP_DIRS.contains(&entry.file_name().to_string_lossy().as_ref()))
-        })
-        .build();
+    let walker = crate::walk::filtered(root, |entry| {
+        !(entry.file_type().is_some_and(|t| t.is_dir())
+            && SKIP_DIRS.contains(&entry.file_name().to_string_lossy().as_ref()))
+    })
+    .hidden(true)
+    .require_git(false)
+    .build();
     for entry in walker {
         let entry = entry?;
         if !entry.file_type().is_some_and(|t| t.is_file()) {

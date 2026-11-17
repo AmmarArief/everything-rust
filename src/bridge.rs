@@ -911,6 +911,13 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             unit.notes.first().map_or("", String::as_str)
         );
     }
+    if unit.bridge == Bridge::PhpFfi {
+        bail!(
+            "bridging PHP units into Rust comes next (PHP FFI over a C ABI); for now a PHP app can \
+             be analyzed, recorded and replayed (`app record`, `app replay`) and get a Rust front \
+             door (`app front-door`) that hands everything to the original"
+        );
+    }
     let kind = opts.kind.unwrap_or(match unit.bridge {
         Bridge::WasmBindgen => Kind::Wasm,
         Bridge::Pyo3 => Kind::Pyo3,

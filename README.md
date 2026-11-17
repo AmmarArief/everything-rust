@@ -128,14 +128,20 @@ done.
 | Go | package | typed cgo calls and a generated binary wire, in a package with the original API | a generated Go driver, built as its own module |
 | Ruby | file or folder of module functions | a magnus extension under the original modules | a generated Ruby driver |
 | Java | package of `public static` methods | typed JNI and a generated binary wire, in wrapper classes with the original methods | a generated reflection driver |
+| PHP (preview) | folder of functions and `public static` methods | coming next: PHP FFI over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
 
 Every language except C also gets batch classes (`--batch`): the items cross once and stay in
 Rust, and each call runs over all of them on all cores.
 
 The language is detected from the repository (`go.mod`, `pom.xml`, `pyproject.toml`, `Gemfile`,
-`package.json`, else the most common source files); `--lang` overrides it. Types come from the
-source: TS types, Python hints, C and Go and Java signatures, Ruby YARD tags; untyped parameters
-used as numbers are inferred as numbers.
+`composer.json`, `package.json`, else the most common source files); `--lang` overrides it. Types
+come from the source: TS types, Python hints, C and Go and Java signatures, Ruby YARD tags, PHP
+types and phpdoc; untyped parameters used as numbers are inferred as numbers.
+
+PHP is in preview: `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
+such as loose comparison and integer overflow into floats, Composer packages mapped to crates),
+and a PHP CLI or server can be recorded, replayed and put behind a Rust front door. Porting its
+units into Rust through PHP's FFI is the next step ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
 ## How it works
 

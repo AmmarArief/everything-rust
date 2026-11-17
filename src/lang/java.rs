@@ -75,14 +75,13 @@ fn dependencies(text: &str) -> (Vec<String>, Vec<String>) {
 pub fn discover(root: &Path) -> Result<Workspace> {
     let mut packages: Vec<Package> = Vec::new();
     let mut files = Vec::new();
-    let walker = ignore::WalkBuilder::new(root)
-        .hidden(true)
-        .require_git(false)
-        .filter_entry(|e| {
-            !(e.file_type().is_some_and(|t| t.is_dir())
-                && SKIP_DIRS.contains(&e.file_name().to_string_lossy().as_ref()))
-        })
-        .build();
+    let walker = crate::walk::filtered(root, |e| {
+        !(e.file_type().is_some_and(|t| t.is_dir())
+            && SKIP_DIRS.contains(&e.file_name().to_string_lossy().as_ref()))
+    })
+    .hidden(true)
+    .require_git(false)
+    .build();
     for entry in walker.flatten() {
         if !entry.file_type().is_some_and(|t| t.is_file()) {
             continue;

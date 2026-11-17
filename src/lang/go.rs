@@ -64,15 +64,14 @@ fn requirements(go_mod: &str) -> Vec<String> {
 pub fn discover(root: &Path) -> Result<Workspace> {
     let mut modules = Vec::new();
     let mut files = Vec::new();
-    let walker = ignore::WalkBuilder::new(root)
-        .hidden(true)
-        .require_git(false)
-        .filter_entry(|e| {
-            let name = e.file_name().to_string_lossy();
-            !(e.file_type().is_some_and(|t| t.is_dir())
-                && (SKIP_DIRS.contains(&name.as_ref()) || name.starts_with('_')))
-        })
-        .build();
+    let walker = crate::walk::filtered(root, |e| {
+        let name = e.file_name().to_string_lossy();
+        !(e.file_type().is_some_and(|t| t.is_dir())
+            && (SKIP_DIRS.contains(&name.as_ref()) || name.starts_with('_')))
+    })
+    .hidden(true)
+    .require_git(false)
+    .build();
     for entry in walker.flatten() {
         if !entry.file_type().is_some_and(|t| t.is_file()) {
             continue;

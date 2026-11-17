@@ -37,7 +37,7 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
 }
 
 fn java_files(dir: &Path) -> Vec<PathBuf> {
-    ignore::WalkBuilder::new(dir)
+    crate::walk::builder(dir)
         .require_git(false)
         .build()
         .flatten()
