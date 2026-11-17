@@ -91,6 +91,18 @@ fn go() -> Command {
     cmd
 }
 
+/// A local replacement still requires a version compatible with the module path.
+fn local_module_version(module: &str) -> String {
+    let suffix = if module.starts_with("gopkg.in/") {
+        module.trim_end_matches("-unstable").rsplit_once(".v")
+    } else {
+        module.rsplit_once("/v")
+    };
+    suffix
+        .and_then(|(_, major)| major.parse::<u64>().ok())
+        .map_or_else(|| "v0.0.0".into(), |major| format!("v{major}.0.0"))
+}
+
 /// Writes and builds a driver module for the original (`rust: false`) or the wrapper.
 fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
     let crate_dir = &crate_dir.canonicalize()?;
@@ -108,9 +120,10 @@ fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
         (module.clone(), module_dir.clone(), import_path(m)?)
     };
     let mut text = format!(
-        "module rust-anything.local/driver\n\ngo {}\n\nrequire {target_module} v0.0.0\n\nreplace {target_module} => {}\n",
+        "module rust-anything.local/driver\n\ngo {}\n\nrequire {target_module} {}\n\nreplace {target_module} => {}\n",
         go_version(&go_mod),
-        target_dir.display()
+        local_module_version(&target_module),
+        serde_json::to_string(&target_dir.to_str().context("Go module path is not UTF-8")?)?
     );
     if rust {
         // The wrapper copies the original's types only; it needs nothing from the original module.
