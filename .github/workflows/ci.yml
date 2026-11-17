@@ -58,6 +58,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
       - run: cargo install --path .
+      - name: Install the wasm-bindgen CLI the wasm demo uses
+        run: |
+          version=$(grep -A1 '^name = "wasm-bindgen"$' demo/fixtures/classes-rs/Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p')
+          cargo install wasm-bindgen-cli --version "$version" --locked
       - name: Gate every demo port
         run: |
           for crate in demo/fixtures/*-rs; do
