@@ -1242,9 +1242,21 @@ pub(crate) fn settle_text(
 }
 
 fn settle(norm: &Normalizers, case: &Case, one: &Run, two: &Run) -> Recorded {
-    let (stdout, out_noise, out_bin) = settle_text(norm, &one.stdout, &two.stdout);
-    let (stderr, err_noise, err_bin) = settle_text(norm, &one.stderr, &two.stderr);
-    let binary = out_bin || err_bin;
+    // trycmd's binary flag applies to both streams. Store both byte-for-byte whenever
+    // either contains invalid UTF-8 so normalization cannot create a false mismatch.
+    let binary = [&one.stdout, &one.stderr, &two.stdout, &two.stderr]
+        .iter()
+        .any(|bytes| std::str::from_utf8(bytes).is_err());
+    let settle_stream = |a: &[u8], b: &[u8]| {
+        if binary {
+            (a.to_vec(), (a != b).then_some(NoiseKind::Values))
+        } else {
+            let (bytes, noise, _) = settle_text(norm, a, b);
+            (bytes, noise)
+        }
+    };
+    let (stdout, out_noise) = settle_stream(&one.stdout, &two.stdout);
+    let (stderr, err_noise) = settle_stream(&one.stderr, &two.stderr);
     let (w1, w2) = (one.written(case), two.written(case));
     let mut unstable = one.status != two.status
         || !w1.keys().eq(w2.keys())
@@ -1988,6 +2000,46 @@ mod tests {
 
     fn text_matches_exact(e: &str, a: &str) -> bool {
         text_matches(e, a, None)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn binary_capture_replays_its_text_companion_byte_for_byte() {
+        let repo = temp_dir("binary-stream-pair").unwrap();
+        let run = [
+            "/bin/sh".to_string(),
+            "-c".to_string(),
+            r"printf '\377'; printf 'at 2026-11-16T10:00:00Z\n' >&2".to_string(),
+        ];
+        let recorded = record(&RecordOptions {
+            repo: &repo,
+            run: &run,
+            inputs: None,
+            normalize: &["timestamps".into()],
+            name: None,
+            traps: false,
+            timeout_secs: None,
+            http: false,
+            port: None,
+            float_tolerance: None,
+        })
+        .unwrap();
+        assert_eq!(recorded.cases, 1);
+        let replayed = replay(&ReplayOptions {
+            repo: &repo,
+            build: None,
+            timeout_secs: None,
+            port: None,
+            case: None,
+        })
+        .unwrap();
+        assert_eq!(
+            (replayed.passed, replayed.total),
+            (1, 1),
+            "{:?}",
+            replayed.failures
+        );
+        std::fs::remove_dir_all(repo).unwrap();
     }
 
     #[test]
