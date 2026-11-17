@@ -45,6 +45,21 @@ impl Lang {
         }
     }
 
+    /// Where third-party dependencies come from in this language: used when a dependency
+    /// is not in the crate table, so a Python stdlib omission is not reported as `npm`.
+    pub fn registry(self) -> &'static str {
+        match self {
+            Self::Ts => "npm",
+            Self::Python => "PyPI",
+            Self::C => "system libraries",
+            Self::Go => "Go modules",
+            Self::Ruby => "gems",
+            Self::Java => "Maven",
+            Self::Php => "Composer",
+            Self::Csharp => "NuGet",
+        }
+    }
+
     /// The language of a repository: from its manifest files, else its most common source files.
     pub fn detect(root: &Path) -> Self {
         let has = |name: &str| root.join(name).exists();

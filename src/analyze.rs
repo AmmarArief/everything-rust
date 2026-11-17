@@ -680,7 +680,8 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
     }
     if unknown_deps > 0 {
         notes.push(format!(
-            "{unknown_deps} npm dependencies not in the crate table: check them by hand."
+            "{unknown_deps} {} dependencies not in the crate table: check them by hand.",
+            ctx.lang.registry()
         ));
     }
     if unit.unresolved > 0 {
