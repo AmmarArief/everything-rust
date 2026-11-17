@@ -141,6 +141,37 @@ fn record_and_diff_catch_a_behavior_change() {
 }
 
 #[test]
+fn float_tolerance_preserves_object_key_order_unless_requested() {
+    if !node_available() {
+        return;
+    }
+    let dir = bridged("tolerance-order");
+    std::fs::write(
+        dir.join(harness::CASES),
+        r#"{"fn":"f","args":[],"ok":{"nested":{"first":0.3,"second":1}}}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("index.cjs"),
+        "exports.f = () => ({ nested: { second: 1, first: 0.30000000000000004 } })",
+    )
+    .unwrap();
+    let mut opts = DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        float_tolerance: Some(1e-9),
+        node_args: &[],
+    };
+    let strict = harness::diff(&opts).unwrap();
+    opts.ignore_key_order = true;
+    let unordered = harness::diff(&opts).unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+    assert_eq!(strict.failed, 1);
+    assert_eq!(unordered.passed, 1);
+}
+
+#[test]
 fn shadow_returns_the_original_and_reports_mismatches() {
     if !node_available() {
         eprintln!("skipped: node not found");
@@ -934,35 +965,4 @@ fn batches_keep_items_in_rust() {
     let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
     assert!(lib.contains("self.inner.rank(min)"), "{lib}");
     std::fs::remove_dir_all(&dir).unwrap();
-}
-
-#[test]
-fn float_tolerance_preserves_object_key_order_unless_requested() {
-    if !node_available() {
-        return;
-    }
-    let dir = bridged("tolerance-order");
-    std::fs::write(
-        dir.join(harness::CASES),
-        r#"{"fn":"f","args":[],"ok":{"nested":{"first":0.3,"second":1}}}"#,
-    )
-    .unwrap();
-    std::fs::write(
-        dir.join("index.cjs"),
-        "exports.f = () => ({ nested: { second: 1, first: 0.30000000000000004 } })",
-    )
-    .unwrap();
-    let mut opts = DiffOptions {
-        crate_dir: &dir,
-        module: None,
-        ignore_key_order: false,
-        float_tolerance: Some(1e-9),
-        node_args: &[],
-    };
-    let strict = harness::diff(&opts).unwrap();
-    opts.ignore_key_order = true;
-    let unordered = harness::diff(&opts).unwrap();
-    std::fs::remove_dir_all(dir).unwrap();
-    assert_eq!(strict.failed, 1);
-    assert_eq!(unordered.passed, 1);
 }
