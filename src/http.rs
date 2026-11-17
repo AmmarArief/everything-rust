@@ -136,23 +136,29 @@ fn read_chunked(stream: &mut impl Read, mut buf: Vec<u8>) -> Result<Vec<u8>> {
 fn read_response(stream: &mut impl Read, head_only: bool) -> Result<Resp> {
     let mut buf = Vec::new();
     let mut chunk = [0u8; 8192];
-    let header_end = loop {
-        if let Some(i) = find(&buf, b"\r\n\r\n") {
-            break i;
+    let (status, head, mut rest) = loop {
+        let header_end = loop {
+            if let Some(i) = find(&buf, b"\r\n\r\n") {
+                break i;
+            }
+            let n = stream.read(&mut chunk)?;
+            ensure!(n > 0, "the connection closed before a full response");
+            buf.extend_from_slice(&chunk[..n]);
+        };
+        let head = String::from_utf8_lossy(&buf[..header_end]).into_owned();
+        let status_line = head.split("\r\n").next().unwrap_or_default();
+        let status: u16 = status_line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|s| s.parse().ok())
+            .with_context(|| format!("not an HTTP response: `{status_line}`"))?;
+        let rest = buf.split_off(header_end + 4);
+        if status == 101 || !(100..200).contains(&status) {
+            break (status, head, rest);
         }
-        let n = stream.read(&mut chunk)?;
-        ensure!(n > 0, "the connection closed before a full response");
-        buf.extend_from_slice(&chunk[..n]);
+        buf = rest;
     };
-    let head = String::from_utf8_lossy(&buf[..header_end]).into_owned();
-    let mut rest = buf[header_end + 4..].to_vec();
-    let mut lines = head.split("\r\n");
-    let status_line = lines.next().unwrap_or_default();
-    let status: u16 = status_line
-        .split_whitespace()
-        .nth(1)
-        .and_then(|s| s.parse().ok())
-        .with_context(|| format!("not an HTTP response: `{status_line}`"))?;
+    let lines = head.split("\r\n").skip(1);
     let mut headers: BTreeMap<String, String> = BTreeMap::new();
     for line in lines {
         if let Some((k, v)) = line.split_once(':') {
@@ -1035,6 +1041,21 @@ mod tests {
         assert!(parse_curl("curl https://example.com/x", here, here).is_none());
         assert!(parse_curl("curl --unknown x http://localhost/", here, here).is_none());
         assert!(parse_curl("curl http://localhost/ | jq .", here, here).is_none());
+    }
+
+    #[test]
+    fn informational_responses_do_not_replace_the_final_response() {
+        let raw = b"HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 103 Early Hints\r\nLink: </app.js>\r\n\r\nHTTP/1.1 201 Created\r\nContent-Length: 2\r\n\r\nok";
+        let response = read_response(&mut &raw[..], false).unwrap();
+        assert_eq!(response.status, 201);
+        assert_eq!(response.body, b"ok");
+        assert!(!response.headers.contains_key("link"));
+
+        let switching = b"HTTP/1.1 101 Switching Protocols\r\n\r\n";
+        assert_eq!(
+            read_response(&mut &switching[..], false).unwrap().status,
+            101
+        );
     }
 
     #[test]
