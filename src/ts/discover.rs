@@ -54,8 +54,8 @@ const SKIP_DIRS: &[&str] = &[
     "playground",
     "examples",
 ];
-const SOURCE_EXTS: &[&str] = &["ts", "mts", "cts", "js", "mjs", "cjs"];
-const UI_EXTS: &[&str] = &["tsx", "jsx", "vue", "svelte", "astro"];
+pub(crate) const SOURCE_EXTS: &[&str] = &["ts", "mts", "cts", "js", "mjs", "cjs"];
+pub(crate) const UI_EXTS: &[&str] = &["tsx", "jsx", "vue", "svelte", "astro"];
 const TEST_DIRS: &[&str] = &["test", "tests", "__tests__", "e2e"];
 
 pub fn discover(root: &Path) -> Result<Workspace> {

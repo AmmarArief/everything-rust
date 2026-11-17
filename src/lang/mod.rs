@@ -57,6 +57,7 @@ impl Lang {
         if has("package.json") {
             return Self::Ts;
         }
+        use crate::ts::discover::{SOURCE_EXTS, UI_EXTS};
         let mut counts = [0usize; 6];
         for entry in ignore::WalkBuilder::new(root)
             .hidden(true)
@@ -64,13 +65,16 @@ impl Lang {
             .build()
             .flatten()
         {
+            if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+                continue;
+            }
             let ext = entry
                 .path()
                 .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("");
             let i = match ext {
-                "ts" | "tsx" | "js" | "mjs" | "cjs" | "jsx" => 0,
+                ext if SOURCE_EXTS.contains(&ext) || UI_EXTS.contains(&ext) => 0,
                 "py" => 1,
                 "c" | "h" => 2,
                 "go" => 3,
@@ -80,7 +84,9 @@ impl Lang {
             };
             counts[i] += 1;
         }
-        let best = (0..6).max_by_key(|&i| counts[i]).unwrap_or(0);
+        let best = (0..6)
+            .max_by_key(|&i| (counts[i], std::cmp::Reverse(i)))
+            .unwrap_or(0);
         [
             Self::Ts,
             Self::Python,
