@@ -21,6 +21,9 @@
   failed to link (`Undefined symbols ... _Py_IsInitialized`). The PyO3 crate now gets the same
   `build.rs` the Ruby bridge has, which lets the interpreter provide Python's symbols at load time.
   `rust-anything refresh <crate>` adds it to crates bridged before this fix.
+- CI also runs every test on macOS, and a new `tests/native.rs` builds a napi addon and a PyO3
+  extension for real, loads them from Node and Python and replays the recording, so link problems
+  like #4 fail CI instead of reaching users.
 - A `.github/FUNDING.yml` turns on the repository's Sponsor button.
 
 ## 1.2.0 (2026-11-17)
