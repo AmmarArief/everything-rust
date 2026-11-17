@@ -114,9 +114,11 @@ fn read_chunked(stream: &mut impl Read, mut buf: Vec<u8>) -> Result<Vec<u8>> {
         if size == 0 {
             return Ok(body);
         }
-        fill(stream, &mut buf, size + 2)?;
+        let end = size.checked_add(2).context("chunk size is too large")?;
+        fill(stream, &mut buf, end)?;
+        ensure!(&buf[size..end] == b"\r\n", "bad chunk terminator");
         body.extend_from_slice(&buf[..size]);
-        buf.drain(..size + 2);
+        buf.drain(..end);
     }
 }
 
@@ -168,7 +170,9 @@ fn read_response(stream: &mut impl Read, head_only: bool) -> Result<Resp> {
         rest.truncate(len);
         rest
     } else {
-        let _ = stream.read_to_end(&mut rest);
+        stream
+            .read_to_end(&mut rest)
+            .context("reading close-delimited HTTP body")?;
         rest
     };
     Ok(Resp {
@@ -1034,6 +1038,28 @@ mod tests {
         assert_eq!((r.status, r.body.as_slice()), (404, &b"not found"[..]));
         let close = b"HTTP/1.0 500 Oops\r\n\r\nbye";
         assert_eq!(read_response(&mut &close[..], false).unwrap().body, b"bye");
+    }
+
+    #[test]
+    fn malformed_http_chunks_are_errors() {
+        let mut bad_ending = &b"1\r\naXX0\r\n\r\n"[..];
+        assert!(read_chunked(&mut bad_ending, Vec::new()).is_err());
+        let max = format!("{:x}\r\n", usize::MAX);
+        assert!(read_chunked(&mut max.as_bytes(), Vec::new()).is_err());
+    }
+
+    #[test]
+    fn interrupted_close_delimited_body_is_an_error() {
+        struct BrokenBody;
+
+        impl Read for BrokenBody {
+            fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+                Err(std::io::ErrorKind::TimedOut.into())
+            }
+        }
+
+        let response = &b"HTTP/1.0 200 OK\r\n\r\npartial"[..];
+        assert!(read_response(&mut response.chain(BrokenBody), false).is_err());
     }
 
     #[test]
