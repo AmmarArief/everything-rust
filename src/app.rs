@@ -371,6 +371,11 @@ fn run_in(
         cmd.env_remove(key);
     }
     cmd.envs(&case.env).env(FALLBACK_ENV, &log);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt as _;
+        cmd.process_group(0);
+    }
     let mut child = cmd
         .spawn()
         .with_context(|| format!("running `{}`", command.join(" ")))?;
@@ -396,9 +401,24 @@ fn run_in(
     let start = Instant::now();
     let status = loop {
         if let Some(s) = child.try_wait()? {
-            break s.code().map_or(Status::Killed, Status::Code);
+            #[cfg(unix)]
+            let pipes_done =
+                writer.is_finished() && out_reader.is_finished() && err_reader.is_finished();
+            #[cfg(not(unix))]
+            let pipes_done = true;
+            if pipes_done {
+                break s.code().map_or(Status::Killed, Status::Code);
+            }
         }
         if start.elapsed() > timeout {
+            #[cfg(unix)]
+            {
+                // Descendants can retain the pipes even after the immediate child exits.
+                let _ = Command::new("/bin/kill")
+                    .args(["-KILL", "--", &format!("-{}", child.id())])
+                    .stderr(Stdio::null())
+                    .status();
+            }
             let _ = child.kill();
             let _ = child.wait();
             break Status::Timeout;
@@ -1988,6 +2008,24 @@ mod tests {
 
     fn text_matches_exact(e: &str, a: &str) -> bool {
         text_matches(e, a, None)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replay_deadline_covers_descendants_that_keep_pipes_open() {
+        for script in ["sleep 6 & wait", "sleep 6 & exit 0"] {
+            let command = ["/bin/sh".into(), "-c".into(), script.into()];
+            let start = Instant::now();
+            let run = run_case(
+                &command,
+                Path::new("."),
+                &Case::new(Vec::new()),
+                Duration::from_millis(200),
+            )
+            .unwrap();
+            assert!(start.elapsed() < Duration::from_secs(3), "{script}");
+            assert!(run.status == Status::Timeout, "{script}: {}", run.status);
+        }
     }
 
     #[test]
