@@ -935,3 +935,35 @@ fn batches_keep_items_in_rust() {
     assert!(lib.contains("self.inner.rank(min)"), "{lib}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn diff_compares_own_proto_named_properties_in_arguments_and_results() {
+    if !node_available() {
+        return;
+    }
+    let dir = bridged("proto-properties");
+    std::fs::write(
+        dir.join(harness::CASES),
+        r#"{"fn":"echo","args":[{"__proto__":{"value":1}}],"ok":{"__proto__":{"value":1}}}"#,
+    )
+    .unwrap();
+    let module = dir.join("index.cjs");
+    let opts = DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        float_tolerance: None,
+        node_args: &[],
+    };
+    std::fs::write(
+        &module,
+        "exports.echo = x => Object.hasOwn(x, '__proto__') ? x : {}",
+    )
+    .unwrap();
+    let matching = harness::diff(&opts).unwrap();
+    std::fs::write(&module, "exports.echo = () => ({})").unwrap();
+    let changed = harness::diff(&opts).unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+    assert_eq!(matching.passed, 1);
+    assert_eq!(changed.failed, 1);
+}

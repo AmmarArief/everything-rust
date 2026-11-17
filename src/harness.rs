@@ -1265,9 +1265,7 @@ const enc = (v, stack = []) => {
   if (v instanceof Date) return { $date: Number.isNaN(v.getTime()) ? 'Invalid' : v.toISOString() }
   if (v instanceof RegExp) return { $regexp: String(v) }
   if (v instanceof Error) return { $error: v.message }
-  const out = {}
-  for (const k of Object.keys(v)) out[k] = enc(v[k], next)
-  return out
+  return Object.fromEntries(Object.keys(v).map(k => [k, enc(v[k], next)]))
 }
 const dec = (v) => {
   if (Array.isArray(v)) return v.map(dec)
@@ -1279,18 +1277,14 @@ const dec = (v) => {
   if ('$map' in v) return new Map(v.$map.map(([k, x]) => [dec(k), dec(x)]))
   if ('$set' in v) return new Set(v.$set.map(dec))
   if ('$date' in v) return new Date(v.$date)
-  const out = {}
-  for (const [k, x] of Object.entries(v)) out[k] = dec(x)
-  return out
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, dec(x)]))
 }
 const canon = (v, sort) => {
   if (Array.isArray(v)) return v.map(x => canon(x, sort))
   if (v === null || typeof v !== 'object') return v
   const keys = Object.keys(v)
   if (sort) keys.sort()
-  const out = {}
-  for (const k of keys) out[k] = canon(v[k], sort)
-  return out
+  return Object.fromEntries(keys.map(k => [k, canon(v[k], sort)]))
 }
 const same = (a, b, sort = false) => JSON.stringify(canon(a, sort)) === JSON.stringify(canon(b, sort))
 "#;
