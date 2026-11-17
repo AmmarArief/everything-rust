@@ -140,7 +140,6 @@ fn read_response(stream: &mut impl Read, head_only: bool) -> Result<Resp> {
             .and_then(|s| s.parse().ok())
             .with_context(|| format!("not an HTTP response: `{status_line}`"))?;
         let rest = buf.split_off(header_end + 4);
-        // 101 switches protocols, so there is no final HTTP response to read.
         if status == 101 || !(100..200).contains(&status) {
             break (status, head, rest);
         }
