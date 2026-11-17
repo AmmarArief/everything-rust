@@ -56,7 +56,8 @@ fn sh(repo: &Path, program: &str, args: &[&str]) {
         .unwrap();
     assert!(
         out.status.success(),
-        "{program} {args:?}: {}",
+        "{program} {args:?}: {}{}",
+        String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
 }
