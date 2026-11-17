@@ -159,7 +159,7 @@ fn body(f: &PortFn, target: &str, constructor: bool) -> String {
                 } else {
                     let _ = writeln!(
                         body,
-                        "    let {n}: {t} = match &{n} {{\n        None => None,\n        Some(v) => Some(crate::pyconv::arg(v)?),\n    }};"
+                        "    let {n} = match &{n} {{\n        None => None,\n        Some(v) => Some(crate::pyconv::arg(v)?),\n    }};"
                     );
                 }
             } else if direct(t) {
