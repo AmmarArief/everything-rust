@@ -583,10 +583,6 @@ const SHOWN_MISMATCHES: usize = 20;
 
 pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
     let mut outcome = diff_exact(opts)?;
-    anyhow::ensure!(
-        outcome.total > 0,
-        "no recorded cases to compare; run `rust-anything record` first"
-    );
     let saved = Manifest::load(opts.crate_dir)
         .ok()
         .and_then(|m| m.float_tolerance);
@@ -594,6 +590,10 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         outcome = crate::tolerance::apply(outcome, crate::tolerance::check(t)?);
     }
     outcome.mismatches.truncate(SHOWN_MISMATCHES);
+    anyhow::ensure!(
+        outcome.total > 0,
+        "no recorded cases to compare; run `rust-anything record` first"
+    );
     Ok(outcome)
 }
 

@@ -101,6 +101,29 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
 }
 
 #[test]
+fn diff_rejects_an_empty_recording() {
+    if !node_available() {
+        return;
+    }
+    let dir = bridged("empty-recording");
+    std::fs::write(dir.join(harness::CASES), "").unwrap();
+    stand_in(&dir, false);
+    let err = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        float_tolerance: None,
+        node_args: &[],
+    })
+    .unwrap_err();
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert!(
+        err.to_string().contains("no recorded cases to compare"),
+        "{err:#}"
+    );
+}
+
+#[test]
 fn record_and_diff_catch_a_behavior_change() {
     if !node_available() {
         eprintln!("skipped: node not found");
@@ -934,27 +957,4 @@ fn batches_keep_items_in_rust() {
     let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
     assert!(lib.contains("self.inner.rank(min)"), "{lib}");
     std::fs::remove_dir_all(&dir).unwrap();
-}
-
-#[test]
-fn diff_rejects_an_empty_recording() {
-    if !node_available() {
-        return;
-    }
-    let dir = bridged("empty-recording");
-    std::fs::write(dir.join(harness::CASES), "").unwrap();
-    stand_in(&dir, false);
-    let err = harness::diff(&DiffOptions {
-        crate_dir: &dir,
-        module: None,
-        ignore_key_order: false,
-        float_tolerance: None,
-        node_args: &[],
-    })
-    .unwrap_err();
-    std::fs::remove_dir_all(&dir).unwrap();
-    assert!(
-        err.to_string().contains("no recorded cases to compare"),
-        "{err:#}"
-    );
 }
