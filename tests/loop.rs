@@ -647,6 +647,38 @@ fn cc_available() -> bool {
 }
 
 #[test]
+fn c_bridge_string_helper_does_not_collide_with_source_names() {
+    let root = std::env::temp_dir().join(format!("rust-anything-c-names-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(
+        root.join("names.c"),
+        "int c_str(const char *c_str) { return c_str != 0; }\n",
+    )
+    .unwrap();
+    let dir = root.join("bridge");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "names.c",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: Some(rust_anything::lang::Lang::C),
+        batch: Vec::new(),
+    })
+    .unwrap();
+    let status = Command::new("cargo")
+        .args(["check", "--quiet"])
+        .current_dir(&dir)
+        .status()
+        .unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert!(status.success());
+}
+
+#[test]
 fn c_units_bridge_record_and_diff() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/c");
     let dir = std::env::temp_dir().join(format!("rust-anything-c-{}", std::process::id()));
