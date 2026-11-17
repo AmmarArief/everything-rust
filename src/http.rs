@@ -750,6 +750,7 @@ pub(crate) fn record(
         inputs: counts[1],
         traps: counts[2],
         noisy: Vec::new(),
+        noise: Vec::new(),
         unstable: Vec::new(),
         timed_out: Vec::new(),
     };
@@ -758,14 +759,26 @@ pub(crate) fn record(
             outcome.timed_out.push(name.clone());
             continue;
         };
-        let (body, body_noisy, binary) = app::settle_text(norm, &a.body, &b.body);
+        let (body, body_noise, binary) = app::settle_text(norm, &a.body, &b.body);
         let (headers, header_noisy) = settle_headers(norm, &a.headers, &b.headers);
         write_case(&dir, name, req, a.status, &headers, &body, binary)?;
         outcome.cases += 1;
-        if body_noisy || header_noisy {
+        if body_noise.is_some() || header_noisy {
             outcome.noisy.push(name.clone());
         }
-        if a.status != b.status || (binary && body_noisy) {
+        for (field, kind) in [
+            ("body", body_noise),
+            ("headers", header_noisy.then_some(app::NoiseKind::Values)),
+        ] {
+            if let Some(kind) = kind {
+                outcome.noise.push(app::Noise {
+                    case: name.clone(),
+                    field: field.to_string(),
+                    kind,
+                });
+            }
+        }
+        if a.status != b.status || (binary && body_noise.is_some()) {
             outcome.unstable.push(name.clone());
         }
     }
@@ -941,7 +954,13 @@ pub(crate) fn replay(
                     }
                 }
                 if let Some(expected) = &spec.body
-                    && let Some(detail) = app::compare(norm, expected, &resp.body, spec.binary)
+                    && let Some(detail) = app::compare(
+                        norm,
+                        expected,
+                        &resp.body,
+                        spec.binary,
+                        norm.unordered(&spec.name, "body"),
+                    )
                 {
                     problems.push(Problem {
                         field: "body".to_string(),

@@ -34,6 +34,8 @@ pub enum Risk {
     NullReferences,
     /// Changing classes, modules or methods at runtime (monkeypatching, `method_missing`).
     Monkeypatching,
+    /// Code already compiled to machine code (numba, Cython, JAX): Rust gains little speed.
+    AlreadyCompiled,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -72,7 +74,8 @@ impl Risk {
             Self::IntegerSemantics
             | Self::DivisionSemantics
             | Self::Concurrency
-            | Self::NullReferences => Severity::Medium,
+            | Self::NullReferences
+            | Self::AlreadyCompiled => Severity::Medium,
         }
     }
 
@@ -99,6 +102,7 @@ impl Risk {
             Self::Concurrency => "Concurrency",
             Self::NullReferences => "Null references",
             Self::Monkeypatching => "Runtime changes to code",
+            Self::AlreadyCompiled => "Already compiled (numba, Cython, JAX)",
         }
     }
 
@@ -110,7 +114,9 @@ impl Risk {
             }
             Self::RegexSyntax => {
                 "Lookaround, backreferences and the `y` flag are not in the `regex` crate. Use \
-                 `fancy-regex` for those patterns, or rewrite them."
+                 `fancy-regex` for those patterns, or rewrite them, and test them on non-ASCII \
+                 text: `\\w`, `\\b` and case-insensitive matching differ between engines even \
+                 where a pattern compiles."
             }
             Self::DynamicRegex => {
                 "Patterns come from data or config in JS syntax. Rust regex syntax differs, so \
@@ -188,8 +194,128 @@ impl Risk {
                 "Code that rewrites classes or modules at runtime has no Rust equivalent: keep it in \
                  the source language and port the stable parts."
             }
+            Self::AlreadyCompiled => {
+                "numba, Cython and JAX already compile this code to machine code (numba through \
+                 LLVM, like Rust): a Rust port is unlikely to run much faster. Port it for a pure \
+                 Rust app, not for speed, and profile first. Its floats may not match Rust's bit for \
+                 bit (fastmath, operation order): record with `--float-tolerance`."
+            }
         }
     }
+}
+
+/// Strings where regex engines disagree most: `\\w`, `\\d`, `\\s` and `\\b` on non-ASCII,
+/// case-insensitive matching (Turkish i, Kelvin sign, long s, final sigma), joiners, line
+/// separators and combining marks.
+pub const REGEX_TRAPS: [&str; 12] = [
+    "Iı İi",
+    "K \u{212A} k",
+    "ſ s S",
+    "x\u{200D}y 👨\u{200D}👩\u{200D}👧",
+    "a\u{00A0}b\u{2009}c\u{3000}d",
+    "١٢٣ ٤٥",
+    "𝟘𝟙 ²³",
+    "snake_case foo-bar o'neil",
+    "ǅungla Ǆ",
+    "one\r\ntwo\u{2028}three\u{85}four",
+    "cafe\u{301} café",
+    "ΣΑΣ σας ς",
+];
+
+/// Whether source text uses regular expressions, so its string inputs get [`REGEX_TRAPS`].
+pub fn uses_regex(lang: crate::lang::Lang, source: &str) -> bool {
+    use crate::lang::Lang;
+    static JS_LITERAL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let has = |needles: &[&str]| needles.iter().any(|n| source.contains(n));
+    match lang {
+        Lang::Ts => {
+            has(&["RegExp("])
+                || JS_LITERAL
+                    .get_or_init(|| {
+                        regex::Regex::new(
+                            r"(?:^|[=(,:!&|?{;]|return)\s*/[^/*\s\n][^/\n]*/[dgimsuyv]*",
+                        )
+                        .expect("valid regex")
+                    })
+                    .is_match(source)
+        }
+        Lang::Python => has(&[
+            "import re\n",
+            "import re ",
+            "from re import",
+            "import regex",
+            "re.compile(",
+        ]),
+        Lang::Ruby => has(&[
+            "=~", "Regexp", "%r{", ".match(", ".scan(/", ".gsub(/", ".sub(/", ".split(/",
+            ".match?(",
+        ]),
+        Lang::Go => has(&["\"regexp\""]),
+        Lang::Java => has(&[
+            "java.util.regex",
+            "Pattern.compile",
+            ".replaceAll(",
+            ".matches(",
+            ".split(",
+        ]),
+        Lang::C => has(&["<regex.h>", "pcre", "regcomp("]),
+    }
+}
+
+/// What compiles a Python function to machine code, from one of its decorators
+/// (`@njit`, `@numba.jit(cache=True)`, `@cython.cfunc`, `@jax.jit`).
+pub fn compiled_by(decorator: &str) -> Option<&'static str> {
+    let d = decorator.trim().trim_start_matches('@');
+    let name = d.split('(').next().unwrap_or(d).trim();
+    if name.starts_with("cython.") {
+        return Some("Cython");
+    }
+    let (module, last) = name.rsplit_once('.').map_or(("", name), |(m, l)| (m, l));
+    if module == "jax" || module.starts_with("jax.") {
+        return (last == "jit").then_some("JAX");
+    }
+    let numba_module = matches!(module, "" | "numba" | "nb" | "cuda" | "numba.cuda");
+    let numba_name = matches!(
+        last,
+        "jit" | "njit" | "vectorize" | "guvectorize" | "cfunc" | "stencil" | "generated_jit"
+    );
+    (numba_module && numba_name).then_some("numba")
+}
+
+/// The Python functions a decorator compiles: name, line of the `def`, compiler.
+pub fn python_compiled(source: &str) -> Vec<(String, u32, &'static str)> {
+    let mut out = Vec::new();
+    let (mut pending, mut depth) = (None, 0i32);
+    for (i, line) in source.lines().enumerate() {
+        let t = line.trim_start();
+        if depth > 0 {
+            depth += paren_balance(t);
+            continue;
+        }
+        if let Some(rest) = t.strip_prefix('@') {
+            pending = pending.or(compiled_by(rest));
+            depth = paren_balance(t).max(0);
+        } else if let Some(def) = t
+            .strip_prefix("def ")
+            .or_else(|| t.strip_prefix("async def "))
+        {
+            if let Some(by) = pending.take() {
+                let name = def.split(['(', ':']).next().unwrap_or("").trim();
+                out.push((name.to_string(), (i + 1) as u32, by));
+            }
+        } else if !t.is_empty() && !t.starts_with('#') {
+            pending = None;
+        }
+    }
+    out
+}
+
+fn paren_balance(line: &str) -> i32 {
+    line.chars().fold(0, |n, c| match c {
+        '(' => n + 1,
+        ')' => n - 1,
+        _ => n,
+    })
 }
 
 /// Whether a JS regex uses features the `regex` crate does not support.
@@ -225,7 +351,49 @@ pub fn regex_needs_fancy(pattern: &str, flags: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::regex_needs_fancy;
+    use super::{compiled_by, python_compiled, regex_needs_fancy, uses_regex};
+    use crate::lang::Lang;
+
+    #[test]
+    fn finds_regex_use() {
+        assert!(uses_regex(Lang::Ts, "const re = /\\w+/gu;"));
+        assert!(uses_regex(Lang::Ts, "return s.replace(/[^a-z]/g, '')"));
+        assert!(uses_regex(Lang::Ts, "new RegExp(p, 'i')"));
+        assert!(!uses_regex(Lang::Ts, "const half = a / b / 2;"));
+        assert!(!uses_regex(Lang::Ts, "// a comment\nconst x = 1;"));
+        assert!(uses_regex(
+            Lang::Python,
+            "import re\n\ndef f(s):\n    return re.sub('a', 'b', s)\n"
+        ));
+        assert!(!uses_regex(Lang::Python, "import requests\n"));
+        assert!(uses_regex(Lang::Go, "import \"regexp\""));
+        assert!(uses_regex(Lang::Ruby, "s =~ /a/"));
+        assert!(uses_regex(Lang::Java, "Pattern.compile(\"a+\")"));
+        assert!(uses_regex(Lang::C, "#include <regex.h>"));
+    }
+
+    #[test]
+    fn finds_compiled_python() {
+        assert_eq!(compiled_by("@njit"), Some("numba"));
+        assert_eq!(
+            compiled_by("@numba.jit(nopython=True, cache=True)"),
+            Some("numba")
+        );
+        assert_eq!(compiled_by("@nb.vectorize(['f8(f8)'])"), Some("numba"));
+        assert_eq!(compiled_by("@cuda.jit"), Some("numba"));
+        assert_eq!(compiled_by("@cython.cfunc"), Some("Cython"));
+        assert_eq!(compiled_by("@jax.jit"), Some("JAX"));
+        assert_eq!(compiled_by("@functools.lru_cache"), None);
+        assert_eq!(compiled_by("@app.jit_route"), None);
+        let src = "import numba\n\n@numba.njit(\n    cache=True,\n)\ndef step(x, dt):\n    return x + dt\n\n@staticmethod\ndef plain():\n    pass\n\n@property\n@njit\ndef energy(s):\n    return s\n";
+        assert_eq!(
+            python_compiled(src),
+            [
+                ("step".to_string(), 6, "numba"),
+                ("energy".to_string(), 15, "numba")
+            ]
+        );
+    }
 
     #[test]
     fn detects_unsupported_regex_features() {

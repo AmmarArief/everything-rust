@@ -86,6 +86,7 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
         timeout_secs: None,
         http: false,
         port: None,
+        float_tolerance: None,
     })
     .unwrap();
     assert_eq!(outcome.examples, 7, "{outcome:?}");
@@ -597,6 +598,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         timeout_secs: None,
         http: false,
         port: None,
+        float_tolerance: None,
     })
     .unwrap();
     let door = front_door::front_door(&FrontDoorOptions {

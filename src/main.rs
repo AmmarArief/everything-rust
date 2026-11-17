@@ -113,6 +113,10 @@ enum Cmd {
         /// Extra arguments for node, e.g. `--node-arg=--import=tsx`.
         #[arg(long = "node-arg", allow_hyphen_values = true)]
         node_args: Vec<String>,
+        /// Floats match when they differ by at most this times the larger magnitude (absolute
+        /// below 1), e.g. 1e-9 for numeric code. Saved with the crate for diff and gate; 0 removes it.
+        #[arg(long)]
+        float_tolerance: Option<f64>,
     },
     /// 3b. Build the crate's JS module (napi-rs `.node` or wasm-bindgen output).
     Build {
@@ -129,6 +133,9 @@ enum Cmd {
         /// Compare objects regardless of key order.
         #[arg(long)]
         ignore_key_order: bool,
+        /// Floats match within this tolerance for this run (the one saved by `record` otherwise).
+        #[arg(long)]
+        float_tolerance: Option<f64>,
         #[arg(long)]
         json: bool,
         #[arg(long = "node-arg", allow_hyphen_values = true)]
@@ -238,6 +245,11 @@ enum AppCmd {
         /// A port the server always listens on (implies --http).
         #[arg(long)]
         port: Option<u16>,
+        /// Numbers in the output match when they differ by at most this times the larger
+        /// magnitude (absolute below 1), e.g. 1e-9 for numeric code. Saved with the cases; 0
+        /// removes it.
+        #[arg(long)]
+        float_tolerance: Option<f64>,
         #[arg(long)]
         json: bool,
         /// The command that runs the original, after `--`; paths are relative to the repository.
@@ -428,7 +440,13 @@ fn run() -> Result<ExitCode> {
             module,
             resolve_from,
             node_args,
+            float_tolerance,
         } => {
+            if let Some(t) = float_tolerance {
+                let mut manifest = bridge::Manifest::load(&crate_dir)?;
+                manifest.float_tolerance = (rust_anything::tolerance::check(t)? > 0.0).then_some(t);
+                manifest.save(&crate_dir)?;
+            }
             let outcome = harness::record(&harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count,
@@ -445,6 +463,12 @@ fn run() -> Result<ExitCode> {
             );
             for (name, n) in &outcome.per_function {
                 say!("  {name}: {n}");
+            }
+            if !outcome.regex_functions.is_empty() {
+                say!(
+                    "Regex traps (non-ASCII \\w, \\b and case folding) added for: {}",
+                    outcome.regex_functions.join(", ")
+                );
             }
         }
         Cmd::Refresh { crate_dir, batch } => {
@@ -466,6 +490,7 @@ fn run() -> Result<ExitCode> {
             crate_dir,
             module,
             ignore_key_order,
+            float_tolerance,
             json,
             node_args,
         } => {
@@ -474,6 +499,7 @@ fn run() -> Result<ExitCode> {
                 module: module.as_deref(),
                 ignore_key_order,
                 node_args: &node_args,
+                float_tolerance,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&d)?);
@@ -664,6 +690,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             timeout,
             http,
             port,
+            float_tolerance,
             json,
             run,
         } => {
@@ -677,6 +704,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 timeout_secs: timeout,
                 http,
                 port,
+                float_tolerance,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);
@@ -690,11 +718,29 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 outcome.inputs,
                 outcome.traps
             );
-            if !outcome.noisy.is_empty() {
-                say!(
-                    "Noise (differed between two runs, now wildcards): {}",
-                    outcome.noisy.join(", ")
-                );
+            for (kind, what) in [
+                (
+                    app::NoiseKind::Lines,
+                    "Lines (a different number of lines between two runs; now `...`, which matches anything: check these first)",
+                ),
+                (
+                    app::NoiseKind::Order,
+                    "Order (the same lines in another order between two runs; replay compares them in any order)",
+                ),
+                (
+                    app::NoiseKind::Values,
+                    "Values (parts of lines differed between two runs; now `[..]` wildcards)",
+                ),
+            ] {
+                let hits: Vec<String> = outcome
+                    .noise
+                    .iter()
+                    .filter(|n| n.kind == kind)
+                    .map(|n| format!("{} ({})", n.case, n.field))
+                    .collect();
+                if !hits.is_empty() {
+                    say!("Noise, {what}: {}", hits.join(", "));
+                }
             }
             if !outcome.unstable.is_empty() {
                 say!(

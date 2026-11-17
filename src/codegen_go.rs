@@ -1312,9 +1312,7 @@ func diff(cases, out string) {
 			passed++
 		} else {
 			failed++
-			if len(mismatches) < 20 {
-				mismatches = append(mismatches, map[string]any{"fn": name, "args": args, "expected": expected, "actual": got})
-			}
+			mismatches = append(mismatches, map[string]any{"fn": name, "args": args, "expected": expected, "actual": got})
 		}
 	}
 	summary["total"], summary["passed"], summary["failed"] = total, passed, failed

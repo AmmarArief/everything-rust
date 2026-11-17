@@ -115,6 +115,7 @@ fn tools() -> Value {
                 "inputs": { "type": "string", "description": "JSONL file of extra cases: {\"fn\": name, \"args\": [...]}." },
                 "module": { "type": "string", "description": "JS only: import the original from this JS module instead of the TS source." },
                 "resolve_from": { "type": "string", "description": "Resolve npm packages from this folder's node_modules." },
+                "float_tolerance": { "type": "number", "description": "Numeric code: floats match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the crate for diff and gate; 0 removes it." },
             }, "required": ["crate"] },
         },
         {
@@ -128,6 +129,7 @@ fn tools() -> Value {
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "ignore_key_order": { "type": "boolean" },
+                "float_tolerance": { "type": "number", "description": "Floats match within this tolerance for this run (the one saved by record otherwise)." },
             }, "required": ["crate"] },
         },
         {
@@ -159,7 +161,7 @@ fn tools() -> Value {
         },
         {
             "name": "app_record",
-            "description": "Record the whole CLI app's behavior: run the original on its own documented examples, an inputs file and semantic traps (non-ASCII and emoji, negative division, overflow, float extremes, map order), twice each; what differs between runs becomes a wildcard. Cases are trycmd files in <repo>/rust/app-cases/ (argv, stdin, env, files in; stdout, stderr, exit code, files out).",
+            "description": "Record the whole CLI app's behavior: run the original on its own documented examples, an inputs file and semantic traps (non-ASCII and emoji, negative division, overflow, float extremes, map order), twice each. What differs between runs is reported by kind in `noise`: values (now [..] wildcards), order (lines compared in any order) and lines (a ... that matches anything): show every one to the user. Cases are trycmd files in <repo>/rust/app-cases/ (argv, stdin, env, files in; stdout, stderr, exit code, files out).",
             "inputSchema": { "type": "object", "properties": {
                 "repo": { "type": "string", "description": "Repository root." },
                 "run": { "type": "array", "items": { "type": "string" }, "description": "Command that runs the original, paths relative to repo: [\"python3\", \"cli.py\"]. Optional after the first record." },
@@ -169,6 +171,7 @@ fn tools() -> Value {
                 "traps": { "type": "boolean", "description": "Add semantic-trap cases (default true)." },
                 "http": { "type": "boolean", "description": "The app is a server: `run` starts it (it takes its port from PORT or {port}); cases are requests from curl lines in its docs, `inputs` ({\"name\", \"method\", \"path\", \"headers\", \"body\"}) and traps." },
                 "port": { "type": "integer", "description": "A port the server always listens on (implies http)." },
+                "float_tolerance": { "type": "number", "description": "Numeric output: numbers match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the cases; 0 removes it." },
             }, "required": ["repo"] },
         },
         {
@@ -264,6 +267,11 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let inputs = opt_path("inputs");
             let module = opt_path("module");
             let resolve_from = opt_path("resolve_from");
+            if let Some(t) = args["float_tolerance"].as_f64() {
+                let mut manifest = bridge::Manifest::load(&crate_dir)?;
+                manifest.float_tolerance = (crate::tolerance::check(t)? > 0.0).then_some(t);
+                manifest.save(&crate_dir)?;
+            }
             serde_json::to_value(harness::record(&harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count: args["count"]
@@ -303,6 +311,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 module: None,
                 ignore_key_order: args["ignore_key_order"].as_bool().unwrap_or(false),
                 node_args: &no_node_args,
+                float_tolerance: args["float_tolerance"].as_f64(),
             })?)?
         }
         "bench" => {
@@ -338,6 +347,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 timeout_secs: None,
                 http: args["http"].as_bool().unwrap_or(false),
                 port: args["port"].as_u64().and_then(|p| u16::try_from(p).ok()),
+                float_tolerance: args["float_tolerance"].as_f64(),
             })?)?
         }
         "app_replay" => {

@@ -72,6 +72,7 @@ fn record(repo: &Path, run: &str, traps: bool) -> app::RecordOutcome {
         timeout_secs: None,
         http: true,
         port: None,
+        float_tolerance: None,
     })
     .unwrap()
 }

@@ -22,7 +22,7 @@ Tools: the `rust-anything` CLI, or the same steps as MCP tools (`rust-anything m
 `analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`, and for a
 whole app `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`.
 If the MCP tools are not available, use the CLI; if `rust-anything` is not installed, ask the user
-to install it (`cargo install --git https://github.com/erkamyaman/rust-anything`) and run
+to install it (`cargo install rust-anything`) and run
 `rust-anything setup`, then restart the agent.
 
 ## 0. Profile: find what is worth moving
@@ -40,6 +40,9 @@ callers and advice. Go profiles only through `go test`; C is not supported (use 
 - A small function called once per item is **not** worth porting alone: one call into Rust costs
   more than its work, and JITs (V8, the JVM, Go) run it in nanoseconds. Port it together with its
   callers, or batch it (step 2b). The advice line says which, with the exact command.
+- Code that is already compiled (numba `@njit`, Cython, `@jax.jit`) runs as machine code: a Rust
+  port gains little speed. `profile` lists it under "Already compiled" and says so in the advice of
+  every hot function that calls it; tell the user before porting it for speed.
 - If the user only wants a migration, skip to step 1.
 
 ## 1. Plan, then stop
@@ -79,7 +82,12 @@ a signature in `port.rs`, run `rust-anything refresh <crate>`.
   in Python ports use `crate::pynum::Num` for int-or-float, not `serde_json::Value`.
 - C: inputs recorded as `crash:` are undefined behavior; any result passes.
 - Ordered maps and object keys: `indexmap` where order reaches output.
-- Regex lookaround or backreferences: `fancy-regex`, not `regex`.
+- Regex lookaround or backreferences: `fancy-regex`, not `regex`. Either way, `\w`, `\b`, `\d`
+  and case-insensitive matching treat non-ASCII text differently from the source language's
+  engine: passing the recorded cases is not enough. `record` adds regex traps (Turkish i, Kelvin
+  sign, joiners, non-ASCII digits and spaces) to functions in files that use regexes; ask the user
+  for real text the patterns see, record it with `--inputs`, and set `unicode(false)` or spell out
+  ASCII classes (`[A-Za-z0-9_]`) where the original's `\w` is ASCII-only (JS without `u`, Java).
 - No `unsafe`. If truly needed: minimal, isolated, with a `// SAFETY:` comment.
 - Add Rust unit tests in `port.rs` for the cases you reason about.
 
@@ -121,6 +129,13 @@ rust-anything bench <crate>                    # original vs Rust, bridge includ
 
 A mismatch is a behavior difference: fix the port, never the recording. If the difference is
 intended, ask the user first, then re-record with their approval.
+
+Numeric code (physics, statistics, graphics) rarely gives bit-identical floats once ported:
+operation order, fused multiply-add and the math library differ. When the user accepts that,
+record with `--float-tolerance 1e-9` (their number): floats then match within that share of the
+larger value (absolute below 1), and `diff` and `gate` use it. Integers, strings and the same
+value written differently (`3` and `3.0`) still must match exactly. Never widen a tolerance to make
+a mismatch go away: a difference beyond it is a bug in the port.
 
 Follow `bench`'s verdict: ship, keep the slower functions in the source language, or port a
 bigger unit (batch or include the callers). Do not ship a port that makes callers slower without

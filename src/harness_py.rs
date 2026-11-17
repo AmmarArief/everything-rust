@@ -355,8 +355,7 @@ def diff(cases_path, out_path, package_dir, name, key_order):
             summary["passed"] += 1
         else:
             summary["failed"] += 1
-            if len(summary["mismatches"]) < 20:
-                summary["mismatches"].append({"fn": name_, "args": c.get("args", [c.get("ctor"), c.get("calls")]), "expected": expected, "actual": actual})
+            summary["mismatches"].append({"fn": name_, "args": c.get("args", [c.get("ctor"), c.get("calls")]), "expected": expected, "actual": actual})
     json.dump(summary, open(out_path, "w", encoding="utf-8"), ensure_ascii=False)
 
 

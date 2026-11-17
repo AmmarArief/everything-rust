@@ -50,7 +50,9 @@ Seed branches (the tree grows from the answers):
 - **Scope**: every feature, or drop dead and deprecated ones. `keep` units (UI, editor code):
   their Rust replacement, or the part that stays outside Rust.
 - **Equivalence bar**: byte-for-byte output, or equal after normalizing (key order, float
-  formatting, whitespace, error text). Exit codes, error messages, log lines.
+  formatting, whitespace, error text). Exit codes, error messages, log lines. For numeric code, a
+  float tolerance (`--float-tolerance` on `record` and `app record`, e.g. `1e-9`), or the same
+  state after N steps.
 - **Compatibility**: config files, environment variables, on-disk and wire formats, CLI flags,
   HTTP routes and status codes that must stay the same.
 - **Dependencies**: a Rust crate for every external dependency the plan lists, most of all fit
@@ -99,8 +101,18 @@ Inputs: the app's tests, examples and real workloads, its error paths (bad input
 failed calls), and the semantic traps: non-ASCII and emoji strings, negative division and
 modulo, integer overflow, large and tiny floats, map and set order, regex lookaround.
 
-Run the original twice on every case. Where its own runs disagree (timestamps, ids, ordering),
-the difference is **noise**: normalize it in the case, never in the port.
+Run the original twice on every case. Where its own runs disagree, the difference is **noise**,
+and `app record` sorts it into three kinds, each listed by case:
+
+- `values`: parts of lines changed (timestamps, ids). They became `[..]` wildcards.
+- `order`: the same lines in another order (hash maps, concurrency). Replay compares them in any
+  order, but the port must produce exactly those lines.
+- `lines`: a different number of lines. That stretch became `...`, which matches anything.
+
+Never accept noise silently: an `order` or `lines` case is exactly the behavior that can change
+for real in a port. Ask the user about each one in the grilling (is the order part of the
+contract? should the output be sorted?), and narrow a `lines` wildcard by hand, or with an input
+that makes the output stable, where you can. Normalize noise in the case, never in the port.
 `rust-anything app record <repo> -- <command that runs the original>` does all of this: the
 app's documented examples, `--inputs` for the tests, workloads and error paths you collect, the
 traps, two runs, `--normalize` for named noise. A CLI's cases are trycmd files in

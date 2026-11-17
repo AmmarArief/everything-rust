@@ -124,6 +124,7 @@ fn record_and_diff_catch_a_behavior_change() {
             crate_dir: dir,
             module: None,
             ignore_key_order: false,
+            float_tolerance: None,
             node_args: &[],
         })
         .unwrap()
@@ -340,6 +341,7 @@ fn classes_are_bridged_recorded_and_replayed() {
         crate_dir: &dir,
         module: None,
         ignore_key_order: false,
+        float_tolerance: None,
         node_args: &[],
     })
     .unwrap();
@@ -516,6 +518,7 @@ fn python_modules_bridge_record_and_diff() {
             crate_dir: dir,
             module: None,
             ignore_key_order: false,
+            float_tolerance: None,
             node_args: &[],
         })
         .unwrap()
@@ -597,6 +600,7 @@ fn c_units_bridge_record_and_diff() {
         crate_dir: &dir,
         module: None,
         ignore_key_order: false,
+        float_tolerance: None,
         node_args: &[],
     })
     .unwrap();
@@ -689,6 +693,7 @@ fn go_packages_bridge_record_and_diff() {
         crate_dir: &dir,
         module: None,
         ignore_key_order: false,
+        float_tolerance: None,
         node_args: &[],
     })
     .unwrap();
@@ -769,6 +774,7 @@ fn ruby_modules_bridge_record_and_diff() {
         crate_dir: &dir,
         module: None,
         ignore_key_order: false,
+        float_tolerance: None,
         node_args: &[],
     })
     .unwrap();
@@ -859,6 +865,7 @@ fn java_classes_bridge_record_and_diff() {
         crate_dir: &dir,
         module: None,
         ignore_key_order: false,
+        float_tolerance: None,
         node_args: &[],
     })
     .unwrap();

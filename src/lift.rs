@@ -335,7 +335,11 @@ fn lifted_units_rs(state: &State) -> String {
     out
 }
 
-fn cases_test_rs(case_bin: &str, binary: &str) -> String {
+fn cases_test_rs(case_bin: &str, binary: &str, unordered: &[&String]) -> String {
+    let skips: String = unordered
+        .iter()
+        .map(|case| format!("\n        .skip(\"../app-cases/{case}.toml\")"))
+        .collect();
     format!(
         "#[test]\n\
          fn recorded_cases() {{\n    \
@@ -344,7 +348,7 @@ fn cases_test_rs(case_bin: &str, binary: &str) -> String {
                      {case_bin:?},\n            \
                      std::path::Path::new(env!(\"CARGO_BIN_EXE_{binary}\")),\n        \
                  )\n        \
-                 .case(\"../app-cases/*.toml\");\n\
+                 .case(\"../app-cases/*.toml\"){skips};\n\
          }}\n"
     )
 }
@@ -382,7 +386,12 @@ fn lift_library(stage_app: &Path, state: &mut State) -> Result<()> {
     Ok(())
 }
 
-fn lift_app(stage_app: &Path, state: &mut State, case_bin: &str) -> Result<()> {
+fn lift_app(
+    stage_app: &Path,
+    state: &mut State,
+    case_bin: &str,
+    unordered: &[&String],
+) -> Result<()> {
     if state.kind == AppKind::Library {
         return lift_library(stage_app, state);
     }
@@ -450,7 +459,7 @@ fn lift_app(stage_app: &Path, state: &mut State, case_bin: &str) -> Result<()> {
     std::fs::write(&cargo, doc.to_string())?;
     std::fs::create_dir_all(stage_app.join("tests"))?;
     let test = stage_app.join("tests/app_cases.rs");
-    std::fs::write(&test, cases_test_rs(case_bin, &binary))?;
+    std::fs::write(&test, cases_test_rs(case_bin, &binary, unordered))?;
     front_door::rustfmt(&test);
     front_door::rustfmt(&main);
     Ok(())
@@ -600,6 +609,10 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
     let key_order = config
         .as_ref()
         .is_some_and(|c| c.normalize.iter().any(|n| n == "key-order"));
+    let unordered: Vec<&String> = config
+        .as_ref()
+        .map(|c| c.unordered.keys().collect())
+        .unwrap_or_default();
     let app_dir = repo.join(APP_DIR);
     let rust_dir = repo.join("rust");
     let mut blockers = Vec::new();
@@ -746,7 +759,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
         staged_units.push((unit.clone(), dir.clone(), staged));
     }
     let stage_app = stage_rust.join("app");
-    lift_app(&stage_app, &mut state, &case_bin)?;
+    lift_app(&stage_app, &mut state, &case_bin, &unordered)?;
 
     let mut checklist = Vec::new();
     for (unit, dir, staged) in &staged_units {
@@ -759,7 +772,7 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
     }
     checklist.push(Item::new(
         "replay in CI",
-        if state.kind != AppKind::Cli || key_order {
+        if state.kind != AppKind::Cli || key_order || !unordered.is_empty() {
             Mark::Warn
         } else {
             Mark::Pass
@@ -768,6 +781,8 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
             "the recorded cases ran through the units' bindings, which the lift removes: `cargo test` on the crates is what CI keeps; turn the cases that matter into Rust tests"
         } else if state.kind == AppKind::Http {
             "trycmd runs command lines only: run `rust-anything app replay <repo> --build <the binary>` in CI for the HTTP cases"
+        } else if !unordered.is_empty() {
+            "rust/app/tests/app_cases.rs runs the cases with trycmd on `cargo test`, which compares line order exactly, so it skips the cases whose order the original's own runs disagreed on: also run `rust-anything app replay` in CI for them"
         } else if key_order {
             "rust/app/tests/app_cases.rs runs the cases with trycmd on `cargo test`, which compares JSON as text: also run `rust-anything app replay` in CI for the key-order normalizer"
         } else {

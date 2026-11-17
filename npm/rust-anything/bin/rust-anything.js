@@ -10,7 +10,7 @@ const bin = path.join(__dirname, '..', 'binaries', key, exe)
 if (!fs.existsSync(bin)) {
   console.error(
     `rust-anything: no prebuilt binary for ${key}.\n` +
-      'Install it with Cargo instead: cargo install --git https://github.com/erkamyaman/rust-anything',
+      'Install it with Cargo instead: cargo install rust-anything',
   )
   process.exit(1)
 }

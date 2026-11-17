@@ -57,6 +57,100 @@ pub struct Report {
     /// Share of the run spent in the repository's own code (the rest: runtime, libraries).
     pub repo_pct: f64,
     pub hot: Vec<Hot>,
+    /// Functions the repository already compiles to machine code (numba, Cython, JAX).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub compiled: Vec<Compiled>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Compiled {
+    pub name: String,
+    pub file: String,
+    pub line: u32,
+    pub by: &'static str,
+}
+
+/// Every Python function in the repository a decorator compiles.
+fn compiled_in(root: &Path, lang: Lang) -> Vec<Compiled> {
+    if lang != Lang::Python {
+        return Vec::new();
+    }
+    let Ok(ws) = crate::lang::python::discover(root) else {
+        return Vec::new();
+    };
+    ws.files
+        .iter()
+        .filter(|f| f.kind == crate::ts::discover::FileKind::Source)
+        .flat_map(|f| {
+            let text = std::fs::read_to_string(root.join(&f.path)).unwrap_or_default();
+            crate::risks::python_compiled(&text)
+                .into_iter()
+                .map(|(name, line, by)| Compiled {
+                    name,
+                    file: f.path.clone(),
+                    line,
+                    by,
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// The body of the Python function `name` defined at or just after `line`.
+fn python_body(text: &str, name: &str, line: u32) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let start = (line as usize).saturating_sub(1);
+    let def = (start..lines.len().min(start + 20)).find(|&i| {
+        let t = lines[i].trim_start();
+        t.strip_prefix("def ")
+            .or_else(|| t.strip_prefix("async def "))
+            .is_some_and(|d| d.starts_with(name) && d[name.len()..].trim_start().starts_with('('))
+    })?;
+    let indent = |l: &str| l.len() - l.trim_start().len();
+    let base = indent(lines[def]);
+    let body: Vec<&str> = lines[def + 1..]
+        .iter()
+        .take_while(|l| l.trim().is_empty() || indent(l) > base)
+        .copied()
+        .collect();
+    Some(body.join("\n"))
+}
+
+fn calls(body: &str, name: &str) -> bool {
+    body.match_indices(&format!("{name}(")).any(|(i, _)| {
+        body[..i]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_alphanumeric() || c == '_'))
+    })
+}
+
+/// Advice for a hot function that is compiled already, or that calls compiled code.
+fn compiled_advice(root: &Path, h: &Hot, compiled: &[Compiled]) -> Option<String> {
+    if let Some(c) = compiled
+        .iter()
+        .find(|c| c.file == h.file && c.name == h.name)
+    {
+        return Some(format!(
+            "Already compiled by {} (`{}:{}`): a Rust port is unlikely to run it much faster. \
+             Port it for a pure Rust app, not for speed.",
+            c.by, c.file, c.line
+        ));
+    }
+    let text = std::fs::read_to_string(root.join(&h.file)).ok()?;
+    let body = python_body(&text, &h.name, h.line)?;
+    let called: Vec<&Compiled> = compiled.iter().filter(|c| calls(&body, &c.name)).collect();
+    let first = called.first()?;
+    let names: Vec<String> = called.iter().map(|c| format!("`{}`", c.name)).collect();
+    Some(format!(
+        "{} It calls {} compiled by {} (`{}:{}`): the profiler counts that compiled time here, so \
+         porting this may gain little; port the Python around those calls, or measure without them.",
+        h.advice,
+        names.join(", "),
+        first.by,
+        first.file,
+        first.line
+    ))
 }
 
 /// One function's numbers before advice: key is (file, name, line).
@@ -1003,6 +1097,12 @@ fn report(
         .collect();
     hot.sort_by(|a, b| b.total_ms.total_cmp(&a.total_ms));
     hot.truncate(25);
+    let compiled = compiled_in(root, lang);
+    for h in &mut hot {
+        if let Some(advice) = compiled_advice(root, h, &compiled) {
+            h.advice = advice;
+        }
+    }
     Report {
         schema: SCHEMA,
         language: lang,
@@ -1013,6 +1113,7 @@ fn report(
         } else {
             0.0
         },
+        compiled,
         hot,
     }
 }
@@ -1042,6 +1143,15 @@ pub fn markdown(r: &Report) -> String {
                 .map_or_else(|| "-".into(), |u| format!("`{u}`"))
         );
     }
+    if !r.compiled.is_empty() {
+        out.push_str(
+            "\n## Already compiled\n\nThese run as machine code already; Rust is unlikely to make them \
+             much faster:\n\n",
+        );
+        for c in &r.compiled {
+            let _ = writeln!(out, "- `{}` (`{}:{}`): {}", c.name, c.file, c.line, c.by);
+        }
+    }
     out.push_str("\n## What to port\n\n");
     let mut seen = BTreeMap::new();
     for h in r.hot.iter().filter(|h| h.unit.is_some()) {
@@ -1061,6 +1171,54 @@ pub fn markdown(r: &Report) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn compiled_code_changes_the_advice() {
+        let root = std::env::temp_dir().join(format!("rust-anything-numba-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("sim")).unwrap();
+        std::fs::write(root.join("pyproject.toml"), "[project]\nname = \"sim\"\n").unwrap();
+        std::fs::write(
+            root.join("sim/physics.py"),
+            "from numba import njit\n\n@njit(cache=True)\ndef step(x, dt):\n    return x + dt\n\n\
+             def run(xs):\n    out = []\n    for x in xs:\n        out.append(step(x, 0.1))\n    return out\n\n\
+             def other(xs):\n    return [x * 2 for x in xs]\n",
+        )
+        .unwrap();
+        let compiled = compiled_in(&root, Lang::Python);
+        assert_eq!(compiled.len(), 1);
+        assert_eq!(
+            (compiled[0].name.as_str(), compiled[0].line, compiled[0].by),
+            ("step", 4, "numba")
+        );
+        let hot = |name: &str, line: u32| Hot {
+            name: name.into(),
+            file: "sim/physics.py".into(),
+            line,
+            unit: None,
+            exported: true,
+            self_ms: 1.0,
+            total_ms: 1.0,
+            total_pct: 50.0,
+            calls: None,
+            ns_per_call: None,
+            callers: Vec::new(),
+            advice: "Port it.".into(),
+        };
+        let own = compiled_advice(&root, &hot("step", 3), &compiled).unwrap();
+        assert!(
+            own.starts_with("Already compiled by numba (`sim/physics.py:4`)"),
+            "{own}"
+        );
+        let caller = compiled_advice(&root, &hot("run", 7), &compiled).unwrap();
+        assert!(
+            caller.starts_with("Port it. It calls `step` compiled by numba"),
+            "{caller}"
+        );
+        assert!(compiled_advice(&root, &hot("other", 13), &compiled).is_none());
+        assert!(compiled_in(&root, Lang::Ts).is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 
     #[test]
     fn frames_outside_user_code_are_dropped() {

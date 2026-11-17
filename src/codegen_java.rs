@@ -733,14 +733,12 @@ public final class RustAnythingDriver {
                     passed++;
                 } else {
                     failed++;
-                    if (mismatches.size() < 20) {
-                        Map<String, Object> m = new LinkedHashMap<>();
-                        m.put("fn", c.get("fn"));
-                        m.put("args", c.get("args"));
-                        m.put("expected", expected);
-                        m.put("actual", got);
-                        mismatches.add(m);
-                    }
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("fn", c.get("fn"));
+                    m.put("args", c.get("args"));
+                    m.put("expected", expected);
+                    m.put("actual", got);
+                    mismatches.add(m);
                 }
             }
             Map<String, Object> summary = new LinkedHashMap<>();

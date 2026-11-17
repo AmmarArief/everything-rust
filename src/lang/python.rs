@@ -294,6 +294,9 @@ pub fn scan(source: &str) -> FileFacts {
             }
         }
         "set" | "set_comprehension" => add(&mut facts, Risk::UnorderedIteration, node),
+        "decorator" if crate::risks::compiled_by(text(node, source)).is_some() => {
+            add(&mut facts, Risk::AlreadyCompiled, node)
+        }
         "raise_statement" | "try_statement" => add(&mut facts, Risk::Exceptions, node),
         "yield" => add(&mut facts, Risk::Generators, node),
         "await" => add(&mut facts, Risk::Async, node),

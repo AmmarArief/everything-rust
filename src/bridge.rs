@@ -61,6 +61,9 @@ pub struct Manifest {
     /// Functions run over many items kept in Rust (`--batch function:param`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub batches: Vec<crate::codegen_batch::Batch>,
+    /// Floats match within this relative tolerance (`record --float-tolerance`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub float_tolerance: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -170,6 +173,17 @@ impl Manifest {
             manifest.root_written = Some(std::mem::replace(&mut manifest.root, resolved));
         }
         Ok(manifest)
+    }
+
+    /// Writes the manifest back, keeping a relative root relative.
+    pub fn save(&self, crate_dir: &Path) -> Result<()> {
+        let mut m = self.clone();
+        if let Some(written) = m.root_written.take() {
+            m.root = written;
+        }
+        let path = crate_dir.join(MANIFEST);
+        std::fs::write(&path, serde_json::to_string_pretty(&m)? + "\n")
+            .with_context(|| format!("writing {}", path.display()))
     }
 
     /// Rust library name: the crate name with `-` replaced.
@@ -1071,6 +1085,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         classes: classes.clone(),
         js_only: js_only.clone(),
         batches: parse_batches(&opts.batch)?,
+        float_tolerance: None,
     };
     if kind == Kind::CAbi {
         return bridge_c(&manifest, &crate_dir, &js_only);

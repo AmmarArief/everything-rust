@@ -240,11 +240,27 @@ Taken while building, without a question to the user (the conventional option, w
     by the coordinator; every mistake becomes an ADR, glossary entry or test.
 46. **Cutover steps only the user can do go in `rust/cutover.sh`** (after `wizard`), an interactive
     script with a way back at each step.
+47. **Floats can match within a tolerance the user chooses**, saved with the recording (the
+    crate manifest, or `rust/app-cases`), so `diff`, `gate`, `replay` and the lift all use the same
+    bar. Relative to the larger value, absolute below 1; integers, text and `3` against `3.0` stay
+    exact, so the tolerance forgives rounding, never formatting. Output lines with `[..]` stay exact.
+48. **Already compiled Python (numba, Cython, JAX) is flagged, not refused**: a risk in `analyze`
+    and advice in `profile`, from the decorators in the source, so it works without numba
+    installed. Porting it still makes sense for a pure Rust app, just not for speed.
+49. **Noise is classified, not just wildcarded** (from a reader's review): same lines in another
+    order are compared as a multiset, so a port that produces different lines still fails; only
+    changed values become `[..]`, and a changed line count (`...`) is reported as the riskiest
+    kind. Every kind goes to the user, since hash order and concurrency are what really change.
+50. **Regex traps go where the regexes are**: per file, by a text check for each language's regex
+    API, so every function in that file gets them; cheaper than per-function analysis, and extra
+    cases cost little.
+51. **The pitch claims what is checked**: "checked against the original's recorded behavior",
+    with a README section on what recording cannot catch.
 
 ## Draft pitch
 
 - One line (GitHub description, npm, `Cargo.toml`): "Rewrite your app in Rust, one piece at a
-  time, proving nothing changed. TypeScript, Python, C, Go, Ruby, Java."
+  time, checked against the original's recorded behavior at every step. TypeScript, Python, C, Go, Ruby, Java."
 - Hero tagline: "Rewrite anything in Rust. Keep it working the whole way."
 - Sub-line: "rust-anything ports your app piece by piece, checks every step against the original,
   and hands you a pure Rust app."

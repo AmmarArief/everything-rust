@@ -36,6 +36,7 @@ pub mod report;
 pub mod risks;
 pub mod setup;
 pub mod shadow;
+pub mod tolerance;
 pub mod ts;
 pub mod whole_app;
 pub mod wire;

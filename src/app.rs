@@ -49,7 +49,7 @@ pub(crate) const FLOAT_TRAPS: [&str; 7] = [
     "5e-324",
     "1.7976931348623157e308",
 ];
-pub(crate) const STRING_TRAPS: [&str; 7] = [
+pub(crate) const STRING_TRAPS: [&str; 10] = [
     "héllo wörld",
     "👍🏽 thumbs",
     "日本語",
@@ -57,6 +57,9 @@ pub(crate) const STRING_TRAPS: [&str; 7] = [
     "e\u{301}",
     "İstanbul",
     "straße",
+    "ılık ırmak",
+    "👨\u{200D}👩\u{200D}👧 family",
+    "a\u{00A0}b",
 ];
 pub(crate) const STDIN_TRAPS: [&str; 4] = [
     "naïve café 👍🏽\nsecond line\n",
@@ -89,6 +92,13 @@ pub struct Config {
     /// Set when the app is a server: cases are requests, in `http/`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub http: Option<crate::http::HttpConfig>,
+    /// Numbers in the output match within this relative tolerance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub float_tolerance: Option<f64>,
+    /// Outputs whose line order the original's own runs disagreed on, by case: their lines must
+    /// match in any order.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub unordered: BTreeMap<String, Vec<String>>,
 }
 
 pub(crate) fn default_timeout() -> u64 {
@@ -194,6 +204,8 @@ impl Run {
 pub(crate) struct Normalizers {
     patterns: Vec<Regex>,
     key_order: bool,
+    float_tolerance: Option<f64>,
+    unordered: BTreeMap<String, Vec<String>>,
 }
 
 impl Normalizers {
@@ -223,10 +235,23 @@ impl Normalizers {
                 Regex::new(pattern).with_context(|| format!("normalizer `{name}`: {pattern}"))
             })
             .collect::<Result<Vec<_>>>()?;
+        let float_tolerance = config
+            .float_tolerance
+            .map(crate::tolerance::check)
+            .transpose()?;
         Ok(Normalizers {
             patterns,
             key_order,
+            float_tolerance,
+            unordered: config.unordered.clone(),
         })
+    }
+
+    /// Whether the original's runs disagreed on the line order of this case's `field`.
+    pub(crate) fn unordered(&self, case: &str, field: &str) -> bool {
+        self.unordered
+            .get(case)
+            .is_some_and(|fields| fields.iter().any(|f| f == field))
     }
 
     pub(crate) fn apply(&self, text: &str) -> String {
@@ -653,8 +678,16 @@ pub(crate) fn line_matches(expected: &str, actual: &str) -> bool {
     true
 }
 
+/// A line within the float tolerance, for lines without wildcards.
+fn line_matches_within(expected: &str, actual: &str, tol: Option<f64>) -> bool {
+    line_matches(expected, actual)
+        || tol.is_some_and(|t| {
+            !expected.contains("[..]") && crate::tolerance::line_close(expected, actual, t)
+        })
+}
+
 /// trycmd's matching: `[..]` is any text within a line, a `...` line is any number of lines.
-fn text_matches(expected: &str, actual: &str) -> bool {
+fn text_matches(expected: &str, actual: &str, tol: Option<f64>) -> bool {
     let (e, a) = (lines(expected), lines(actual));
     let m = a.len();
     let mut next = vec![false; m + 1];
@@ -665,7 +698,7 @@ fn text_matches(expected: &str, actual: &str) -> bool {
             cur[j] = if *line == "..." {
                 next[j] || (j < m && cur[j + 1])
             } else {
-                j < m && line_matches(line, a[j]) && next[j + 1]
+                j < m && line_matches_within(line, a[j], tol) && next[j + 1]
             };
         }
         next = cur;
@@ -673,9 +706,9 @@ fn text_matches(expected: &str, actual: &str) -> bool {
     next[0]
 }
 
-fn render_diff(expected: &str, actual: &str) -> String {
+fn render_diff(expected: &str, actual: &str, tol: Option<f64>) -> String {
     let (e, a) = (lines(expected), lines(actual));
-    let ops = diff_ops(&e, &a, |x, y| line_matches(x, y));
+    let ops = diff_ops(&e, &a, |x, y| line_matches_within(x, y, tol));
     let changed: Vec<bool> = ops.iter().map(|op| !matches!(op, Op::Equal(..))).collect();
     let near = |k: usize| {
         let lo = k.saturating_sub(3);
@@ -1120,6 +1153,9 @@ pub struct RecordOptions<'a> {
     /// The port a server always listens on (implies `http`); unset, it gets a free one through
     /// `PORT` and `{port}`.
     pub port: Option<u16>,
+    /// Numbers in the output match within this tolerance; kept from the last recording when
+    /// `None`, removed with 0.
+    pub float_tolerance: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1130,8 +1166,11 @@ pub struct RecordOutcome {
     pub examples: usize,
     pub inputs: usize,
     pub traps: usize,
-    /// Cases where the two runs of the original differed; the differences are now wildcards.
+    /// Cases where the two runs of the original differed.
     pub noisy: Vec<String>,
+    /// What differed in each noisy case, and how: `values` became wildcards, `order` is compared
+    /// in any order, `lines` became a `...` that matches anything.
+    pub noise: Vec<Noise>,
     /// Cases whose exit code or written files differed between the two runs.
     pub unstable: Vec<String>,
     /// Cases not written: the original timed out or did not answer.
@@ -1144,39 +1183,84 @@ struct Recorded {
     status: Status,
     written: BTreeMap<PathBuf, Vec<u8>>,
     binary: bool,
-    noisy: bool,
+    noise: Vec<(String, NoiseKind)>,
     unstable: bool,
 }
 
-pub(crate) fn settle_text(norm: &Normalizers, a: &[u8], b: &[u8]) -> (Vec<u8>, bool, bool) {
+/// How two runs of the original disagreed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NoiseKind {
+    /// Values within lines changed (times, ids): those parts are wildcards now.
+    Values,
+    /// The same lines came out in another order (hash maps, concurrency): replay compares them
+    /// in any order, and a port must produce exactly those lines.
+    Order,
+    /// A different number of lines came out: that stretch is a `...` wildcard, which matches
+    /// anything. Look at these first.
+    Lines,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Noise {
+    pub case: String,
+    pub field: String,
+    pub kind: NoiseKind,
+}
+
+fn same_lines_any_order(a: &str, b: &str) -> bool {
+    let (mut la, mut lb) = (lines(a), lines(b));
+    la.sort_unstable();
+    lb.sort_unstable();
+    la == lb
+}
+
+pub(crate) fn settle_text(
+    norm: &Normalizers,
+    a: &[u8],
+    b: &[u8],
+) -> (Vec<u8>, Option<NoiseKind>, bool) {
     match (std::str::from_utf8(a), std::str::from_utf8(b)) {
         (Ok(a), Ok(b)) => {
             let (a, b) = (norm.apply(a), norm.apply(b));
             if a == b || (norm.key_order && norm.canonical(&a) == norm.canonical(&b)) {
-                (a.into_bytes(), false, false)
+                (a.into_bytes(), None, false)
+            } else if same_lines_any_order(&a, &b) {
+                (a.into_bytes(), Some(NoiseKind::Order), false)
             } else {
-                (merge_noise(&a, &b).into_bytes(), true, false)
+                let merged = merge_noise(&a, &b);
+                let kind = if merged.split('\n').any(|l| l == "...") {
+                    NoiseKind::Lines
+                } else {
+                    NoiseKind::Values
+                };
+                (merged.into_bytes(), Some(kind), false)
             }
         }
-        _ => (a.to_vec(), a != b, true),
+        _ => (a.to_vec(), (a != b).then_some(NoiseKind::Values), true),
     }
 }
 
 fn settle(norm: &Normalizers, case: &Case, one: &Run, two: &Run) -> Recorded {
-    let (stdout, out_noisy, out_bin) = settle_text(norm, &one.stdout, &two.stdout);
-    let (stderr, err_noisy, err_bin) = settle_text(norm, &one.stderr, &two.stderr);
+    let (stdout, out_noise, out_bin) = settle_text(norm, &one.stdout, &two.stdout);
+    let (stderr, err_noise, err_bin) = settle_text(norm, &one.stderr, &two.stderr);
     let binary = out_bin || err_bin;
     let (w1, w2) = (one.written(case), two.written(case));
     let mut unstable = one.status != two.status
         || !w1.keys().eq(w2.keys())
-        || (binary && (out_noisy || err_noisy));
-    let mut noisy = out_noisy || err_noisy;
+        || (binary && (out_noise.is_some() || err_noise.is_some()));
+    let mut noise: Vec<(String, NoiseKind)> = [("stdout", out_noise), ("stderr", err_noise)]
+        .into_iter()
+        .filter_map(|(f, k)| Some((f.to_string(), k?)))
+        .collect();
     let mut written = BTreeMap::new();
     for (path, a) in &w1 {
         let b = w2.get(path).unwrap_or(a);
-        let (bytes, file_noisy, file_bin) = settle_text(norm, a, b);
-        unstable |= file_bin && file_noisy;
-        noisy |= file_noisy;
+        let (bytes, file_noise, file_bin) = settle_text(norm, a, b);
+        unstable |= file_bin && file_noise.is_some();
+        if let Some(kind) = file_noise {
+            noise.push((format!("file {}", path.display()), kind));
+        }
         written.insert(path.clone(), bytes);
     }
     Recorded {
@@ -1185,7 +1269,7 @@ fn settle(norm: &Normalizers, case: &Case, one: &Run, two: &Run) -> Recorded {
         status: one.status.clone(),
         written,
         binary,
-        noisy,
+        noise,
         unstable,
     }
 }
@@ -1291,7 +1375,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         .map(str::to_string)
         .or_else(|| existing.as_ref().map(|c| c.name.clone()));
     let names = app_names(&repo, &run, explicit.as_deref());
-    let config = Config {
+    let mut config = Config {
         schema: SCHEMA.to_string(),
         name: explicit
             .or_else(|| names.first().cloned())
@@ -1308,10 +1392,16 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         } else {
             existing.as_ref().and_then(|c| c.http.clone())
         },
+        float_tolerance: match opts.float_tolerance {
+            Some(t) => (crate::tolerance::check(t)? > 0.0).then_some(t),
+            None => existing.as_ref().and_then(|c| c.float_tolerance),
+        },
+        unordered: BTreeMap::new(),
     };
     let norm = Normalizers::new(&config)?;
     if config.http.is_some() {
         let outcome = crate::http::record(&repo, &config, &norm, opts)?;
+        config.unordered = unordered_of(&outcome.noise);
         std::fs::write(
             cases_dir(&repo).join(CONFIG_FILE),
             serde_json::to_string_pretty(&config)? + "\n",
@@ -1388,6 +1478,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         inputs: counts[1],
         traps: counts[2],
         noisy: Vec::new(),
+        noise: Vec::new(),
         unstable: Vec::new(),
         timed_out: Vec::new(),
     };
@@ -1400,18 +1491,34 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         let rec = settle(&norm, case, &one, &two);
         write_case(&dir, &config.name, name, case, &rec)?;
         outcome.cases += 1;
-        if rec.noisy {
+        if !rec.noise.is_empty() {
             outcome.noisy.push(name.clone());
         }
+        outcome
+            .noise
+            .extend(rec.noise.iter().map(|(field, kind)| Noise {
+                case: name.clone(),
+                field: field.clone(),
+                kind: *kind,
+            }));
         if rec.unstable {
             outcome.unstable.push(name.clone());
         }
     }
+    config.unordered = unordered_of(&outcome.noise);
     std::fs::write(
         dir.join(CONFIG_FILE),
         serde_json::to_string_pretty(&config)? + "\n",
     )?;
     Ok(outcome)
+}
+
+fn unordered_of(noise: &[Noise]) -> BTreeMap<String, Vec<String>> {
+    let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for n in noise.iter().filter(|n| n.kind == NoiseKind::Order) {
+        out.entry(n.case.clone()).or_default().push(n.field.clone());
+    }
+    out
 }
 
 enum Expect {
@@ -1531,12 +1638,30 @@ pub(crate) fn compare(
     expected: &[u8],
     actual: &[u8],
     binary: bool,
+    unordered: bool,
 ) -> Option<String> {
     if !binary && let (Ok(e), Ok(a)) = (std::str::from_utf8(expected), std::str::from_utf8(actual))
     {
         let e = norm.canonical(&norm.apply(e));
         let a = norm.canonical(&norm.apply(a));
-        return (!text_matches(&e, &a)).then(|| render_diff(&e, &a));
+        let tol = norm.float_tolerance;
+        if unordered {
+            let (mut el, mut al) = (lines(&e), lines(&a));
+            el.sort_unstable();
+            al.sort_unstable();
+            let same = el.len() == al.len()
+                && el
+                    .iter()
+                    .zip(&al)
+                    .all(|(x, y)| line_matches_within(x, y, tol));
+            return (!same).then(|| {
+                format!(
+                    "(lines compared in any order: the original's own runs disagreed on it)\n{}",
+                    render_diff(&el.join("\n"), &al.join("\n"), tol)
+                )
+            });
+        }
+        return (!text_matches(&e, &a, tol)).then(|| render_diff(&e, &a, tol));
     }
     (expected != actual).then(|| {
         format!(
@@ -1643,7 +1768,13 @@ fn check(
         ("stderr", &spec.stderr, &run.stderr),
     ] {
         if let Some(expected) = expected
-            && let Some(detail) = compare(norm, expected, actual, spec.binary)
+            && let Some(detail) = compare(
+                norm,
+                expected,
+                actual,
+                spec.binary,
+                norm.unordered(&spec.name, field),
+            )
         {
             problems.push(Problem {
                 field: field.to_string(),
@@ -1660,7 +1791,8 @@ fn check(
                     detail: "not written\n".to_string(),
                 }),
                 Some(actual) => {
-                    if let Some(detail) = compare(norm, &expected, actual, false) {
+                    let unordered = norm.unordered(&spec.name, &field);
+                    if let Some(detail) = compare(norm, &expected, actual, false, unordered) {
                         problems.push(Problem { field, detail });
                     }
                 }
@@ -1789,6 +1921,8 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         normalizers: BTreeMap::new(),
         timeout_secs: default_timeout(),
         http: None,
+        float_tolerance: None,
+        unordered: BTreeMap::new(),
     });
     let norm = Normalizers::new(&config)?;
     let timeout = Duration::from_secs(opts.timeout_secs.unwrap_or(config.timeout_secs));
@@ -1852,16 +1986,83 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
 mod tests {
     use super::*;
 
+    fn text_matches_exact(e: &str, a: &str) -> bool {
+        text_matches(e, a, None)
+    }
+
     #[test]
     fn matching_follows_trycmd() {
-        assert!(text_matches("a\nb\n", "a\nb\n"));
-        assert!(text_matches("now: [..]\n", "now: 1234\n"));
-        assert!(text_matches("x [..] y [..] z\n", "x 1 y 2 y 3 z\n"));
-        assert!(!text_matches("x [..] z\n", "x 1 y\n"));
-        assert!(text_matches("head\n...\ntail\n", "head\n1\n2\ntail\n"));
-        assert!(text_matches("head\n...\ntail\n", "head\ntail\n"));
-        assert!(!text_matches("head\ntail\n", "head\nmid\ntail\n"));
-        assert!(text_matches("a\r\nb", "a\nb\n"));
+        assert!(text_matches_exact("a\nb\n", "a\nb\n"));
+        assert!(text_matches_exact("now: [..]\n", "now: 1234\n"));
+        assert!(text_matches_exact("x [..] y [..] z\n", "x 1 y 2 y 3 z\n"));
+        assert!(!text_matches_exact("x [..] z\n", "x 1 y\n"));
+        assert!(text_matches_exact(
+            "head\n...\ntail\n",
+            "head\n1\n2\ntail\n"
+        ));
+        assert!(text_matches_exact("head\n...\ntail\n", "head\ntail\n"));
+        assert!(!text_matches_exact("head\ntail\n", "head\nmid\ntail\n"));
+        assert!(text_matches_exact("a\r\nb", "a\nb\n"));
+    }
+
+    #[test]
+    fn numbers_match_within_the_tolerance() {
+        let e = "step 1\nenergy 0.3\nat [..]\n";
+        let a = "step 1\nenergy 0.30000000000000004\nat 12:00\n";
+        assert!(!text_matches(e, a, None));
+        assert!(text_matches(e, a, Some(1e-9)));
+        assert!(!text_matches(
+            e,
+            "step 2\nenergy 0.3\nat 12:00\n",
+            Some(1e-9)
+        ));
+        assert!(!render_diff(e, a, Some(1e-9)).contains("energy"));
+    }
+
+    #[test]
+    fn noise_is_classified() {
+        let norm = Normalizers::new(&Config {
+            schema: SCHEMA.to_string(),
+            name: "app".to_string(),
+            run: Vec::new(),
+            normalize: Vec::new(),
+            normalizers: BTreeMap::new(),
+            timeout_secs: 30,
+            http: None,
+            float_tolerance: None,
+            unordered: BTreeMap::new(),
+        })
+        .unwrap();
+        let kind = |a: &str, b: &str| settle_text(&norm, a.as_bytes(), b.as_bytes()).1;
+        assert_eq!(kind("a\nb\n", "a\nb\n"), None);
+        assert_eq!(kind("x=1\ny=2\n", "y=2\nx=1\n"), Some(NoiseKind::Order));
+        assert_eq!(kind("at 10:01\n", "at 10:02\n"), Some(NoiseKind::Values));
+        assert_eq!(kind("a\nz\n", "a\nb\nc\nz\n"), Some(NoiseKind::Lines));
+        let (kept, _, _) = settle_text(&norm, b"x=1\ny=2\n", b"y=2\nx=1\n");
+        assert_eq!(kept, b"x=1\ny=2\n", "order noise keeps the lines exactly");
+    }
+
+    #[test]
+    fn unordered_output_matches_in_any_order_but_not_other_lines() {
+        let norm = Normalizers::new(&Config {
+            schema: SCHEMA.to_string(),
+            name: "app".to_string(),
+            run: Vec::new(),
+            normalize: Vec::new(),
+            normalizers: BTreeMap::new(),
+            timeout_secs: 30,
+            http: None,
+            float_tolerance: None,
+            unordered: BTreeMap::from([("c".to_string(), vec!["stdout".to_string()])]),
+        })
+        .unwrap();
+        assert!(norm.unordered("c", "stdout"));
+        assert!(!norm.unordered("c", "stderr"));
+        let e = b"x=1\ny=2\n";
+        assert!(compare(&norm, e, b"y=2\nx=1\n", false, true).is_none());
+        assert!(compare(&norm, e, b"y=2\nx=2\n", false, true).is_some());
+        assert!(compare(&norm, e, b"x=1\n", false, true).is_some());
+        assert!(compare(&norm, e, b"y=2\nx=1\n", false, false).is_some());
     }
 
     #[test]
@@ -1876,7 +2077,7 @@ mod tests {
         assert_eq!(merge_noise("a\nb\nz\n", "a\nc\nd\nz\n"), "a\n...\nz\n");
         assert_eq!(merge_line("id=ab12 ok", "id=cd34 ok"), "id=[..] ok");
         let merged = merge_noise("x 1\n", "x 2\n");
-        assert!(text_matches(&merged, "x 3\n"));
+        assert!(text_matches_exact(&merged, "x 3\n"));
     }
 
     #[test]
@@ -1889,6 +2090,8 @@ mod tests {
             normalizers: BTreeMap::from([("req".to_string(), r"req-\d+".to_string())]),
             timeout_secs: 30,
             http: None,
+            float_tolerance: None,
+            unordered: BTreeMap::new(),
         };
         let norm = Normalizers::new(&config).unwrap();
         assert_eq!(

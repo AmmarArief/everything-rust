@@ -66,6 +66,9 @@ pub struct RecordOutcome {
     /// Cases from the semantic traps (added to the generated ones for every function).
     pub traps: usize,
     pub per_function: BTreeMap<String, usize>,
+    /// Functions in files that use regexes: their string parameters also got the regex traps.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub regex_functions: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -105,15 +108,25 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         Ok(path.to_string_lossy().into_owned())
     };
     let mut scopes: BTreeMap<String, Vec<LocalType>> = BTreeMap::new();
+    let mut regex_files: BTreeMap<String, bool> = BTreeMap::new();
+    let mut regex_functions = Vec::new();
     let mut traps = 0;
     for f in &manifest.exports {
         let module = module_for(&f.file)?;
         if !scopes.contains_key(&f.file) {
             let text = std::fs::read_to_string(manifest.root.join(&f.file)).unwrap_or_default();
+            regex_files.insert(
+                f.file.clone(),
+                crate::risks::uses_regex(manifest.language, &text),
+            );
             scopes.insert(
                 f.file.clone(),
                 crate::bridge::types_in_scope(&manifest.root, &f.file, &text),
             );
+        }
+        let regex = regex_files[&f.file];
+        if regex && f.params.iter().any(|p| param_type(p) == RType::Str) {
+            regex_functions.push(f.name.clone());
         }
         let types = &scopes[&f.file];
         let mut all = generate(f, opts.count, types);
@@ -126,7 +139,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .and_then(Value::as_array)
             .cloned()
             .unwrap_or_default();
-        for args in trap_args(&f.params, &base) {
+        for args in trap_args(&f.params, &base, regex) {
             let args = Value::Array(args);
             if seen.insert(serde_json::to_string(&args).unwrap_or_default()) {
                 all.push(args);
@@ -231,6 +244,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         errors,
         traps,
         per_function,
+        regex_functions,
     })
 }
 
@@ -560,9 +574,26 @@ pub struct DiffOptions<'a> {
     /// Compare objects regardless of key order.
     pub ignore_key_order: bool,
     pub node_args: &'a [String],
+    /// Floats match within this tolerance; the one saved by `record` when `None`.
+    pub float_tolerance: Option<f64>,
 }
 
+/// The first mismatches a diff reports.
+const SHOWN_MISMATCHES: usize = 20;
+
 pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
+    let mut outcome = diff_exact(opts)?;
+    let saved = Manifest::load(opts.crate_dir)
+        .ok()
+        .and_then(|m| m.float_tolerance);
+    if let Some(t) = opts.float_tolerance.or(saved) {
+        outcome = crate::tolerance::apply(outcome, crate::tolerance::check(t)?);
+    }
+    outcome.mismatches.truncate(SHOWN_MISMATCHES);
+    Ok(outcome)
+}
+
+fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
     if let Ok(manifest) = Manifest::load(opts.crate_dir)
         && manifest.language == crate::lang::Lang::Python
         && opts.module.is_none()
@@ -731,7 +762,11 @@ fn trap_values(t: &RType) -> Vec<Value> {
 
 /// Every trap value in every parameter, one at a time, the other arguments as in `base`.
 /// Structured parameters (objects with a known shape) are left as generated.
-pub fn trap_args(params: &[crate::ts::exports::Param], base: &[Value]) -> Vec<Vec<Value>> {
+pub fn trap_args(
+    params: &[crate::ts::exports::Param],
+    base: &[Value],
+    regex: bool,
+) -> Vec<Vec<Value>> {
     let mut out = Vec::new();
     if base.len() < params.iter().filter(|p| !p.rest).count() {
         return out;
@@ -746,7 +781,11 @@ pub fn trap_args(params: &[crate::ts::exports::Param], base: &[Value]) -> Vec<Ve
         if structured || (matches!(t, RType::Json) && !any) {
             continue;
         }
-        for v in trap_values(&t) {
+        let mut values = trap_values(&t);
+        if regex && t == RType::Str {
+            values.extend(crate::risks::REGEX_TRAPS.iter().map(|s| json!(s)));
+        }
+        for v in values {
             if base[i] != v {
                 let mut args = base.to_vec();
                 args[i] = v;
@@ -1433,7 +1472,7 @@ for (const c of cases) {
     }
     else {
       summary.failed++
-      if (summary.mismatches.length < 20) summary.mismatches.push({ fn: c.class, args: [c.ctor, c.calls], expected: c.results, actual: got })
+      summary.mismatches.push({ fn: c.class, args: [c.ctor, c.calls], expected: c.results, actual: got })
     }
     continue
   }
@@ -1459,7 +1498,7 @@ for (const c of cases) {
   }
   else {
     summary.failed++
-    if (summary.mismatches.length < 20) summary.mismatches.push({ fn: c.fn, args: c.args, expected, actual })
+    summary.mismatches.push({ fn: c.fn, args: c.args, expected, actual })
   }
 }
 writeFileSync(outPath, JSON.stringify(summary, null, 2))

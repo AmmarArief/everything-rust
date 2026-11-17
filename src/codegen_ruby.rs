@@ -264,10 +264,8 @@ when "diff"
       summary["passed"] += 1
     else
       summary["failed"] += 1
-      if summary["mismatches"].size < 20
-        shown = c["kwargs"].nil? || c["kwargs"].empty? ? c["args"] : c["args"] + [c["kwargs"]]
-        summary["mismatches"] << { "fn" => c["fn"], "args" => shown, "expected" => expected, "actual" => got }
-      end
+      shown = c["kwargs"].nil? || c["kwargs"].empty? ? c["args"] : c["args"] + [c["kwargs"]]
+      summary["mismatches"] << { "fn" => c["fn"], "args" => shown, "expected" => expected, "actual" => got }
     end
   end
   File.write(out_path, JSON.generate(summary))

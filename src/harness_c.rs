@@ -447,11 +447,16 @@ fn bench_c(m: &Manifest, cases: &[Value], min_ms: u64) -> String {
 const DRIVER_C_PY: &str = r#"
 import ctypes
 import json
+import locale
 import math
 import os
 import signal
 import sys
 import time
+
+# Python switches C's locale to the user's at startup; a C program stays in "C" unless it calls
+# setlocale, so the library must see "C" here (isspace, toupper, strtod depend on it).
+locale.setlocale(locale.LC_ALL, "C")
 
 
 def enc(v):
@@ -567,8 +572,7 @@ def diff(lib, sigs, cases_path, out_path):
             summary["passed"] += 1
         else:
             summary["failed"] += 1
-            if len(summary["mismatches"]) < 20:
-                summary["mismatches"].append({"fn": c["fn"], "args": c["args"], "expected": expected, "actual": got})
+            summary["mismatches"].append({"fn": c["fn"], "args": c["args"], "expected": expected, "actual": got})
     json.dump(summary, open(out_path, "w", encoding="utf-8"), ensure_ascii=False)
 
 

@@ -1,7 +1,31 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (2026-11-17)
 
+Numeric code, already compiled code, and the edges of what a recording proves, after the first
+round of feedback. rust-anything is now on crates.io: `cargo install rust-anything`.
+
+- Float tolerance for numeric code: `record --float-tolerance 1e-9` (and `app record`) lets floats
+  match when they differ by at most that share of the larger value (absolute below 1); `diff`,
+  `gate`, `app replay` and the lift use it. Integers, text, structure and formatting (`3` against
+  `3.0`) still match exactly. `diff --float-tolerance` tries one for a single run.
+- Noise is sorted by kind: when the original's two runs disagree, `app record` reports `values`
+  (now `[..]`), `order` (the same lines in another order: replay now compares them in any order
+  instead of wildcarding them, so a port must still produce exactly those lines) and `lines` (a
+  `...` that matches anything), by case and field. The lift's trycmd test skips `order` cases and
+  says to run `app replay` in CI for them.
+- Regex traps: functions in files that use regexes get extra string inputs where engines
+  disagree (Turkish i, Kelvin sign, long s, joiners, non-ASCII digits and spaces, line separators,
+  final sigma), in all six languages. Every string trap now also includes a dotless `ı`, a
+  zero-width-joiner emoji and a non-breaking space.
+- C: recording runs the library in the "C" locale, as a C program has unless it calls
+  `setlocale`. It ran in the user's locale (Python sets it at startup), so `isspace` and friends
+  could record a different answer per machine; the new non-breaking-space trap caught it.
+- The pitch says what passing means: the Rust matches the original's recorded behavior. The
+  README has a "What it can't catch" section.
+- Already compiled code: `profile` and `analyze` flag Python functions compiled by numba
+  (`@njit`, `@jit`, `@vectorize`, ...), Cython or JAX, and the hot functions that call them, since
+  a Rust port gains little speed there.
 - Go: crates no longer build a static library. Go 1.26.11 and 1.27.4 refuse to link archives
   that carry LLVM bitcode, which every Rust static library does; cgo links the shared library
   anyway. Run `rust-anything refresh <crate>` on a Go crate bridged by an earlier version.

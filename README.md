@@ -9,7 +9,7 @@
 <p align="center"><em>CLIs, servers and libraries, piece by piece, checked against the original at every step.</em></p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
+  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
   <img src="https://img.shields.io/badge/languages-6-E2862A" alt="6 languages">
   <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="Works with 4 agents"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Tests"></a>
@@ -19,10 +19,12 @@
 
 <p align="center">up to 20x faster · 38,251 recorded cases replayed · 0 mismatches · one command</p>
 
-**Rewrite your whole app in Rust, one piece at a time, proving nothing changed.** For CLIs, HTTP
-servers and libraries in TypeScript/JavaScript, Python, C, Go, Ruby and Java: rust-anything ports
-your app piece by piece, checks every step against the original's recorded behavior, and hands
-you a pure Rust app. Only need the slow part fast? Port just that, one hot path at a time:
+**Rewrite your whole app in Rust, one piece at a time.** rust-anything records what your
+TypeScript/JavaScript, Python, C, Go, Ruby or Java app does today, then checks every piece of the
+Rust rewrite against that recording before it moves on, until the app is pure Rust. CLIs, HTTP
+servers and libraries; your coding agent (or you) writes the Rust. It can only catch what the
+recording covers: see [What it can't catch](#what-it-cant-catch). Only need the slow part fast?
+Port just that, one hot path at a time:
 
 | Real workload, same results as the original | Original | With rust-anything |
 | --- | ---: | ---: |
@@ -49,19 +51,20 @@ rust-anything finds the loop worth moving, and moves it.
 Paste this into Claude Code, Codex, Cursor or Gemini CLI and let your agent install it:
 
 ```text
-Install rust-anything: run `cargo install --git https://github.com/erkamyaman/rust-anything`,
-then `rust-anything setup`. Tell me when to restart you.
+Install rust-anything: run `cargo install rust-anything`, then `rust-anything setup`.
+Tell me when to restart you.
 ```
 
 Or yourself:
 
 ```sh
-npm install -g rust-anything  # prebuilt binary for macOS, Linux and Windows
-# or: cargo install --git https://github.com/erkamyaman/rust-anything
+cargo install rust-anything   # from crates.io
 rust-anything setup           # registers it with Claude Code, Codex, Cursor and Gemini CLI
 ```
 
-Prebuilt binaries are also attached to each [GitHub release](https://github.com/erkamyaman/rust-anything/releases).
+No Rust toolchain yet? Prebuilt binaries for macOS, Linux and Windows are attached to each
+[GitHub release](https://github.com/erkamyaman/rust-anything/releases), and for JavaScript
+projects `npm install -g rust-anything` installs the same binary.
 
 In Claude Code you can also install it as a plugin (the MCP server and the skill; the CLI above
 must be on your `PATH`):
@@ -160,10 +163,10 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 
 | Step | Command | What it does |
 | --- | --- | --- |
-| 0. Profile | `rust-anything profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler (node, cProfile, `go test` pprof, JFR, a Ruby tracer): hot functions by inclusive time, their callers, and which loops to batch |
+| 0. Profile | `rust-anything profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler (node, cProfile, `go test` pprof, JFR, a Ruby tracer): hot functions by inclusive time, their callers, and which loops to batch; flags code that is already compiled (numba, Cython, JAX), where Rust gains little |
 | 1. Plan | `rust-anything analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, dependency-to-crate fit, best first ports; `--whole-app` adds entry points and shape, every dependency (imported or declared) with its crate, pieces (units that import each other move together) and numbered decisions with a recommended answer |
 | 2. Bridge | `rust-anything bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`); `--batch fn:param` adds a class that keeps many `param` values in Rust |
-| 3. Record | `rust-anything record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and on every semantic trap in every parameter (string length and case, signed division, overflow edges, float printing, map and sort order), and saves `cases.jsonl` |
+| 3. Record | `rust-anything record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and on every semantic trap in every parameter (string length and case, signed division, overflow edges, float printing, map and sort order), and saves `cases.jsonl`; `--float-tolerance 1e-9` lets floats match within that share for numeric code |
 | 3. Build | `rust-anything build <crate>` | Builds the Rust side: `.node`, wasm package, Python extension or shared library |
 | 3. Diff | `rust-anything diff <crate>` | Replays the recorded cases against Rust, called the way the original's callers call it; lists mismatches |
 | 3. Bench | `rust-anything bench <crate>` | Times the recorded cases on the original and on Rust, bridge included |
@@ -492,15 +495,42 @@ Design choices and their reasons: [DECISIONS.md](./DECISIONS.md).
 ## Update or remove
 
 ```sh
-npm install -g rust-anything@latest                                       # update (npm)
-cargo install --git https://github.com/erkamyaman/rust-anything --force   # update (Cargo)
-rust-anything setup                                                       # refresh agent settings
-rust-anything setup --remove && npm uninstall -g rust-anything            # remove (npm)
-rust-anything setup --remove && cargo uninstall rust-anything             # remove (Cargo)
+cargo install rust-anything                                    # update (Cargo)
+npm install -g rust-anything@latest                            # update (npm)
+rust-anything setup                                            # refresh agent settings
+rust-anything setup --remove && cargo uninstall rust-anything  # remove (Cargo)
+rust-anything setup --remove && npm uninstall -g rust-anything # remove (npm)
 ```
 
 `setup --remove` takes out only rust-anything's entries; the copies it saved
 (`<file>.rust-anything.bak`) stay until you delete them.
+
+## What it can't catch
+
+Passing means the Rust matches every case that was recorded, nothing more. What bites rewrites
+usually lives outside the recording, so know where the edges are:
+
+- **Inputs nobody recorded.** The generated cases, the traps and your own `--inputs` are the
+  ceiling. Add real inputs (production samples, bug reports, the original's test fixtures); the
+  user input that breaks prod is rarely one a generator thinks of.
+- **Regexes.** The `regex` crate has no lookaround or backreferences, and even a pattern that
+  compiles can treat `\w`, `\b`, `\d` and case-insensitive matching on non-ASCII text differently
+  from JS, Python or Java. Swapping in `fancy-regex` or rewriting the pattern can pass every
+  recorded case and still differ on a Turkish dotless `ı` or a zero-width joiner. `record` adds
+  regex traps (those, the Kelvin sign, long s, Arabic-Indic digits, line separators, final sigma)
+  to every function in a file that uses regexes, but fuzz your real patterns against real text too.
+- **What changes between runs.** `record` runs the original twice and sorts out what differed:
+  changed values (times, ids) become wildcards; the same lines in another order (hash maps,
+  concurrency) are compared in any order, so a port still has to produce exactly those lines; a
+  different number of lines becomes `...`, which matches anything. `record` lists each kind:
+  look at every one, since a hash-order or concurrency difference is exactly what can change for
+  real in a port.
+- **Floats.** Number-to-text formatting differs between languages (`1e21`, `-0`, digit counts).
+  The traps include those values, and they must match exactly; `--float-tolerance` forgives
+  rounding only, never formatting.
+- **Anything not in the output.** Timing, memory, concurrency under load, and side effects other
+  than stdout, stderr, exit codes, written files and HTTP responses (network calls, databases,
+  signals) are not compared.
 
 ## FAQ
 
@@ -514,7 +544,13 @@ runs both and returns the original's result while you build confidence).
 **Is Rust always faster?** No, and rust-anything says so. A small function called once per item
 is often slower in Rust, because each call crosses a bridge; V8, the JVM and Go run such functions
 in nanoseconds. `profile` finds the loop around it, `--batch` moves the whole loop, and `bench`
-gives a verdict before you ship.
+gives a verdict before you ship. Code already compiled by numba, Cython or JAX runs as machine
+code too: `profile` and `analyze` flag it, since porting it buys little speed.
+
+**My code is numeric; will the floats match exactly?** Often not: operation order, fused
+multiply-add and the math library differ between compilers. Record with `--float-tolerance 1e-9`
+(`record` or `app record`), and floats match within that share of the larger value (absolute below
+1). Integers, text and structure still have to match exactly.
 
 **Does my code leave my machine?** No: rust-anything runs locally and sends none of your code
 anywhere. Cargo downloads crates as usual, and your agent's model provider sees what your agent
