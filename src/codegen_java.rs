@@ -686,7 +686,8 @@ public final class RustAnythingDriver {
         if (expected.containsKey("error")) {
             return got.containsKey("error") && String.valueOf(expected.get("error_type")).equals(String.valueOf(got.get("error_type")));
         }
-        return !got.containsKey("error") && RustAnythingJson.write(expected.get("ok")).equals(RustAnythingJson.write(got.get("ok")));
+        return expected.containsKey("ok") && got.containsKey("ok")
+            && RustAnythingJson.write(expected.get("ok")).equals(RustAnythingJson.write(got.get("ok")));
     }
 
     @SuppressWarnings("unchecked")
