@@ -28,20 +28,7 @@ pub struct GateOutcome {
 pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
     let manifest = Manifest::load(crate_dir)?;
     let mut checks = rust_checks(crate_dir, &crate_dir.join("target"));
-    let port = std::fs::read_to_string(crate_dir.join("src/port.rs")).unwrap_or_default();
-    let todo = port.matches("unimplemented!(").count();
-    checks.push(Check {
-        name: "ported",
-        passed: todo == 0,
-        detail: if todo == 0 {
-            format!("all {} functions ported", manifest.exports.len())
-        } else {
-            format!(
-                "{todo} of {} functions still `unimplemented!`",
-                manifest.exports.len()
-            )
-        },
-    });
+    checks.push(ported_check(crate_dir));
 
     checks.extend(crate::error_paths::checks(crate_dir, &manifest));
     let built = harness::build(crate_dir);
@@ -184,7 +171,17 @@ pub fn rust_checks(crate_dir: &Path, target_dir: &Path) -> Vec<Check> {
 
 /// No function in `src/port.rs` is still `unimplemented!`.
 pub fn ported_check(crate_dir: &Path) -> Check {
-    let port = std::fs::read_to_string(crate_dir.join("src/port.rs")).unwrap_or_default();
+    let path = crate_dir.join("src/port.rs");
+    let port = match std::fs::read_to_string(&path) {
+        Ok(port) => port,
+        Err(error) => {
+            return Check {
+                name: "ported",
+                passed: false,
+                detail: format!("cannot read {}: {error}", path.display()),
+            };
+        }
+    };
     let todo = port.matches("unimplemented!(").count();
     Check {
         name: "ported",
@@ -264,5 +261,14 @@ mod tests {
         assert_eq!(explained, 1);
         assert_eq!(unexplained.len(), 1);
         assert!(unexplained[0].ends_with("a.rs:4"));
+    }
+    #[test]
+    fn missing_port_source_fails_the_ported_check() {
+        let dir = crate::app::temp_dir("gate-port").unwrap();
+        let check = super::ported_check(&dir);
+        std::fs::remove_dir(dir).unwrap();
+        assert!(!check.passed);
+        assert!(check.detail.contains("cannot read"));
+        assert!(check.detail.contains("port.rs"));
     }
 }
