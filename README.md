@@ -1,6 +1,9 @@
 <p align="center">
   <img src="docs/assets/hero.png" alt="rust-anything: Rewrite your whole app in Rust. Keep it working the whole way. CLIs, servers and libraries, piece by piece, checked against the original at every step." width="820">
 </p>
+<p align="center">
+  <a href="https://github.com/erkamyaman/rust-anything/stargazers"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=flat&logo=github&label=stars&color=e8892f" alt="GitHub stars"></a>
+</p>
 
 **Rewrite your whole app in Rust, one piece at a time, proving nothing changed.** For CLIs, HTTP
 servers and libraries in TypeScript/JavaScript, Python, C, Go, Ruby and Java: rust-anything ports
