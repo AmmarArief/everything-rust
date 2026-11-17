@@ -69,7 +69,7 @@ pub struct Decision {
     pub recommendation: String,
 }
 
-const SERVER: &str = r"\.listen\(|createServer\(|ListenAndServe|HTTPServer\(|HttpServer\.create|uvicorn\.run|\bapp\.run\(|SpringApplication\.run|TCPServer\.new|WEBrick::HTTPServer|Sinatra::Base|FastAPI\(|Flask\(|\bexpress\(\)|\blisten\(\s*\w+\s*,\s*\w+\s*\)|\bserve\(\s*listener";
+const SERVER: &str = r#"\$_SERVER\[\s*['"]REQUEST_(?:METHOD|URI)|\$_(?:GET|POST)\[|\.listen\(|createServer\(|ListenAndServe|HTTPServer\(|HttpServer\.create|uvicorn\.run|\bapp\.run\(|SpringApplication\.run|TCPServer\.new|WEBrick::HTTPServer|Sinatra::Base|FastAPI\(|Flask\(|\bexpress\(\)|\blisten\(\s*\w+\s*,\s*\w+\s*\)|\bserve\(\s*listener"#;
 
 fn main_pattern(lang: Lang) -> Option<&'static str> {
     Some(match lang {
@@ -79,6 +79,7 @@ fn main_pattern(lang: Lang) -> Option<&'static str> {
         Lang::C => r"\bint\s+main\s*\(",
         Lang::Ruby => r"^#!.*\bruby\b|\bARGV\b|__FILE__\s*==\s*\$0",
         Lang::Java => r"public\s+static\s+void\s+main\s*\(",
+        Lang::Php => r#"^#!.*\bphp\b|\$argv\b|PHP_SAPI\s*===?\s*['"]cli['"]"#,
     })
 }
 
@@ -160,6 +161,34 @@ fn manifest_entries(root: &Path, lang: Lang) -> Vec<EntryPoint> {
                 name: Some(dir),
                 evidence: "a `cmd/` folder".into(),
             });
+        }
+    }
+    if lang == Lang::Php {
+        if let Ok(doc) = serde_json::from_str::<Value>(&read(root, "composer.json")) {
+            for bin in doc["bin"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+            {
+                out.push(EntryPoint {
+                    kind: "cli",
+                    path: bin.trim_start_matches("./").to_string(),
+                    name: Some(bin.rsplit('/').next().unwrap_or(bin).to_string()),
+                    evidence: "composer.json `bin`".into(),
+                });
+            }
+        }
+        for front in ["public/index.php", "web/index.php", "index.php"] {
+            if root.join(front).is_file() {
+                out.push(EntryPoint {
+                    kind: "server",
+                    path: front.to_string(),
+                    name: None,
+                    evidence: format!("`{front}`, a front controller: serve it with `php -S`"),
+                });
+                break;
+            }
         }
     }
     if lang == Lang::Ruby {
@@ -356,6 +385,17 @@ pub fn declared(root: &Path, lang: Lang) -> BTreeSet<String> {
                 Regex::new(r#"\b(?:implementation|api|compile)\s*\(?\s*['"]([^:'"]+:[^:'"]+)"#)
                     .expect("valid regex");
             out.extend(line.captures_iter(&gradle).map(|c| c[1].to_string()));
+        }
+        Lang::Php => {
+            if let Ok(doc) = serde_json::from_str::<Value>(&read(root, "composer.json"))
+                && let Some(deps) = doc["require"].as_object()
+            {
+                out.extend(
+                    deps.keys()
+                        .filter(|k| k.contains('/') && !k.starts_with("ext-"))
+                        .cloned(),
+                );
+            }
         }
         Lang::C => {}
     }

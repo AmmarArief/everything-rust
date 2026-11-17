@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+- PHP, in preview: detected from `composer.json` or `.php` files. `analyze` reads Composer
+  packages and PSR-4 roots, resolves `require` and `use`, finds functions and public static
+  methods with native and phpdoc types, flags PHP's risks (loose `==`, `/` returning floats, byte
+  strings against `mb_*`, PCRE features the `regex` crate lacks, `eval`, magic methods) and maps
+  common Composer packages to crates. `analyze --whole-app` finds CLIs (`$argv`, composer `bin`)
+  and servers (front controllers, `$_SERVER`). `app record`, `app replay` and `app front-door`
+  work on PHP CLIs and on servers run with `php -S`. Bridging PHP units into Rust (PHP FFI over a
+  C ABI) comes next; `bridge` says so for now.
+- Fix ([#3](https://github.com/erkamyaman/rust-anything/issues/3)): `.gitignore` files in folders
+  above the repository (a `*` in a home-folder `.gitignore`, for one) no longer hide every source
+  file. Ignore files are read the way git reads them: from the repository root down, and not from
+  parent folders at all outside a repository. When ignore rules still exclude every source file,
+  `analyze` says so instead of returning an empty plan.
+- PHP's built-in server echoes a `Host` header with the port it ran on; HTTP recordings now skip
+  it, like `Date`.
+- Fix ([#4](https://github.com/erkamyaman/rust-anything/issues/4)): Python units bridged on macOS
+  failed to link (`Undefined symbols ... _Py_IsInitialized`). The PyO3 crate now gets the same
+  `build.rs` the Ruby bridge has, which lets the interpreter provide Python's symbols at load time.
+  `rust-anything refresh <crate>` adds it to crates bridged before this fix.
+- A `.github/FUNDING.yml` turns on the repository's Sponsor button.
+
 ## 1.2.0 (2026-11-17)
 
 Numeric code, already compiled code, and the edges of what a recording proves, after the first

@@ -187,6 +187,10 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
             "`profile` runs TS/JS, Python, Go, Java and Ruby workloads; for C, use `perf record -g` \
              and port the hot loops it shows"
         ),
+        Lang::Php => bail!(
+            "`profile` does not run PHP workloads yet; use SPX or Xdebug's profiler and port the \
+             hot loops it shows"
+        ),
     };
     let _ = std::fs::remove_dir_all(&work);
     Ok(report(&root, lang, command, functions, total_ms))
@@ -702,7 +706,7 @@ fn java(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
     let json: Value = serde_json::from_slice(&out.stdout).context("jfr output")?;
     // Sources by class: `com/example/text/Strings` -> its file in the repository.
     let mut sources: HashMap<String, String> = HashMap::new();
-    for entry in ignore::WalkBuilder::new(root).build() {
+    for entry in crate::walk::builder(root).build() {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
         if path.extension().is_some_and(|e| e == "java")

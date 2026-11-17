@@ -49,6 +49,8 @@ pub enum Bridge {
     /// Ruby through Fiddle over a C ABI.
     Fiddle,
     Jni,
+    /// PHP through its FFI extension over a C ABI.
+    PhpFfi,
 }
 
 impl Bridge {
@@ -62,6 +64,7 @@ impl Bridge {
             Self::Cgo => "cgo",
             Self::Fiddle => "Fiddle (C ABI)",
             Self::Jni => "JNI",
+            Self::PhpFfi => "PHP FFI (C ABI)",
         }
     }
 
@@ -74,6 +77,7 @@ impl Bridge {
             Lang::Go => Self::Cgo,
             Lang::Ruby => Self::Fiddle,
             Lang::Java => Self::Jni,
+            Lang::Php => Self::PhpFfi,
         }
     }
 }
@@ -100,6 +104,9 @@ pub struct Report {
     /// `analyze --whole-app`: entry points, every dependency, pieces and decisions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whole_app: Option<crate::whole_app::WholeApp>,
+    /// Problems with the input itself, such as every source file being excluded by ignore rules.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -507,6 +514,19 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -
     let start_here = start_here(&reports);
     let packages = package_reports(ws, &reports, &package_tests, &node_packages);
     let dependencies = dependency_reports(&reports, lang);
+    let mut warnings = Vec::new();
+    if ws.files.is_empty() {
+        let hidden = crate::walk::ignored_files(root, lang.extensions());
+        if hidden > 0 {
+            warnings.push(format!(
+                "no source files were analyzed, but {hidden} {} files under {} are excluded by \
+                 ignore rules (.gitignore or .ignore files in this repository); the plan is empty \
+                 because of them, not because there is nothing to port",
+                lang.name(),
+                root.display()
+            ));
+        }
+    }
     Report {
         schema: SCHEMA,
         language: lang,
@@ -516,6 +536,7 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -
         start_here,
         dependencies,
         whole_app: None,
+        warnings,
     }
 }
 

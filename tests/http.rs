@@ -387,6 +387,19 @@ fn python_server() {
 }
 
 #[test]
+fn php_server() {
+    check_language(&Lang {
+        name: "php",
+        compiled: false,
+        runtime: ("php", "--version"),
+        source: "server.php",
+        build: no_build,
+        run: |s| format!("php -S 127.0.0.1:{{port}} {s}"),
+        original: "server.php",
+    });
+}
+
+#[test]
 fn ruby_server() {
     check_language(&Lang {
         name: "ruby",

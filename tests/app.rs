@@ -359,6 +359,17 @@ fn ruby_cli_records_and_replays() {
 }
 
 #[test]
+fn php_cli_records_and_replays() {
+    if !available("php", "--version") {
+        eprintln!("skipped: php not found");
+        return;
+    }
+    let repo = fixture("php");
+    add_bug(&repo, "tcli.php", Some("tcli_bug.php"));
+    record_then_replay(&repo, "php tcli.php", "php tcli_bug.php");
+}
+
+#[test]
 fn java_cli_records_and_replays() {
     if !available("javac", "--version") || !available("java", "--version") {
         eprintln!("skipped: javac or java not found");
@@ -787,6 +798,15 @@ fn go_cli_lifts_to_pure_rust() {
         unit: "bytes",
     };
     lift_end_to_end(&repo, "./tcli", &go, "tcli");
+}
+
+#[test]
+fn php_cli_lifts_to_pure_rust() {
+    if !available("php", "--version") || !available("cargo", "--version") {
+        eprintln!("skipped: php or cargo not found");
+        return;
+    }
+    lift_end_to_end(&fixture("php"), "php tcli.php", &CHARS, "tcli.php");
 }
 
 #[test]

@@ -89,6 +89,9 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
         "{} packages, {} source files ({} lines), {} test files, {} UI files, grouped into {} units.\n",
         s.packages, s.source_files, s.loc, s.test_files, s.ui_files, s.units
     )?;
+    for warning in &r.warnings {
+        writeln!(out, "> **Warning:** {warning}\n")?;
+    }
     writeln!(
         out,
         "| Ready | Caution | Blocked | Keep in source language |"

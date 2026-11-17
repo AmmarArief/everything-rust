@@ -83,7 +83,7 @@ fn build_original(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
     }
     // Headers paired with a `.c` file are not in the workspace listing; their folders still
     // go on the include path.
-    for entry in ignore::WalkBuilder::new(&manifest.root)
+    for entry in crate::walk::builder(&manifest.root)
         .require_git(false)
         .build()
         .flatten()
@@ -291,7 +291,7 @@ fn original_sources(
             sources.push(path);
         }
     }
-    for entry in ignore::WalkBuilder::new(&manifest.root)
+    for entry in crate::walk::builder(&manifest.root)
         .require_git(false)
         .build()
         .flatten()

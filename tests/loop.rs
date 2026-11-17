@@ -476,6 +476,8 @@ fn python_modules_bridge_record_and_diff() {
         "{lib}"
     );
     assert!(lib.contains("#[pyclass(name = \"Stack\")]"));
+    let build_rs = std::fs::read_to_string(dir.join("build.rs")).unwrap();
+    assert!(build_rs.contains("dynamic_lookup"), "{build_rs}");
     if !python_available() {
         return;
     }

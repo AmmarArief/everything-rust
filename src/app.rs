@@ -71,10 +71,10 @@ pub(crate) const JSON_TRAPS: [&str; 2] = [
     r#"{"zebra":1,"apple":2,"10":3,"2":4,"é":5,"Apple":6}"#,
     r#"{"n":9007199254740993,"f":1e21,"t":0.1,"neg":-7}"#,
 ];
-const NOT_APP_NAMES: [&str; 27] = [
+const NOT_APP_NAMES: [&str; 28] = [
     "node", "nodejs", "python", "python3", "py", "ruby", "java", "go", "deno", "bun", "tsx",
     "ts-node", "sh", "bash", "zsh", "cargo", "npx", "npm", "pnpm", "yarn", "uv", "poetry",
-    "bundle", "run", "exec", "env", "sudo",
+    "bundle", "run", "exec", "env", "sudo", "php",
 ];
 
 /// `rust/app-cases/rust-anything.json`: how to run the original, and the normalizers.
@@ -985,14 +985,13 @@ fn find_examples(repo: &Path, names: &[String]) -> Vec<Case> {
 /// with the folder of the file it came from.
 pub(crate) fn scan_examples<T>(repo: &Path, parse: impl Fn(&str, &Path) -> Option<T>) -> Vec<T> {
     let skip = ["node_modules", "target", "vendor", ".git"];
-    let walker = ignore::WalkBuilder::new(repo)
-        .max_depth(Some(4))
-        .sort_by_file_name(|a, b| a.cmp(b))
-        .filter_entry(move |e| {
-            let name = e.file_name().to_string_lossy();
-            !skip.contains(&name.as_ref())
-        })
-        .build();
+    let walker = crate::walk::filtered(repo, move |e| {
+        let name = e.file_name().to_string_lossy();
+        !skip.contains(&name.as_ref())
+    })
+    .max_depth(Some(4))
+    .sort_by_file_name(|a, b| a.cmp(b))
+    .build();
     let rust_dir = repo.join("rust");
     let mut out = Vec::new();
     for entry in walker.flatten() {
