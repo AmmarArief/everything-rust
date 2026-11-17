@@ -84,7 +84,7 @@ pub extern "system" fn Java_rustanything_{mangled}_call<'local>(
 }}
 "#,
             class = java_native_class(m),
-            mangled = java_native_class(m).replace('_', "_1"),
+            mangled = crate::codegen_java::mangle_jni_component(&java_native_class(m)),
         )
     } else {
         r#"

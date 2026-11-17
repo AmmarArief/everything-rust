@@ -999,8 +999,19 @@ fn typed<'m>(
     }
 }
 
-fn mangle(s: &str) -> String {
-    s.replace('_', "_1")
+/// Escape one component of a JNI symbol. Non-ASCII characters are encoded one UTF-16 unit at a time.
+pub(crate) fn mangle_jni_component(s: &str) -> String {
+    let mut out = String::new();
+    for unit in s.encode_utf16() {
+        match unit {
+            0x30..=0x39 | 0x41..=0x5a | 0x61..=0x7a => out.push(char::from(unit as u8)),
+            0x5f => out.push_str("_1"),
+            _ => {
+                let _ = write!(out, "_0{unit:04x}");
+            }
+        }
+    }
+    out
 }
 
 /// Typed JNI functions for `lib.rs`, appended after the JSON dispatcher.
@@ -1194,8 +1205,8 @@ fn java_string(env: &mut jni::JNIEnv, text: &str) -> jni::sys::jstring {
              report(&mut env, &slot, &message);\n            {default}\n        }}\n    }}\n}}",
             proto = e.prototype.as_deref().unwrap_or(&e.name),
             js = f.js_name,
-            mclass = mangle(&class),
-            mjs = mangle(&f.js_name),
+            mclass = mangle_jni_component(&class),
+            mjs = mangle_jni_component(&f.js_name),
             params = params.join(", "),
         );
     }
@@ -1753,8 +1764,8 @@ fn java_wire_fns<'m>(
              Err(message) => {{\n            report(&mut env, &slot, &message);\n            std::ptr::null_mut()\n        }}\n    }}\n}}",
             proto = e.prototype.as_deref().unwrap_or(&e.name),
             js = f.js_name,
-            mclass = mangle(&class),
-            mjs = mangle(&f.js_name),
+            mclass = mangle_jni_component(&class),
+            mjs = mangle_jni_component(&f.js_name),
         );
         out.push((e, java, rust));
     }
@@ -1838,4 +1849,16 @@ fn direct_names(m: &Manifest, api: &crate::codegen::PortApi) -> Vec<String> {
             .map(|(e, ..)| e.name.clone()),
     );
     names
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jni_symbols_match_javac_for_non_ascii_identifiers() {
+        assert_eq!(mangle_jni_component("n_café"), "n_1caf_000e9");
+        assert_eq!(mangle_jni_component("w_get$Value"), "w_1get_00024Value");
+        assert_eq!(mangle_jni_component("n_𐐀"), "n_1_0d801_0dc00");
+    }
 }
