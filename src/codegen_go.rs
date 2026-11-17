@@ -474,8 +474,6 @@ func rustAnythingErr(p *C.char) string {
 }
 "#;
 
-// Parameter names are local to the wrapper. Positional names keep them out of the
-// generated locals and imports (for example, `status`, `out`, and `C`).
 fn wrapper_arg(index: usize) -> String {
     format!("raArg{index}")
 }
