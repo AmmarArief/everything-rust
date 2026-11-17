@@ -232,10 +232,6 @@ fn json_server(
             path.display()
         );
     };
-    let mut entry = json!({ "command": command, "args": ["mcp"] });
-    if stdio_type {
-        entry = json!({ "type": "stdio", "command": command, "args": ["mcp"], "env": {} });
-    }
     let servers = root.entry("mcpServers").or_insert_with(|| json!({}));
     let Some(servers) = servers.as_object_mut() else {
         bail!(
@@ -250,16 +246,31 @@ fn json_server(
             "absent"
         }
     } else {
-        match servers.get(NAME) {
-            Some(old) if *old == entry => "unchanged",
-            Some(_) => {
-                servers.insert(NAME.into(), entry);
+        let existing = servers.get(NAME);
+        let mut entry = existing
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_default();
+        entry.insert("command".into(), json!(command));
+        entry.insert("args".into(), json!(["mcp"]));
+        if stdio_type || entry.contains_key("type") {
+            entry.insert("type".into(), json!("stdio"));
+        }
+        if stdio_type {
+            entry.entry("env").or_insert_with(|| json!({}));
+        }
+        entry.shift_remove("url");
+        let entry = Value::Object(entry);
+        if existing == Some(&entry) {
+            "unchanged"
+        } else {
+            let action = if existing.is_some() {
                 "updated"
-            }
-            None => {
-                servers.insert(NAME.into(), entry);
+            } else {
                 "added"
-            }
+            };
+            servers.insert(NAME.into(), entry);
+            action
         }
     };
     let mut saved = None;
@@ -297,16 +308,12 @@ fn codex_server(agent: Agent, path: &Path, command: &str, opts: &Options) -> Res
         })
         .as_table_mut()
         .with_context(|| format!("`mcp_servers` in {} is not a table", path.display()))?;
-    let mut entry = toml_edit::Table::new();
-    entry["command"] = toml_edit::value(command);
-    let mut args = toml_edit::Array::new();
-    args.push("mcp");
-    entry["args"] = toml_edit::value(args);
     let same = servers
         .get(NAME)
         .and_then(|t| t.as_table())
         .is_some_and(|t| {
             t.get("command").and_then(|c| c.as_str()) == Some(command)
+                && t.get("url").is_none()
                 && t.get("args").and_then(|a| a.as_array()).is_some_and(|a| {
                     a.iter().map(|v| v.as_str()).collect::<Vec<_>>() == [Some("mcp")]
                 })
@@ -321,6 +328,16 @@ fn codex_server(agent: Agent, path: &Path, command: &str, opts: &Options) -> Res
         "unchanged"
     } else {
         let had = servers.contains_key(NAME);
+        let mut entry = servers
+            .get(NAME)
+            .and_then(toml_edit::Item::as_table)
+            .cloned()
+            .unwrap_or_default();
+        entry["command"] = toml_edit::value(command);
+        let mut args = toml_edit::Array::new();
+        args.push("mcp");
+        entry["args"] = toml_edit::value(args);
+        entry.remove("url");
         servers.insert(NAME, toml_edit::Item::Table(entry));
         if had { "updated" } else { "added" }
     };
@@ -534,6 +551,36 @@ mod tests {
             "{codex}"
         );
         std::fs::remove_dir_all(&home).unwrap();
+    }
+
+    #[test]
+    fn reinstall_preserves_custom_options_for_the_same_server() {
+        let home = temp_home("custom-entry");
+        let cursor = home.join(".cursor/mcp.json");
+        let codex = home.join(".codex/config.toml");
+        std::fs::create_dir_all(cursor.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(codex.parent().unwrap()).unwrap();
+        std::fs::write(&cursor, r#"{"mcpServers":{"rust-anything":{"command":"old","args":["mcp"],"env":{"MODE":"custom"}}}}"#).unwrap();
+        std::fs::write(&codex, "[mcp_servers.rust-anything]\ncommand = \"old\"\nargs = [\"mcp\"]\ntool_timeout_sec = 120\n").unwrap();
+
+        let options = opts(&home, vec![Agent::Cursor, Agent::Codex]);
+        setup(&options).unwrap();
+        let cursor: Value =
+            serde_json::from_str(&std::fs::read_to_string(cursor).unwrap()).unwrap();
+        let codex: toml_edit::DocumentMut =
+            std::fs::read_to_string(codex).unwrap().parse().unwrap();
+        let again = setup(&options).unwrap();
+        std::fs::remove_dir_all(home).unwrap();
+        assert_eq!(cursor["mcpServers"][NAME]["env"]["MODE"], "custom");
+        assert_eq!(
+            cursor["mcpServers"][NAME]["command"],
+            "/opt/bin/rust-anything"
+        );
+        assert_eq!(
+            codex["mcp_servers"][NAME]["tool_timeout_sec"].as_integer(),
+            Some(120)
+        );
+        assert!(again.changes.iter().all(|c| c.action == "unchanged"));
     }
 
     #[test]
