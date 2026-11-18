@@ -12,6 +12,7 @@ where used, `inputs.jsonl` (extra inputs passed to `rust-anything record --input
 | `python-colorsys-rs` | Python's `colorsys.py` | CPython 3.13's `Lib/colorsys.py`, as `src/colorsys_pkg/colorsys.py` of a project with a `pyproject.toml` |
 | `java-jdk-rs` | JDK 21 behind `original/Jdk.java` | `original/Jdk.java` in `src/main/java/com/example/jdk/` of a project with a `pom.xml` |
 | `c-libc-rs` | glibc behind `original/facade.c` | `original/facade.c` in `src/` of a project with a `Makefile` |
+| `vercel-ms-rs` | [vercel/ms](https://github.com/vercel/ms) (MIT) | a clone at commit `4ff48ce`, with the crate at `rust/index-rs` (where `bench_batch.mjs` finds `src/index.ts`) |
 
 The originals are not copied here: the standard-library sources keep their own licenses, and the
 ports name theirs in `src/port.rs`. To rerun one, put the original in place as described, point

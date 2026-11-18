@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A port of [vercel/ms](https://github.com/vercel/ms), end to end, in `demo/real-world/vercel-ms-rs`
+  and `docs/real-world.md`: 784/784 recorded cases match; slower per call, 18x faster as a batch
+  for `parse`, slower for `format`.
+- Fix: a napi batch method with a structured parameter did not compile; crates with batch classes
+  now enable napi's `serde-json` feature.
+
 ## 1.5.1 (2026-11-18)
 
 - Fix ([#80](https://github.com/erkamyaman/rust-anything/issues/80)): `record` could stall for good

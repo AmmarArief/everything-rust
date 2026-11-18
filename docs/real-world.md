@@ -22,6 +22,41 @@ Found in the tool, and fixed:
 - Shaped inputs found a real bug in the `text.ts` port (Infinity in a range), then an order
   dependency on V8's sort with NaN comparators; `js::sort` now reproduces V8.
 
+## vercel/ms
+
+[vercel/ms](https://github.com/vercel/ms) (5.5k stars, commit `4ff48ce`) turns `"2 days"` into
+milliseconds and back; most Node projects pull it in through some dependency. Ported end to end
+with rust-anything 1.5.1; the crate is in
+[`demo/real-world/vercel-ms-rs`](../demo/real-world/vercel-ms-rs).
+
+| Step | Result |
+| --- | --- |
+| `analyze` | 1 unit (`src/index.ts`), ready, readiness 96 |
+| `bridge --kind napi` | `ms`, `parse`, `parseStrict` and `format` bridged, none kept in TS |
+| `record --inputs` | 784 cases: generated ones, traps, and 149 inputs taken from vercel/ms's own test suite |
+| port | 200 lines of Rust for 184 of TS |
+| `diff` | 784/784 match on the first build |
+| `gate` | passes (fmt, clippy, tests, error paths, size, behavior) |
+| `bench`, per call | 0.39x: slower. `parse` takes 64 ns in JS, less than one crossing |
+| batch, `parse` x100,000 | JS 11.8 ms, Rust 0.64 ms: **18x**; 2.1x counting the one-time handover of the strings |
+| batch, `format` x100,000 | JS 1.8 ms, Rust 7.2 ms: **0.2x**; building 100,000 JS strings on the way back costs more than the formatting |
+
+What the port had to get right, all caught by recorded cases or traps:
+
+- `/.../i` without the `u` flag folds only ASCII letters, while Rust's `regex` folds Unicode, so
+  `"1 ſ"` (long s) and the Kelvin sign would have parsed as seconds. The port matches units by
+  hand, ASCII only.
+- `Math.round` rounds halves up (`-2.5` gives `-2`); Rust's `round` goes away from zero.
+- `${n}` prints `1e+21`, `5e-324` and `0` for `-0`; the port reproduces JS number-to-string.
+- `str.length` counts UTF-16 units, so the 100-character limit counts an emoji as two.
+
+Found in the tool, and fixed: a napi batch method with a structured parameter (`format`'s
+`options`) did not compile, since the generated binding took a `serde_json::Value` that napi
+cannot convert without its `serde-json` feature. Crates with batch classes now enable it.
+
+The verdict: `ms` is a good port and a bad speed target. Correct on every recorded case, faster
+only when a program parses many durations in one go.
+
 ## Fixtures written to stress the tool
 
 | Fixture | Exercises | Result |
