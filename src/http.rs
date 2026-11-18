@@ -706,6 +706,7 @@ pub(crate) fn record(
     };
     let mut planned: Vec<(String, Req)> = Vec::new();
     let mut seen = BTreeSet::new();
+    let mut taken = BTreeSet::new();
     let mut counts = [0usize; 3];
     let mut bases = Vec::new();
     let mut push = |kind: usize, given: Option<String>, req: Req| -> bool {
@@ -719,6 +720,7 @@ pub(crate) fn record(
             Some(g) => g,
             None => format!("{prefix}-{:03}-{}", counts[kind], case_slug(&req)),
         };
+        let name = app::reserve_case_name(&mut taken, name, counts[kind]);
         planned.push((name, req));
         true
     };

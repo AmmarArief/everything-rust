@@ -89,6 +89,53 @@ fn replay(repo: &Path, build: Option<&str>) -> app::ReplayOutcome {
     .unwrap()
 }
 
+#[test]
+fn http_record_keeps_distinct_requests_with_the_same_name() {
+    if !available("node", "--version") {
+        return;
+    }
+    let repo = fixture("ts", "duplicate-inputs");
+    let inputs = repo.join("inputs.jsonl");
+    std::fs::write(
+        &inputs,
+        concat!(
+            "{\"name\":\"request\",\"path\":\"/hello\"}\n",
+            "{\"name\":\"request-003\",\"path\":\"/div/1/1\"}\n",
+            "{\"name\":\"request\",\"path\":\"/div/2/1\"}\n",
+        ),
+    )
+    .unwrap();
+    // Use only the JSONL cases, so the suffixes do not depend on README examples.
+    std::fs::remove_file(repo.join("README.md")).unwrap();
+    let out = app::record(&RecordOptions {
+        repo: &repo,
+        run: &words("node server.js"),
+        inputs: Some(&inputs),
+        normalize: &[],
+        name: None,
+        traps: false,
+        timeout_secs: None,
+        http: true,
+        port: None,
+        float_tolerance: None,
+    })
+    .unwrap();
+    let repeated = replay(&repo, None);
+    let mut recorded = std::fs::read_dir(&out.dir)
+        .unwrap()
+        .map(|r| r.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|name| name.ends_with(".toml"))
+        .collect::<Vec<_>>();
+    recorded.sort();
+    std::fs::remove_dir_all(repo).unwrap();
+    assert_eq!(out.cases, 3);
+    assert_eq!(repeated.passed, 3, "{:?}", repeated.failures);
+    assert_eq!(
+        recorded,
+        ["request-003.toml", "request-3.toml", "request.toml"]
+    );
+}
+
 /// How to build and run one language's server, and a copy with a changed error message.
 struct Lang {
     name: &'static str,
