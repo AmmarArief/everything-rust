@@ -179,10 +179,20 @@ fn read_response(stream: &mut impl Read, head_only: bool) -> Result<Resp> {
         Vec::new()
     } else if chunked {
         read_chunked(stream, rest)?
-    } else if let Some(len) = headers
-        .get("content-length")
-        .and_then(|l| l.parse::<usize>().ok())
-    {
+    } else if let Some(lengths) = headers.get("content-length") {
+        let parse = |value: &str| -> Result<usize> {
+            let value = value.trim();
+            ensure!(
+                !value.is_empty() && value.bytes().all(|b| b.is_ascii_digit()),
+                "invalid Content-Length"
+            );
+            value.parse().context("invalid Content-Length")
+        };
+        let mut lengths = lengths.split(',');
+        let len = parse(lengths.next().unwrap_or_default())?;
+        for other in lengths {
+            ensure!(parse(other)? == len, "conflicting Content-Length headers");
+        }
         fill(stream, &mut rest, len)?;
         rest.truncate(len);
         rest
@@ -1093,6 +1103,18 @@ mod tests {
         assert!(read_chunked(&mut truncated, Vec::new()).is_err());
         let mut trailers = &b"1\r\na\r\n0\r\nX-Trailer: present\r\n\r\n"[..];
         assert_eq!(read_chunked(&mut trailers, Vec::new()).unwrap(), b"a");
+    }
+
+    #[test]
+    fn fixed_body_rejects_malformed_lengths_and_accepts_equal_duplicates() {
+        let response = |lengths| {
+            let msg = format!("HTTP/1.1 200 OK\r\n{lengths}\r\n\r\nabc trailing");
+            read_response(&mut msg.as_bytes(), false)
+        };
+        assert!(response("Content-Length: invalid").is_err());
+        assert!(response("Content-Length: 3\r\nContent-Length: 4").is_err());
+        let matching = response("Content-Length: 3\r\nContent-Length: 03").unwrap();
+        assert_eq!(matching.body, b"abc");
     }
 
     #[test]
