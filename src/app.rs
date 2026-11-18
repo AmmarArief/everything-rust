@@ -333,6 +333,18 @@ pub(crate) fn resolve_word(repo: &Path, word: &str) -> String {
     word.to_string()
 }
 
+#[cfg(any(windows, test))]
+fn is_python_program(program: &str) -> bool {
+    Path::new(program)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            ["python", "python3", "py"]
+                .iter()
+                .any(|candidate| name.eq_ignore_ascii_case(candidate))
+        })
+}
+
 fn run_case(command: &[String], repo: &Path, case: &Case, timeout: Duration) -> Result<Run> {
     let sandbox = temp_dir("run")?;
     let result = run_in(command, repo, case, timeout, &sandbox);
@@ -369,10 +381,7 @@ fn run_in(
         cmd.env_clear();
     }
     #[cfg(windows)]
-    if Path::new(program)
-        .file_stem()
-        .and_then(|name| name.to_str())
-        .is_some_and(|name| ["python", "python3", "py"].contains(&name))
+    if is_python_program(program)
         && (!case.inherit_env || std::env::var_os("PYTHONIOENCODING").is_none())
     {
         // Python otherwise inherits the legacy Windows console code page even though its stdio
@@ -571,13 +580,19 @@ pub(crate) fn shell_tokens(line: &str) -> Option<Vec<Tok>> {
             '\\' => {
                 in_tok = true;
                 let mut following = chars.clone();
-                let escaped_substitution = following.next() == Some('$')
-                    && following.next() == Some('(');
+                let next = following.next();
+                let after_next = following.next();
+                let escaped_substitution = next == Some('$') && after_next == Some('(');
+                let unc_prefix = cur.is_empty() && next == Some('\\')
+                    && after_next.is_some_and(|c| {
+                        !c.is_whitespace() && !"'\"\\|<>&;$`".contains(c)
+                    });
                 if cfg!(windows)
-                    && !escaped_substitution
-                    && !chars
-                        .peek()
-                        .is_some_and(|c| c.is_whitespace() || "'\"\\|<>&;`".contains(*c))
+                    && (unc_prefix
+                        || (!escaped_substitution
+                            && !chars.peek().is_some_and(|c| {
+                                c.is_whitespace() || "'\"\\|<>&;`".contains(*c)
+                            })))
                 {
                     cur.push('\\');
                 } else if let Some(x) = chars.next() {
@@ -2313,6 +2328,14 @@ mod tests {
     }
 
     #[test]
+    fn python_program_names_are_case_insensitive() {
+        assert!(is_python_program("PYTHON"));
+        assert!(is_python_program("/tools/Python3.exe"));
+        assert!(is_python_program("Py.cmd"));
+        assert!(!is_python_program("pythonw.exe"));
+    }
+
+    #[test]
     fn shell_words() {
         assert_eq!(
             shell_split(r#"cargo run -q -- "a b" 'c d' e\ f"#).unwrap(),
@@ -2334,6 +2357,15 @@ mod tests {
         assert_eq!(
             shell_split(r"run C:\$cache\tool.exe").unwrap(),
             ["run", r"C:\$cache\tool.exe"]
+        );
+        #[cfg(windows)]
+        assert_eq!(
+            shell_split(r"\\server\share\tool.exe --flag").unwrap(),
+            [r"\\server\share\tool.exe", "--flag"]
+        );
+        assert_eq!(
+            shell_split(r"echo one\\two").unwrap(),
+            ["echo", r"one\two"]
         );
     }
 }
