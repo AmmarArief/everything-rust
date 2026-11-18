@@ -318,6 +318,20 @@ fn builtin(t: &str) -> Option<&'static str> {
 }
 
 /// Exported struct types of a file: name to dialect object type, from their JSON field names.
+/// Fields declared directly in this struct, excluding the fields of nested anonymous types.
+fn direct_struct_fields(struct_type: Node<'_>) -> Vec<Node<'_>> {
+    named_children(struct_type)
+        .into_iter()
+        .find(|node| node.kind() == "field_declaration_list")
+        .map(|list| {
+            named_children(list)
+                .into_iter()
+                .filter(|field| field.kind() == "field_declaration")
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn structs(root: Node, source: &str) -> HashMap<String, String> {
     let mut out = HashMap::new();
     for decl in named_children(root)
@@ -339,10 +353,7 @@ fn structs(root: Node, source: &str) -> HashMap<String, String> {
             }
             let mut fields = Vec::new();
             let mut ok = true;
-            syntax::walk(ty, |n| {
-                if n.kind() != "field_declaration" {
-                    return;
-                }
+            for n in direct_struct_fields(ty) {
                 let field_type = n
                     .child_by_field_name("type")
                     .map_or("", |t| text(t, source));
@@ -372,7 +383,7 @@ fn structs(root: Node, source: &str) -> HashMap<String, String> {
                         Err(_) => ok = false,
                     }
                 }
-            });
+            }
             if ok {
                 out.insert(
                     text(name, source).to_string(),
@@ -634,10 +645,7 @@ pub fn struct_fields(sources: &[String], name: &str) -> Option<Vec<(String, Stri
                 }
                 let mut out = Vec::new();
                 let mut ok = true;
-                syntax::walk(ty, |n| {
-                    if n.kind() != "field_declaration" {
-                        return;
-                    }
+                for n in direct_struct_fields(ty) {
                     let field_type = n
                         .child_by_field_name("type")
                         .map_or("", |t| text(t, source))
@@ -666,7 +674,7 @@ pub fn struct_fields(sources: &[String], name: &str) -> Option<Vec<(String, Stri
                             .unwrap_or_else(|| field.clone());
                         out.push((field, field_type.clone(), key));
                     }
-                });
+                }
                 return ok.then_some(out);
             }
         }
@@ -688,6 +696,25 @@ mod tests {
         );
         assert!(go_to_ts("*Point", &none).is_err());
         assert!(go_to_ts("map[int]string", &none).is_err());
+    }
+
+    #[test]
+    fn hidden_nested_struct_does_not_add_phantom_fields() {
+        let source = String::from(
+            r#"package x
+type Point struct {
+    hidden struct { Extra float64 }
+    X int `json:"x"`
+}
+func Echo(p Point) Point { return p }"#,
+        );
+        let exports = exports("x.go", &source);
+        assert_eq!(exports[0].params[0].ts_type, "{ x: int }");
+        assert_eq!(exports[0].returns, "{ x: int }");
+        assert_eq!(
+            struct_fields(&[source], "Point").unwrap(),
+            [("X".into(), "int".into(), "x".into())]
+        );
     }
 
     #[test]
