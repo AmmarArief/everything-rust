@@ -17,18 +17,53 @@
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
-  <img src="https://img.shields.io/badge/languages-6-E2862A" alt="6 languages">
+  <img src="https://img.shields.io/badge/languages-6%20%2B%202%20preview-E2862A" alt="6 languages, plus 2 in preview">
   <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="Works with 4 agents"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Tests"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT license"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
 </p>
 
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#languages">Languages</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#the-loop">The loop</a> ·
+  <a href="#port-a-whole-app">Port a whole app</a> ·
+  <a href="#hot-paths-keep-the-data-in-rust">Hot paths</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#what-it-cant-catch">What it can't catch</a> ·
+  <a href="#faq">FAQ</a>
+</p>
+
 <p align="center">up to 20x faster · 38,251 recorded cases replayed · 0 mismatches · one command</p>
 
 <p align="center">
   <img src="docs/assets/race.gif" alt="Typing user.profile into x18n's search over 50,000 keys: TypeScript spends 143 ms, the rust-anything batch 6.9 ms, with the same results at every keystroke." width="820">
+  <br>
+  <sub>Typing a query into x18n's search over 50,000 keys: the TypeScript original against the rust-anything batch, same results at every keystroke.</sub>
 </p>
+
+<table>
+  <tr>
+    <td width="25%" valign="top">
+      <b>Record</b><br>
+      <code>record</code> runs the original on generated edge cases, semantic traps and your own inputs, and saves what it returns or throws.
+    </td>
+    <td width="25%" valign="top">
+      <b>Port</b><br>
+      <code>bridge</code> generates the Rust crate and a wrapper, so callers keep the original API. You or your agent write the Rust.
+    </td>
+    <td width="25%" valign="top">
+      <b>Check</b><br>
+      <code>diff</code> replays every recorded case against the Rust, and nothing ships until they all match and <code>gate</code> passes.
+    </td>
+    <td width="25%" valign="top">
+      <b>Lift</b><br>
+      When replay passes with no fallback and every unit passes gate, <code>app lift</code> makes it a pure Rust app. The original is never touched.
+    </td>
+  </tr>
+</table>
 
 **Rewrite your whole app in Rust, one piece at a time.** rust-anything records what your
 Node.js (TypeScript/JavaScript), Python, C, Go, Ruby or Java app does today, then checks every piece of the
@@ -52,6 +87,13 @@ rust-anything finds the loop worth moving, and moves it.
 
 > rust-anything is an independent project, not affiliated with or endorsed by the Rust Project
 > or the Rust Foundation. "Rust" is a trademark of the Rust Foundation.
+
+> [!WARNING]
+> `record` and `app record` run your original code, calling each function (or the whole app) on
+> many generated inputs, and `app record` runs every case twice. `diff`, `gate` and `app replay`
+> run the same cases again, on the port or the original. Code that writes files, talks to a
+> database or calls the network does that once per case. Run them on a copy of the project, with a
+> test database and no production credentials in the environment.
 
 ## Quick start
 
@@ -105,6 +147,8 @@ Or run the steps yourself:
 
 <p align="center">
   <img src="docs/assets/terminal.gif" alt="rust-anything profile finds fuzzyScore in a loop, bridge --batch generates the Rust crate, gate passes with 2000/2000 recorded cases, and the benchmark shows 20.7x faster than TS." width="820">
+  <br>
+  <sub>The steps on x18n's <code>fuzzyScore</code>: <code>profile</code> finds the hot loop, <code>bridge --batch</code> generates the crate, <code>gate</code> passes, and the benchmark compares it with the TypeScript.</sub>
 </p>
 
 ```sh
@@ -487,6 +531,9 @@ one project by hand instead (`.mcp.json`):
 ```json
 { "mcpServers": { "rust-anything": { "command": "rust-anything", "args": ["mcp"] } } }
 ```
+
+Every tool, its parameters and what it may touch: [docs/tools.md](docs/tools.md). The server also
+offers two prompts, `port_unit` and `port_whole_app`, built from the skill.
 
 ## What `bridge` decides
 

@@ -1,28 +1,13 @@
 //! Bridges built for real: compile the generated crate, load it from the original language and
 //! replay the recording. Run on every CI platform, since linking differs between them.
 
+mod common;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rust_anything::bridge::{self, Kind};
 use rust_anything::harness::{self, DiffOptions, RecordOptions};
-
-fn available(program: &str) -> bool {
-    Command::new(program)
-        .arg(if program == "go" {
-            "version"
-        } else {
-            "--version"
-        })
-        .output()
-        .is_ok_and(|o| o.status.success())
-}
-
-fn python() -> Option<&'static str> {
-    ["python3", "python"]
-        .into_iter()
-        .find(|program| available(program))
-}
 
 fn project(name: &str, files: &[(&str, &str)]) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
@@ -108,8 +93,7 @@ fn round_trip(root: &Path, unit: &str, kind: Kind, name: &str, body: &str) {
 
 #[test]
 fn napi_addon_builds_loads_and_matches_in_space_and_unicode_path() {
-    if !available("node") {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = project(
@@ -133,8 +117,7 @@ fn napi_addon_builds_loads_and_matches_in_space_and_unicode_path() {
 
 #[test]
 fn pyo3_extension_builds_imports_and_matches() {
-    if python().is_none() {
-        eprintln!("skipped: neither python3 nor python was found");
+    if common::python().is_none() {
         return;
     }
     let root = project(
@@ -162,8 +145,7 @@ fn pyo3_extension_builds_imports_and_matches() {
 /// A freshly bridged crate is all `unimplemented!` stubs: replaying it must pass no case, even
 /// where the original throws the same kind of error a panic turns into.
 fn stubs_fail(root: &Path, unit: &str, kind: Option<Kind>, program: &str) {
-    if !available(program) {
-        eprintln!("skipped: {program} not found");
+    if !common::have(program) {
         return;
     }
     let dir = std::env::temp_dir().join(format!(
@@ -229,8 +211,7 @@ fn unported_stubs_never_match_in_typescript() {
 
 #[test]
 fn unported_stubs_never_match_in_python() {
-    let Some(python) = python() else {
-        eprintln!("skipped: neither python3 nor python was found");
+    let Some(python) = common::python() else {
         return;
     };
     stubs_fail(&fixture("python"), "src/textkit/", None, python);
@@ -295,8 +276,7 @@ fn unported_stubs_never_match_a_go_panic() {
 
 #[test]
 fn napi_errors_keep_their_class_and_async_exports_reject() {
-    if !available("node") {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = project(
@@ -367,8 +347,7 @@ out.push(!threw && p instanceof Promise)
 
 #[test]
 fn napi_carries_bytes_maps_sets_dates_and_bigints() {
-    if !available("node") {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = project(
@@ -448,8 +427,7 @@ console.log(JSON.stringify([
 
 #[test]
 fn java_records_with_the_bridge_crate_inside_the_project() {
-    if !available("javac") {
-        eprintln!("skipped: javac not found");
+    if !common::have("javac") {
         return;
     }
     let root = project(
@@ -568,8 +546,7 @@ fn cli_entry_points_stay_in_python() {
 
 #[test]
 fn dataclass_parameters_get_real_instances() {
-    if !available("python3") {
-        eprintln!("skipped: python3 not found");
+    if !common::have("python3") {
         return;
     }
     let root = project(
@@ -618,8 +595,7 @@ fn dataclass_parameters_get_real_instances() {
 
 #[test]
 fn one_file_of_a_unit_can_be_bridged_alone() {
-    if !available("python3") {
-        eprintln!("skipped: python3 not found");
+    if !common::have("python3") {
         return;
     }
     let root = project(
@@ -661,8 +637,7 @@ fn one_file_of_a_unit_can_be_bridged_alone() {
 
 #[test]
 fn napi_batches_take_structured_parameters() {
-    if !available("node") {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = project(
@@ -718,8 +693,7 @@ console.log(JSON.stringify([batch.run(), batch.run({ long: true }), batch instan
 
 #[test]
 fn napi_string_batches_cross_joined() {
-    if !available("node") {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = project(

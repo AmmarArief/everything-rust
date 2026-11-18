@@ -3,19 +3,14 @@
 //! A hand-written JS module stands in for the built Rust module, so these tests check the
 //! harness itself without compiling a native crate. They need `node` on PATH.
 
+mod common;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rust_anything::bridge::{self, Kind, Manifest};
 use rust_anything::harness::{self, DiffOptions, RecordOptions};
 use rust_anything::shadow;
-
-fn node_available() -> bool {
-    Command::new("node")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
-}
 
 fn fixture() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mini")
@@ -118,7 +113,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
 
 #[test]
 fn diff_rejects_an_empty_recording() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let dir = bridged("empty-recording");
@@ -141,8 +136,7 @@ fn diff_rejects_an_empty_recording() {
 
 #[test]
 fn record_and_diff_catch_a_behavior_change() {
-    if !node_available() {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let dir = bridged("diff");
@@ -181,7 +175,7 @@ fn record_and_diff_catch_a_behavior_change() {
 
 #[test]
 fn diff_replays_large_strings_with_lone_surrogates() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let unsplit = 0xd800;
@@ -222,7 +216,7 @@ fn diff_replays_large_strings_with_lone_surrogates() {
 
 #[test]
 fn float_tolerance_preserves_object_key_order_unless_requested() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let dir = bridged("tolerance-order");
@@ -253,8 +247,7 @@ fn float_tolerance_preserves_object_key_order_unless_requested() {
 
 #[test]
 fn shadow_returns_the_original_and_reports_mismatches() {
-    if !node_available() {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let dir = bridged("shadow");
@@ -307,8 +300,7 @@ fn mcp_runs_analyze() {
 
 #[test]
 fn record_follows_bundler_style_imports() {
-    if !node_available() {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     // `fs.ts` imports `./util.js`, a file that only exists as `util.ts`.
@@ -343,7 +335,7 @@ fn record_follows_bundler_style_imports() {
 
 #[test]
 fn record_registers_its_resolver_from_a_path_with_url_delimiters() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let dir = bridged("record #1 % café");
@@ -410,7 +402,7 @@ fn async_functions_get_async_bindings() {
 
 #[test]
 fn benchmark_awaits_async_typescript_calls_and_counts_rejections() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let root = std::env::temp_dir().join(format!(
@@ -462,8 +454,7 @@ fn benchmark_awaits_async_typescript_calls_and_counts_rejections() {
 
 #[test]
 fn classes_are_bridged_recorded_and_replayed() {
-    if !node_available() {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/classes");
@@ -534,7 +525,7 @@ fn classes_are_bridged_recorded_and_replayed() {
 
 #[test]
 fn recording_substitutes_typescript_extensions_from_emitted_module_imports() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let root = std::env::temp_dir().join(format!(
@@ -591,7 +582,7 @@ fn tsconfig_aliases_are_followed() {
         .find(|u| u.id == "src/greet.ts")
         .unwrap();
     assert_eq!(greet.internal_deps, ["src/lib/", "src/util/"]);
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let dir = std::env::temp_dir().join(format!("rust-anything-alias-{}", std::process::id()));
@@ -623,7 +614,7 @@ fn tsconfig_aliases_are_followed() {
 
 #[test]
 fn record_prefers_an_exact_tsconfig_alias_to_a_matching_wildcard() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let root =
@@ -672,7 +663,7 @@ fn record_prefers_an_exact_tsconfig_alias_to_a_matching_wildcard() {
 
 #[test]
 fn record_resolves_workspace_packages_to_source() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     // `@m/b` imports `@m/a` by name; `@m/a` has no build output (`dist/` does not exist).
@@ -702,13 +693,6 @@ fn record_resolves_workspace_packages_to_source() {
     .unwrap();
     assert_eq!((recorded.cases - recorded.traps, recorded.errors), (10, 0));
     std::fs::remove_dir_all(&dir).unwrap();
-}
-
-fn python_available() -> bool {
-    Command::new("python3")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
 }
 
 #[test]
@@ -807,7 +791,7 @@ fn python_modules_bridge_record_and_diff() {
     assert!(lib.contains("#[pyclass(name = \"Stack\")]"));
     let build_rs = std::fs::read_to_string(dir.join("build.rs")).unwrap();
     assert!(build_rs.contains("dynamic_lookup"), "{build_rs}");
-    if !python_available() {
+    if !common::have("python3") {
         return;
     }
     let recorded = harness::record(&RecordOptions {
@@ -864,13 +848,6 @@ fn python_modules_bridge_record_and_diff() {
     let fixed = diff(&dir);
     assert_eq!(fixed.failed, 0, "{:?}", fixed.mismatches);
     std::fs::remove_dir_all(&dir).unwrap();
-}
-
-fn cc_available() -> bool {
-    Command::new("cc")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
 }
 
 #[test]
@@ -937,7 +914,7 @@ fn c_units_bridge_record_and_diff() {
         header.contains("bool is_palindrome(const char *s);"),
         "{header}"
     );
-    if !(cc_available() && python_available()) {
+    if !(common::have("cc") && common::have("python3")) {
         return;
     }
     let recorded = harness::record(&RecordOptions {
@@ -974,13 +951,6 @@ fn c_units_bridge_record_and_diff() {
         "{diff:?}"
     );
     let _ = std::fs::remove_dir_all(&dir);
-}
-
-fn go_available() -> bool {
-    Command::new("go")
-        .arg("version")
-        .output()
-        .is_ok_and(|o| o.status.success())
 }
 
 #[test]
@@ -1035,7 +1005,7 @@ fn go_packages_bridge_record_and_diff() {
     assert!(lib.contains("static GLOBAL: mimalloc::MiMalloc"), "{lib}");
     let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
     assert!(!cargo.contains("staticlib"), "{cargo}");
-    if !go_available() {
+    if !common::have("go") {
         return;
     }
     let recorded = harness::record(&RecordOptions {
@@ -1063,13 +1033,6 @@ fn go_packages_bridge_record_and_diff() {
     assert_eq!(diff.passed, 0, "{diff:?}");
     assert_eq!(diff.total, recorded.cases);
     let _ = std::fs::remove_dir_all(&dir);
-}
-
-fn ruby_available() -> bool {
-    Command::new("ruby")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
 }
 
 #[test]
@@ -1116,7 +1079,7 @@ fn ruby_modules_bridge_record_and_diff() {
         wrapper.contains("def rank(per_page = 10, min: 0)"),
         "{wrapper}"
     );
-    if !ruby_available() {
+    if !common::have("ruby") {
         return;
     }
     let recorded = harness::record(&RecordOptions {
@@ -1145,13 +1108,6 @@ fn ruby_modules_bridge_record_and_diff() {
     assert_eq!(diff.passed, 0, "{diff:?}");
     assert_eq!(diff.total, recorded.cases);
     let _ = std::fs::remove_dir_all(&dir);
-}
-
-fn java_available() -> bool {
-    Command::new("javac")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
 }
 
 #[test]
@@ -1207,7 +1163,7 @@ fn java_classes_bridge_record_and_diff() {
         lib.contains("fn Java_com_example_text_SlugifyBatch_nRun"),
         "{lib}"
     );
-    if !java_available() {
+    if !common::have("javac") {
         return;
     }
     let recorded = harness::record(&RecordOptions {
@@ -1301,7 +1257,7 @@ fn batches_keep_items_in_rust() {
 
 #[test]
 fn diff_compares_own_proto_named_properties_in_arguments_and_results() {
-    if !node_available() {
+    if !common::have("node") {
         return;
     }
     let dir = bridged("proto-properties");

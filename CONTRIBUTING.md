@@ -37,6 +37,11 @@ git config core.hooksPath .githooks
 cargo test
 ```
 
+`cargo run -- doctor` lists which of these runtimes you have, their versions, and the command
+that installs or updates each one. To make a missing runtime fail its tests instead of skipping
+them (CI does this), name it in `RUST_ANYTHING_REQUIRE`, e.g.
+`RUST_ANYTHING_REQUIRE=node,python3,go,ruby,java cargo test`.
+
 The hook runs `scripts/check-secrets.sh`, which refuses keys, tokens and personal home-folder
 paths in what you commit. CI runs it on every file.
 
@@ -60,6 +65,14 @@ paths in what you commit. CI runs it on every file.
 - **Style:** match the code around you. Keep comments for what the code can't say on its own, and
   put the reasoning for a change in the pull request instead.
 
+## Add a crate mapping
+
+`analyze` names the Rust crate for each library the code imports from `src/crates.toml`. To add
+one, append an entry under its language: `names` (exact package names) or `prefixes` (the start of
+a name, for Java and C#), `crates`, `fit` (`good`, `partial` or `none`) and a `note` when the fit
+needs explaining. The first matching entry wins, so put specific ones before broad prefixes. A
+library missing from the table is reported as `unknown`; never guess a crate.
+
 ## Add a language
 
 PHP and C# were added as previews in two commits worth reading first:
@@ -67,8 +80,8 @@ PHP and C# were added as previews in two commits worth reading first:
 [caea59a](https://github.com/erkamyaman/rust-anything/commit/caea59a) (C#). A new language starts
 the same way:
 
-1. A plugin in `src/lang/<name>.rs`: discovery, scan (imports and risks), resolve, the
-   package-to-crate table and exports.
+1. A plugin in `src/lang/<name>.rs`: discovery, scan (imports and risks), resolve and exports,
+   plus its libraries' crates as `[[<name>]]` entries in `src/crates.toml`.
 2. Detection and dispatch in `src/lang/mod.rs`.
 3. Whole-app support in `src/whole_app.rs`: entry points, servers, declared dependencies.
 4. The CLI and HTTP fixtures, a library fixture, and tests in `tests/analyze.rs`, `tests/app.rs`

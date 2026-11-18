@@ -1,6 +1,8 @@
 //! `record` fingerprints the original, so a recording made before the original changed is
 //! reported as stale instead of passing against old behavior.
 
+mod common;
+
 use std::process::Command;
 
 use rust_anything::bridge::Manifest;
@@ -8,12 +10,7 @@ use rust_anything::recording;
 
 #[test]
 fn a_changed_original_makes_the_recording_stale() {
-    if !Command::new("python3")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
-    {
-        eprintln!("skipped: python3 not found");
+    if !common::have("python3") {
         return;
     }
     let root = std::env::temp_dir().join(format!("rust-anything-stale-{}", std::process::id()));
@@ -101,12 +98,7 @@ fn from_tests(root: &std::path::Path, unit: &str, test: &[&str]) -> (String, Str
 
 #[test]
 fn records_the_calls_a_python_test_suite_makes() {
-    if !Command::new("python3")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
-    {
-        eprintln!("skipped: python3 not found");
+    if !common::have("python3") {
         return;
     }
     let root = project(
@@ -142,12 +134,7 @@ fn records_the_calls_a_python_test_suite_makes() {
 
 #[test]
 fn records_the_calls_a_js_test_suite_makes_and_restores_the_source() {
-    if !Command::new("node")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
-    {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let source = "export function label(n: number): string {\n  return `${n}u`;\n}\n\nexport const unwrapped = (s: string): string => s;\n";
@@ -185,12 +172,7 @@ fn records_the_calls_a_js_test_suite_makes_and_restores_the_source() {
 
 #[test]
 fn record_reports_lines_of_the_original_no_case_reached() {
-    if !Command::new("node")
-        .arg("--version")
-        .output()
-        .is_ok_and(|o| o.status.success())
-    {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let root = project(

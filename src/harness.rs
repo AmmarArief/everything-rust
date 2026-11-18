@@ -94,6 +94,9 @@ pub struct DiffOutcome {
     /// `known-diffs.jsonl` entries no mismatch matched any more.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stale_known: Vec<Value>,
+    /// Matches across the last changes to `port.rs`, and whether they stopped going up.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trend: Option<crate::recording::Trend>,
 }
 
 fn is_zero(n: &usize) -> bool {
@@ -718,6 +721,9 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
         outcome.total > 0,
         "no recorded cases to compare; run `rust-anything record` first"
     );
+    if opts.module.is_none() {
+        outcome.trend = crate::recording::track(opts.crate_dir, outcome.passed, outcome.total);
+    }
     Ok(outcome)
 }
 

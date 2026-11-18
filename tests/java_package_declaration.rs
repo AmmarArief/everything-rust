@@ -1,15 +1,12 @@
-use std::{path::Path, process::Command};
+mod common;
+
+use std::path::Path;
 
 use rust_anything::{bridge, harness};
 
 #[test]
 fn records_java_with_comments_in_package_declarations() {
-    if !["javac", "java"].into_iter().all(|tool| {
-        Command::new(tool)
-            .arg("-version")
-            .output()
-            .is_ok_and(|o| o.status.success())
-    }) {
+    if !common::have("javac") || !common::have("java") {
         return;
     }
 

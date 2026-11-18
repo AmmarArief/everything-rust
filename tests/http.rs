@@ -3,19 +3,14 @@
 //! every route to a Rust unit, the lift, and a replay of the pure binary with the original gone.
 //! A language is skipped when its runtime is missing.
 
+mod common;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rust_anything::app::{self, RecordOptions, ReplayOptions};
 use rust_anything::front_door::{self, FrontDoorOptions, WireOptions};
 use rust_anything::lift::{self, LiftOptions};
-
-fn available(program: &str, arg: &str) -> bool {
-    Command::new(program)
-        .arg(arg)
-        .output()
-        .is_ok_and(|o| o.status.success())
-}
 
 fn copy_dir(from: &Path, to: &Path) {
     std::fs::create_dir_all(to).unwrap();
@@ -91,7 +86,7 @@ fn replay(repo: &Path, build: Option<&str>) -> app::ReplayOutcome {
 
 #[test]
 fn http_record_keeps_distinct_requests_with_the_same_name() {
-    if !available("node", "--version") {
+    if !common::have("node") {
         return;
     }
     let repo = fixture("ts", "duplicate-inputs");
@@ -150,7 +145,7 @@ fn no_build(_: &Path, _: &str, _: &str) {}
 
 #[test]
 fn http_rerecord_uses_the_existing_fixed_port() {
-    if !available("node", "--version") {
+    if !common::have("node") {
         return;
     }
     let repo = fixture("ts", "saved-port");
@@ -306,8 +301,7 @@ pub async fn handle(route: &str, params: HashMap<String, String>, req: Request) 
 
 fn check_language(lang: &Lang) {
     let (program, arg) = lang.runtime;
-    if !available(program, arg) {
-        eprintln!("skipped: {program} not found");
+    if !common::have_with(program, &[arg], "was not found") {
         return;
     }
 
@@ -349,7 +343,7 @@ fn check_language(lang: &Lang) {
     }
     std::fs::remove_dir_all(&repo).unwrap();
 
-    if !available("cargo", "--version") {
+    if !common::have("cargo") {
         return;
     }
     let repo = fixture(lang.name, "lift");

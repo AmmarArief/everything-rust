@@ -69,7 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          (cd dist && sha256sum * > SHA256SUMS)
+          (cd dist && sha256sum -- * > SHA256SUMS)
           version="${GITHUB_REF_NAME#v}"
           awk -v v="$version" '/^## /{ if (on) exit; if (index($0, "## " v " ") == 1) { on = 1; next } } on' CHANGELOG.md > notes.md
           gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag

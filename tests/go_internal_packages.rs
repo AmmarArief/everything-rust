@@ -1,14 +1,10 @@
-use std::process::Command;
+mod common;
 
 use rust_anything::{bridge, harness};
 
 #[test]
 fn records_go_internal_packages() {
-    if !Command::new("go")
-        .arg("version")
-        .output()
-        .is_ok_and(|o| o.status.success())
-    {
+    if !common::have("go") {
         return;
     }
 

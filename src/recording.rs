@@ -284,6 +284,70 @@ pub fn stale(crate_dir: &Path, m: &Manifest) -> Option<String> {
     })
 }
 
+const HISTORY: &str = ".rust-anything/diff-history.jsonl";
+/// Changes to `port.rs` in a row that gain no matching case before `diff` calls the port stalled.
+pub const STALL_AFTER: usize = 3;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct Trend {
+    /// Cases matching after each change to `port.rs`, oldest first (the last ten).
+    pub passed: Vec<usize>,
+    pub total: usize,
+    /// The last `STALL_AFTER` changes gained nothing while cases still fail.
+    pub stalled: bool,
+}
+
+/// Records this diff when `port.rs` changed since the last one, and returns the trend. Rerunning
+/// `diff` on an unchanged port is not another attempt, so it adds nothing.
+pub fn track(crate_dir: &Path, passed: usize, total: usize) -> Option<Trend> {
+    let port = std::fs::read(crate_dir.join("src/port.rs")).ok()?;
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in &port {
+        hash ^= u64::from(*b);
+        hash = hash.wrapping_mul(0x0100_0000_01b3);
+    }
+    let hash = format!("{hash:016x}");
+    let path = crate_dir.join(HISTORY);
+    let mut runs: Vec<Value> = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .filter(|r: &Value| r["total"].as_u64() == Some(total as u64))
+        .collect();
+    let entry = json!({ "port": hash, "passed": passed, "total": total });
+    match runs.last_mut() {
+        Some(last) if last["port"] == entry["port"] => *last = entry,
+        _ => runs.push(entry),
+    }
+    let keep = runs.len().saturating_sub(10);
+    runs.drain(..keep);
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let text: String = runs.iter().map(|r| format!("{r}\n")).collect();
+    let _ = std::fs::write(&path, text);
+    Some(trend(
+        runs.iter()
+            .filter_map(|r| r["passed"].as_u64().map(|p| p as usize))
+            .collect(),
+        total,
+    ))
+}
+
+fn trend(passed: Vec<usize>, total: usize) -> Trend {
+    let n = passed.len();
+    let stalled = n > STALL_AFTER
+        && passed[n - 1] < total
+        && passed[n - STALL_AFTER..]
+            .iter()
+            .all(|p| *p <= passed[..n - STALL_AFTER].iter().copied().max().unwrap_or(0));
+    Trend {
+        passed,
+        total,
+        stalled,
+    }
+}
+
 /// The entries of `known-diffs.jsonl`: `{"fn", "args", "actual", "reason"}` per line, `actual`
 /// being the port's result as `diff --json` prints it. An entry without a reason is refused.
 pub fn known_diffs(crate_dir: &Path) -> Result<Vec<Value>> {
@@ -382,6 +446,30 @@ mod tests {
         assert_eq!(out.mismatches.len(), 1);
         assert_eq!(out.mismatches[0]["args"], json!([2]));
         assert_eq!(out.stale_known.len(), 2);
+    }
+
+    #[test]
+    fn a_port_stalls_after_changes_that_gain_nothing() {
+        assert!(!trend(vec![10, 12, 15], 20).stalled);
+        assert!(!trend(vec![10, 12, 12, 12], 20).stalled);
+        assert!(trend(vec![10, 12, 12, 11, 12], 20).stalled);
+        assert!(!trend(vec![10, 12, 12, 11, 13], 20).stalled);
+        assert!(!trend(vec![20, 20, 20, 20, 20], 20).stalled);
+    }
+
+    #[test]
+    fn rerunning_diff_on_an_unchanged_port_is_not_an_attempt() {
+        let dir = std::env::temp_dir().join(format!("ra-trend-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("src")).unwrap();
+        let mut last = None;
+        for (port, passed) in [("a", 1), ("a", 2), ("b", 2), ("c", 2), ("d", 2), ("e", 2)] {
+            std::fs::write(dir.join("src/port.rs"), port).unwrap();
+            last = track(&dir, passed, 5);
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
+        let last = last.unwrap();
+        assert_eq!(last.passed, vec![2, 2, 2, 2, 2]);
+        assert!(last.stalled);
     }
 
     #[test]

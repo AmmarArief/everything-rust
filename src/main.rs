@@ -219,6 +219,12 @@ enum Cmd {
         #[arg(long)]
         json: bool,
     },
+    /// Check the language runtimes, the agent setup and the MCP server, with the command that
+    /// fixes each problem. Exits 1 when something required is missing.
+    Doctor {
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -577,6 +583,17 @@ fn run() -> Result<ExitCode> {
                 } else {
                     say!("{}/{} cases match", d.passed, d.total);
                 }
+                if let Some(t) = d.trend.as_ref().filter(|t| t.stalled) {
+                    let shown: Vec<String> = t.passed.iter().map(ToString::to_string).collect();
+                    say!(
+                        "Stalled: the last {} changes to port.rs gained no matching case ({} of {}). \
+                         Stop and look at the remaining mismatches with a person, or keep these \
+                         functions in the original for now.",
+                        rust_anything::recording::STALL_AFTER,
+                        shown.join(", "),
+                        t.total
+                    );
+                }
                 for e in &d.stale_known {
                     say!(
                         "Known diff no longer happens, remove it from {}: {}({})",
@@ -715,6 +732,9 @@ fn run() -> Result<ExitCode> {
                         for line in check.detail.lines().skip(1) {
                             say!("            {line}");
                         }
+                        if let Some(fix) = &check.fix {
+                            say!("            fix: {fix}");
+                        }
                     }
                 }
                 say!(
@@ -753,6 +773,17 @@ fn run() -> Result<ExitCode> {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
                 print!("{}", rust_anything::setup::text(&report));
+            }
+        }
+        Cmd::Doctor { json } => {
+            let report = rust_anything::doctor::run();
+            if json {
+                say!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                say_raw!("{}", rust_anything::doctor::text(&report));
+            }
+            if !report.ok() {
+                return Ok(ExitCode::FAILURE);
             }
         }
     }

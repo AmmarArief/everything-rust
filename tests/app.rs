@@ -4,6 +4,8 @@
 //! (everything matches), then replays a build whose division-by-zero message changed (only those
 //! cases fail, with a diff in the report). A test is skipped when its runtime is missing.
 
+mod common;
+
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -11,13 +13,6 @@ use std::process::Command;
 use rust_anything::app::{self, RecordOptions, ReplayOptions};
 use rust_anything::front_door::{self, FrontDoorOptions, WireOptions};
 use rust_anything::lift::{self, LiftOptions};
-
-fn available(program: &str, arg: &str) -> bool {
-    Command::new(program)
-        .arg(arg)
-        .output()
-        .is_ok_and(|o| o.status.success())
-}
 
 fn copy_dir(from: &Path, to: &Path) {
     std::fs::create_dir_all(to).unwrap();
@@ -218,7 +213,7 @@ fn front_door_then_wire(repo: &Path) {
     let fallback = replay.fallback.as_ref().unwrap();
     assert_eq!(fallback.cases, replay.total);
     let app_dir = repo.join(front_door::APP_DIR);
-    if available("cargo", "--version") {
+    if common::have("cargo") {
         sh(&app_dir, "cargo", &["fmt", "--check"]);
     }
 
@@ -265,7 +260,7 @@ fn front_door_then_wire(repo: &Path) {
         "{}",
         std::fs::read_to_string(&replay.report).unwrap()
     );
-    if available("cargo", "--version") {
+    if common::have("cargo") {
         sh(&app_dir, "cargo", &["fmt", "--check"]);
         sh(
             &app_dir,
@@ -316,8 +311,7 @@ fn front_door_then_wire(repo: &Path) {
 
 #[test]
 fn ts_cli_records_and_replays() {
-    if !available("node", "--version") {
-        eprintln!("skipped: node not found");
+    if !common::have("node") {
         return;
     }
     let repo = fixture("ts");
@@ -327,8 +321,7 @@ fn ts_cli_records_and_replays() {
 
 #[test]
 fn python_cli_records_and_replays() {
-    if !available("python3", "--version") {
-        eprintln!("skipped: python3 not found");
+    if !common::have("python3") {
         return;
     }
     let repo = fixture("python");
@@ -338,8 +331,7 @@ fn python_cli_records_and_replays() {
 
 #[test]
 fn c_cli_records_and_replays() {
-    if !available("cc", "--version") {
-        eprintln!("skipped: cc not found");
+    if !common::have("cc") {
         return;
     }
     let repo = fixture("c");
@@ -351,8 +343,7 @@ fn c_cli_records_and_replays() {
 
 #[test]
 fn go_cli_records_and_replays() {
-    if !available("go", "version") {
-        eprintln!("skipped: go not found");
+    if !common::have("go") {
         return;
     }
     let repo = fixture("go");
@@ -364,8 +355,7 @@ fn go_cli_records_and_replays() {
 
 #[test]
 fn ruby_cli_records_and_replays() {
-    if !available("ruby", "--version") {
-        eprintln!("skipped: ruby not found");
+    if !common::have("ruby") {
         return;
     }
     let repo = fixture("ruby");
@@ -375,8 +365,7 @@ fn ruby_cli_records_and_replays() {
 
 #[test]
 fn php_cli_records_and_replays() {
-    if !available("php", "--version") {
-        eprintln!("skipped: php not found");
+    if !common::have("php") {
         return;
     }
     let repo = fixture("php");
@@ -386,8 +375,7 @@ fn php_cli_records_and_replays() {
 
 #[test]
 fn java_cli_records_and_replays() {
-    if !available("javac", "--version") || !available("java", "--version") {
-        eprintln!("skipped: javac or java not found");
+    if !common::have("javac") || !common::have("java") {
         return;
     }
     let repo = fixture("java");
@@ -411,8 +399,7 @@ fn dotnet_build(repo: &Path, out: &str) {
 
 #[test]
 fn csharp_cli_records_and_replays() {
-    if !available("dotnet", "--version") {
-        eprintln!("skipped: dotnet not found");
+    if !common::have("dotnet") {
         return;
     }
     let repo = fixture("csharp");
@@ -424,8 +411,7 @@ fn csharp_cli_records_and_replays() {
 
 #[test]
 fn the_command_exits_non_zero_on_a_mismatch() {
-    if !available("python3", "--version") {
-        eprintln!("skipped: python3 not found");
+    if !common::have("python3") {
         return;
     }
     let repo = fixture("python");
@@ -791,8 +777,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
 
 #[test]
 fn ts_cli_lifts_to_pure_rust() {
-    if !available("node", "--version") || !available("cargo", "--version") {
-        eprintln!("skipped: node or cargo not found");
+    if !common::have("node") || !common::have("cargo") {
         return;
     }
     lift_end_to_end(&fixture("ts"), "node tcli.js", &CHARS, "tcli.js");
@@ -800,8 +785,7 @@ fn ts_cli_lifts_to_pure_rust() {
 
 #[test]
 fn python_cli_lifts_to_pure_rust() {
-    if !available("python3", "--version") || !available("cargo", "--version") {
-        eprintln!("skipped: python3 or cargo not found");
+    if !common::have("python3") || !common::have("cargo") {
         return;
     }
     lift_end_to_end(&fixture("python"), "python3 tcli.py", &CHARS, "tcli.py");
@@ -809,8 +793,7 @@ fn python_cli_lifts_to_pure_rust() {
 
 #[test]
 fn c_cli_lifts_to_pure_rust() {
-    if !available("cc", "--version") || !available("cargo", "--version") {
-        eprintln!("skipped: cc or cargo not found");
+    if !common::have("cc") || !common::have("cargo") {
         return;
     }
     let repo = fixture("c");
@@ -825,8 +808,7 @@ fn c_cli_lifts_to_pure_rust() {
 
 #[test]
 fn go_cli_lifts_to_pure_rust() {
-    if !available("go", "version") || !available("cargo", "--version") {
-        eprintln!("skipped: go or cargo not found");
+    if !common::have("go") || !common::have("cargo") {
         return;
     }
     let repo = fixture("go");
@@ -841,8 +823,7 @@ fn go_cli_lifts_to_pure_rust() {
 
 #[test]
 fn php_cli_lifts_to_pure_rust() {
-    if !available("php", "--version") || !available("cargo", "--version") {
-        eprintln!("skipped: php or cargo not found");
+    if !common::have("php") || !common::have("cargo") {
         return;
     }
     lift_end_to_end(&fixture("php"), "php tcli.php", &CHARS, "tcli.php");
@@ -850,8 +831,7 @@ fn php_cli_lifts_to_pure_rust() {
 
 #[test]
 fn ruby_cli_lifts_to_pure_rust() {
-    if !available("ruby", "--version") || !available("cargo", "--version") {
-        eprintln!("skipped: ruby or cargo not found");
+    if !common::have("ruby") || !common::have("cargo") {
         return;
     }
     lift_end_to_end(&fixture("ruby"), "ruby tcli.rb", &CHARS, "tcli.rb");
@@ -859,11 +839,7 @@ fn ruby_cli_lifts_to_pure_rust() {
 
 #[test]
 fn java_cli_lifts_to_pure_rust() {
-    if !available("javac", "--version")
-        || !available("java", "--version")
-        || !available("cargo", "--version")
-    {
-        eprintln!("skipped: javac, java or cargo not found");
+    if !common::have("javac") || !common::have("java") || !common::have("cargo") {
         return;
     }
     let repo = fixture("java");
@@ -873,8 +849,7 @@ fn java_cli_lifts_to_pure_rust() {
 
 #[test]
 fn csharp_cli_lifts_to_pure_rust() {
-    if !available("dotnet", "--version") || !available("cargo", "--version") {
-        eprintln!("skipped: dotnet or cargo not found");
+    if !common::have("dotnet") || !common::have("cargo") {
         return;
     }
     let repo = fixture("csharp");
@@ -959,7 +934,7 @@ fn lift_strips_bridge_bindings_in_every_language() {
             assert!(!dir.join(generated).exists(), "{lang}: {generated}");
         }
         assert!(dir.join("src/port.rs").is_file());
-        if available("cargo", "--version") {
+        if common::have("cargo") {
             let out = Command::new("cargo")
                 .args(["check", "--quiet", "--manifest-path"])
                 .arg(dir.join("Cargo.toml"))
