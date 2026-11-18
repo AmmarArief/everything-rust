@@ -658,3 +658,59 @@ fn one_file_of_a_unit_can_be_bridged_alone() {
     assert!(recorded.cases > 0, "{recorded:?}");
     assert!(format!("{missing:#}").contains("no unit or source file"));
 }
+
+#[test]
+fn napi_batches_take_structured_parameters() {
+    if !available("node") {
+        eprintln!("skipped: node not found");
+        return;
+    }
+    let root = project(
+        "batch-options",
+        &[
+            ("package.json", r#"{"name":"fmt","version":"0.1.0"}"#),
+            (
+                "src/fmt.ts",
+                "export function label(n: number, options?: { long?: boolean }): string {\n  return options?.long ? `${n} units` : `${n}u`;\n}\n",
+            ),
+        ],
+    );
+    let dir = root.join("port");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/fmt.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: vec!["label:n".into()],
+    })
+    .unwrap();
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    let port = port.replacen(
+        "unimplemented!(\"port `label` from src/fmt.ts\")",
+        "let long = options\n        .as_ref()\n        .and_then(|o| o.get(\"long\"))\n        .and_then(serde_json::Value::as_bool)\n        .unwrap_or(false);\n    Ok(if long { format!(\"{n} units\") } else { format!(\"{n}u\") })",
+        1,
+    );
+    std::fs::write(dir.join("src/port.rs"), &port).unwrap();
+    harness::build(&dir).unwrap();
+    let script = r#"
+const { LabelBatch } = require(process.argv[1])
+const batch = new LabelBatch([1, 2])
+console.log(JSON.stringify([batch.run(), batch.run({ long: true })]))
+"#;
+    let output = Command::new("node")
+        .args(["-e", script])
+        .arg(dir.join("index.cjs"))
+        .output()
+        .unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        r#"[["1u","2u"],["1 units","2 units"]]"#,
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

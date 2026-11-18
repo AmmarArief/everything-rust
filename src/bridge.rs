@@ -749,11 +749,35 @@ fn with_allocator(m: &Manifest, lib: String) -> String {
 
 /// Cargo.toml with rayon (and mimalloc) when batches run on all cores.
 fn with_rayon(m: &Manifest, cargo: String) -> Result<String> {
-    if !crate::codegen_batch::needs_rayon(m) {
-        return Ok(cargo);
-    }
     let mut doc: toml_edit::DocumentMut = cargo.parse().context("Cargo.toml")?;
     let deps = doc["dependencies"].or_insert(toml_edit::table());
+    // Batch methods take their other parameters as napi values; structured ones need serde.
+    if m.kind == Kind::Napi
+        && !m.batches.is_empty()
+        && let Some(napi) = deps.get_mut("napi")
+    {
+        let mut table = toml_edit::InlineTable::new();
+        match napi {
+            toml_edit::Item::Value(toml_edit::Value::String(v)) => {
+                table.insert("version", v.value().clone().into());
+            }
+            toml_edit::Item::Value(toml_edit::Value::InlineTable(t)) => table = t.clone(),
+            _ => {}
+        }
+        let mut features = table
+            .get("features")
+            .and_then(|f| f.as_array())
+            .cloned()
+            .unwrap_or_default();
+        if !features.iter().any(|f| f.as_str() == Some("serde-json")) {
+            features.push("serde-json");
+        }
+        table.insert("features", toml_edit::Value::Array(features));
+        *napi = toml_edit::value(table);
+    }
+    if !crate::codegen_batch::needs_rayon(m) {
+        return Ok(doc.to_string());
+    }
     if deps.get("rayon").is_none() {
         deps["rayon"] = toml_edit::value("1");
     }
