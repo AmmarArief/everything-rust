@@ -57,8 +57,9 @@ slow cases (the single-call row is slower than JS on some units). No rounding up
 `git diff --cached` for `/Users/` and `/home/` before committing (`scripts/check-secrets.sh`
 does this in the pre-commit hook).
 
-**A new translation was listed right after English.** Language lines list English first, then
-the existing languages in their order, then new ones at the end (see CONTRIBUTING.md).
+**A new translation was listed right after English.** Language lines list English, Türkçe,
+Українська first, then the other existing languages in their order, then new ones at the end (see
+CONTRIBUTING.md).
 
 **Two sessions edited one checkout.** When another agent is working in the repository, work in
 a separate worktree and bring the change over when its files do not overlap.

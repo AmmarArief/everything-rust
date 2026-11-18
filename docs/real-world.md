@@ -6,7 +6,7 @@ What happened when rust-anything met real code, and what changed in the tool bec
 
 | Target | What ran | Result |
 | --- | --- | --- |
-| `packages/core`, 9 units, 29 functions | analyze, bridge, record, diff, bench, shadow, gate | every gate passes; 9,000+ recorded cases match; slower than TS through a bridge ([report](../demo/x18n-core/README.md)) |
+| `packages/core`, 9 units, 29 functions | analyze, bridge, record, diff, bench, shadow, gate | every gate passes; 7,925 recorded cases match; slower than TS through a bridge ([report](../demo/x18n-core/README.md)) |
 | `packages/builtins/src/formats/shared/`, 7 functions | same | 3,672/3,672 cases match, 960 of them built from 40 real files of the repository (YAML locales, JSON, Markdown, TS), in LF and CRLF |
 | whole repository | analyze | 142 units; `start_here` now lists only units with bridgeable exports |
 
