@@ -34,12 +34,12 @@ with rust-anything 1.5.1; the crate is in
 | `analyze` | 1 unit (`src/index.ts`), ready, readiness 96 |
 | `bridge --kind napi` | `ms`, `parse`, `parseStrict` and `format` bridged, none kept in TS |
 | `record --inputs` | 784 cases: generated ones, traps, and 149 inputs taken from vercel/ms's own test suite |
-| port | 200 lines of Rust for 184 of TS |
+| port | 173 lines of Rust for 184 of TS (with the `js` helpers below) |
 | `diff` | 784/784 match on the first build |
 | `gate` | passes (fmt, clippy, tests, error paths, size, behavior) |
 | `bench`, per call | 0.39x: slower. `parse` takes 64 ns in JS, less than one crossing |
-| batch, `parse` x100,000 | JS 11.8 ms, Rust 0.64 ms: **18x**; 2.1x counting the one-time handover of the strings |
-| batch, `format` x100,000 | JS 1.8 ms, Rust 7.2 ms: **0.2x**; building 100,000 JS strings on the way back costs more than the formatting |
+| batch, `parse` x100,000 | JS 11.8 ms, Rust 0.65 ms: **18x**; 3.4x counting the one-time handover of the strings (2.1x before strings crossed joined) |
+| batch, `format` x100,000 | JS 1.9 ms, Rust 3.8 ms: **0.5x** (0.2x before strings crossed joined); making 100,000 JS strings still costs more than the formatting |
 
 What the port had to get right, all caught by recorded cases or traps:
 
@@ -48,11 +48,23 @@ What the port had to get right, all caught by recorded cases or traps:
   hand, ASCII only.
 - `Math.round` rounds halves up (`-2.5` gives `-2`); Rust's `round` goes away from zero.
 - `${n}` prints `1e+21`, `5e-324` and `0` for `-0`; the port reproduces JS number-to-string.
+  Its first version also had a tie bug (`25.728225708007812` printed as `...813`) that ms's
+  integer outputs never reach.
 - `str.length` counts UTF-16 units, so the 100-character limit counts an emoji as two.
 
 Found in the tool, and fixed: a napi batch method with a structured parameter (`format`'s
 `options`) did not compile, since the generated binding took a `serde_json::Value` that napi
 cannot convert without its `serde-json` feature. Crates with batch classes now enable it.
+
+Taken back into the tool from this port:
+
+- The generated `js.rs` has `js::number_to_string` and `js::math_round`, checked against Node on
+  20,000 random doubles; the port uses them instead of its own copies.
+- napi batches send string items as one joined string with UTF-16 end offsets, and return string
+  results the same way (`index.cjs` splits them with `slice`): about 2x faster each way than one
+  JS string per item. `new Batch(items)` and `run()` keep their shape.
+- `analyze` flags `Math.round`, `toFixed` and `/i` regexes without `u` that mention `s` or `k`,
+  with guidance on each.
 
 The verdict: `ms` is a good port and a bad speed target. Correct on every recorded case, faster
 only when a program parses many durations in one go.

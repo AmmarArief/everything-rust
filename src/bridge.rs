@@ -798,6 +798,7 @@ fn loader_file(m: &Manifest, api: &codegen::PortApi) -> (String, String) {
             "index.cjs".into(),
             codegen::index_cjs(m, api)
                 + &crate::codegen_tswire::index_cjs(m, api)
+                + &crate::codegen_batch::index_cjs(m, api)
                 + &codegen::guard_cjs(api),
         ),
     }

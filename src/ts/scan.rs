@@ -17,7 +17,7 @@ use oxc_span::{SourceType, Span};
 use oxc_syntax::scope::ScopeFlags;
 use serde::Serialize;
 
-use crate::risks::{Risk, regex_needs_fancy};
+use crate::risks::{Risk, regex_folds_differently, regex_needs_fancy};
 
 /// A runtime a file depends on directly.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -173,7 +173,7 @@ impl Collector {
     }
 
     fn check_regex(&mut self, pattern: &str, flags: &str, span: Span) {
-        if regex_needs_fancy(pattern, flags) {
+        if regex_needs_fancy(pattern, flags) || regex_folds_differently(pattern, flags) {
             self.add(Risk::RegexSyntax, span);
         }
         if flags.contains('d') {
@@ -247,6 +247,9 @@ impl<'a> Visit<'a> for Collector {
                     )
                     | (Some("Reflect"), _) => self.add(Risk::Reflection, it.span),
                     (Some("Promise"), _) => self.add(Risk::Async, it.span),
+                    (Some("Math"), "round") | (_, "toFixed") => {
+                        self.add(Risk::NumberSemantics, it.span);
+                    }
                     (_, "matchAll" | "exec") => self.add(Risk::StringOffsets, it.span),
                     (_, method) if STRING_OFFSET_METHODS.contains(&method) => {
                         self.add(Risk::StringOffsets, it.span);
@@ -446,5 +449,17 @@ mod tests {
         assert_eq!(facts.risks[&Risk::StringOffsets], [6]);
         assert_eq!(facts.risks[&Risk::OrderedCollections], [7]);
         assert_eq!(facts.parse_errors, 0);
+    }
+
+    #[test]
+    fn flags_rounding_and_ascii_case_folds() {
+        let facts = scan(
+            "ms.ts",
+            "const re = /^(\\d+) *(secs?|ms)$/i\n\
+             export const r = (x: number) => Math.round(x)\n\
+             export const f = (x: number) => x.toFixed(2)\n",
+        );
+        assert_eq!(facts.risks[&Risk::RegexSyntax], [1]);
+        assert_eq!(facts.risks[&Risk::NumberSemantics], [2, 3]);
     }
 }

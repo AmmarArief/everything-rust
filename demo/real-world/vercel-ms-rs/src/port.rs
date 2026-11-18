@@ -1,4 +1,4 @@
-//! The Rust port of `src/index.ts` of vercel/ms (https://github.com/vercel/ms, MIT, commit 4ff48ce).
+//! The Rust port of `src/index.ts`.
 //!
 //! Replace each `unimplemented!` with the port of the source function. Return `Err` where
 //! the source throws or raises: the caller gets an error there too. After changing a
@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+use crate::js::{math_round, number_to_string};
 use serde_json::{Value, json};
 
 const S: f64 = 1000.0;
@@ -120,10 +121,10 @@ fn fmt_short(ms: f64) -> String {
         (S, "s"),
     ] {
         if abs >= unit {
-            return format!("{}{suffix}", js_number(js_round(ms / unit)));
+            return format!("{}{suffix}", number_to_string(math_round(ms / unit)));
         }
     }
-    format!("{}ms", js_number(ms))
+    format!("{}ms", number_to_string(ms))
 }
 
 fn fmt_long(ms: f64) -> String {
@@ -139,46 +140,10 @@ fn fmt_long(ms: f64) -> String {
     ] {
         if abs >= unit {
             let plural = if abs >= unit * 1.5 { "s" } else { "" };
-            return format!("{} {name}{plural}", js_number(js_round(ms / unit)));
+            return format!("{} {name}{plural}", number_to_string(math_round(ms / unit)));
         }
     }
-    format!("{} ms", js_number(ms))
-}
-
-/// `Math.round`: the nearest integer, halves toward positive infinity.
-fn js_round(x: f64) -> f64 {
-    let floor = x.floor();
-    if x - floor >= 0.5 { floor + 1.0 } else { floor }
-}
-
-/// `Number.prototype.toString()` for a finite number.
-fn js_number(x: f64) -> String {
-    if x == 0.0 {
-        return "0".into();
-    }
-    let sign = if x < 0.0 { "-" } else { "" };
-    let sci = format!("{:e}", x.abs());
-    let (mantissa, exponent) = sci.split_once('e').unwrap_or((&sci, "0"));
-    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
-    let k = digits.len() as i64;
-    let n = exponent.parse::<i64>().unwrap_or(0) + 1;
-    let body = if k <= n && n <= 21 {
-        format!("{digits}{}", "0".repeat((n - k) as usize))
-    } else if 0 < n && n <= 21 {
-        format!("{}.{}", &digits[..n as usize], &digits[n as usize..])
-    } else if -6 < n && n <= 0 {
-        format!("0.{}{digits}", "0".repeat((-n) as usize))
-    } else {
-        let e = n - 1;
-        let sign_e = if e < 0 { "-" } else { "+" };
-        let mantissa = if k == 1 {
-            digits.clone()
-        } else {
-            format!("{}.{}", &digits[..1], &digits[1..])
-        };
-        format!("{mantissa}e{sign_e}{}", e.abs())
-    };
-    format!("{sign}{body}")
+    format!("{} ms", number_to_string(ms))
 }
 
 /// A number from the bridge: plain, or a `{"$num": ...}` marker for NaN, ±Infinity and -0.

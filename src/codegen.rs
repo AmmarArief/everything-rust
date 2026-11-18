@@ -1031,7 +1031,8 @@ for (const [name, [ctor, methods]] of Object.entries(classes)) {
 
 // ---- js.rs -----------------------------------------------------------------------------------
 
-pub const JS_RS: &str = r#"//! JS values that JSON cannot express, and the JSON transport of the bindings.
+pub const JS_RS: &str = concat!(
+    r#"//! JS values that JSON cannot express, and the JSON transport of the bindings.
 
 #![forbid(unsafe_code)]
 
@@ -1152,7 +1153,9 @@ pub fn as_number(value: &serde_json::Value) -> Option<f64> {
         _ => None,
     }
 }
-"#;
+"#,
+    include_str!("js_number.rs")
+);
 
 // ---- Cargo.toml ------------------------------------------------------------------------------
 

@@ -27,6 +27,8 @@ pub mod harness_java;
 pub mod harness_py;
 pub mod harness_ruby;
 pub mod http;
+#[cfg(test)]
+mod js_number;
 pub mod lang;
 pub mod library;
 pub mod lift;

@@ -123,7 +123,9 @@ impl Risk {
                 "Lookaround, backreferences and the `y` flag are not in the `regex` crate. Use \
                  `fancy-regex` for those patterns, or rewrite them, and test them on non-ASCII \
                  text: `\\w`, `\\b` and case-insensitive matching differ between engines even \
-                 where a pattern compiles."
+                 where a pattern compiles. JS `/i` without `u` never matches a non-ASCII letter to \
+                 an ASCII one, Rust `(?i)` does (`ſ` matches `s`, the Kelvin sign `K` matches `k`): \
+                 write `(?i-u)` or compare with `eq_ignore_ascii_case`."
             }
             Self::DynamicRegex => {
                 "Patterns come from data or config in JS syntax. Rust regex syntax differs, so \
@@ -167,7 +169,11 @@ impl Risk {
             }
             Self::NumberSemantics => {
                 "JS numbers are f64; bitwise ops truncate to i32; parseInt is lenient. Pick Rust \
-                 integer types deliberately."
+                 integer types deliberately. Printing differs: `${n}` gives `1e+21`, `1e-7` and `0` \
+                 for -0 where Rust's `{}` does not, so use `js::number_to_string`. `Math.round` \
+                 rounds halves up (-2.5 gives -2), Rust's `round` away from zero: use \
+                 `js::math_round`. `toFixed` rounds exact halves up ((2.5).toFixed(0) is \"3\"), \
+                 Rust's `{:.0}` to even."
             }
             Self::Json => {
                 "JSON.stringify key order and number formatting must match `serde_json` output if \
@@ -333,6 +339,20 @@ fn paren_balance(line: &str) -> i32 {
     })
 }
 
+/// Whether a JS regex matches case-insensitively where Rust's `(?i)` folds more: without the
+/// `u` or `v` flag JS never folds `ſ` to `s` or the Kelvin sign to `k`.
+pub fn regex_folds_differently(pattern: &str, flags: &str) -> bool {
+    if !flags.contains('i') || flags.contains('u') || flags.contains('v') {
+        return false;
+    }
+    let mut escaped = false;
+    pattern.chars().any(|c| {
+        let letter = !escaped && matches!(c, 's' | 'S' | 'k' | 'K');
+        escaped = !escaped && c == '\\';
+        letter
+    })
+}
+
 /// Whether a JS regex uses features the `regex` crate does not support.
 pub fn regex_needs_fancy(pattern: &str, flags: &str) -> bool {
     if flags.contains('y') {
@@ -366,7 +386,19 @@ pub fn regex_needs_fancy(pattern: &str, flags: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{compiled_by, python_compiled, regex_needs_fancy, uses_regex};
+    use super::{
+        compiled_by, python_compiled, regex_folds_differently, regex_needs_fancy, uses_regex,
+    };
+
+    #[test]
+    fn detects_case_folds_rust_widens() {
+        assert!(regex_folds_differently("^(ms|secs?)$", "i"));
+        assert!(regex_folds_differently("K", "gi"));
+        assert!(!regex_folds_differently("secs?", "iu"));
+        assert!(!regex_folds_differently("secs?", "g"));
+        assert!(!regex_folds_differently("\\s+\\d", "i"));
+        assert!(!regex_folds_differently("abc", "i"));
+    }
     use crate::lang::Lang;
 
     #[test]

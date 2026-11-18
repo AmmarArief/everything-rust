@@ -4,9 +4,15 @@
 
 - A port of [vercel/ms](https://github.com/vercel/ms), end to end, in `demo/real-world/vercel-ms-rs`
   and `docs/real-world.md`: 784/784 recorded cases match; slower per call, 18x faster as a batch
-  for `parse`, slower for `format`.
+  for `parse` (3.4x with the handover), slower for `format`.
 - Fix: a napi batch method with a structured parameter did not compile; crates with batch classes
   now enable napi's `serde-json` feature.
+- napi batches pass strings joined: items cross as one string plus UTF-16 end offsets and string
+  results come back the same way, about 2x faster each way. The JS API is unchanged.
+- The generated `js.rs` gains `number_to_string` (JS `String(n)`) and `math_round` (JS
+  `Math.round`), tested against Node.
+- `analyze` flags `Math.round`, `toFixed`, and `/i` regexes without `u` where Rust's case folding
+  matches more (`ſ`, the Kelvin sign).
 
 ## 1.5.1 (2026-11-18)
 

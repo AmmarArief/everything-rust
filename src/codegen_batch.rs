@@ -291,6 +291,9 @@ pub(crate) fn rank_body(ret: &str) -> Option<String> {
 pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
     let mut out = String::new();
     let parallel = m.kind == Kind::Napi;
+    if parallel && !joined_batches(m, api).is_empty() {
+        out.push_str(JOINED_RS);
+    }
     for b in &m.batches {
         let s = spec(b, api)?;
         if !s.custom {
@@ -347,8 +350,8 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
             "\n/// `{js}` over many `{param}` values kept in Rust: `run` maps them all in one call{cores};\n\
              /// `rank` returns the indexes of results >= `min`, best first.\n\
              #[{attr}(js_name = \"{class}\")]\npub struct {class} {{\n    inner: {index},\n}}\n\n\
-             {impl_attr}\nimpl {class} {{\n    {ctor_attr}\n    pub fn new(items: Vec<{item}>) -> Self {{\n        Self {{ inner: {index}::new(items) }}\n    }}\n\n    \
-             /// The result for every item, in order.\n    #[{attr}]\n    pub fn run(&self, {params}) -> {res_run} {{\n        {run_body}\n    }}\n",
+             {impl_attr}\nimpl {class} {{\n    {ctor_attr}\n    pub fn new(items: Vec<{item}>) -> Self {{\n        Self {{ inner: {index}::new(items) }}\n    }}\n{from_joined}\n    \
+             /// The result for every item, in order.\n    #[{attr}]\n    pub fn run(&self, {params}) -> {res_run} {{\n        {run_body}\n    }}\n{run_joined}",
             impl_attr = if wasm {
                 format!("#[wasm_bindgen(js_class = \"{}\")]", s.class)
             } else {
@@ -363,6 +366,28 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
             params = params.join(", "),
             res_run = res.replace("{T}", &out_ty),
             run_body = call(&format!("Ok({out_expr})")),
+            from_joined = if parallel && s.item_ty == "String" {
+                format!(
+                    "\n    /// `new` for items sent as one joined string and their UTF-16 end offsets.\n    \
+                     #[napi(factory, js_name = \"fromJoined\")]\n    \
+                     pub fn from_joined(text: String, ends: napi::bindgen_prelude::Uint32Array) -> Self {{\n        \
+                     Self {{ inner: {}::new(split_joined(&text, &ends)) }}\n    }}\n",
+                    s.index
+                )
+            } else {
+                String::new()
+            },
+            run_joined = if parallel && ret == "String" {
+                format!(
+                    "\n    /// `run` with the results joined into one string and their UTF-16 end offsets.\n    \
+                     #[napi(js_name = \"runJoined\")]\n    \
+                     pub fn run_joined(&self, {}) -> napi::Result<JoinedStrings> {{\n        {}\n    }}\n",
+                    params.join(", "),
+                    call("Ok(joined(out))")
+                )
+            } else {
+                String::new()
+            },
         );
         if let Some(rank) = rank_for(&s) {
             let from = out.len();
@@ -391,6 +416,134 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
     }
     Ok(out)
 }
+
+/// The napi batches whose strings cross joined: `(class, items are strings, results are
+/// strings)`. One JS string per item costs more than the work for short strings, so `index.cjs`
+/// joins items into one string and splits joined results with `slice`.
+pub(crate) fn joined_batches(m: &Manifest, api: &PortApi) -> Vec<(String, bool, bool)> {
+    if m.kind != Kind::Napi {
+        return Vec::new();
+    }
+    m.batches
+        .iter()
+        .filter_map(|b| spec(b, api).ok())
+        .map(|s| {
+            (
+                s.class.clone(),
+                s.item_ty == "String",
+                s.f.ret.trim() == "String",
+            )
+        })
+        .filter(|(_, items, results)| *items || *results)
+        .collect()
+}
+
+const JOINED_RS: &str = r#"
+/// Strings joined into one, with the UTF-16 end offset of each (what JS `slice` takes).
+#[napi(object)]
+pub struct JoinedStrings {
+    pub text: String,
+    pub ends: napi::bindgen_prelude::Uint32Array,
+}
+
+fn joined(out: Vec<String>) -> JoinedStrings {
+    let mut text = String::with_capacity(out.iter().map(String::len).sum());
+    let mut ends = Vec::with_capacity(out.len());
+    let mut at = 0u32;
+    for s in &out {
+        text.push_str(s);
+        let units = if s.is_ascii() { s.len() } else { s.encode_utf16().count() };
+        at = at.saturating_add(u32::try_from(units).unwrap_or(u32::MAX));
+        ends.push(at);
+    }
+    JoinedStrings {
+        text,
+        ends: napi::bindgen_prelude::Uint32Array::new(ends),
+    }
+}
+
+/// Splits `text` at UTF-16 end offsets. A lone surrogate arrived as U+FFFD, one unit as before.
+fn split_joined(text: &str, ends: &[u32]) -> Vec<String> {
+    let ascii = text.is_ascii()
+        && ends.last().is_none_or(|&e| e as usize == text.len())
+        && ends.windows(2).all(|w| w[0] <= w[1]);
+    let mut out = Vec::with_capacity(ends.len());
+    if ascii {
+        let mut from = 0;
+        for &e in ends {
+            out.push(text[from..e as usize].to_string());
+            from = e as usize;
+        }
+        return out;
+    }
+    let mut chars = text.chars();
+    let mut unit = 0usize;
+    for &e in ends {
+        let mut s = String::new();
+        while unit < e as usize {
+            let Some(c) = chars.next() else { break };
+            unit += c.len_utf16();
+            s.push(c);
+        }
+        out.push(s);
+    }
+    out
+}
+"#;
+
+/// The `index.cjs` part that sends and receives the strings of [`joined_batches`] joined.
+pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
+    let batches = joined_batches(m, api);
+    if batches.is_empty() {
+        return String::new();
+    }
+    let list = |pick: fn(&(String, bool, bool)) -> bool| -> String {
+        batches
+            .iter()
+            .filter(|b| pick(b))
+            .map(|b| format!("'{}'", b.0))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    format!(
+        "{JOINED_CJS}for (const name of [{}]) joinItems(name)\nfor (const name of [{}]) splitResults(name)\n",
+        list(|b| b.1),
+        list(|b| b.2)
+    )
+}
+
+const JOINED_CJS: &str = r#"
+// Batches: strings cross as one joined string and the UTF-16 end offset of each, which costs far
+// less than one JS string per item. `new Batch(items)` and `batch.run()` keep their shape.
+const joinItems = name => {
+  const Native = native[name]
+  const Batch = { [name]: function (items) {
+    if (!Array.isArray(items)) throw new TypeError(`${name}: items must be an array of strings`)
+    const ends = new Uint32Array(items.length)
+    let at = 0
+    for (let i = 0; i < items.length; i++) {
+      if (typeof items[i] !== 'string') throw new TypeError(`${name}: items must be an array of strings`)
+      ends[i] = at += items[i].length
+    }
+    return Native.fromJoined(items.join(''), ends)
+  } }[name]
+  Batch.prototype = Native.prototype
+  Batch.fromJoined = Native.fromJoined
+  module.exports[name] = Batch
+}
+const splitResults = name => {
+  Object.defineProperty(native[name].prototype, 'run', {
+    value: function (...a) {
+      const { text, ends } = this.runJoined(...a)
+      const out = new Array(ends.length)
+      for (let i = 0, from = 0; i < ends.length; from = ends[i++]) out[i] = text.slice(from, ends[i])
+      return out
+    },
+    writable: true,
+    configurable: true,
+  })
+}
+"#;
 
 /// Batch classes for a PyO3 `lib.rs`, and the names to register.
 pub fn py_rs(m: &Manifest, api: &PortApi) -> Result<(String, Vec<String>), String> {

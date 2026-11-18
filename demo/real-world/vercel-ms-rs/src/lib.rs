@@ -75,6 +75,61 @@ pub fn format(ms: f64, options: String) -> napi::Result<String> {
     })
 }
 
+/// Strings joined into one, with the UTF-16 end offset of each (what JS `slice` takes).
+#[napi(object)]
+pub struct JoinedStrings {
+    pub text: String,
+    pub ends: napi::bindgen_prelude::Uint32Array,
+}
+
+fn joined(out: Vec<String>) -> JoinedStrings {
+    let mut text = String::with_capacity(out.iter().map(String::len).sum());
+    let mut ends = Vec::with_capacity(out.len());
+    let mut at = 0u32;
+    for s in &out {
+        text.push_str(s);
+        let units = if s.is_ascii() {
+            s.len()
+        } else {
+            s.encode_utf16().count()
+        };
+        at = at.saturating_add(u32::try_from(units).unwrap_or(u32::MAX));
+        ends.push(at);
+    }
+    JoinedStrings {
+        text,
+        ends: napi::bindgen_prelude::Uint32Array::new(ends),
+    }
+}
+
+/// Splits `text` at UTF-16 end offsets. A lone surrogate arrived as U+FFFD, one unit as before.
+fn split_joined(text: &str, ends: &[u32]) -> Vec<String> {
+    let ascii = text.is_ascii()
+        && ends.last().is_none_or(|&e| e as usize == text.len())
+        && ends.windows(2).all(|w| w[0] <= w[1]);
+    let mut out = Vec::with_capacity(ends.len());
+    if ascii {
+        let mut from = 0;
+        for &e in ends {
+            out.push(text[from..e as usize].to_string());
+            from = e as usize;
+        }
+        return out;
+    }
+    let mut chars = text.chars();
+    let mut unit = 0usize;
+    for &e in ends {
+        let mut s = String::new();
+        while unit < e as usize {
+            let Some(c) = chars.next() else { break };
+            unit += c.len_utf16();
+            s.push(c);
+        }
+        out.push(s);
+    }
+    out
+}
+
 /// The items of `ParseBatch` as the port takes them; the port runs per item. Define
 /// `pub struct ParseIndex` in `port.rs` (with `new` and `run`) to prepare items once.
 pub struct ParseDefaultIndex {
@@ -110,6 +165,14 @@ impl ParseBatch {
     pub fn new(items: Vec<String>) -> Self {
         Self {
             inner: ParseDefaultIndex::new(items),
+        }
+    }
+
+    /// `new` for items sent as one joined string and their UTF-16 end offsets.
+    #[napi(factory, js_name = "fromJoined")]
+    pub fn from_joined(text: String, ends: napi::bindgen_prelude::Uint32Array) -> Self {
+        Self {
+            inner: ParseDefaultIndex::new(split_joined(&text, &ends)),
         }
     }
 
@@ -180,6 +243,13 @@ impl FormatBatch {
     pub fn run(&self, options: Option<Value>) -> napi::Result<Vec<String>> {
         let out = run(|| self.inner.run(options))?;
         Ok(out)
+    }
+
+    /// `run` with the results joined into one string and their UTF-16 end offsets.
+    #[napi(js_name = "runJoined")]
+    pub fn run_joined(&self, options: Option<Value>) -> napi::Result<JoinedStrings> {
+        let out = run(|| self.inner.run(options))?;
+        Ok(joined(out))
     }
 }
 

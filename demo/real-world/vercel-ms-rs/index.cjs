@@ -309,6 +309,39 @@ module.exports.format = function format (...a) {
   return json(...a)
 }
 }
+
+// Batches: strings cross as one joined string and the UTF-16 end offset of each, which costs far
+// less than one JS string per item. `new Batch(items)` and `batch.run()` keep their shape.
+const joinItems = name => {
+  const Native = native[name]
+  const Batch = { [name]: function (items) {
+    if (!Array.isArray(items)) throw new TypeError(`${name}: items must be an array of strings`)
+    const ends = new Uint32Array(items.length)
+    let at = 0
+    for (let i = 0; i < items.length; i++) {
+      if (typeof items[i] !== 'string') throw new TypeError(`${name}: items must be an array of strings`)
+      ends[i] = at += items[i].length
+    }
+    return Native.fromJoined(items.join(''), ends)
+  } }[name]
+  Batch.prototype = Native.prototype
+  Batch.fromJoined = Native.fromJoined
+  module.exports[name] = Batch
+}
+const splitResults = name => {
+  Object.defineProperty(native[name].prototype, 'run', {
+    value: function (...a) {
+      const { text, ends } = this.runJoined(...a)
+      const out = new Array(ends.length)
+      for (let i = 0, from = 0; i < ends.length; from = ends[i++]) out[i] = text.slice(from, ends[i])
+      return out
+    },
+    writable: true,
+    configurable: true,
+  })
+}
+for (const name of ['ParseBatch']) joinItems(name)
+for (const name of ['FormatBatch']) splitResults(name)
 const guards = {
   ms: [false, []],
   parse: [false, [0]],

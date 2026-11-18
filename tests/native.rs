@@ -714,3 +714,61 @@ console.log(JSON.stringify([batch.run(), batch.run({ long: true })]))
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn napi_string_batches_cross_joined() {
+    if !available("node") {
+        eprintln!("skipped: node not found");
+        return;
+    }
+    let root = project(
+        "batch-strings",
+        &[
+            ("package.json", r#"{"name":"wrap","version":"0.1.0"}"#),
+            (
+                "src/wrap.ts",
+                "export function wrap(s: string): string {\n  return `<${s}>`;\n}\n",
+            ),
+        ],
+    );
+    let dir = root.join("port");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/wrap.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: vec!["wrap:s".into()],
+    })
+    .unwrap();
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    let port = port.replacen(
+        "unimplemented!(\"port `wrap` from src/wrap.ts\")",
+        "Ok(format!(\"<{s}>\"))",
+        1,
+    );
+    std::fs::write(dir.join("src/port.rs"), &port).unwrap();
+    harness::build(&dir).unwrap();
+    let script = r#"
+const { WrapBatch } = require(process.argv[1])
+const items = ['', 'a', 'é', '😀x', '日本', 'b\uD800c', 'ascii only']
+const batch = new WrapBatch(items)
+const refused = [() => new WrapBatch('ab'), () => new WrapBatch(['a', 1])].map(f => { try { f(); return 'no' } catch (e) { return e.name } })
+console.log(JSON.stringify([batch.run(), batch instanceof WrapBatch, refused, new WrapBatch([]).run()]))
+"#;
+    let output = Command::new("node")
+        .args(["-e", script])
+        .arg(dir.join("index.cjs"))
+        .output()
+        .unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        r#"[["<>","<a>","<é>","<😀x>","<日本>","<b�c>","<ascii only>"],true,["TypeError","TypeError"],[]]"#,
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
