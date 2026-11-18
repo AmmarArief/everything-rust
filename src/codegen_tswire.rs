@@ -31,7 +31,9 @@ fn shape_ty(s: &Shape, types: &[LocalType], depth: usize) -> Ty {
             native: "ts".into(),
             array: false,
         },
-        Shape::Object(props, None) => Ty::Obj(
+        // Indexed objects reserve 0xff for a key outside the schema, and the
+        // number of encoded properties also fits in one byte.
+        Shape::Object(props, None) if props.len() <= usize::from(u8::MAX) => Ty::Obj(
             props
                 .iter()
                 .map(|(name, optional, s)| {
@@ -633,6 +635,21 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wide_objects_use_dynamic_keys_instead_of_truncating_field_indexes() {
+        let shape = |n| {
+            Shape::Object(
+                (0..n)
+                    .map(|i| (format!("p{i}"), true, Shape::Num))
+                    .collect(),
+                None,
+            )
+        };
+        assert!(matches!(shape_ty(&shape(255), &[], 0), Ty::Obj(fields) if fields.len() == 255));
+        assert_eq!(shape_ty(&shape(256), &[], 0), Ty::Dyn);
+        assert_eq!(shape_ty(&shape(257), &[], 0), Ty::Dyn);
+    }
 
     #[test]
     fn maps_ts_shapes() {
