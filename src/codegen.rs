@@ -906,21 +906,30 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
 /// The last layer of `index.cjs`: errors keep their JS class (`TypeError: x` from Rust throws a
 /// `TypeError`), panics carry `code: 'RUST_PANIC'`, async exports reject instead of throwing, and
 /// a string a Rust `String` cannot hold (a lone surrogate) is refused instead of altered.
-pub fn guard_cjs(api: &PortApi) -> String {
+/// The parameters a Rust `String` holds, by position: a lone surrogate is refused there.
+pub(crate) fn string_params(f: &PortFn) -> Vec<usize> {
+    f.params
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, t))| {
+            let t: String = t.chars().filter(|c| !c.is_whitespace()).collect();
+            matches!(t.as_str(), "String" | "Option<String>" | "Vec<String>")
+        })
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// `wired` functions already check their arguments and errors in their wire wrapper.
+pub fn guard_cjs(api: &PortApi, wired: &[String]) -> String {
+    if api.functions.is_empty() {
+        return String::new();
+    }
     let guards: Vec<String> = api
         .functions
         .iter()
+        .filter(|f| !wired.contains(&f.js_name))
         .map(|f| {
-            let strings: Vec<String> = f
-                .params
-                .iter()
-                .enumerate()
-                .filter(|(_, (_, t))| {
-                    let t: String = t.chars().filter(|c| !c.is_whitespace()).collect();
-                    matches!(t.as_str(), "String" | "Option<String>" | "Vec<String>")
-                })
-                .map(|(i, _)| i.to_string())
-                .collect();
+            let strings: Vec<String> = string_params(f).iter().map(ToString::to_string).collect();
             format!(
                 "  {}: [{}, [{}]],",
                 f.js_name,
@@ -929,9 +938,6 @@ pub fn guard_cjs(api: &PortApi) -> String {
             )
         })
         .collect();
-    if guards.is_empty() {
-        return String::new();
-    }
     format!("const guards = {{\n{}\n}}\n{GUARD_CJS}", guards.join("\n"))
 }
 
@@ -1161,7 +1167,8 @@ pub fn as_number(value: &serde_json::Value) -> Option<f64> {
 
 /// Dependencies the bindings need, as `(name, TOML value)`.
 pub fn required_deps(kind: Kind, api: &PortApi) -> Vec<(&'static str, String)> {
-    let json = api.needs_json();
+    let wire = kind == Kind::Napi && api.functions.iter().any(|f| !f.is_async);
+    let json = api.needs_json() || wire;
     let any_async = api.all().any(|f| f.is_async);
     let mut deps = Vec::new();
     match kind {

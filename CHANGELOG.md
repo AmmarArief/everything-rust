@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Faster single calls on napi: every sync function crosses the binary wire with no napi
+  arguments (each argument cost about 55 ns), behind one JS wrapper instead of two;
+  `serde_json::Value` parameters cross as tagged values of any shape, and errors come back in the
+  wire buffer. vercel/ms per call: 0.39x to 0.56x of JS over its recorded cases, and `parse` on a
+  normal string at JS speed (79 ns).
+
 - `record --from-tests -- <test command>` runs the original's own test suite and records every call
   it makes to the unit's functions: TS/JS with any runner (Jest, Vitest, `node --test`), Python
   with pytest or unittest. On vercel/ms it captured 340 calls from 167 Jest tests, more than
@@ -13,10 +19,9 @@
   fails on an entry that no longer differs.
 - `app replay`'s report no longer carries temporary paths, so CI can commit it and fail on
   `git diff --exit-code`.
-
 - A port of [vercel/ms](https://github.com/vercel/ms), end to end, in `demo/real-world/vercel-ms-rs`
-  and `docs/real-world.md`: 784/784 recorded cases match; slower per call, 18x faster as a batch
-  for `parse` (3.4x with the handover), slower for `format`.
+  and `docs/real-world.md`: 975/975 recorded cases match; slower per call, 19x faster as a batch
+  for `parse` (3.6x with the handover), 1.3x for `format(x, { long: true })`.
 - Fix: a napi batch method with a structured parameter did not compile; crates with batch classes
   now enable napi's `serde-json` feature.
 - napi batches pass strings joined: items cross as one string plus UTF-16 end offsets and string

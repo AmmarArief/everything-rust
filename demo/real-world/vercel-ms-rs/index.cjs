@@ -80,17 +80,23 @@ for (const [name, [ctor, methods]] of Object.entries(classes)) {
 // The binary wire (see rust-anything's `wire.rs`): arguments are written into `wIn`, results read
 // from `wOut`; both are registered with the native module once.
 let wIn = new Uint8Array(1 << 16), wOut = new Uint8Array(1 << 16)
+const wLen = new Uint32Array(1)
 let iv = new DataView(wIn.buffer), ov = new DataView(wOut.buffer), at = 0, p = 0
-native.rustAnythingWireInit(wIn, wOut)
-const regrow = () => native.rustAnythingWireInit(wIn, wOut)
+native.rustAnythingWireInit(wIn, wOut, wLen)
+const regrow = () => native.rustAnythingWireInit(wIn, wOut, wLen)
 // Runs a wire function; a result larger than `wOut` is fetched once `wOut` has grown.
 const wireCall = fn => {
-  const n = fn(at)
+  wLen[0] = at
+  const n = fn()
   if (Number.isNaN(n)) return false
+  if (n === Infinity) {
+    p = 0
+    throw new Error(rStr())
+  }
   if (n < 0) {
     wOut = new Uint8Array(Math.max(wOut.length * 2, -n))
     ov = new DataView(wOut.buffer)
-    native.rustAnythingWireInit(wIn, wOut)
+    native.rustAnythingWireInit(wIn, wOut, wLen)
     native.rustAnythingWireFlush()
   }
   p = 0
@@ -176,43 +182,7 @@ const call = native.msWire
 const encode = (a0, a1) => {
 at = 0
 if (!wDyn(a0)) return false
-if (a1 === undefined) {
-wU8(0)
-} else if (a1 === null) {
-return false
-wU8(2)
-} else {
-wU8(1)
-if (a1 === null || typeof a1 !== 'object' || Array.isArray(a1)) return false
-{
-const at0 = at
-wU8(0)
-let n0 = 0, r0 = 0
-for (const k0 in a1) {
-switch (k0) {
-case "long": {
-wU8(0)
-const f0 = a1[k0]
-if (f0 === undefined) {
-wU8(0)
-} else if (f0 === null) {
-return false
-wU8(2)
-} else {
-wU8(1)
-if (typeof f0 !== 'boolean') return false
-wU8(f0 ? 1 : 0)
-}
-break
-}
-default: return false
-}
-if (++n0 > 255) return false
-}
-if (r0 !== 0) return false
-iv.setUint8(at0, n0)
-}
-}
+if (!wDyn(a1)) return false
 return true
 }
 const decode = () => {
@@ -220,11 +190,39 @@ let t
 t = rDyn()
 return t
 }
-module.exports.ms = function ms (...a) {
-  if (a.length <= 2 && encode(a[0], a[1]) && wireCall(call)) {
-    return decode()
+module.exports.ms = function ms (a0, a1) {
+  try {
+    if (arguments.length <= 2 && encode(a0, a1) && wireCall(call)) return decode()
+    return json(...arguments)
+  } catch (e) {
+    throw jsError(e)
   }
-  return json(...a)
+}
+}
+
+// `parse`: binary wire; the JSON version handles inputs of other shapes.
+{
+const json = module.exports.parse
+const call = native.parseWire
+const encode = (a0) => {
+at = 0
+if (typeof a0 !== 'string') return false
+wStr(a0)
+return true
+}
+const decode = () => {
+let t
+t = rF64()
+return t
+}
+module.exports.parse = function parse (a0) {
+  if (illFormed(a0)) throw new TypeError('argument 1 of parse has a lone surrogate, which a Rust String cannot hold')
+  try {
+    if (arguments.length <= 1 && encode(a0) && wireCall(call)) return decode()
+    return json(...arguments)
+  } catch (e) {
+    throw jsError(e)
+  }
 }
 }
 
@@ -242,11 +240,13 @@ let t
 t = rF64()
 return t
 }
-module.exports.parseStrict = function parseStrict (...a) {
-  if (a.length <= 1 && encode(a[0]) && wireCall(call)) {
-    return decode()
+module.exports.parseStrict = function parseStrict (a0) {
+  try {
+    if (arguments.length <= 1 && encode(a0) && wireCall(call)) return decode()
+    return json(...arguments)
+  } catch (e) {
+    throw jsError(e)
   }
-  return json(...a)
 }
 }
 
@@ -258,43 +258,7 @@ const encode = (a0, a1) => {
 at = 0
 if (typeof a0 !== 'number') return false
 wF64(a0)
-if (a1 === undefined) {
-wU8(0)
-} else if (a1 === null) {
-return false
-wU8(2)
-} else {
-wU8(1)
-if (a1 === null || typeof a1 !== 'object' || Array.isArray(a1)) return false
-{
-const at0 = at
-wU8(0)
-let n0 = 0, r0 = 0
-for (const k0 in a1) {
-switch (k0) {
-case "long": {
-wU8(0)
-const f0 = a1[k0]
-if (f0 === undefined) {
-wU8(0)
-} else if (f0 === null) {
-return false
-wU8(2)
-} else {
-wU8(1)
-if (typeof f0 !== 'boolean') return false
-wU8(f0 ? 1 : 0)
-}
-break
-}
-default: return false
-}
-if (++n0 > 255) return false
-}
-if (r0 !== 0) return false
-iv.setUint8(at0, n0)
-}
-}
+if (!wDyn(a1)) return false
 return true
 }
 const decode = () => {
@@ -302,11 +266,13 @@ let t
 t = rStr()
 return t
 }
-module.exports.format = function format (...a) {
-  if (a.length <= 2 && encode(a[0], a[1]) && wireCall(call)) {
-    return decode()
+module.exports.format = function format (a0, a1) {
+  try {
+    if (arguments.length <= 2 && encode(a0, a1) && wireCall(call)) return decode()
+    return json(...arguments)
+  } catch (e) {
+    throw jsError(e)
   }
-  return json(...a)
 }
 }
 
@@ -360,10 +326,7 @@ for (const name of ['ParseBatch']) joinItems(name)
 for (const name of ['FormatBatch']) packNumbers(name)
 for (const name of ['FormatBatch']) splitResults(name)
 const guards = {
-  ms: [false, []],
-  parse: [false, [0]],
-  parseStrict: [false, []],
-  format: [false, []],
+
 }
 const JS_ERRORS = /^(TypeError|RangeError|SyntaxError|ReferenceError|URIError|EvalError): ([\s\S]*)$/
 const jsError = e => {

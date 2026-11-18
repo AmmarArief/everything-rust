@@ -241,19 +241,26 @@ impl FormatBatch {
 
 // ---- the binary wire ------------------------------------------------------------------------
 
+type WireBuffers = (
+    napi::bindgen_prelude::Uint8Array,
+    napi::bindgen_prelude::Uint8Array,
+    napi::bindgen_prelude::Uint32Array,
+);
+
 thread_local! {
-    static WIRE: std::cell::RefCell<Option<(napi::bindgen_prelude::Uint8Array, napi::bindgen_prelude::Uint8Array)>> =
-        const { std::cell::RefCell::new(None) };
+    static WIRE: std::cell::RefCell<Option<WireBuffers>> = const { std::cell::RefCell::new(None) };
     static PENDING: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+    static SCRATCH: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// Registers the argument and result buffers `index.cjs` writes to and reads from.
+/// Registers the argument, result and argument-length buffers `index.cjs` uses.
 #[napi(js_name = "rustAnythingWireInit")]
 pub fn rust_anything_wire_init(
     input: napi::bindgen_prelude::Uint8Array,
     output: napi::bindgen_prelude::Uint8Array,
+    len: napi::bindgen_prelude::Uint32Array,
 ) {
-    WIRE.with(|w| *w.borrow_mut() = Some((input, output)));
+    WIRE.with(|w| *w.borrow_mut() = Some((input, output, len)));
 }
 
 /// Copies a result that did not fit into the (now larger) result buffer.
@@ -262,7 +269,7 @@ pub fn rust_anything_wire_flush() -> f64 {
     let bytes = PENDING.with(|p| std::mem::take(&mut *p.borrow_mut()));
     WIRE.with(|w| {
         let mut w = w.borrow_mut();
-        let Some((_, output)) = w.as_mut() else {
+        let Some((_, output, _)) = w.as_mut() else {
             return -1.0;
         };
         // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
@@ -273,25 +280,42 @@ pub fn rust_anything_wire_flush() -> f64 {
     })
 }
 
-/// Reads `len` argument bytes, runs `f`, and writes its result; a negative return is the size
-/// of a result that did not fit, kept for `rustAnythingWireFlush`.
+/// Reads the argument bytes (`wLen[0]` of them), runs `f`, and writes its result; a negative
+/// return is the size of a result that did not fit, kept for `rustAnythingWireFlush`.
 fn wire_io(
-    len: u32,
     f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Result<(), String>,
 ) -> napi::Result<f64> {
     WIRE.with(|cell| {
         let mut guard = cell.borrow_mut();
-        let Some((input, output)) = guard.as_mut() else {
+        let Some((input, output, len)) = guard.as_mut() else {
             return Err(napi::Error::from_reason(
                 "rust-anything: the wire buffers are not registered",
             ));
         };
-        let len = (len as usize).min(input.len());
-        let mut w = wire::Writer::default();
-        match run(|| f(&mut wire::Reader::new(&input[..len]), &mut w)) {
+        let len = (len.first().copied().unwrap_or(0) as usize).min(input.len());
+        let mut w = wire::Writer(SCRATCH.with(|s| std::mem::take(&mut *s.borrow_mut())));
+        w.0.clear();
+        let result = run(|| f(&mut wire::Reader::new(&input[..len]), &mut w));
+        let keep = |w: wire::Writer| SCRATCH.with(|s| *s.borrow_mut() = w.0);
+        match result {
             // A result of another shape than the TS type: JS runs the call through JSON.
-            Err(e) if e.reason.starts_with(wire::MISMATCH) => return Ok(f64::NAN),
-            other => other?,
+            Err(e) if e.reason.starts_with(wire::MISMATCH) => {
+                keep(w);
+                return Ok(f64::NAN);
+            }
+            Err(e) => {
+                keep(w);
+                let mut m = wire::Writer::default();
+                m.string16(&e.reason);
+                // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
+                let out = unsafe { output.as_mut() };
+                if m.0.len() > out.len() {
+                    return Err(e);
+                }
+                out[..m.0.len()].copy_from_slice(&m.0);
+                return Ok(f64::INFINITY);
+            }
+            Ok(()) => {}
         }
         // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
         let out = unsafe { output.as_mut() };
@@ -301,25 +325,33 @@ fn wire_io(
             return Ok(-(n as f64));
         }
         out[..n].copy_from_slice(&w.0);
+        keep(w);
         Ok(n as f64)
     })
 }
 
 static S_MS_0: wire::Schema = wire::Schema::Dyn;
-static S_MS_1: wire::Schema = wire::Schema::OptJs(&wire::Schema::Obj(&[(
-    "long",
-    wire::Schema::OptJs(&wire::Schema::Bool),
-)]));
 static S_MS_OUT: wire::Schema = wire::Schema::Dyn;
 
 /// `ms` over the binary wire.
 #[napi(js_name = "msWire")]
-pub fn ms_wire(len: u32) -> napi::Result<f64> {
-    wire_io(len, |r, w| {
+pub fn ms_wire() -> napi::Result<f64> {
+    wire_io(|r, w| {
         let value: Value = wire::read_value(r, &S_MS_0)?;
-        let options: Option<Value> = r.opt_js(|r| wire::read_value(r, S_MS_1.inner()))?;
+        let options: Option<Value> = wire::read_dyn_opt(r)?;
         let out = &port::ms(value, options)?;
         wire::write_value(w, out, &S_MS_OUT)?;
+        Ok(())
+    })
+}
+
+/// `parse` over the binary wire.
+#[napi(js_name = "parseWire")]
+pub fn parse_wire() -> napi::Result<f64> {
+    wire_io(|r, w| {
+        let str: String = r.string16()?;
+        let out = &port::parse(str)?;
+        w.f64(*out);
         Ok(())
     })
 }
@@ -328,8 +360,8 @@ static S_PARSE_STRICT_0: wire::Schema = wire::Schema::Dyn;
 
 /// `parseStrict` over the binary wire.
 #[napi(js_name = "parseStrictWire")]
-pub fn parse_strict_wire(len: u32) -> napi::Result<f64> {
-    wire_io(len, |r, w| {
+pub fn parse_strict_wire() -> napi::Result<f64> {
+    wire_io(|r, w| {
         let value: Value = wire::read_value(r, &S_PARSE_STRICT_0)?;
         let out = &port::parse_strict(value)?;
         w.f64(*out);
@@ -337,17 +369,12 @@ pub fn parse_strict_wire(len: u32) -> napi::Result<f64> {
     })
 }
 
-static S_FORMAT_1: wire::Schema = wire::Schema::OptJs(&wire::Schema::Obj(&[(
-    "long",
-    wire::Schema::OptJs(&wire::Schema::Bool),
-)]));
-
 /// `format` over the binary wire.
 #[napi(js_name = "formatWire")]
-pub fn format_wire(len: u32) -> napi::Result<f64> {
-    wire_io(len, |r, w| {
+pub fn format_wire() -> napi::Result<f64> {
+    wire_io(|r, w| {
         let ms: f64 = r.f64()?;
-        let options: Option<Value> = r.opt_js(|r| wire::read_value(r, S_FORMAT_1.inner()))?;
+        let options: Option<Value> = wire::read_dyn_opt(r)?;
         let out = &port::format(ms, options)?;
         w.string16(out);
         Ok(())

@@ -217,17 +217,23 @@ const WIRE_NAPI_CJS: &str = r#"
 // The binary wire (see rust-anything's `wire.rs`): arguments are written into `wIn`, results read
 // from `wOut`; both are registered with the native module once.
 let wIn = new Uint8Array(1 << 16), wOut = new Uint8Array(1 << 16)
+const wLen = new Uint32Array(1)
 let iv = new DataView(wIn.buffer), ov = new DataView(wOut.buffer), at = 0, p = 0
-native.rustAnythingWireInit(wIn, wOut)
-const regrow = () => native.rustAnythingWireInit(wIn, wOut)
+native.rustAnythingWireInit(wIn, wOut, wLen)
+const regrow = () => native.rustAnythingWireInit(wIn, wOut, wLen)
 // Runs a wire function; a result larger than `wOut` is fetched once `wOut` has grown.
 const wireCall = fn => {
-  const n = fn(at)
+  wLen[0] = at
+  const n = fn()
   if (Number.isNaN(n)) return false
+  if (n === Infinity) {
+    p = 0
+    throw new Error(rStr())
+  }
   if (n < 0) {
     wOut = new Uint8Array(Math.max(wOut.length * 2, -n))
     ov = new DataView(wOut.buffer)
-    native.rustAnythingWireInit(wIn, wOut)
+    native.rustAnythingWireInit(wIn, wOut, wLen)
     native.rustAnythingWireFlush()
   }
   p = 0
@@ -338,16 +344,26 @@ const rDyn = () => {
 const WIRE_NAPI_RS: &str = r#"
 // ---- the binary wire ------------------------------------------------------------------------
 
+type WireBuffers = (
+    napi::bindgen_prelude::Uint8Array,
+    napi::bindgen_prelude::Uint8Array,
+    napi::bindgen_prelude::Uint32Array,
+);
+
 thread_local! {
-    static WIRE: std::cell::RefCell<Option<(napi::bindgen_prelude::Uint8Array, napi::bindgen_prelude::Uint8Array)>> =
-        const { std::cell::RefCell::new(None) };
+    static WIRE: std::cell::RefCell<Option<WireBuffers>> = const { std::cell::RefCell::new(None) };
     static PENDING: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+    static SCRATCH: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// Registers the argument and result buffers `index.cjs` writes to and reads from.
+/// Registers the argument, result and argument-length buffers `index.cjs` uses.
 #[napi(js_name = "rustAnythingWireInit")]
-pub fn rust_anything_wire_init(input: napi::bindgen_prelude::Uint8Array, output: napi::bindgen_prelude::Uint8Array) {
-    WIRE.with(|w| *w.borrow_mut() = Some((input, output)));
+pub fn rust_anything_wire_init(
+    input: napi::bindgen_prelude::Uint8Array,
+    output: napi::bindgen_prelude::Uint8Array,
+    len: napi::bindgen_prelude::Uint32Array,
+) {
+    WIRE.with(|w| *w.borrow_mut() = Some((input, output, len)));
 }
 
 /// Copies a result that did not fit into the (now larger) result buffer.
@@ -356,7 +372,7 @@ pub fn rust_anything_wire_flush() -> f64 {
     let bytes = PENDING.with(|p| std::mem::take(&mut *p.borrow_mut()));
     WIRE.with(|w| {
         let mut w = w.borrow_mut();
-        let Some((_, output)) = w.as_mut() else {
+        let Some((_, output, _)) = w.as_mut() else {
             return -1.0;
         };
         // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
@@ -367,20 +383,38 @@ pub fn rust_anything_wire_flush() -> f64 {
     })
 }
 
-/// Reads `len` argument bytes, runs `f`, and writes its result; a negative return is the size
-/// of a result that did not fit, kept for `rustAnythingWireFlush`.
-fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Result<(), String>) -> napi::Result<f64> {
+/// Reads the argument bytes (`wLen[0]` of them), runs `f`, and writes its result; a negative
+/// return is the size of a result that did not fit, kept for `rustAnythingWireFlush`.
+fn wire_io(f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Result<(), String>) -> napi::Result<f64> {
     WIRE.with(|cell| {
         let mut guard = cell.borrow_mut();
-        let Some((input, output)) = guard.as_mut() else {
+        let Some((input, output, len)) = guard.as_mut() else {
             return Err(napi::Error::from_reason("rust-anything: the wire buffers are not registered"));
         };
-        let len = (len as usize).min(input.len());
-        let mut w = wire::Writer::default();
-        match run(|| f(&mut wire::Reader::new(&input[..len]), &mut w)) {
+        let len = (len.first().copied().unwrap_or(0) as usize).min(input.len());
+        let mut w = wire::Writer(SCRATCH.with(|s| std::mem::take(&mut *s.borrow_mut())));
+        w.0.clear();
+        let result = run(|| f(&mut wire::Reader::new(&input[..len]), &mut w));
+        let keep = |w: wire::Writer| SCRATCH.with(|s| *s.borrow_mut() = w.0);
+        match result {
             // A result of another shape than the TS type: JS runs the call through JSON.
-            Err(e) if e.reason.starts_with(wire::MISMATCH) => return Ok(f64::NAN),
-            other => other?,
+            Err(e) if e.reason.starts_with(wire::MISMATCH) => {
+                keep(w);
+                return Ok(f64::NAN);
+            }
+            Err(e) => {
+                keep(w);
+                let mut m = wire::Writer::default();
+                m.string16(&e.reason);
+                // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
+                let out = unsafe { output.as_mut() };
+                if m.0.len() > out.len() {
+                    return Err(e);
+                }
+                out[..m.0.len()].copy_from_slice(&m.0);
+                return Ok(f64::INFINITY);
+            }
+            Ok(()) => {}
         }
         // SAFETY: the call is synchronous; JS does not touch `output` until it returns.
         let out = unsafe { output.as_mut() };
@@ -390,6 +424,7 @@ fn wire_io(len: u32, f: impl FnOnce(&mut wire::Reader, &mut wire::Writer) -> Res
             return Ok(-(n as f64));
         }
         out[..n].copy_from_slice(&w.0);
+        keep(w);
         Ok(n as f64)
     })
 }
@@ -469,7 +504,8 @@ fn wire_fns<'m>(m: &'m Manifest, api: &'m PortApi) -> Vec<WireFn<'m>> {
         }
         let structured =
             f.params.iter().any(|(_, t)| wire(t) == Wire::Json) || wire(&f.ret) == Wire::Json;
-        if !structured {
+        let napi = m.kind == crate::bridge::Kind::Napi;
+        if !structured && !napi {
             continue;
         }
         let Some(e) = m.exports.iter().find(|e| e.name == f.js_name) else {
@@ -507,6 +543,22 @@ fn wire_fns<'m>(m: &'m Manifest, api: &'m PortApi) -> Vec<WireFn<'m>> {
                 }
             })
             .collect();
+        let params: Vec<Ty> = params
+            .into_iter()
+            .zip(&f.params)
+            .map(|(t, (_, rust))| {
+                let rust: String = rust.chars().filter(|c| !c.is_whitespace()).collect();
+                let value = rust
+                    .strip_prefix("Option<")
+                    .and_then(|r| r.strip_suffix('>'))
+                    .unwrap_or(&rust);
+                if matches!(value, "Value" | "serde_json::Value") {
+                    Ty::Dyn
+                } else {
+                    t
+                }
+            })
+            .collect();
         let result = (f.ret != "()").then(|| shape_ty(&shape::parse(&e.returns), types, 0));
         let named: Vec<(String, Ty)> = f
             .params
@@ -539,14 +591,14 @@ fn wire_fns<'m>(m: &'m Manifest, api: &'m PortApi) -> Vec<WireFn<'m>> {
                 format!("        let out = &{call};\n        {w}\n")
             }
         };
-        let (attr, ret) = if m.kind == crate::bridge::Kind::Wasm {
-            ("wasm_bindgen", "Result<u32, JsError>")
+        let (attr, ret, len, len_arg) = if napi {
+            ("napi", "napi::Result<f64>", "", "")
         } else {
-            ("napi", "napi::Result<f64>")
+            ("wasm_bindgen", "Result<u32, JsError>", "len: u32", "len, ")
         };
         let rust = format!(
-            "\n{statics}\n/// `{js}` over the binary wire.\n#[{attr}(js_name = \"{js}Wire\")]\npub fn {name}_wire(len: u32) -> {ret} {{\n    \
-             wire_io(len, |r, w| {{\n{reads}{write}        Ok(())\n    }})\n}}\n",
+            "\n{statics}\n/// `{js}` over the binary wire.\n#[{attr}(js_name = \"{js}Wire\")]\npub fn {name}_wire({len}) -> {ret} {{\n    \
+             wire_io({len_arg}|r, w| {{\n{reads}{write}        Ok(())\n    }})\n}}\n",
             js = f.js_name,
             name = f.rust_name.trim_start_matches("r#"),
         );
@@ -577,6 +629,21 @@ pub fn napi_rs(m: &Manifest, api: &PortApi) -> String {
         out.push_str(&f.rust);
     }
     out
+}
+
+/// The functions `index.cjs` sends over the wire: their wrapper also refuses lone surrogates and
+/// keeps JS error classes, in place of the guard layer.
+pub fn wired(m: &Manifest, api: &PortApi) -> Vec<String> {
+    if !matches!(
+        m.kind,
+        crate::bridge::Kind::Napi | crate::bridge::Kind::Wasm
+    ) {
+        return Vec::new();
+    }
+    wire_fns(m, api)
+        .iter()
+        .map(|f| f.port.js_name.clone())
+        .collect()
 }
 
 /// Whether the crate has wire functions (and needs `src/wire.rs`).
@@ -612,18 +679,25 @@ pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
             .as_ref()
             .map_or_else(String::new, |t| js_dec("t", t, 0));
         let js = &f.port.js_name;
+        let checks: String = crate::codegen::string_params(f.port)
+            .iter()
+            .map(|i| {
+                format!(
+                    "  if (illFormed(a{i})) throw new TypeError('argument {} of {js} has a lone surrogate, which a Rust String cannot hold')\n",
+                    i + 1
+                )
+            })
+            .collect();
         let _ = write!(
             out,
             "\n// `{js}`: binary wire; the JSON version handles inputs of other shapes.\n{{\n\
              const json = module.exports.{js}\nconst call = native.{js}Wire\n\
              const encode = ({args}) => {{\nat = 0\n{enc}return true\n}}\n\
              const decode = () => {{\nlet t\n{dec}return t\n}}\n\
-             module.exports.{js} = function {js} (...a) {{\n  if (a.length <= {n} && encode({spread}) && wireCall(call)) {{\n    return decode()\n  }}\n  return json(...a)\n}}\n}}\n",
+             module.exports.{js} = function {js} ({args}) {{\n{checks}  try {{\n    \
+             if (arguments.length <= {n} && encode({args}) && wireCall(call)) return decode()\n    \
+             return json(...arguments)\n  }} catch (e) {{\n    throw jsError(e)\n  }}\n}}\n}}\n",
             args = names.join(", "),
-            spread = (0..n)
-                .map(|i| format!("a[{i}]"))
-                .collect::<Vec<_>>()
-                .join(", "),
         );
         let _ = f.export;
     }

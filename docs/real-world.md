@@ -37,7 +37,7 @@ with rust-anything 1.5.1; the crate is in
 | port | 200 lines of Rust for 184 of TS, including a `FormatIndex` that reads `options` once per batch |
 | `diff` | 784/784 matched on the first build; 975/975 with the captured calls |
 | `gate` | passes (fmt, clippy, tests, error paths, size, behavior) |
-| `bench`, per call | 0.39x: slower. `parse` takes 64 ns in JS, less than one crossing |
+| `bench`, per call | 0.56x over the recorded cases (0.39x at first): `parse` on a normal string takes 79 ns, level with JS, but edge cases and thrown errors still cost more through the bridge |
 | batch, `parse` x100,000 | JS 11.8 ms, Rust 0.65 ms: **18x**; 3.4x counting the one-time handover of the strings (2.1x before strings crossed joined) |
 | batch, `format` x100,000 | JS 2.1 ms, Rust 2.5 ms with the handover: **0.8x** (0.2x at first); `format(x, { long: true })` 1.2x |
 
@@ -67,6 +67,10 @@ Taken back into the tool from this port:
   `run()` keep their shape.
 - `analyze` flags `Math.round`, `toFixed` and `/i` regexes without `u` that mention `s` or `k`,
   with guidance on each.
+- Calls cost less: on napi every sync function goes over the binary wire with no napi arguments
+  (an argument costs about 55 ns, the whole call 22 ns), one JS wrapper per function instead of
+  two, `serde_json::Value` parameters cross as tagged values of any shape, and errors come back
+  in the wire buffer. `parse` per call went from 121 to 79 ns.
 - `record --from-tests` replaces copying test inputs by hand: it records each call the suite makes
   while the tests run, with the capture code kept out of coverage (ms enforces 100%).
 
