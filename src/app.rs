@@ -570,10 +570,14 @@ pub(crate) fn shell_tokens(line: &str) -> Option<Vec<Tok>> {
             }
             '\\' => {
                 in_tok = true;
+                let mut following = chars.clone();
+                let escaped_substitution = following.next() == Some('$')
+                    && following.next() == Some('(');
                 if cfg!(windows)
+                    && !escaped_substitution
                     && !chars
                         .peek()
-                        .is_some_and(|c| c.is_whitespace() || "'\"\\|<>&;$`".contains(*c))
+                        .is_some_and(|c| c.is_whitespace() || "'\"\\|<>&;`".contains(*c))
                 {
                     cur.push('\\');
                 } else if let Some(x) = chars.next() {
@@ -2325,6 +2329,11 @@ mod tests {
         assert_eq!(
             shell_split(r"C:\tools\rust-anything\app.exe --flag").unwrap(),
             [r"C:\tools\rust-anything\app.exe", "--flag"]
+        );
+        #[cfg(windows)]
+        assert_eq!(
+            shell_split(r"run C:\$cache\tool.exe").unwrap(),
+            ["run", r"C:\$cache\tool.exe"]
         );
     }
 }
