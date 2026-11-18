@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.5.0 (2026-11-18)
+
+Twenty-two contributions from the community, Windows in CI, and a README in 16 languages.
+
+- From @rudycelekli, 20 fixes, each with a test that fails without it:
+  - TypeScript: keyword-shaped export names survive `refresh` (#57); objects with more than 255
+    properties fall back to dynamic wire keys (#58); recording works from a folder with `#` in its
+    path (#59); large strings with lone surrogates replay without overflowing Node's argument
+    limit (#60); exact `tsconfig` path aliases beat wildcards (#61); `.mjs`/`.cjs` specifiers
+    find the authored `.mts`/`.cts` (#62); `bench` awaits async exports (#63).
+  - C, Go, C#, PHP, Java: a C function or parameter named `c_str` no longer breaks the bridge
+    (#64); private nested Go struct fields stay out of the wire schema (#65); `go.mod` directives
+    with tabs and comments are read (#66); a root C# test project's sources count as tests (#67);
+    grouped PHP `use` imports keep their namespace (#68); Go packages that use cgo can be recorded
+    (#69); a comment in a Java package declaration no longer hides the class (#70).
+  - Whole-app and HTTP: HTTP cases sharing a name are all kept (#71); curl `--data @file` bodies
+    match curl (#72); an invalid `Content-Length` is an error, not a body read until close (#73);
+    Node profiles work from a folder with spaces (#74) and decode `file://` URLs (#75); re-recording
+    keeps a configured port (#76).
+- From @atontini: native Windows CI for the bridge tests, with Windows fixes for absolute paths in
+  run commands, Python's UTF-8 output and line endings (#78). On top of it: the Go driver finds the
+  Rust DLL on Windows, and the Ruby test skips there, since RubyInstaller's MinGW Ruby cannot load
+  an MSVC extension.
+- From @lyufeng000: README translations in Chinese (simplified and traditional), German, French,
+  Japanese, Korean and Russian (#36). Turkish, Azerbaijani, Uzbek, Kazakh, Kyrgyz, Turkmen, Tatar,
+  Uyghur and Ukrainian followed, every translation is marked community-maintained, and each README
+  links all 16 languages.
+- CI runs on Node 24. `profile` on Node needs it, since Node 22 refuses `--cpu-prof` in
+  `NODE_OPTIONS`.
+- A social preview image (`docs/assets/social-preview.png`) without a version or star count, so
+  link cards never go stale.
+
 ## 1.4.0 (2026-11-18)
 
 Fixes from the first round of outside issues and pull requests, and the project's community files.
