@@ -421,7 +421,11 @@ fn parse_curl(line: &str, repo: &Path, doc_dir: &Path) -> Option<Req> {
             "-d" | "--data" | "--data-raw" | "--data-binary" | "--data-ascii" => {
                 let d = next()?;
                 data.push(if d.starts_with('@') && arg != "--data-raw" {
-                    read_file(&d)?
+                    let mut contents = read_file(&d)?;
+                    if arg != "--data-binary" {
+                        contents.retain(|c| !matches!(c, '\r' | '\n' | '\0'));
+                    }
+                    contents
                 } else {
                     d
                 });
@@ -1052,6 +1056,27 @@ mod tests {
         assert!(parse_curl("curl ftp://localhost/file", here, here).is_none());
         assert!(parse_curl("curl --unknown x http://localhost/", here, here).is_none());
         assert!(parse_curl("curl http://localhost/ | jq .", here, here).is_none());
+    }
+
+    #[test]
+    fn curl_data_and_binary_file_inputs_match_curl_file_semantics() {
+        let root = app::temp_dir("curl-data").unwrap();
+        std::fs::write(root.join("body.txt"), b"one\r\ntwo\0\nthree").unwrap();
+        let body = |flag| {
+            parse_curl(
+                &format!("curl {flag} @body.txt http://localhost/upper"),
+                &root,
+                &root,
+            )
+            .unwrap()
+            .body
+            .unwrap()
+        };
+        let data = body("--data");
+        let binary = body("--data-binary");
+        std::fs::remove_dir_all(root).unwrap();
+        assert_eq!(data, "onetwothree");
+        assert_eq!(binary, "one\r\ntwo\0\nthree");
     }
 
     #[test]
