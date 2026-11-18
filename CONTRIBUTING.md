@@ -71,6 +71,19 @@ the same way:
    and `tests/http.rs`.
 5. `bridge` refuses the language's units until a bridge exists, with a clear message.
 
+## Translate the README
+
+Translations are welcome and community-maintained. A new one:
+
+1. Lives in `docs/README_<CODE>.md` (for example `docs/README_PT.md`); the root `README.md` stays
+   English and is never renamed or replaced.
+2. Uses paths that work from `docs/`: `assets/logo.svg`, `../LICENSE`, `../README.md`.
+3. Starts with the same language line as the other translations, with its own language as plain
+   text, followed by the note that it is community-maintained and may lag behind the English
+   README (copy it from `docs/README_DE.md` and translate it).
+4. Goes at the **end** of the language line, in `README.md` and in every translation. The order of
+   the languages already listed does not change.
+
 ## Open the pull request
 
 Before you push:
