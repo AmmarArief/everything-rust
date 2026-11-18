@@ -332,6 +332,58 @@ fn async_functions_get_async_bindings() {
 }
 
 #[test]
+fn benchmark_awaits_async_typescript_calls_and_counts_rejections() {
+    if !node_available() {
+        return;
+    }
+    let root = std::env::temp_dir().join(format!(
+        "rust-anything-ts-async-bench-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(
+        root.join("main.mts"),
+        "export async function delayed(): Promise<number> { await new Promise(r => setTimeout(r, 15)); throw new Error('intentional'); }",
+    )
+    .unwrap();
+    let dir = root.join("bridge");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "main.mts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+    })
+    .unwrap();
+    std::fs::write(
+        dir.join(harness::CASES),
+        r#"{"fn":"delayed","args":[],"error":"intentional"}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("index.cjs"),
+        "exports.delayed = async () => { await new Promise(r => setTimeout(r, 15)); throw new Error('intentional') }",
+    )
+    .unwrap();
+    let result = harness::bench(&harness::BenchOptions {
+        crate_dir: &dir,
+        min_ms: 1,
+        resolve_from: None,
+        node_args: &[],
+    });
+    std::fs::remove_dir_all(root).unwrap();
+    let rows = result.unwrap();
+    assert_eq!(rows.len(), 1);
+    assert!(rows[0].original_ns > 5_000_000.0, "{rows:?}");
+    assert!(rows[0].rust_ns > 5_000_000.0, "{rows:?}");
+}
+
+#[test]
 fn classes_are_bridged_recorded_and_replayed() {
     if !node_available() {
         eprintln!("skipped: node not found");

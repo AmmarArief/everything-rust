@@ -609,10 +609,20 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
             )
         })
         .collect();
+    let async_functions: Vec<&str> = manifest
+        .exports
+        .iter()
+        .filter(|f| f.is_async)
+        .map(|f| f.name.as_str())
+        .collect();
     let modules_path = work.join("bench-modules.json");
     std::fs::write(
         &modules_path,
-        serde_json::to_string(&json!({ "functions": modules, "classes": class_modules }))?,
+        serde_json::to_string(&json!({
+            "functions": modules,
+            "classes": class_modules,
+            "asyncFunctions": async_functions,
+        }))?,
     )?;
     let script = work.join("bench.mjs");
     std::fs::write(&script, format!("{CODEC_JS}\n{BENCH_JS}"))?;
@@ -1456,7 +1466,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
 const [modulesPath, nativePath, casesPath, outPath, minMs] = process.argv.slice(2)
-const { functions: modules, classes: classModules } = JSON.parse(readFileSync(modulesPath, 'utf8'))
+const { functions: modules, classes: classModules, asyncFunctions } = JSON.parse(readFileSync(modulesPath, 'utf8'))
 const loaded = await import(pathToFileURL(nativePath).href)
 const native = { ...(loaded.default && typeof loaded.default === 'object' ? loaded.default : {}), ...loaded }
 const cases = readFileSync(casesPath, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
@@ -1483,13 +1493,26 @@ const time = (fn, argsList) => {
   do { pass(); passes++ } while (performance.now() - start < Number(minMs))
   return (performance.now() - start) * 1e6 / (passes * argsList.length)
 }
+const timeAsync = async (fn, argsList) => {
+  const pass = async () => {
+    for (const args of argsList) {
+      try { await fn(...args) } catch {}
+    }
+  }
+  await pass()
+  let passes = 0
+  const start = performance.now()
+  do { await pass(); passes++ } while (performance.now() - start < Number(minMs))
+  return (performance.now() - start) * 1e6 / (passes * argsList.length)
+}
 const rows = []
 for (const [name, argsList] of byFn) {
   const original = (await import(pathToFileURL(modules[name]).href))[name]
   const rust = native[name]
   if (typeof original !== 'function' || typeof rust !== 'function') continue
-  const originalNs = time(original, argsList)
-  const rustNs = time(rust, argsList)
+  const timer = asyncFunctions.includes(name) ? timeAsync : time
+  const originalNs = await timer(original, argsList)
+  const rustNs = await timer(rust, argsList)
   rows.push({ fn: name, cases: argsList.length, original_ns: originalNs, rust_ns: rustNs, speedup: originalNs / rustNs })
 }
 // Classes: time whole scenarios (construct, then every call).
