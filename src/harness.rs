@@ -1384,7 +1384,12 @@ const dec = (v) => {
   if (v.$undefined) return undefined
   if ('$num' in v) return Number(v.$num)
   if ('$bigint' in v) return BigInt(v.$bigint)
-  if ('$utf16' in v) return String.fromCharCode(...v.$utf16)
+  if ('$utf16' in v) {
+    let text = ''
+    for (let i = 0; i < v.$utf16.length; i += 8192)
+      text += String.fromCharCode(...v.$utf16.slice(i, i + 8192))
+    return text
+  }
   if ('$map' in v) return new Map(v.$map.map(([k, x]) => [dec(k), dec(x)]))
   if ('$set' in v) return new Set(v.$set.map(dec))
   if ('$date' in v) return new Date(v.$date)
