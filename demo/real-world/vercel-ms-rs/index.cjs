@@ -310,8 +310,9 @@ module.exports.format = function format (...a) {
 }
 }
 
-// Batches: strings cross as one joined string and the UTF-16 end offset of each, which costs far
-// less than one JS string per item. `new Batch(items)` and `batch.run()` keep their shape.
+// Batches: strings cross as one joined string and the UTF-16 end offset of each, numbers as one
+// Float64Array, which costs far less than one JS value per item. `new Batch(items)` and
+// `batch.run()` keep their shape.
 const joinItems = name => {
   const Native = native[name]
   const Batch = { [name]: function (items) {
@@ -328,6 +329,21 @@ const joinItems = name => {
   Batch.fromJoined = Native.fromJoined
   module.exports[name] = Batch
 }
+const packNumbers = name => {
+  const Native = native[name]
+  const Batch = { [name]: function (items) {
+    if (!Array.isArray(items)) throw new TypeError(`${name}: items must be an array of numbers`)
+    const packed = new Float64Array(items.length)
+    for (let i = 0; i < items.length; i++) {
+      if (typeof items[i] !== 'number') throw new TypeError(`${name}: items must be an array of numbers`)
+      packed[i] = items[i]
+    }
+    return Native.fromFloat64(packed)
+  } }[name]
+  Batch.prototype = Native.prototype
+  Batch.fromFloat64 = Native.fromFloat64
+  module.exports[name] = Batch
+}
 const splitResults = name => {
   Object.defineProperty(native[name].prototype, 'run', {
     value: function (...a) {
@@ -341,6 +357,7 @@ const splitResults = name => {
   })
 }
 for (const name of ['ParseBatch']) joinItems(name)
+for (const name of ['FormatBatch']) packNumbers(name)
 for (const name of ['FormatBatch']) splitResults(name)
 const guards = {
   ms: [false, []],

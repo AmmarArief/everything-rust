@@ -633,152 +633,343 @@
 {"fn":"format","args":[1e-7,"x"],"ok":"1e-7ms"}
 {"fn":"format","args":[5e-324,"x"],"ok":"5e-324ms"}
 {"fn":"format","args":[1.7976931348623157e+308,"x"],"ok":"5.696545792019405e+297y"}
-{"fn":"format","args":[""],"error":"Value provided to ms.format() must be of type number."}
-{"fn":"format","args":[-1000],"ok":"-1s"}
-{"fn":"format","args":[-10000],"ok":"-10s"}
-{"fn":"format","args":[-1200],"ok":"-1s"}
-{"fn":"format","args":[-234234234],"ok":"-3d"}
+{"fn":"ms","args":["1m"],"ok":60000}
+{"fn":"parse","args":["1m"],"ok":60000}
+{"fn":"ms","args":["100"],"ok":100}
+{"fn":"parse","args":["100"],"ok":100}
+{"fn":"ms","args":["1h"],"ok":3600000}
+{"fn":"parse","args":["1h"],"ok":3600000}
+{"fn":"ms","args":["2d"],"ok":172800000}
+{"fn":"parse","args":["2d"],"ok":172800000}
+{"fn":"ms","args":["3w"],"ok":1814400000}
+{"fn":"parse","args":["3w"],"ok":1814400000}
+{"fn":"ms","args":["1s"],"ok":1000}
+{"fn":"parse","args":["1s"],"ok":1000}
+{"fn":"ms","args":["100ms"],"ok":100}
+{"fn":"parse","args":["100ms"],"ok":100}
+{"fn":"ms","args":["1y"],"ok":31557600000}
+{"fn":"parse","args":["1y"],"ok":31557600000}
+{"fn":"ms","args":["1.5h"],"ok":5400000}
+{"fn":"parse","args":["1.5h"],"ok":5400000}
+{"fn":"ms","args":["1   s"],"ok":1000}
+{"fn":"parse","args":["1   s"],"ok":1000}
+{"fn":"ms","args":["☃"],"ok":{"$num":"NaN"}}
+{"fn":"parse","args":["☃"],"ok":{"$num":"NaN"}}
+{"fn":"ms","args":["10-.5"],"ok":{"$num":"NaN"}}
+{"fn":"parse","args":["10-.5"],"ok":{"$num":"NaN"}}
+{"fn":"ms","args":["ms"],"ok":{"$num":"NaN"}}
+{"fn":"parse","args":["ms"],"ok":{"$num":"NaN"}}
+{"fn":"ms","args":["1.5H"],"ok":5400000}
+{"fn":"parse","args":["1.5H"],"ok":5400000}
+{"fn":"ms","args":[".5ms"],"ok":0.5}
+{"fn":"parse","args":[".5ms"],"ok":0.5}
+{"fn":"ms","args":["-100ms"],"ok":-100}
+{"fn":"parse","args":["-100ms"],"ok":-100}
+{"fn":"ms","args":["-1.5h"],"ok":-5400000}
+{"fn":"parse","args":["-1.5h"],"ok":-5400000}
+{"fn":"ms","args":["-10.5h"],"ok":-37800000}
+{"fn":"parse","args":["-10.5h"],"ok":-37800000}
+{"fn":"ms","args":["-.5h"],"ok":-1800000}
+{"fn":"parse","args":["-.5h"],"ok":-1800000}
+{"fn":"ms","args":["53 milliseconds"],"ok":53}
+{"fn":"parse","args":["53 milliseconds"],"ok":53}
+{"fn":"ms","args":["17 msecs"],"ok":17}
+{"fn":"parse","args":["17 msecs"],"ok":17}
+{"fn":"ms","args":["1 sec"],"ok":1000}
+{"fn":"parse","args":["1 sec"],"ok":1000}
+{"fn":"ms","args":["1 min"],"ok":60000}
+{"fn":"parse","args":["1 min"],"ok":60000}
+{"fn":"ms","args":["1 hr"],"ok":3600000}
+{"fn":"parse","args":["1 hr"],"ok":3600000}
+{"fn":"ms","args":["2 days"],"ok":172800000}
+{"fn":"parse","args":["2 days"],"ok":172800000}
+{"fn":"ms","args":["1 week"],"ok":604800000}
+{"fn":"parse","args":["1 week"],"ok":604800000}
+{"fn":"ms","args":["1 year"],"ok":31557600000}
+{"fn":"parse","args":["1 year"],"ok":31557600000}
+{"fn":"ms","args":["1.5 hours"],"ok":5400000}
+{"fn":"parse","args":["1.5 hours"],"ok":5400000}
+{"fn":"ms","args":["-100 milliseconds"],"ok":-100}
+{"fn":"parse","args":["-100 milliseconds"],"ok":-100}
+{"fn":"ms","args":["-1.5 hours"],"ok":-5400000}
+{"fn":"parse","args":["-1.5 hours"],"ok":-5400000}
+{"fn":"ms","args":["-.5 hr"],"ok":-1800000}
+{"fn":"parse","args":["-.5 hr"],"ok":-1800000}
+{"fn":"ms","args":[500,{"long":true}],"ok":"500 ms"}
+{"fn":"format","args":[500,{"long":true}],"ok":"500 ms"}
+{"fn":"ms","args":[-500,{"long":true}],"ok":"-500 ms"}
+{"fn":"format","args":[-500,{"long":true}],"ok":"-500 ms"}
+{"fn":"ms","args":[1000,{"long":true}],"ok":"1 second"}
+{"fn":"format","args":[1000,{"long":true}],"ok":"1 second"}
+{"fn":"ms","args":[1200,{"long":true}],"ok":"1 second"}
+{"fn":"format","args":[1200,{"long":true}],"ok":"1 second"}
+{"fn":"ms","args":[10000,{"long":true}],"ok":"10 seconds"}
+{"fn":"format","args":[10000,{"long":true}],"ok":"10 seconds"}
+{"fn":"ms","args":[-1000,{"long":true}],"ok":"-1 second"}
+{"fn":"format","args":[-1000,{"long":true}],"ok":"-1 second"}
+{"fn":"ms","args":[-1200,{"long":true}],"ok":"-1 second"}
+{"fn":"format","args":[-1200,{"long":true}],"ok":"-1 second"}
+{"fn":"ms","args":[-10000,{"long":true}],"ok":"-10 seconds"}
+{"fn":"format","args":[-10000,{"long":true}],"ok":"-10 seconds"}
+{"fn":"ms","args":[60000,{"long":true}],"ok":"1 minute"}
+{"fn":"format","args":[60000,{"long":true}],"ok":"1 minute"}
+{"fn":"ms","args":[72000,{"long":true}],"ok":"1 minute"}
+{"fn":"format","args":[72000,{"long":true}],"ok":"1 minute"}
+{"fn":"ms","args":[600000,{"long":true}],"ok":"10 minutes"}
+{"fn":"format","args":[600000,{"long":true}],"ok":"10 minutes"}
+{"fn":"ms","args":[-60000,{"long":true}],"ok":"-1 minute"}
+{"fn":"format","args":[-60000,{"long":true}],"ok":"-1 minute"}
+{"fn":"ms","args":[-72000,{"long":true}],"ok":"-1 minute"}
+{"fn":"format","args":[-72000,{"long":true}],"ok":"-1 minute"}
+{"fn":"ms","args":[-600000,{"long":true}],"ok":"-10 minutes"}
+{"fn":"format","args":[-600000,{"long":true}],"ok":"-10 minutes"}
+{"fn":"ms","args":[3600000,{"long":true}],"ok":"1 hour"}
+{"fn":"format","args":[3600000,{"long":true}],"ok":"1 hour"}
+{"fn":"ms","args":[4320000,{"long":true}],"ok":"1 hour"}
+{"fn":"format","args":[4320000,{"long":true}],"ok":"1 hour"}
+{"fn":"ms","args":[36000000,{"long":true}],"ok":"10 hours"}
+{"fn":"format","args":[36000000,{"long":true}],"ok":"10 hours"}
+{"fn":"ms","args":[-3600000,{"long":true}],"ok":"-1 hour"}
+{"fn":"format","args":[-3600000,{"long":true}],"ok":"-1 hour"}
+{"fn":"ms","args":[-4320000,{"long":true}],"ok":"-1 hour"}
+{"fn":"format","args":[-4320000,{"long":true}],"ok":"-1 hour"}
+{"fn":"ms","args":[-36000000,{"long":true}],"ok":"-10 hours"}
+{"fn":"format","args":[-36000000,{"long":true}],"ok":"-10 hours"}
+{"fn":"ms","args":[86400000,{"long":true}],"ok":"1 day"}
+{"fn":"format","args":[86400000,{"long":true}],"ok":"1 day"}
+{"fn":"ms","args":[103680000,{"long":true}],"ok":"1 day"}
+{"fn":"format","args":[103680000,{"long":true}],"ok":"1 day"}
+{"fn":"ms","args":[518400000,{"long":true}],"ok":"6 days"}
+{"fn":"format","args":[518400000,{"long":true}],"ok":"6 days"}
+{"fn":"ms","args":[-86400000,{"long":true}],"ok":"-1 day"}
+{"fn":"format","args":[-86400000,{"long":true}],"ok":"-1 day"}
+{"fn":"ms","args":[-103680000,{"long":true}],"ok":"-1 day"}
+{"fn":"format","args":[-103680000,{"long":true}],"ok":"-1 day"}
+{"fn":"ms","args":[-518400000,{"long":true}],"ok":"-6 days"}
+{"fn":"format","args":[-518400000,{"long":true}],"ok":"-6 days"}
+{"fn":"ms","args":[604800000,{"long":true}],"ok":"1 week"}
+{"fn":"format","args":[604800000,{"long":true}],"ok":"1 week"}
+{"fn":"ms","args":[1209600000,{"long":true}],"ok":"2 weeks"}
+{"fn":"format","args":[1209600000,{"long":true}],"ok":"2 weeks"}
+{"fn":"ms","args":[-604800000,{"long":true}],"ok":"-1 week"}
+{"fn":"format","args":[-604800000,{"long":true}],"ok":"-1 week"}
+{"fn":"ms","args":[-1209600000,{"long":true}],"ok":"-2 weeks"}
+{"fn":"format","args":[-1209600000,{"long":true}],"ok":"-2 weeks"}
+{"fn":"ms","args":[2629800000,{"long":true}],"ok":"1 month"}
+{"fn":"format","args":[2629800000,{"long":true}],"ok":"1 month"}
+{"fn":"ms","args":[3155760000,{"long":true}],"ok":"1 month"}
+{"fn":"format","args":[3155760000,{"long":true}],"ok":"1 month"}
+{"fn":"ms","args":[26298000000,{"long":true}],"ok":"10 months"}
+{"fn":"format","args":[26298000000,{"long":true}],"ok":"10 months"}
+{"fn":"ms","args":[-2629800000,{"long":true}],"ok":"-1 month"}
+{"fn":"format","args":[-2629800000,{"long":true}],"ok":"-1 month"}
+{"fn":"ms","args":[-3155760000,{"long":true}],"ok":"-1 month"}
+{"fn":"format","args":[-3155760000,{"long":true}],"ok":"-1 month"}
+{"fn":"ms","args":[-26298000000,{"long":true}],"ok":"-10 months"}
+{"fn":"format","args":[-26298000000,{"long":true}],"ok":"-10 months"}
+{"fn":"ms","args":[31557600001,{"long":true}],"ok":"1 year"}
+{"fn":"format","args":[31557600001,{"long":true}],"ok":"1 year"}
+{"fn":"ms","args":[37869120001,{"long":true}],"ok":"1 year"}
+{"fn":"format","args":[37869120001,{"long":true}],"ok":"1 year"}
+{"fn":"ms","args":[315576000001,{"long":true}],"ok":"10 years"}
+{"fn":"format","args":[315576000001,{"long":true}],"ok":"10 years"}
+{"fn":"ms","args":[-31557600001,{"long":true}],"ok":"-1 year"}
+{"fn":"format","args":[-31557600001,{"long":true}],"ok":"-1 year"}
+{"fn":"ms","args":[-37869120001,{"long":true}],"ok":"-1 year"}
+{"fn":"format","args":[-37869120001,{"long":true}],"ok":"-1 year"}
+{"fn":"ms","args":[-315576000001,{"long":true}],"ok":"-10 years"}
+{"fn":"format","args":[-315576000001,{"long":true}],"ok":"-10 years"}
+{"fn":"ms","args":[234234234,{"long":true}],"ok":"3 days"}
+{"fn":"format","args":[234234234,{"long":true}],"ok":"3 days"}
+{"fn":"ms","args":[-234234234,{"long":true}],"ok":"-3 days"}
+{"fn":"format","args":[-234234234,{"long":true}],"ok":"-3 days"}
+{"fn":"ms","args":[500],"ok":"500ms"}
+{"fn":"format","args":[500,{"$undefined":true}],"ok":"500ms"}
+{"fn":"ms","args":[-500],"ok":"-500ms"}
+{"fn":"format","args":[-500,{"$undefined":true}],"ok":"-500ms"}
+{"fn":"ms","args":[1000],"ok":"1s"}
+{"fn":"format","args":[1000,{"$undefined":true}],"ok":"1s"}
+{"fn":"ms","args":[10000],"ok":"10s"}
+{"fn":"format","args":[10000,{"$undefined":true}],"ok":"10s"}
+{"fn":"ms","args":[-1000],"ok":"-1s"}
+{"fn":"format","args":[-1000,{"$undefined":true}],"ok":"-1s"}
+{"fn":"ms","args":[-10000],"ok":"-10s"}
+{"fn":"format","args":[-10000,{"$undefined":true}],"ok":"-10s"}
+{"fn":"ms","args":[60000],"ok":"1m"}
+{"fn":"format","args":[60000,{"$undefined":true}],"ok":"1m"}
+{"fn":"ms","args":[600000],"ok":"10m"}
+{"fn":"format","args":[600000,{"$undefined":true}],"ok":"10m"}
+{"fn":"ms","args":[-60000],"ok":"-1m"}
+{"fn":"format","args":[-60000,{"$undefined":true}],"ok":"-1m"}
+{"fn":"ms","args":[-600000],"ok":"-10m"}
+{"fn":"format","args":[-600000,{"$undefined":true}],"ok":"-10m"}
+{"fn":"ms","args":[3600000],"ok":"1h"}
+{"fn":"format","args":[3600000,{"$undefined":true}],"ok":"1h"}
+{"fn":"ms","args":[36000000],"ok":"10h"}
+{"fn":"format","args":[36000000,{"$undefined":true}],"ok":"10h"}
+{"fn":"ms","args":[-3600000],"ok":"-1h"}
+{"fn":"format","args":[-3600000,{"$undefined":true}],"ok":"-1h"}
+{"fn":"ms","args":[-36000000],"ok":"-10h"}
+{"fn":"format","args":[-36000000,{"$undefined":true}],"ok":"-10h"}
+{"fn":"ms","args":[86400000],"ok":"1d"}
+{"fn":"format","args":[86400000,{"$undefined":true}],"ok":"1d"}
+{"fn":"ms","args":[518400000],"ok":"6d"}
+{"fn":"format","args":[518400000,{"$undefined":true}],"ok":"6d"}
+{"fn":"ms","args":[-86400000],"ok":"-1d"}
+{"fn":"format","args":[-86400000,{"$undefined":true}],"ok":"-1d"}
+{"fn":"ms","args":[-518400000],"ok":"-6d"}
+{"fn":"format","args":[-518400000,{"$undefined":true}],"ok":"-6d"}
+{"fn":"ms","args":[604800000],"ok":"1w"}
+{"fn":"format","args":[604800000,{"$undefined":true}],"ok":"1w"}
+{"fn":"ms","args":[1209600000],"ok":"2w"}
+{"fn":"format","args":[1209600000,{"$undefined":true}],"ok":"2w"}
+{"fn":"ms","args":[-604800000],"ok":"-1w"}
+{"fn":"format","args":[-604800000,{"$undefined":true}],"ok":"-1w"}
+{"fn":"ms","args":[-1209600000],"ok":"-2w"}
+{"fn":"format","args":[-1209600000,{"$undefined":true}],"ok":"-2w"}
+{"fn":"ms","args":[2629800000],"ok":"1mo"}
+{"fn":"format","args":[2629800000,{"$undefined":true}],"ok":"1mo"}
+{"fn":"ms","args":[3155760000],"ok":"1mo"}
+{"fn":"format","args":[3155760000,{"$undefined":true}],"ok":"1mo"}
+{"fn":"ms","args":[26298000000],"ok":"10mo"}
+{"fn":"format","args":[26298000000,{"$undefined":true}],"ok":"10mo"}
+{"fn":"ms","args":[-2629800000],"ok":"-1mo"}
+{"fn":"format","args":[-2629800000,{"$undefined":true}],"ok":"-1mo"}
+{"fn":"ms","args":[-3155760000],"ok":"-1mo"}
+{"fn":"format","args":[-3155760000,{"$undefined":true}],"ok":"-1mo"}
+{"fn":"ms","args":[-26298000000],"ok":"-10mo"}
+{"fn":"format","args":[-26298000000,{"$undefined":true}],"ok":"-10mo"}
+{"fn":"ms","args":[31557600001],"ok":"1y"}
+{"fn":"format","args":[31557600001,{"$undefined":true}],"ok":"1y"}
+{"fn":"ms","args":[37869120001],"ok":"1y"}
+{"fn":"format","args":[37869120001,{"$undefined":true}],"ok":"1y"}
+{"fn":"ms","args":[315576000001],"ok":"10y"}
+{"fn":"format","args":[315576000001,{"$undefined":true}],"ok":"10y"}
+{"fn":"ms","args":[-31557600001],"ok":"-1y"}
+{"fn":"format","args":[-31557600001,{"$undefined":true}],"ok":"-1y"}
+{"fn":"ms","args":[-37869120001],"ok":"-1y"}
+{"fn":"format","args":[-37869120001,{"$undefined":true}],"ok":"-1y"}
+{"fn":"ms","args":[-315576000001],"ok":"-10y"}
+{"fn":"format","args":[-315576000001,{"$undefined":true}],"ok":"-10y"}
+{"fn":"ms","args":[234234234],"ok":"3d"}
+{"fn":"format","args":[234234234,{"$undefined":true}],"ok":"3d"}
+{"fn":"ms","args":[-234234234],"ok":"-3d"}
+{"fn":"format","args":[-234234234,{"$undefined":true}],"ok":"-3d"}
+{"fn":"ms","args":[""],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"\""}
+{"fn":"parse","args":[""],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"\""}
+{"fn":"ms","args":[{"$undefined":true}],"error":"Value provided to ms() must be a string or number. value=undefined"}
+{"fn":"ms","args":[null],"error":"Value provided to ms() must be a string or number. value=null"}
+{"fn":"ms","args":[[]],"error":"Value provided to ms() must be a string or number. value=[]"}
+{"fn":"ms","args":[{}],"error":"Value provided to ms() must be a string or number. value={}"}
+{"fn":"ms","args":[{"$num":"NaN"}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$num":"NaN"},{"$undefined":true}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"ms","args":[{"$num":"Infinity"}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$num":"Infinity"},{"$undefined":true}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"ms","args":[{"$num":"-Infinity"}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$num":"-Infinity"},{"$undefined":true}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[500],"ok":"500ms"}
 {"fn":"format","args":[-500],"ok":"-500ms"}
 {"fn":"format","args":[1000],"ok":"1s"}
 {"fn":"format","args":[10000],"ok":"10s"}
-{"fn":"format","args":[1200],"ok":"1s"}
+{"fn":"format","args":[-1000],"ok":"-1s"}
+{"fn":"format","args":[-10000],"ok":"-10s"}
+{"fn":"format","args":[60000],"ok":"1m"}
+{"fn":"format","args":[600000],"ok":"10m"}
+{"fn":"format","args":[-60000],"ok":"-1m"}
+{"fn":"format","args":[-600000],"ok":"-10m"}
+{"fn":"format","args":[3600000],"ok":"1h"}
+{"fn":"format","args":[36000000],"ok":"10h"}
+{"fn":"format","args":[-3600000],"ok":"-1h"}
+{"fn":"format","args":[-36000000],"ok":"-10h"}
+{"fn":"format","args":[86400000],"ok":"1d"}
+{"fn":"format","args":[518400000],"ok":"6d"}
+{"fn":"format","args":[-86400000],"ok":"-1d"}
+{"fn":"format","args":[-518400000],"ok":"-6d"}
+{"fn":"format","args":[604800000],"ok":"1w"}
+{"fn":"format","args":[1209600000],"ok":"2w"}
+{"fn":"format","args":[-604800000],"ok":"-1w"}
+{"fn":"format","args":[-1209600000],"ok":"-2w"}
+{"fn":"format","args":[2629800000],"ok":"1mo"}
+{"fn":"format","args":[3155760000],"ok":"1mo"}
+{"fn":"format","args":[26298000000],"ok":"10mo"}
+{"fn":"format","args":[-2629800000],"ok":"-1mo"}
+{"fn":"format","args":[-3155760000],"ok":"-1mo"}
+{"fn":"format","args":[-26298000000],"ok":"-10mo"}
+{"fn":"format","args":[31557600001],"ok":"1y"}
+{"fn":"format","args":[37869120001],"ok":"1y"}
+{"fn":"format","args":[315576000001],"ok":"10y"}
+{"fn":"format","args":[-31557600001],"ok":"-1y"}
+{"fn":"format","args":[-37869120001],"ok":"-1y"}
+{"fn":"format","args":[-315576000001],"ok":"-10y"}
 {"fn":"format","args":[234234234],"ok":"3d"}
-{"fn":"format","args":[500],"ok":"500ms"}
-{"fn":"format","args":[-1000,{"long":true}],"ok":"-1 second"}
-{"fn":"format","args":[-10000,{"long":true}],"ok":"-10 seconds"}
-{"fn":"format","args":[-1200,{"long":true}],"ok":"-1 second"}
-{"fn":"format","args":[-234234234,{"long":true}],"ok":"-3 days"}
-{"fn":"format","args":[-500,{"long":true}],"ok":"-500 ms"}
-{"fn":"format","args":[1000,{"long":true}],"ok":"1 second"}
-{"fn":"format","args":[10000,{"long":true}],"ok":"10 seconds"}
-{"fn":"format","args":[1200,{"long":true}],"ok":"1 second"}
-{"fn":"format","args":[234234234,{"long":true}],"ok":"3 days"}
-{"fn":"format","args":[500,{"long":true}],"ok":"500 ms"}
-{"fn":"ms","args":[""],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"\""}
-{"fn":"ms","args":["-.5 hr"],"ok":-1800000}
-{"fn":"ms","args":["-.5h"],"ok":-1800000}
-{"fn":"ms","args":["-1.5 hours"],"ok":-5400000}
-{"fn":"ms","args":["-1.5h"],"ok":-5400000}
-{"fn":"ms","args":["-10.5h"],"ok":-37800000}
-{"fn":"ms","args":["-100 milliseconds"],"ok":-100}
-{"fn":"ms","args":["-100ms"],"ok":-100}
-{"fn":"ms","args":[".5ms"],"ok":0.5}
-{"fn":"ms","args":["1   s"],"ok":1000}
-{"fn":"ms","args":["1 hr"],"ok":3600000}
-{"fn":"ms","args":["1 min"],"ok":60000}
-{"fn":"ms","args":["1 sec"],"ok":1000}
-{"fn":"ms","args":["1 week"],"ok":604800000}
-{"fn":"ms","args":["1 year"],"ok":31557600000}
-{"fn":"ms","args":["1.5 hours"],"ok":5400000}
-{"fn":"ms","args":["1.5H"],"ok":5400000}
-{"fn":"ms","args":["1.5h"],"ok":5400000}
-{"fn":"ms","args":["10-.5"],"ok":{"$num":"NaN"}}
-{"fn":"ms","args":["100"],"ok":100}
-{"fn":"ms","args":["100ms"],"ok":100}
-{"fn":"ms","args":["17 msecs"],"ok":17}
-{"fn":"ms","args":["1h"],"ok":3600000}
-{"fn":"ms","args":["1m"],"ok":60000}
-{"fn":"ms","args":["1s"],"ok":1000}
-{"fn":"ms","args":["1y"],"ok":31557600000}
-{"fn":"ms","args":["2 days"],"ok":172800000}
-{"fn":"ms","args":["2d"],"ok":172800000}
-{"fn":"ms","args":["3w"],"ok":1814400000}
-{"fn":"ms","args":["53 milliseconds"],"ok":53}
-{"fn":"ms","args":["☃"],"ok":{"$num":"NaN"}}
-{"fn":"ms","args":["ms"],"ok":{"$num":"NaN"}}
-{"fn":"ms","args":[-1000],"ok":"-1s"}
-{"fn":"ms","args":[-10000],"ok":"-10s"}
-{"fn":"ms","args":[-1200],"ok":"-1s"}
-{"fn":"ms","args":[-234234234],"ok":"-3d"}
-{"fn":"ms","args":[-500],"ok":"-500ms"}
-{"fn":"ms","args":[1000],"ok":"1s"}
-{"fn":"ms","args":[10000],"ok":"10s"}
-{"fn":"ms","args":[1200],"ok":"1s"}
-{"fn":"ms","args":[234234234],"ok":"3d"}
-{"fn":"ms","args":[500],"ok":"500ms"}
-{"fn":"ms","args":[-1000,{"long":true}],"ok":"-1 second"}
-{"fn":"ms","args":[-10000,{"long":true}],"ok":"-10 seconds"}
-{"fn":"ms","args":[-1200,{"long":true}],"ok":"-1 second"}
-{"fn":"ms","args":[-234234234,{"long":true}],"ok":"-3 days"}
-{"fn":"ms","args":[-500,{"long":true}],"ok":"-500 ms"}
-{"fn":"ms","args":[1000,{"long":true}],"ok":"1 second"}
-{"fn":"ms","args":[10000,{"long":true}],"ok":"10 seconds"}
-{"fn":"ms","args":[1200,{"long":true}],"ok":"1 second"}
-{"fn":"ms","args":[234234234,{"long":true}],"ok":"3 days"}
-{"fn":"ms","args":[500,{"long":true}],"ok":"500 ms"}
-{"fn":"parse","args":[""],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"\""}
-{"fn":"parse","args":["-.5 hr"],"ok":-1800000}
-{"fn":"parse","args":["-.5h"],"ok":-1800000}
-{"fn":"parse","args":["-1.5 hours"],"ok":-5400000}
-{"fn":"parse","args":["-1.5h"],"ok":-5400000}
-{"fn":"parse","args":["-10.5h"],"ok":-37800000}
-{"fn":"parse","args":["-100 milliseconds"],"ok":-100}
-{"fn":"parse","args":["-100ms"],"ok":-100}
-{"fn":"parse","args":[".5ms"],"ok":0.5}
-{"fn":"parse","args":["1   s"],"ok":1000}
-{"fn":"parse","args":["1 hr"],"ok":3600000}
-{"fn":"parse","args":["1 min"],"ok":60000}
-{"fn":"parse","args":["1 month"],"ok":2629800000}
-{"fn":"parse","args":["1 sec"],"ok":1000}
-{"fn":"parse","args":["1 week"],"ok":604800000}
-{"fn":"parse","args":["1 year"],"ok":31557600000}
-{"fn":"parse","args":["1.5 hours"],"ok":5400000}
-{"fn":"parse","args":["1.5h"],"ok":5400000}
-{"fn":"parse","args":["10-.5"],"ok":{"$num":"NaN"}}
-{"fn":"parse","args":["100"],"ok":100}
-{"fn":"parse","args":["100ms"],"ok":100}
-{"fn":"parse","args":["17 msecs"],"ok":17}
-{"fn":"parse","args":["1h"],"ok":3600000}
-{"fn":"parse","args":["1m"],"ok":60000}
-{"fn":"parse","args":["1s"],"ok":1000}
-{"fn":"parse","args":["1y"],"ok":31557600000}
-{"fn":"parse","args":["2 days"],"ok":172800000}
-{"fn":"parse","args":["2d"],"ok":172800000}
-{"fn":"parse","args":["3w"],"ok":1814400000}
-{"fn":"parse","args":["53 DaYS"],"ok":4579200000}
-{"fn":"parse","args":["53 HoUrs"],"ok":190800000}
-{"fn":"parse","args":["53 MiLliSeCondS"],"ok":53}
-{"fn":"parse","args":["53 WeEkS"],"ok":32054400000}
-{"fn":"parse","args":["53 YeArS"],"ok":1672552800000}
-{"fn":"parse","args":["53 milliseconds"],"ok":53}
-{"fn":"parse","args":["☃"],"ok":{"$num":"NaN"}}
-{"fn":"parse","args":["foo"],"ok":{"$num":"NaN"}}
-{"fn":"parseStrict","args":[""],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"\""}
-{"fn":"parseStrict","args":["-.5 hr"],"ok":-1800000}
-{"fn":"parseStrict","args":["-.5h"],"ok":-1800000}
-{"fn":"parseStrict","args":["-1.5 hours"],"ok":-5400000}
-{"fn":"parseStrict","args":["-1.5h"],"ok":-5400000}
-{"fn":"parseStrict","args":["-10.5h"],"ok":-37800000}
-{"fn":"parseStrict","args":["-100 milliseconds"],"ok":-100}
-{"fn":"parseStrict","args":["-100ms"],"ok":-100}
-{"fn":"parseStrict","args":["...>100 length string..."],"ok":{"$num":"NaN"}}
-{"fn":"parseStrict","args":[".5ms"],"ok":0.5}
-{"fn":"parseStrict","args":["1   s"],"ok":1000}
-{"fn":"parseStrict","args":["1 hr"],"ok":3600000}
-{"fn":"parseStrict","args":["1 min"],"ok":60000}
-{"fn":"parseStrict","args":["1 month"],"ok":2629800000}
-{"fn":"parseStrict","args":["1 sec"],"ok":1000}
-{"fn":"parseStrict","args":["1 week"],"ok":604800000}
-{"fn":"parseStrict","args":["1 year"],"ok":31557600000}
-{"fn":"parseStrict","args":["1.5 hours"],"ok":5400000}
-{"fn":"parseStrict","args":["1.5h"],"ok":5400000}
-{"fn":"parseStrict","args":["10-.5"],"ok":{"$num":"NaN"}}
-{"fn":"parseStrict","args":["100"],"ok":100}
-{"fn":"parseStrict","args":["100ms"],"ok":100}
-{"fn":"parseStrict","args":["17 msecs"],"ok":17}
-{"fn":"parseStrict","args":["1h"],"ok":3600000}
+{"fn":"format","args":[-234234234],"ok":"-3d"}
+{"fn":"format","args":[""],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$undefined":true}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[null],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[[]],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$num":"NaN"}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$num":"Infinity"}],"error":"Value provided to ms.format() must be of type number."}
+{"fn":"format","args":[{"$num":"-Infinity"}],"error":"Value provided to ms.format() must be of type number."}
 {"fn":"parseStrict","args":["1m"],"ok":60000}
-{"fn":"parseStrict","args":["1mo"],"ok":2629800000}
-{"fn":"parseStrict","args":["1s"],"ok":1000}
-{"fn":"parseStrict","args":["1y"],"ok":31557600000}
-{"fn":"parseStrict","args":["2 days"],"ok":172800000}
+{"fn":"parseStrict","args":["100"],"ok":100}
+{"fn":"parseStrict","args":["1h"],"ok":3600000}
 {"fn":"parseStrict","args":["2d"],"ok":172800000}
 {"fn":"parseStrict","args":["3w"],"ok":1814400000}
-{"fn":"parseStrict","args":["53 DaYS"],"ok":4579200000}
-{"fn":"parseStrict","args":["53 HoUrs"],"ok":190800000}
-{"fn":"parseStrict","args":["53 MiLliSeCondS"],"ok":53}
-{"fn":"parseStrict","args":["53 WeEkS"],"ok":32054400000}
-{"fn":"parseStrict","args":["53 YeArS"],"ok":1672552800000}
-{"fn":"parseStrict","args":["53 milliseconds"],"ok":53}
+{"fn":"parseStrict","args":["1s"],"ok":1000}
+{"fn":"parseStrict","args":["100ms"],"ok":100}
+{"fn":"parseStrict","args":["1mo"],"ok":2629800000}
+{"fn":"parse","args":["1mo"],"ok":2629800000}
+{"fn":"parseStrict","args":["1y"],"ok":31557600000}
+{"fn":"parseStrict","args":["1.5h"],"ok":5400000}
+{"fn":"parseStrict","args":["1   s"],"ok":1000}
 {"fn":"parseStrict","args":["☃"],"ok":{"$num":"NaN"}}
+{"fn":"parseStrict","args":["10-.5"],"ok":{"$num":"NaN"}}
 {"fn":"parseStrict","args":["foo"],"ok":{"$num":"NaN"}}
+{"fn":"parse","args":["foo"],"ok":{"$num":"NaN"}}
+{"fn":"parseStrict","args":["53 YeArS"],"ok":1672552800000}
+{"fn":"parse","args":["53 YeArS"],"ok":1672552800000}
+{"fn":"parseStrict","args":["53 WeEkS"],"ok":32054400000}
+{"fn":"parse","args":["53 WeEkS"],"ok":32054400000}
+{"fn":"parseStrict","args":["53 DaYS"],"ok":4579200000}
+{"fn":"parse","args":["53 DaYS"],"ok":4579200000}
+{"fn":"parseStrict","args":["53 HoUrs"],"ok":190800000}
+{"fn":"parse","args":["53 HoUrs"],"ok":190800000}
+{"fn":"parseStrict","args":["53 MiLliSeCondS"],"ok":53}
+{"fn":"parse","args":["53 MiLliSeCondS"],"ok":53}
+{"fn":"parseStrict","args":[".5ms"],"ok":0.5}
+{"fn":"parseStrict","args":["-100ms"],"ok":-100}
+{"fn":"parseStrict","args":["-1.5h"],"ok":-5400000}
+{"fn":"parseStrict","args":["-10.5h"],"ok":-37800000}
+{"fn":"parseStrict","args":["-.5h"],"ok":-1800000}
+{"fn":"parseStrict","args":["53 milliseconds"],"ok":53}
+{"fn":"parseStrict","args":["17 msecs"],"ok":17}
+{"fn":"parseStrict","args":["1 sec"],"ok":1000}
+{"fn":"parseStrict","args":["1 min"],"ok":60000}
+{"fn":"parseStrict","args":["1 hr"],"ok":3600000}
+{"fn":"parseStrict","args":["2 days"],"ok":172800000}
+{"fn":"parseStrict","args":["1 week"],"ok":604800000}
+{"fn":"parseStrict","args":["1 month"],"ok":2629800000}
+{"fn":"parse","args":["1 month"],"ok":2629800000}
+{"fn":"parseStrict","args":["1 year"],"ok":31557600000}
+{"fn":"parseStrict","args":["1.5 hours"],"ok":5400000}
+{"fn":"parseStrict","args":["-100 milliseconds"],"ok":-100}
+{"fn":"parseStrict","args":["-1.5 hours"],"ok":-5400000}
+{"fn":"parseStrict","args":["-.5 hr"],"ok":-1800000}
+{"fn":"parseStrict","args":[""],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"\""}
+{"fn":"parseStrict","args":["▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲"],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲\""}
+{"fn":"parse","args":["▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲"],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=\"▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲\""}
+{"fn":"parseStrict","args":[{"$undefined":true}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=undefined"}
+{"fn":"parse","args":[{"$undefined":true}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=undefined"}
+{"fn":"parseStrict","args":[null],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parse","args":[null],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parseStrict","args":[[]],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=[]"}
+{"fn":"parse","args":[[]],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=[]"}
+{"fn":"parseStrict","args":[{}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value={}"}
+{"fn":"parse","args":[{}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value={}"}
+{"fn":"parseStrict","args":[{"$num":"NaN"}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parse","args":[{"$num":"NaN"}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parseStrict","args":[{"$num":"Infinity"}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parse","args":[{"$num":"Infinity"}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parseStrict","args":[{"$num":"-Infinity"}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}
+{"fn":"parse","args":[{"$num":"-Infinity"}],"error":"Value provided to ms.parse() must be a string with length between 1 and 99. value=null"}

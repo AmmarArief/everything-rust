@@ -215,6 +215,7 @@ mod tests {
                 json!({"fn": "f", "args": [2], "expected": {"x": 1.5}, "actual": {"x": 1.5000000000000002}}),
                 json!({"fn": "f", "args": [3], "expected": 0.1, "actual": 0.2}),
             ],
+            ..Default::default()
         };
         let out = apply(outcome, 1e-9, true);
         assert_eq!((out.passed, out.failed, out.mismatches.len()), (3, 1, 1));

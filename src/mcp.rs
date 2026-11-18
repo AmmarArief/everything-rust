@@ -116,6 +116,7 @@ fn tools() -> Value {
                 "module": { "type": "string", "description": "JS only: import the original from this JS module instead of the TS source." },
                 "resolve_from": { "type": "string", "description": "Resolve npm packages from this folder's node_modules." },
                 "float_tolerance": { "type": "number", "description": "Numeric code: floats match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the crate for diff and gate; 0 removes it." },
+                "test_command": { "type": "array", "items": { "type": "string" }, "description": "TS/JS or Python: also record every call the original's own test suite makes to the unit's functions, e.g. [\"npx\", \"jest\"] or [\"pytest\"]. Runs in the original's folder." },
             }, "required": ["crate"] },
         },
         {
@@ -264,7 +265,23 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         }
         "record" => {
             let crate_dir = path("crate")?;
-            let inputs = opt_path("inputs");
+            let mut inputs = opt_path("inputs");
+            let test_command = strings("test_command");
+            let captured = if test_command.is_empty() {
+                None
+            } else {
+                let c = crate::from_tests::capture(&crate_dir, &test_command)?;
+                inputs = Some(crate::from_tests::with_own_inputs(
+                    &crate_dir,
+                    inputs.as_deref(),
+                    &c.inputs,
+                )?);
+                Some(serde_json::json!({
+                    "per_function": c.per_function,
+                    "not_captured": c.skipped,
+                    "tests_passed": c.tests_passed,
+                }))
+            };
             let module = opt_path("module");
             let resolve_from = opt_path("resolve_from");
             if let Some(t) = args["float_tolerance"].as_f64() {
@@ -272,7 +289,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 manifest.float_tolerance = (crate::tolerance::check(t)? > 0.0).then_some(t);
                 manifest.save(&crate_dir)?;
             }
-            serde_json::to_value(harness::record(&harness::RecordOptions {
+            let mut out = serde_json::to_value(harness::record(&harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count: args["count"]
                     .as_u64()
@@ -281,7 +298,11 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 module: module.as_deref(),
                 resolve_from: resolve_from.as_deref(),
                 node_args: &no_node_args,
-            })?)?
+            })?)?;
+            if let Some(c) = captured {
+                out["from_tests"] = c;
+            }
+            out
         }
         "refresh" => {
             let batch = strings("batch");

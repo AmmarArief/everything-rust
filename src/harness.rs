@@ -75,7 +75,7 @@ pub struct RecordOutcome {
     pub timed_out: Vec<Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DiffOutcome {
     pub total: usize,
     pub passed: usize,
@@ -84,6 +84,16 @@ pub struct DiffOutcome {
     pub missing: Vec<String>,
     /// The first mismatches: `{ fn, args, expected, actual }`.
     pub mismatches: Vec<Value>,
+    /// Mismatches `known-diffs.jsonl` explains, counted in `passed`.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub accepted: usize,
+    /// `known-diffs.jsonl` entries no mismatch matched any more.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stale_known: Vec<Value>,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 pub struct RecordOptions<'a> {
@@ -251,6 +261,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     } else {
         record_node(opts, &manifest, &cases)?
     };
+    crate::recording::save_fingerprint(opts.crate_dir, &manifest)?;
     let text = std::fs::read_to_string(&out)?;
     let mut per_function = BTreeMap::new();
     let mut errors = 0;
@@ -691,6 +702,8 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
             opts.ignore_key_order || !preserve_key_order,
         );
     }
+    outcome =
+        crate::recording::apply_known(outcome, &crate::recording::known_diffs(opts.crate_dir)?);
     outcome.mismatches.truncate(SHOWN_MISMATCHES);
     anyhow::ensure!(
         outcome.total > 0,

@@ -118,6 +118,13 @@ enum Cmd {
         /// below 1), e.g. 1e-9 for numeric code. Saved with the crate for diff and gate; 0 removes it.
         #[arg(long)]
         float_tolerance: Option<f64>,
+        /// Also record every call the original's own test suite makes to the unit's functions:
+        /// `--from-tests -- npx jest` (TS/JS, any runner) or `-- pytest` (Python).
+        #[arg(long)]
+        from_tests: bool,
+        /// The test command for `--from-tests`, after `--`; it runs in the original's folder.
+        #[arg(last = true)]
+        test_command: Vec<String>,
     },
     /// 3b. Build the crate's JS module (napi-rs `.node` or wasm-bindgen output).
     Build {
@@ -442,7 +449,38 @@ fn run() -> Result<ExitCode> {
             resolve_from,
             node_args,
             float_tolerance,
+            from_tests,
+            test_command,
         } => {
+            anyhow::ensure!(
+                from_tests || test_command.is_empty(),
+                "a command after `--` is the test suite for `--from-tests`; add the flag"
+            );
+            let inputs = if from_tests {
+                let c = rust_anything::from_tests::capture(&crate_dir, &test_command)?;
+                say!(
+                    "Captured {} call(s) from the tests{}:",
+                    c.per_function.values().sum::<usize>(),
+                    if c.tests_passed {
+                        ""
+                    } else {
+                        " (the test command failed; calls made before that are kept)"
+                    }
+                );
+                for (name, n) in &c.per_function {
+                    say!("  {name}: {n}");
+                }
+                for s in &c.skipped {
+                    say!("  not captured: {s}");
+                }
+                Some(rust_anything::from_tests::with_own_inputs(
+                    &crate_dir,
+                    inputs.as_deref(),
+                    &c.inputs,
+                )?)
+            } else {
+                inputs
+            };
             if let Some(t) = float_tolerance {
                 let mut manifest = bridge::Manifest::load(&crate_dir)?;
                 manifest.float_tolerance = (rust_anything::tolerance::check(t)? > 0.0).then_some(t);
@@ -516,7 +554,30 @@ fn run() -> Result<ExitCode> {
             if json {
                 say!("{}", serde_json::to_string_pretty(&d)?);
             } else {
-                say!("{}/{} cases match", d.passed, d.total);
+                if let Ok(m) = rust_anything::bridge::Manifest::load(&crate_dir)
+                    && let Some(why) = rust_anything::recording::stale(&crate_dir, &m)
+                {
+                    say!("Warning: {why}");
+                }
+                if d.accepted > 0 {
+                    say!(
+                        "{}/{} cases match ({} by {})",
+                        d.passed,
+                        d.total,
+                        d.accepted,
+                        rust_anything::recording::KNOWN_DIFFS
+                    );
+                } else {
+                    say!("{}/{} cases match", d.passed, d.total);
+                }
+                for e in &d.stale_known {
+                    say!(
+                        "Known diff no longer happens, remove it from {}: {}({})",
+                        rust_anything::recording::KNOWN_DIFFS,
+                        e["fn"].as_str().unwrap_or_default(),
+                        e["args"]
+                    );
+                }
                 if !d.missing.is_empty() {
                     say!("Missing exports: {}", d.missing.join(", "));
                 }

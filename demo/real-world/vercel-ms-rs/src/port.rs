@@ -75,11 +75,44 @@ pub fn format(ms: f64, options: Option<Value>) -> Result<String, String> {
     if !ms.is_finite() {
         return Err("Value provided to ms.format() must be of type number.".into());
     }
-    let long = options.as_ref().is_some_and(|o| match o {
+    Ok(if is_long(options.as_ref()) {
+        fmt_long(ms)
+    } else {
+        fmt_short(ms)
+    })
+}
+
+/// `options?.long`, truthy as JS sees it.
+fn is_long(options: Option<&Value>) -> bool {
+    options.is_some_and(|o| match o {
         Value::Object(map) if !is_marker(o) => map.get("long").is_some_and(truthy),
         _ => false,
-    });
-    Ok(if long { fmt_long(ms) } else { fmt_short(ms) })
+    })
+}
+
+/// `format` over many values for `FormatBatch`: reads `options` once instead of once per value.
+pub struct FormatIndex {
+    items: Vec<f64>,
+}
+
+impl FormatIndex {
+    pub fn new(items: Vec<f64>) -> Self {
+        Self { items }
+    }
+
+    pub fn run(&self, options: Option<Value>) -> Result<Vec<String>, String> {
+        use rayon::prelude::*;
+        let long = is_long(options.as_ref());
+        self.items
+            .par_iter()
+            .map(|&ms| {
+                if !ms.is_finite() {
+                    return Err("Value provided to ms.format() must be of type number.".to_string());
+                }
+                Ok(if long { fmt_long(ms) } else { fmt_short(ms) })
+            })
+            .collect()
+    }
 }
 
 /// `-?\d*\.?\d+ *(unit)?` matched against the whole string, as the original's regex does:

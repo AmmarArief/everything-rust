@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- `record --from-tests -- <test command>` runs the original's own test suite and records every call
+  it makes to the unit's functions: TS/JS with any runner (Jest, Vitest, `node --test`), Python
+  with pytest or unittest. On vercel/ms it captured 340 calls from 167 Jest tests, more than
+  twice the 149 inputs copied by hand.
+- `record` saves a fingerprint of the original unit (`recorded-from.json`); `diff` warns and `gate`
+  fails when the original changed since.
+- `known-diffs.jsonl` lists cases where the port is meant to differ, each with the result it gives
+  and a reason. `diff` and `gate` count them as passing only with exactly that result, and `gate`
+  fails on an entry that no longer differs.
+- `app replay`'s report no longer carries temporary paths, so CI can commit it and fail on
+  `git diff --exit-code`.
+
 - A port of [vercel/ms](https://github.com/vercel/ms), end to end, in `demo/real-world/vercel-ms-rs`
   and `docs/real-world.md`: 784/784 recorded cases match; slower per call, 18x faster as a batch
   for `parse` (3.4x with the handover), slower for `format`.
@@ -9,8 +21,10 @@
   now enable napi's `serde-json` feature.
 - napi batches pass strings joined: items cross as one string plus UTF-16 end offsets and string
   results come back the same way, about 2x faster each way. The JS API is unchanged.
-- The generated `js.rs` gains `number_to_string` (JS `String(n)`) and `math_round` (JS
-  `Math.round`), tested against Node.
+- napi batches of numbers take their items as one `Float64Array`: `new Batch(numbers)` costs
+  0.1 ms instead of 3.3 ms for 100,000 values.
+- The generated `js.rs` gains `number_to_string` (JS `String(n)`, digits from serde_json's fast
+  printer) and `math_round` (JS `Math.round`), tested against Node.
 - `analyze` flags `Math.round`, `toFixed`, and `/i` regexes without `u` where Rust's case folding
   matches more (`ſ`, the Kelvin sign).
 

@@ -200,33 +200,11 @@ impl ParseBatch {
     }
 }
 
-/// The items of `FormatBatch` as the port takes them; the port runs per item. Define
-/// `pub struct FormatIndex` in `port.rs` (with `new` and `run`) to prepare items once.
-pub struct FormatDefaultIndex {
-    items: Vec<f64>,
-}
-
-impl FormatDefaultIndex {
-    pub fn new(items: Vec<f64>) -> Self {
-        Self { items }
-    }
-
-    pub fn run(&self, options: Option<Value>) -> Result<Vec<String>, String> {
-        use rayon::prelude::*;
-        self.items
-            .par_iter()
-            .map(|item| port::format(*item, options.clone()))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .collect()
-    }
-}
-
 /// `format` over many `ms` values kept in Rust: `run` maps them all in one call, on all cores;
 /// `rank` returns the indexes of results >= `min`, best first.
 #[napi(js_name = "FormatBatch")]
 pub struct FormatBatch {
-    inner: FormatDefaultIndex,
+    inner: port::FormatIndex,
 }
 
 #[napi]
@@ -234,7 +212,15 @@ impl FormatBatch {
     #[napi(constructor)]
     pub fn new(items: Vec<f64>) -> Self {
         Self {
-            inner: FormatDefaultIndex::new(items),
+            inner: port::FormatIndex::new(items),
+        }
+    }
+
+    /// `new` for items sent as one `Float64Array`.
+    #[napi(factory, js_name = "fromFloat64")]
+    pub fn from_float64(items: napi::bindgen_prelude::Float64Array) -> Self {
+        Self {
+            inner: port::FormatIndex::new(items.to_vec()),
         }
     }
 

@@ -129,6 +129,14 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         },
     });
 
+    if let Some(why) = crate::recording::stale(crate_dir, &manifest) {
+        checks.push(Check {
+            name: "recording",
+            passed: false,
+            detail: why,
+        });
+    }
+
     if !crate_dir.join(CASES).exists() {
         checks.push(Check {
             name: "behavior",
@@ -165,8 +173,40 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
                 checks.push(Check {
                     name: "behavior",
                     passed: d.failed == 0,
-                    detail: format!("{}/{} recorded cases match", d.passed, d.total),
+                    detail: if d.accepted > 0 {
+                        format!(
+                            "{}/{} recorded cases match ({} by {})",
+                            d.passed,
+                            d.total,
+                            d.accepted,
+                            crate::recording::KNOWN_DIFFS
+                        )
+                    } else {
+                        format!("{}/{} recorded cases match", d.passed, d.total)
+                    },
                 });
+                if !d.stale_known.is_empty() {
+                    checks.push(Check {
+                        name: "known diffs",
+                        passed: false,
+                        detail: format!(
+                            "{} entr{} of {} no longer differ{}: remove {}",
+                            d.stale_known.len(),
+                            if d.stale_known.len() == 1 { "y" } else { "ies" },
+                            crate::recording::KNOWN_DIFFS,
+                            if d.stale_known.len() == 1 { "s" } else { "" },
+                            d.stale_known
+                                .iter()
+                                .map(|e| format!(
+                                    "{}({})",
+                                    e["fn"].as_str().unwrap_or("?"),
+                                    e["args"]
+                                ))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        ),
+                    });
+                }
             }
             Err(e) => checks.push(Check {
                 name: "behavior",

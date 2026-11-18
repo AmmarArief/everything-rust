@@ -1878,6 +1878,28 @@ fn check(
 }
 
 pub(crate) fn report_markdown(outcome: &ReplayOutcome) -> String {
+    stable_paths(&report_body(outcome))
+}
+
+/// The report with the per-run sandbox paths replaced, so two replays of the same build write the
+/// same file and CI can commit it and fail on `git diff --exit-code`.
+fn stable_paths(text: &str) -> String {
+    static SANDBOX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let tmp = std::env::temp_dir();
+    let tmp = tmp.to_string_lossy();
+    let tmp = tmp.trim_end_matches(['/', '\\']);
+    let text = if tmp.len() > 1 {
+        text.replace(tmp, "$TMPDIR")
+    } else {
+        text.to_string()
+    };
+    SANDBOX
+        .get_or_init(|| regex::Regex::new(r"rust-anything-app-(\w+)-\d+-\d+").expect("valid regex"))
+        .replace_all(&text, "rust-anything-app-$1")
+        .into_owned()
+}
+
+fn report_body(outcome: &ReplayOutcome) -> String {
     let mut out = String::from("# App replay\n\n");
     out += &format!(
         "Build: `{}`\n\n",
@@ -2060,6 +2082,25 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reports_do_not_carry_sandbox_paths() {
+        let tmp = std::env::temp_dir();
+        let line = format!(
+            "-cwd {}\n",
+            tmp.join("rust-anything-app-run-4242-7")
+                .join("cwd")
+                .display()
+        );
+        let stable = stable_paths(&line);
+        assert!(!stable.contains("4242"), "{stable}");
+        assert!(stable.contains("$TMPDIR"), "{stable}");
+        assert_eq!(
+            stable,
+            stable_paths(&line.replace("4242-7", "99-0")),
+            "{stable}"
+        );
+    }
 
     fn text_matches_exact(e: &str, a: &str) -> bool {
         text_matches(e, a, None)

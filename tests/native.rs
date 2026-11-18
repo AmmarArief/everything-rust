@@ -699,7 +699,8 @@ fn napi_batches_take_structured_parameters() {
     let script = r#"
 const { LabelBatch } = require(process.argv[1])
 const batch = new LabelBatch([1, 2])
-console.log(JSON.stringify([batch.run(), batch.run({ long: true })]))
+const refused = [() => new LabelBatch(3), () => new LabelBatch([1, '2'])].map(f => { try { f(); return 'no' } catch (e) { return e.name } })
+console.log(JSON.stringify([batch.run(), batch.run({ long: true }), batch instanceof LabelBatch, refused]))
 "#;
     let output = Command::new("node")
         .args(["-e", script])
@@ -709,7 +710,7 @@ console.log(JSON.stringify([batch.run(), batch.run({ long: true })]))
     std::fs::remove_dir_all(&root).unwrap();
     assert_eq!(
         String::from_utf8_lossy(&output.stdout).trim(),
-        r#"[["1u","2u"],["1 units","2 units"]]"#,
+        r#"[["1u","2u"],["1 units","2 units"],true,["TypeError","TypeError"]]"#,
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );

@@ -70,6 +70,10 @@ rust-anything bridge <repo> <unit-id>          # crate in <repo>/rust/<name>; ne
 rust-anything record <crate>                   # the original's behavior on edge-case inputs -> cases.jsonl
 ```
 
+- If the original has tests, record their calls too: `record <crate> --from-tests -- npx jest`
+  (TS/JS, any runner) or `-- pytest` (Python). Every call the suite makes to the unit's exported
+  functions becomes a case; the source is restored afterwards. Exports that are not function
+  declarations (`export const f = () => ...`) are listed as not captured.
 - Add real-world inputs with `--inputs cases.jsonl` (`{"fn": name, "args": [...]}` per line) when
   the generated ones cannot reach the interesting paths (structured arguments, domain strings).
 - TS that cannot run directly in Node (extensionless imports, path aliases): record from built
@@ -133,7 +137,11 @@ rust-anything bench <crate>                    # original vs Rust, bridge includ
 ```
 
 A mismatch is a behavior difference: fix the port, never the recording. If the difference is
-intended, ask the user first, then re-record with their approval.
+intended (the user wants the port to fix a bug of the original), ask the user first, then add one
+line per case to `<crate>/known-diffs.jsonl`: `{"fn", "args", "actual", "reason"}`, with `fn`,
+`args` and `actual` copied from `diff --json`. That case then passes only with exactly that result,
+and `gate` fails once it no longer differs, so remove the line then. If `gate` says the recording
+is stale, the original changed: record again before porting further.
 
 Numeric code (physics, statistics, graphics) rarely gives bit-identical floats once ported:
 operation order, fused multiply-add and the math library differ. When the user accepts that,

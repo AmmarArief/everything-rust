@@ -33,13 +33,13 @@ with rust-anything 1.5.1; the crate is in
 | --- | --- |
 | `analyze` | 1 unit (`src/index.ts`), ready, readiness 96 |
 | `bridge --kind napi` | `ms`, `parse`, `parseStrict` and `format` bridged, none kept in TS |
-| `record --inputs` | 784 cases: generated ones, traps, and 149 inputs taken from vercel/ms's own test suite |
-| port | 173 lines of Rust for 184 of TS (with the `js` helpers below) |
-| `diff` | 784/784 match on the first build |
+| `record --from-tests -- jest` | 975 cases: generated ones, traps, and 340 calls captured from vercel/ms's 167 Jest tests (the first port used 149 inputs copied from them by hand) |
+| port | 200 lines of Rust for 184 of TS, including a `FormatIndex` that reads `options` once per batch |
+| `diff` | 784/784 matched on the first build; 975/975 with the captured calls |
 | `gate` | passes (fmt, clippy, tests, error paths, size, behavior) |
 | `bench`, per call | 0.39x: slower. `parse` takes 64 ns in JS, less than one crossing |
 | batch, `parse` x100,000 | JS 11.8 ms, Rust 0.65 ms: **18x**; 3.4x counting the one-time handover of the strings (2.1x before strings crossed joined) |
-| batch, `format` x100,000 | JS 1.9 ms, Rust 3.8 ms: **0.5x** (0.2x before strings crossed joined); making 100,000 JS strings still costs more than the formatting |
+| batch, `format` x100,000 | JS 2.1 ms, Rust 2.5 ms with the handover: **0.8x** (0.2x at first); `format(x, { long: true })` 1.2x |
 
 What the port had to get right, all caught by recorded cases or traps:
 
@@ -59,12 +59,16 @@ cannot convert without its `serde-json` feature. Crates with batch classes now e
 Taken back into the tool from this port:
 
 - The generated `js.rs` has `js::number_to_string` and `js::math_round`, checked against Node on
-  20,000 random doubles; the port uses them instead of its own copies.
-- napi batches send string items as one joined string with UTF-16 end offsets, and return string
-  results the same way (`index.cjs` splits them with `slice`): about 2x faster each way than one
-  JS string per item. `new Batch(items)` and `run()` keep their shape.
+  20,000 random doubles; the port uses them instead of its own copies. `number_to_string` takes
+  its digits from serde_json's printer: 5x faster than `format!` for integers, 3x for fractions.
+- napi batches send string items as one joined string with UTF-16 end offsets, number items as
+  one `Float64Array`, and return string results joined (`index.cjs` splits them with `slice`):
+  2x faster for strings and 20x for numbers than one JS value per item. `new Batch(items)` and
+  `run()` keep their shape.
 - `analyze` flags `Math.round`, `toFixed` and `/i` regexes without `u` that mention `s` or `k`,
   with guidance on each.
+- `record --from-tests` replaces copying test inputs by hand: it records each call the suite makes
+  while the tests run, with the capture code kept out of coverage (ms enforces 100%).
 
 The verdict: `ms` is a good port and a bad speed target. Correct on every recorded case, faster
 only when a program parses many durations in one go.

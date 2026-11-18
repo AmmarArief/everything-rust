@@ -124,7 +124,9 @@ pub fn as_number(value: &serde_json::Value) -> Option<f64> {
     }
 }
 /// JS `Number.prototype.toString()` (what `${n}` and `String(n)` print): `1e+21`, `5e-324`,
-/// `0` for `-0`, `NaN`, `Infinity`, and the shortest digits that read back as the same number.
+/// `0` for `-0`, `NaN`, `Infinity`, and the shortest digits that read back as the same number
+/// (the closest of them on a tie, as V8 picks). The digits come from serde_json's printer, several
+/// times faster than `format!`.
 #[allow(dead_code)]
 pub fn number_to_string(x: f64) -> String {
     if x.is_nan() {
@@ -136,37 +138,49 @@ pub fn number_to_string(x: f64) -> String {
     if x == 0.0 {
         return "0".into();
     }
-    let sign = if x < 0.0 { "-" } else { "" };
-    let shortest = format!("{:e}", x.abs());
-    let k = shortest
-        .split('e')
-        .next()
-        .unwrap_or("")
-        .chars()
-        .filter(char::is_ascii_digit)
-        .count();
-    let sci = format!("{:.*e}", k.saturating_sub(1), x.abs());
-    let (mantissa, exponent) = sci.split_once('e').unwrap_or((&sci, "0"));
-    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
+    if x.fract() == 0.0 && x.abs() < 9007199254740992.0 {
+        return (x as i64).to_string();
+    }
+    let json = serde_json::to_string(&x).unwrap_or_default();
+    let (sign, json) = match json.strip_prefix('-') {
+        Some(rest) => ("-", rest),
+        None => ("", json.as_str()),
+    };
+    let (mantissa, exponent) = match json.find(['e', 'E']) {
+        Some(i) => (&json[..i], json[i + 1..].parse::<i64>().unwrap_or(0)),
+        None => (json, 0),
+    };
+    let (int, frac) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    let all = format!("{int}{frac}");
+    let lead = all.len() - all.trim_start_matches('0').len();
+    let digits = all[lead..].trim_end_matches('0');
     let k = digits.len() as i64;
-    let n = exponent.parse::<i64>().unwrap_or(0) + 1;
-    let body = if k <= n && n <= 21 {
-        format!("{digits}{}", "0".repeat((n - k) as usize))
+    let n = int.len() as i64 - lead as i64 + exponent;
+    let mut out = String::with_capacity(digits.len() + 8);
+    out.push_str(sign);
+    if k <= n && n <= 21 {
+        out.push_str(digits);
+        out.extend(std::iter::repeat_n('0', (n - k) as usize));
     } else if 0 < n && n <= 21 {
-        let (int, frac) = digits.split_at(n as usize);
-        format!("{int}.{frac}")
+        out.push_str(&digits[..n as usize]);
+        out.push('.');
+        out.push_str(&digits[n as usize..]);
     } else if -6 < n && n <= 0 {
-        format!("0.{}{digits}", "0".repeat((-n) as usize))
+        out.push_str("0.");
+        out.extend(std::iter::repeat_n('0', (-n) as usize));
+        out.push_str(digits);
     } else {
         let e = n - 1;
-        let mantissa = if k == 1 {
-            digits.clone()
-        } else {
-            format!("{}.{}", &digits[..1], &digits[1..])
-        };
-        format!("{mantissa}e{}{}", if e < 0 { "-" } else { "+" }, e.abs())
-    };
-    format!("{sign}{body}")
+        out.push_str(&digits[..1]);
+        if k > 1 {
+            out.push('.');
+            out.push_str(&digits[1..]);
+        }
+        out.push('e');
+        out.push(if e < 0 { '-' } else { '+' });
+        out.push_str(&e.abs().to_string());
+    }
+    out
 }
 
 /// JS `Math.round`: the nearest integer, halves toward positive infinity (`-2.5` gives `-2`,
@@ -201,6 +215,9 @@ mod js_number_tests {
             (5e-324, "5e-324"),
             (1.7976931348623157e308, "1.7976931348623157e+308"),
             (2.5e-7, "2.5e-7"),
+            (9007199254740993.0, "9007199254740992"),
+            (-123456789.0, "-123456789"),
+            (1e300, "1e+300"),
             (153596401214599.62, "153596401214599.62"),
             (-25.728225708007812, "-25.728225708007812"),
             (f64::NAN, "NaN"),

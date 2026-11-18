@@ -186,7 +186,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 0. Profile | `rust-anything profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler (node, cProfile, `go test` pprof, JFR, a Ruby tracer): hot functions by inclusive time, their callers, and which loops to batch; flags code that is already compiled (numba, Cython, JAX), where Rust gains little |
 | 1. Plan | `rust-anything analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, dependency-to-crate fit, best first ports; `--whole-app` adds entry points and shape, every dependency (imported or declared) with its crate, pieces (units that import each other move together) and numbered decisions with a recommended answer |
 | 2. Bridge | `rust-anything bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`); `--batch fn:param` adds a class that keeps many `param` values in Rust |
-| 3. Record | `rust-anything record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and on every semantic trap in every parameter (string length and case, signed division, overflow edges, float printing, map and sort order), and saves `cases.jsonl`; `--float-tolerance 1e-9` lets floats match within that share for numeric code |
+| 3. Record | `rust-anything record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and on every semantic trap in every parameter (string length and case, signed division, overflow edges, float printing, map and sort order), and saves `cases.jsonl`; `--from-tests -- npx jest` (or `-- pytest`) also records every call the original's own test suite makes; `--float-tolerance 1e-9` lets floats match within that share for numeric code |
 | 3. Build | `rust-anything build <crate>` | Builds the Rust side: `.node`, wasm package, Python extension or shared library |
 | 3. Diff | `rust-anything diff <crate>` | Replays the recorded cases against Rust, called the way the original's callers call it; lists mismatches |
 | 3. Bench | `rust-anything bench <crate>` | Times the recorded cases on the original and on Rust, bridge included |
@@ -246,6 +246,10 @@ rust-anything app replay . --build "target/release/mytool"
   fallback to the original), as the front door below does, also gets its fallback rate reported.
 - `app replay --case <name>` reruns one case by the name the report gives it: the fast,
   repeatable loop for fixing a mismatch before running everything again.
+- The report has no timings or temporary paths: two replays of the same build write the same
+  file. Commit it and run `app replay` then `git diff --exit-code rust/app-cases/replay-report.md`
+  in CI, and a half-ported app fails CI on any change in what passes, better or worse, until the
+  report is updated with it.
 
 Then move the entry point to Rust and hand it commands one unit at a time:
 
@@ -554,9 +558,12 @@ rust-anything setup --remove && npm uninstall -g rust-anything # remove (npm)
 Passing means the Rust matches every case that was recorded, nothing more. What bites rewrites
 usually lives outside the recording, so know where the edges are:
 
-- **Inputs nobody recorded.** The generated cases, the traps and your own `--inputs` are the
-  ceiling. Add real inputs (production samples, bug reports, the original's test fixtures); the
-  user input that breaks prod is rarely one a generator thinks of.
+- **Inputs nobody recorded.** The generated cases, the traps, the original's test suite
+  (`record --from-tests`) and your own `--inputs` are the ceiling. Add real inputs (production
+  samples, bug reports); the user input that breaks prod is rarely one a generator thinks of.
+- **An original that moved on.** `record` saves a fingerprint of the unit's files
+  (`recorded-from.json`); when the original changes later, `diff` warns and `gate` fails until you
+  record again, instead of passing against what the original used to do.
 - **Regexes.** The `regex` crate has no lookaround or backreferences, and even a pattern that
   compiles can treat `\w`, `\b`, `\d` and case-insensitive matching on non-ASCII text differently
   from JS, Python or Java. Swapping in `fancy-regex` or rewriting the pattern can pass every

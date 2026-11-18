@@ -291,7 +291,11 @@ pub(crate) fn rank_body(ret: &str) -> Option<String> {
 pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
     let mut out = String::new();
     let parallel = m.kind == Kind::Napi;
-    if parallel && !joined_batches(m, api).is_empty() {
+    if parallel
+        && fast_batches(m, api)
+            .iter()
+            .any(|b| b.items == Items::Strings || b.strings_out)
+    {
         out.push_str(JOINED_RS);
     }
     for b in &m.batches {
@@ -374,6 +378,14 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
                      Self {{ inner: {}::new(split_joined(&text, &ends)) }}\n    }}\n",
                     s.index
                 )
+            } else if parallel && s.item_ty == "f64" {
+                format!(
+                    "\n    /// `new` for items sent as one `Float64Array`.\n    \
+                     #[napi(factory, js_name = \"fromFloat64\")]\n    \
+                     pub fn from_float64(items: napi::bindgen_prelude::Float64Array) -> Self {{\n        \
+                     Self {{ inner: {}::new(items.to_vec()) }}\n    }}\n",
+                    s.index
+                )
             } else {
                 String::new()
             },
@@ -417,24 +429,40 @@ pub fn js_rs(m: &Manifest, api: &PortApi) -> Result<String, String> {
     Ok(out)
 }
 
-/// The napi batches whose strings cross joined: `(class, items are strings, results are
-/// strings)`. One JS string per item costs more than the work for short strings, so `index.cjs`
-/// joins items into one string and splits joined results with `slice`.
-pub(crate) fn joined_batches(m: &Manifest, api: &PortApi) -> Vec<(String, bool, bool)> {
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Items {
+    Strings,
+    Numbers,
+    Other,
+}
+
+/// A napi batch whose values cross in bulk instead of one JS value per item.
+pub(crate) struct FastBatch {
+    class: String,
+    items: Items,
+    strings_out: bool,
+}
+
+/// The napi batches whose items or results cross in bulk. One JS value per item costs more than
+/// the work of a small function, so `index.cjs` joins string items into one string, packs number
+/// items into a `Float64Array`, and splits joined string results with `slice`.
+pub(crate) fn fast_batches(m: &Manifest, api: &PortApi) -> Vec<FastBatch> {
     if m.kind != Kind::Napi {
         return Vec::new();
     }
     m.batches
         .iter()
         .filter_map(|b| spec(b, api).ok())
-        .map(|s| {
-            (
-                s.class.clone(),
-                s.item_ty == "String",
-                s.f.ret.trim() == "String",
-            )
+        .map(|s| FastBatch {
+            class: s.class.clone(),
+            items: match s.item_ty.as_str() {
+                "String" => Items::Strings,
+                "f64" => Items::Numbers,
+                _ => Items::Other,
+            },
+            strings_out: s.f.ret.trim() == "String",
         })
-        .filter(|(_, items, results)| *items || *results)
+        .filter(|b| b.items != Items::Other || b.strings_out)
         .collect()
 }
 
@@ -491,30 +519,34 @@ fn split_joined(text: &str, ends: &[u32]) -> Vec<String> {
 }
 "#;
 
-/// The `index.cjs` part that sends and receives the strings of [`joined_batches`] joined.
+/// The `index.cjs` part that sends and receives the values of [`fast_batches`] in bulk.
 pub fn index_cjs(m: &Manifest, api: &PortApi) -> String {
-    let batches = joined_batches(m, api);
+    let batches = fast_batches(m, api);
     if batches.is_empty() {
         return String::new();
     }
-    let list = |pick: fn(&(String, bool, bool)) -> bool| -> String {
+    let list = |pick: &dyn Fn(&FastBatch) -> bool| -> String {
         batches
             .iter()
             .filter(|b| pick(b))
-            .map(|b| format!("'{}'", b.0))
+            .map(|b| format!("'{}'", b.class))
             .collect::<Vec<_>>()
             .join(", ")
     };
     format!(
-        "{JOINED_CJS}for (const name of [{}]) joinItems(name)\nfor (const name of [{}]) splitResults(name)\n",
-        list(|b| b.1),
-        list(|b| b.2)
+        "{JOINED_CJS}for (const name of [{}]) joinItems(name)\n\
+         for (const name of [{}]) packNumbers(name)\n\
+         for (const name of [{}]) splitResults(name)\n",
+        list(&|b| b.items == Items::Strings),
+        list(&|b| b.items == Items::Numbers),
+        list(&|b| b.strings_out)
     )
 }
 
 const JOINED_CJS: &str = r#"
-// Batches: strings cross as one joined string and the UTF-16 end offset of each, which costs far
-// less than one JS string per item. `new Batch(items)` and `batch.run()` keep their shape.
+// Batches: strings cross as one joined string and the UTF-16 end offset of each, numbers as one
+// Float64Array, which costs far less than one JS value per item. `new Batch(items)` and
+// `batch.run()` keep their shape.
 const joinItems = name => {
   const Native = native[name]
   const Batch = { [name]: function (items) {
@@ -529,6 +561,21 @@ const joinItems = name => {
   } }[name]
   Batch.prototype = Native.prototype
   Batch.fromJoined = Native.fromJoined
+  module.exports[name] = Batch
+}
+const packNumbers = name => {
+  const Native = native[name]
+  const Batch = { [name]: function (items) {
+    if (!Array.isArray(items)) throw new TypeError(`${name}: items must be an array of numbers`)
+    const packed = new Float64Array(items.length)
+    for (let i = 0; i < items.length; i++) {
+      if (typeof items[i] !== 'number') throw new TypeError(`${name}: items must be an array of numbers`)
+      packed[i] = items[i]
+    }
+    return Native.fromFloat64(packed)
+  } }[name]
+  Batch.prototype = Native.prototype
+  Batch.fromFloat64 = Native.fromFloat64
   module.exports[name] = Batch
 }
 const splitResults = name => {
