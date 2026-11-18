@@ -184,7 +184,7 @@ C#도 같은 방식으로 프리뷰 지원됩니다. `analyze`가 `.csproj` 프�
 ## 후원자
 
 <p align="center">
-  rust-anything은 무료 오픈 소스입니다. 작업에 도움이 되었다면 후원을 고려해 주세요.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a>은 무료 오픈 소스입니다. 작업에 도움이 되었다면 후원을 고려해 주세요.<br>
   여러분의 지원이 개발을 계속 이어가게 합니다.
 </p>
 

@@ -206,7 +206,7 @@ C# 同樣處於搶先預覽階段：`analyze` 會讀取 `.csproj` 專案與其 N
 ## 贊助商
 
 <p align="center">
-  rust-anything 是一款免費且開源的專案。如果它對你的工作有所幫助，歡迎考慮贊助支持。<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> 是一款免費且開源的專案。如果它對你的工作有所幫助，歡迎考慮贊助支持。<br>
   你的支持能讓開發持續推進。
 </p>
 

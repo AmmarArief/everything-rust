@@ -217,7 +217,7 @@ d'unités via P/Invoke viendra ensuite.
 ## Sponsors
 
 <p align="center">
-  rust-anything est gratuit et open source. S'il vous aide dans votre travail, envisagez de le sponsoriser.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> est gratuit et open source. S'il vous aide dans votre travail, envisagez de le sponsoriser.<br>
   Votre soutien permet de poursuivre le développement.
 </p>
 

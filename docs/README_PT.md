@@ -185,7 +185,7 @@ O C# está em pré-visualização da mesma forma: `analyze` lê projetos `.cspro
 ## Patrocinadores
 
 <p align="center">
-  O rust-anything é gratuito e de código aberto. Se for útil para o seu trabalho, considere patrociná-lo.<br>
+  O <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> é gratuito e de código aberto. Se for útil para o seu trabalho, considere patrociná-lo.<br>
   O seu apoio ajuda a manter o desenvolvimento.
 </p>
 

@@ -181,7 +181,7 @@ C# 同样处于预览阶段：`analyze` 会读取 `.csproj` 工程及其 NuGet �
 ## 赞助商
 
 <p align="center">
-  rust-anything 是一款免费开源项目。如果它对你的工作有所帮助，欢迎考虑赞助支持。<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> 是一款免费开源项目。如果它对你的工作有所帮助，欢迎考虑赞助支持。<br>
   你的支持将助力项目持续开发。
 </p>
 

@@ -218,7 +218,7 @@ Portieren einzelner Einheiten über P/Invoke folgt als Nächstes.
 ## Sponsoren
 
 <p align="center">
-  rust-anything ist kostenlos und Open Source. Wenn es dir bei der Arbeit hilft, ziehe bitte ein Sponsoring in Betracht.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> ist kostenlos und Open Source. Wenn es dir bei der Arbeit hilft, ziehe bitte ein Sponsoring in Betracht.<br>
   Deine Unterstützung hält die Entwicklung am Laufen.
 </p>
 

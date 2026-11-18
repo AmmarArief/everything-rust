@@ -181,7 +181,7 @@ C# も同様にプレビュー版です: `analyze` は `.csproj` プロジェク
 ## スポンサー
 
 <p align="center">
-  rust-anything は無料のオープンソースです。お役に立ちましたら、ぜひスポンサーをご検討ください。<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> は無料のオープンソースです。お役に立ちましたら、ぜひスポンサーをご検討ください。<br>
   皆様のご支援が開発を支えます。
 </p>
 

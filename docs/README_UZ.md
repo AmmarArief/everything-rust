@@ -216,7 +216,7 @@ ortiga qo'yish mumkin; birliklarni P/Invoke orqali port qilish navbatda.
 ## Homiylar
 
 <p align="center">
-  rust-anything bepul va ochiq manbali. Agar u ishingizga yordam bersa, iltimos, unga homiylik qilishni o'ylab ko'ring.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> bepul va ochiq manbali. Agar u ishingizga yordam bersa, iltimos, unga homiylik qilishni o'ylab ko'ring.<br>
   Qo'llab-quvvatlashingiz ishlab chiqishni davom ettirishga yordam beradi.
 </p>
 

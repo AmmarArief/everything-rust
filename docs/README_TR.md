@@ -216,7 +216,7 @@ arkasına konabilir; birimleri P/Invoke üzerinden port etmek sırada.
 ## Sponsorlar
 
 <p align="center">
-  rust-anything ücretsiz ve açık kaynaklıdır. İşinize yarıyorsa lütfen sponsor olmayı düşünün.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> ücretsiz ve açık kaynaklıdır. İşinize yarıyorsa lütfen sponsor olmayı düşünün.<br>
   Desteğiniz geliştirmenin sürmesini sağlar.
 </p>
 

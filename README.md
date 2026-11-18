@@ -212,7 +212,7 @@ comes next.
 ## Sponsors
 
 <p align="center">
-  rust-anything is free and open source. If it helps your work, please consider sponsoring it.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> is free and open source. If it helps your work, please consider sponsoring it.<br>
   Your support keeps development going.
 </p>
 

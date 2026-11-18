@@ -215,7 +215,7 @@ arxasına qoyula bilər; vahidləri P/Invoke vasitəsilə port etmək növbədə
 ## Sponsorlar
 
 <p align="center">
-  rust-anything pulsuz və açıq mənbəlidir. Əgər işinizə yarayırsa, lütfən ona sponsorluq etməyi düşünün.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> pulsuz və açıq mənbəlidir. Əgər işinizə yarayırsa, lütfən ona sponsorluq etməyi düşünün.<br>
   Dəstəyiniz inkişafın davam etməsinə kömək edir.
 </p>
 

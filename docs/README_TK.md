@@ -216,7 +216,7 @@ arkasyna goýup bolýar; birlikleri P/Invoke arkaly geçirmek indiki nobatda.
 ## Hemaýatkärler
 
 <p align="center">
-  rust-anything mugt we açyk çeşmeli taslama. Eger ol işiňize kömek edýän bolsa, oňa hemaýatkär bolmagy göz öňünde tutuň.<br>
+  <a href="https://github.com/erkamyaman/rust-anything">rust-anything</a> mugt we açyk çeşmeli taslama. Eger ol işiňize kömek edýän bolsa, oňa hemaýatkär bolmagy göz öňünde tutuň.<br>
   Siziň goldawyňyz işläp düzmegiň dowam etmegine kömek edýär.
 </p>
 
