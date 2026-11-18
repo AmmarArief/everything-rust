@@ -3,7 +3,7 @@
 //! fmt, clippy (warnings are errors), cargo tests, no unexplained `unsafe`, every function
 //! ported, the built module exposes the original API, and the recorded behavior replays cleanly.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::Result;
@@ -59,20 +59,76 @@ fn files_under(path: &Path, extensions: &[&str]) -> Vec<std::path::PathBuf> {
 
 /// Lines of Rust in the port against lines of the source unit: a port several times larger
 /// usually re-implements what a crate already does.
+/// The unit's files and the repository files they import, directly or not: a port stands in
+/// for all of them.
+fn with_local_imports(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
+    const TRIES: &[&str] = &[
+        "",
+        ".ts",
+        ".tsx",
+        ".mts",
+        ".cts",
+        ".js",
+        ".mjs",
+        ".cjs",
+        "/index.ts",
+        "/index.tsx",
+        "/index.js",
+        "/index.mjs",
+    ];
+    let resolve = |from: &Path, spec: &str| -> Option<PathBuf> {
+        let base = from.parent()?.join(spec);
+        let stem = base.with_extension("");
+        let js_to_ts = matches!(
+            base.extension().and_then(|e| e.to_str()),
+            Some("js" | "mjs" | "cjs")
+        );
+        TRIES
+            .iter()
+            .map(|t| PathBuf::from(format!("{}{t}", base.display())))
+            .chain(js_to_ts.then(|| stem.with_extension("ts")))
+            .find(|p| p.is_file())
+    };
+    let mut seen: std::collections::BTreeSet<PathBuf> = files.into_iter().collect();
+    let mut todo: Vec<PathBuf> = seen.iter().cloned().collect();
+    while let Some(file) = todo.pop() {
+        let Ok(text) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        for import in crate::ts::scan::scan(&file.to_string_lossy(), &text).imports {
+            if !import.specifier.starts_with('.') || import.type_only {
+                continue;
+            }
+            if let Some(found) = resolve(&file, &import.specifier)
+                && found.starts_with(root)
+                && !found.components().any(|c| c.as_os_str() == "node_modules")
+                && seen.insert(found.clone())
+            {
+                todo.push(found);
+            }
+        }
+    }
+    seen.into_iter().collect()
+}
+
 fn size_check(crate_dir: &Path, manifest: &Manifest) -> Option<Check> {
     let source_comments: &[&str] = match manifest.language {
         crate::lang::Lang::Python | crate::lang::Lang::Ruby => &["#"],
         crate::lang::Lang::Php => &["//", "#", "/*", "*"],
         _ => &["//", "/*", "*"],
     };
-    let source: usize = files_under(
+    let mut files = files_under(
         &manifest.root.join(&manifest.unit),
         manifest.language.extensions(),
-    )
-    .iter()
-    .filter_map(|p| std::fs::read_to_string(p).ok())
-    .map(|t| code_lines(&t, source_comments))
-    .sum();
+    );
+    if manifest.language == crate::lang::Lang::Ts {
+        files = with_local_imports(&manifest.root, files);
+    }
+    let source: usize = files
+        .iter()
+        .filter_map(|p| std::fs::read_to_string(p).ok())
+        .map(|t| code_lines(&t, source_comments))
+        .sum();
     if source == 0 {
         return None;
     }

@@ -77,6 +77,56 @@ Taken back into the tool from this port:
 The verdict: `ms` is a good port and a bad speed target. Correct on every recorded case, faster
 only when a program parses many durations in one go.
 
+## Fuse.js
+
+[Fuse.js](https://github.com/krisk/Fuse) (20k stars, about 20 million npm downloads a week,
+commit `edf2fb6`) is the fuzzy-search library behind countless search boxes. Ported with
+rust-anything 1.6 (unreleased); the crate is in [`demo/real-world/fuse-rs`](../demo/real-world/fuse-rs).
+
+`analyze` put every folder of `src/` in one import cycle, so Fuse cannot be ported file by file.
+The port takes the path a search spends its time on instead: a 54-line adapter
+(`adapter/relevance.ts`) exports Fuse's own score for one string of a string list, built from
+Fuse's `BitapSearch`, field norm and `computeScoreSingle`. That function is what a search over
+50,000 strings runs 50,000 times. `bridge --batch relevance:text` keeps the strings in Rust and
+runs a search over all of them, on all cores.
+
+| Step | Result |
+| --- | --- |
+| adapter | the adapter's ranking equals `new Fuse(list).search(q)` on 81 queries and option sets before any Rust |
+| `record --inputs` | 3,414 cases: titles from Fuse's own fixtures, non-ASCII, emoji, patterns longer than 32 units, every supported option, and wrong-typed options (refused, 149 cases) |
+| port | 673 lines of Rust for the 839 lines of Fuse it stands in for |
+| `diff` | 3,414/3,414 match on the first build |
+| `gate` | passes |
+| drop-in | `withRust(Fuse)` answers string-list searches in Rust and passes everything else to Fuse; it returns byte-identical results to Fuse on 360 searches (12 option sets, 15 queries, with and without `limit`) |
+
+Search time per query, Apple M4 (10 cores), Node 24, results checked identical before timing:
+
+| List | Fuse.js | Rust | Speedup |
+| ---: | ---: | ---: | ---: |
+| 1,000 strings | 1.9 ms | 0.1 ms | 18x |
+| 10,000 strings | 19.1 ms | 0.7 ms | 27 to 30x |
+| 50,000 strings | 91.2 ms | 2.8 ms | **32x** |
+| 50,000 strings, one core | 92.0 ms | 17.5 ms | 5.3x |
+
+What the port had to get right:
+
+- Bitap runs on 32-bit JS integers: `1 << 31` is negative and `(1 << 31) - 1` is a double that
+  becomes `2147483647` at the next shift. The port keeps those values as JS has them.
+- Text is indexed in UTF-16 code units, so an emoji is two positions, as in Fuse.
+- `ignoreDiacritics` is NFD plus a list of combining-mark ranges and a few letters spelled out
+  (`ł`, `ß`, `ı`); the port uses the same list.
+- `String.prototype.trim` decides which strings Fuse skips: JS whitespace, not Rust's
+  `char::is_whitespace` (which includes U+0085 and leaves out U+FEFF).
+
+Found in the tool, and fixed: batch crates whose items were strings but whose results were not
+got an unused helper and failed `clippy -D warnings`; and `gate`'s size check counted only the
+adapter (54 lines, so 12.5x "too big") instead of the Fuse files it imports.
+
+What it does not cover: object lists with `keys`, extended and token search, logical queries,
+`includeMatches`, a custom `sortFn` or `getFn`. The drop-in hands those to Fuse unchanged. The
+speedup needs the list to stay in Rust between searches; building it costs about as much as
+Fuse's own index (3.4 ms against 2.8 ms for 50,000 strings).
+
 ## Fixtures written to stress the tool
 
 | Fixture | Exercises | Result |

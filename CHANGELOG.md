@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A port of [Fuse.js](https://github.com/krisk/Fuse) string-list search in
+  `demo/real-world/fuse-rs` and `docs/real-world.md`: 3,414/3,414 recorded cases match, results
+  byte-identical to Fuse, 32x faster on 50,000 strings (5.3x on one core).
+- `gate`'s size check counts the files a TS unit imports from the repository, not only the unit.
+- Batch crates with string items but other results no longer get an unused helper (clippy failed).
+
 - Faster single calls on napi: every sync function crosses the binary wire with no napi
   arguments (each argument cost about 55 ns), behind one JS wrapper instead of two;
   `serde_json::Value` parameters cross as tagged values of any shape, and errors come back in the
