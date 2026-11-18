@@ -4,7 +4,7 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">by <a href="https://github.com/erkamyaman">Erkam Yaman</a></p>
+<p align="center">by <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
 
 <p align="center"><em>Rewrite your whole app in Rust. Keep it working the whole way.</em></p>
 
