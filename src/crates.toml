@@ -207,19 +207,21 @@ note = "Dev server or UI framework: keep in JS."
 
 [[ts]]
 names = ["fluent-ffmpeg", "ffmpeg-static", "@ffmpeg/ffmpeg", "@ffmpeg/core"]
-crates = "remade-ffmpeg"
+crates = "ffmpeg-next"
 fit = "partial"
-note = "Pure-Rust rebuild with an ffmpeg-compatible CLI; check your codecs against its table. ffmpeg-next binds the C libraries for full coverage."
+note = "Binds the C libraries. For pure Rust, remade-ffmpeg covers a subset of codecs (and has an ffmpeg-compatible CLI): check its codec table."
 
 [[ts]]
 names = ["@discordjs/opus", "opusscript"]
-crates = "rusty-opus"
+crates = "opus"
 fit = "good"
+note = "Binds libopus. For pure Rust, rusty-opus implements RFC 6716 (encoder and decoder)."
 
 [[ts]]
 names = ["lamejs"]
 crates = "rusty_mp3"
-fit = "good"
+fit = "partial"
+note = "Pure-Rust MP3 encoder and decoder; young, so test it on your files. symphonia decodes MP3 if you only need to read."
 
 [[python]]
 names = ["requests", "httpx", "urllib3", "aiohttp"]
@@ -327,14 +329,15 @@ note = "Tooling, not runtime."
 
 [[python]]
 names = ["av", "ffmpeg-python", "ffmpeg", "imageio-ffmpeg"]
-crates = "remade-ffmpeg"
+crates = "ffmpeg-next"
 fit = "partial"
-note = "Pure-Rust rebuild with an ffmpeg-compatible CLI; check your codecs against its table. ffmpeg-next binds the C libraries for full coverage."
+note = "Binds the C libraries. For pure Rust, remade-ffmpeg covers a subset of codecs (and has an ffmpeg-compatible CLI): check its codec table."
 
 [[python]]
 names = ["opuslib"]
-crates = "rusty-opus"
+crates = "opus"
 fit = "good"
+note = "Binds libopus. For pure Rust, rusty-opus implements RFC 6716 (encoder and decoder)."
 
 [[c]]
 names = ["<zlib.h>"]
@@ -420,19 +423,21 @@ fit = "good"
 
 [[c]]
 prefixes = ["<libavcodec/", "<libavformat/", "<libavutil/", "<libswscale/", "<libswresample/", "<libavfilter/"]
-crates = "remade-ffmpeg"
+crates = "ffmpeg-next"
 fit = "partial"
-note = "Pure-Rust rebuild, not a binding: the libav* API does not carry over. ffmpeg-next binds the C libraries if you need it to."
+note = "Binds the same C libraries with a safe Rust API, so the libav* calls map to it closely. For pure Rust, remade-ffmpeg covers a subset of codecs, with its own API."
 
 [[c]]
 names = ["<opus.h>", "<opus/opus.h>"]
-crates = "rusty-opus"
+crates = "opus"
 fit = "good"
+note = "Binds libopus. For pure Rust, rusty-opus implements RFC 6716 (encoder and decoder)."
 
 [[c]]
 names = ["<lame/lame.h>", "<lame.h>"]
 crates = "rusty_mp3"
-fit = "good"
+fit = "partial"
+note = "Pure-Rust MP3 encoder and decoder; young, so test it on your files. symphonia decodes MP3 if you only need to read."
 
 [[go]]
 names = ["github.com/spf13/cobra", "github.com/urfave/cli", "github.com/urfave/cli/v2"]
@@ -517,9 +522,9 @@ fit = "good"
 
 [[go]]
 names = ["github.com/u2takey/ffmpeg-go", "github.com/asticode/go-astiav", "github.com/giorgisio/goav"]
-crates = "remade-ffmpeg"
+crates = "ffmpeg-next"
 fit = "partial"
-note = "Pure-Rust rebuild; check your codecs against its table. ffmpeg-next binds the C libraries for full coverage."
+note = "Binds the C libraries. For pure Rust, remade-ffmpeg covers a subset of codecs (and has an ffmpeg-compatible CLI): check its codec table."
 
 [[ruby]]
 names = ["rails", "sinatra", "roda", "hanami"]
@@ -690,9 +695,9 @@ fit = "partial"
 
 [[java]]
 prefixes = ["org.bytedeco.ffmpeg", "org.bytedeco.javacv", "net.bramp.ffmpeg"]
-crates = "remade-ffmpeg"
+crates = "ffmpeg-next"
 fit = "partial"
-note = "Pure-Rust rebuild; JavaCV's OpenCV side is not covered."
+note = "Binds the C libraries; JavaCV's OpenCV side is not covered. For pure Rust, remade-ffmpeg covers a subset of codecs: check its codec table."
 
 [[php]]
 names = ["laravel/framework", "slim/slim", "symfony/framework-bundle", "laminas/laminas-mvc", "cakephp/cakephp", "yiisoft/yii2"]

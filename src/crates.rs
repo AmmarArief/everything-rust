@@ -123,7 +123,7 @@ mod tests {
             let m = find(lang, name).unwrap_or_else(|| panic!("{lang}: {name}"));
             assert_eq!(
                 (m.crates, m.fit),
-                ("remade-ffmpeg", Fit::Partial),
+                ("ffmpeg-next", Fit::Partial),
                 "{lang}: {name}"
             );
         }
