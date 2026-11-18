@@ -404,6 +404,55 @@ fn classes_are_bridged_recorded_and_replayed() {
 }
 
 #[test]
+fn recording_substitutes_typescript_extensions_from_emitted_module_imports() {
+    if !node_available() {
+        return;
+    }
+    let root = std::env::temp_dir().join(format!(
+        "rust-anything-ts-extensions-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("esm.mts"), "export const value: number = 2;").unwrap();
+    std::fs::write(
+        root.join("common.cts"),
+        "module.exports = 40 satisfies number;",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("main.mts"),
+        "import { value } from './esm.mjs'; import common from './common.cjs'; export function answer(): number { return value + common; }",
+    )
+    .unwrap();
+    let dir = root.join("bridge");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "main.mts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+    })
+    .unwrap();
+    let result = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 1,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    });
+    let evidence = std::fs::read_to_string(dir.join(harness::CASES));
+    std::fs::remove_dir_all(root).unwrap();
+    result.unwrap();
+    assert!(evidence.unwrap().contains(r#""ok":42"#));
+}
+
+#[test]
 fn tsconfig_aliases_are_followed() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aliases");
     let report = rust_anything::analyze::analyze(&root).unwrap();
