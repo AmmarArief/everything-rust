@@ -1317,15 +1317,23 @@ const aliasTargets = (specifier) => {
   return []
 }
 const suffixes = ['.ts', '.tsx', '.mts', '.js', '.mjs', '/index.ts', '/index.mts', '/index.js']
+const sourceCandidates = path => {
+  const exact = path.match(/\.(mjs|cjs|jsx)$/)
+  if (exact) {
+    const replacement = { mjs: 'mts', cjs: 'cts', jsx: 'tsx' }[exact[1]]
+    return [path, path.slice(0, -exact[1].length) + replacement]
+  }
+  const stem = path.replace(/\.js$/, '')
+  return [stem, ...suffixes.map(suffix => stem + suffix)]
+}
 const isFile = p => existsSync(p) && statSync(p).isFile()
 
 export async function resolve(specifier, context, next) {
   // Aliases first: `@/x` is not even a valid package name for Node.
   for (const target of [...aliasTargets(specifier), ...workspaceTargets(specifier)]) {
-    const stem = target.replace(/\.js$/, '')
-    for (const suffix of ['', ...suffixes]) {
-      if (isFile(stem + suffix))
-        return next(pathToFileURL(stem + suffix).href, context)
+    for (const candidate of sourceCandidates(target)) {
+      if (isFile(candidate))
+        return next(pathToFileURL(candidate).href, context)
     }
   }
   try {
@@ -1336,10 +1344,10 @@ export async function resolve(specifier, context, next) {
     if (!missing || !context.parentURL)
       throw error
     if (specifier.startsWith('.') || specifier.startsWith('/')) {
-      const stem = fileURLToPath(new URL(specifier, context.parentURL)).replace(/\.js$/, '')
-      for (const suffix of suffixes) {
-        if (isFile(stem + suffix))
-          return next(pathToFileURL(stem + suffix).href, context)
+      const path = fileURLToPath(new URL(specifier, context.parentURL))
+      for (const candidate of sourceCandidates(path)) {
+        if (isFile(candidate))
+          return next(pathToFileURL(candidate).href, context)
       }
     }
     else if (extra) {
