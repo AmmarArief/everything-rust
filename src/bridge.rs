@@ -1584,7 +1584,7 @@ mod tests {
         )
         .unwrap();
         let m = Manifest::load(&crate_dir).unwrap();
-        assert_eq!(m.root, base.join("repo").canonicalize().unwrap());
+        assert_eq!(m.root, base.join("repo").canonical().unwrap());
         assert_eq!(m.root_written.as_deref(), Some(Path::new("../..")));
         // Written back, the file keeps the relative root.
         let mut back = m.clone();

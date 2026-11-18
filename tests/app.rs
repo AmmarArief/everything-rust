@@ -98,13 +98,22 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
 
     let dir = app::cases_dir(repo);
     let read = |name: &str| std::fs::read_to_string(dir.join(name)).unwrap();
-    assert_eq!(read("example-006-now.stdout"), "now: [..]\n");
+    assert_eq!(
+        read("example-006-now.stdout").lines().collect::<Vec<_>>(),
+        ["now: [..]"]
+    );
     let div = read("example-003-div.toml");
     assert!(div.contains("args = [\"div\", \"7\", \"2\"]"), "{div}");
     assert!(div.contains("status.code = 0"), "{div}");
-    assert_eq!(read("example-003-div.stdout"), "7 / 2 = 3 remainder 1\n");
+    assert_eq!(
+        read("example-003-div.stdout").lines().collect::<Vec<_>>(),
+        ["7 / 2 = 3 remainder 1"]
+    );
     assert_eq!(read("example-004-words.stdin"), "one two three\n");
-    assert_eq!(read("example-004-words.stdout"), "3\n");
+    assert_eq!(
+        read("example-004-words.stdout").lines().collect::<Vec<_>>(),
+        ["3"]
+    );
     assert!(dir.join("example-005-copy.in/input.txt").is_file());
     assert!(
         read("example-005-copy.out/out.txt").starts_with("GR"),
@@ -289,7 +298,12 @@ fn front_door_then_wire(repo: &Path) {
             .unwrap();
         let out = child.wait_with_output().unwrap();
         assert!(out.status.success());
-        assert_eq!(String::from_utf8_lossy(&out.stdout), "3\n");
+        assert_eq!(
+            String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .collect::<Vec<_>>(),
+            ["3"]
+        );
         std::fs::read_to_string(&log).unwrap()
     };
     assert_eq!(run(None), "", "Rust answered");
@@ -447,8 +461,11 @@ fn the_command_exits_non_zero_on_a_mismatch() {
     );
     let dir = app::cases_dir(&repo);
     assert_eq!(
-        std::fs::read_to_string(dir.join("stamped.stdout")).unwrap(),
-        "AT [..]\n"
+        std::fs::read_to_string(dir.join("stamped.stdout"))
+            .unwrap()
+            .lines()
+            .collect::<Vec<_>>(),
+        ["AT [..]"]
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("input-002-copy.out/b.txt")).unwrap(),

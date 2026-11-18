@@ -356,10 +356,20 @@ pub fn run(args: &[OsString]) -> ExitCode {{
     let Some((program, rest)) = RUN.split_first() else {{
         return ExitCode::from(127);
     }};
-    let status = Command::new(resolve(program))
-        .args(rest.iter().map(|w| resolve(w)))
-        .args(args)
-        .status();
+    let mut command = Command::new(resolve(program));
+    command.args(rest.iter().map(|w| resolve(w))).args(args);
+    #[cfg(windows)]
+    if Path::new(program)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| [\"python\", \"python3\", \"py\"]
+            .iter()
+            .any(|candidate| name.eq_ignore_ascii_case(candidate)))
+        && std::env::var_os(\"PYTHONIOENCODING\").is_none()
+    {{
+        command.env(\"PYTHONIOENCODING\", \"utf-8\");
+    }}
+    let status = command.status();
     match status {{
         Ok(status) => ExitCode::from(exit_code(status)),
         Err(e) => {{
@@ -1069,6 +1079,16 @@ mod tests {
         assert_eq!(package_name("7zip"), "app-7zip");
         assert_eq!(ident("text-kit"), "text_kit");
         assert_eq!(ident("mod"), "unit_mod");
+    }
+
+    #[test]
+    fn generated_fallback_matches_python_stems_case_insensitively() {
+        let code = original_rs(&["Python.EXE".to_string()]);
+        assert!(
+            code.contains(".any(|candidate| name.eq_ignore_ascii_case(candidate))"),
+            "{code}"
+        );
+        assert!(code.contains("var_os(\"PYTHONIOENCODING\").is_none()"), "{code}");
     }
 
     #[test]

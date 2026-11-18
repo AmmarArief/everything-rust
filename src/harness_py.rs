@@ -13,7 +13,11 @@ use crate::harness::{BenchRow, CASES, DiffOutcome};
 const WORK_DIR: &str = ".rust-anything";
 
 fn python() -> &'static str {
-    if Command::new("python3").arg("--version").output().is_ok() {
+    if Command::new("python3")
+        .arg("--version")
+        .output()
+        .is_ok_and(|output| output.status.success())
+    {
         "python3"
     } else {
         "python"
