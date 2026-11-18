@@ -1369,6 +1369,19 @@ fn write_case(dir: &Path, bin: &str, name: &str, case: &Case, rec: &Recorded) ->
     Ok(())
 }
 
+pub(crate) fn reserve_case_name(
+    taken: &mut BTreeSet<String>,
+    base: String,
+    mut suffix: usize,
+) -> String {
+    let mut name = base.clone();
+    while !taken.insert(name.clone()) {
+        name = format!("{base}-{suffix}");
+        suffix += 1;
+    }
+    name
+}
+
 pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let repo = opts
         .repo
@@ -1457,12 +1470,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
                 None => format!("{prefix}-{n:03}"),
             },
         };
-        let mut name = base_name.clone();
-        let mut suffix = n;
-        while !taken.insert(name.clone()) {
-            name = format!("{base_name}-{suffix}");
-            suffix += 1;
-        }
+        let name = reserve_case_name(&mut taken, base_name, n);
         planned.push((name, case));
         true
     };
