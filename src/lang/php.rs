@@ -284,7 +284,11 @@ pub fn scan(source: &str) -> FileFacts {
                 .parent()
                 .filter(|p| p.kind() == "namespace_use_group")
                 .and_then(|g| g.parent())
-                .and_then(|d| d.child_by_field_name("prefix"))
+                .and_then(|d| {
+                    named_children(d)
+                        .into_iter()
+                        .find(|n| n.kind() == "namespace_name")
+                })
                 .map(|p| format!("{}\\", text(p, source)))
                 .unwrap_or_default();
             facts.imports.push(Import {
@@ -919,6 +923,31 @@ eval('1;');
         assert!(fns[1].blocker.as_deref().unwrap().contains("generator"));
         assert!(fns[2].blocker.as_deref().unwrap().contains("...$args"));
         assert_eq!(fns[3].params[1].ts_type, "number");
+    }
+
+    #[test]
+    fn resolves_import_names_from_a_group_use() {
+        let facts = scan(
+            r"<?php
+namespace App;
+use Vendor\Library\{One, Two as Alias, function helpers\trim_value};
+use Other\Three;
+",
+        );
+        assert_eq!(facts.parse_errors, 0);
+        assert_eq!(
+            facts
+                .imports
+                .iter()
+                .map(|i| i.specifier.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "Vendor\\Library\\One",
+                "Vendor\\Library\\Two",
+                "Vendor\\Library\\helpers\\trim_value",
+                "Other\\Three"
+            ]
+        );
     }
 
     #[test]
