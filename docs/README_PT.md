@@ -1,4 +1,4 @@
- <p align="center">
+<p align="center">
   <img src="docs/assets/logo.svg" width="160" height="160" alt="O caranguejo do rust-anything, com uma tag de código na boca">
 </p>
 
@@ -131,7 +131,7 @@ O rust-anything fornece aquilo que um agente não consegue adivinhar de forma fi
 | PHP (pré-visualização) | Pasta de funções e métodos `public static` | Próximo passo: PHP FFI através de uma ABI C | Aplicações completas atualmente: `app record`, `app replay` e a front door, para CLIs e servidores (`php -S`) |
 | C# (pré-visualização) | Pasta de métodos `public static` | Próximo passo: P/Invoke através de uma ABI C | Aplicações completas atualmente: `app record`, `app replay` e a front door, para CLIs e servidores ASP.NET (`dotnet <app>.dll`) |
 
-Todas as linguagens, exceto C, também recebem classes de processamento em lote (`--batch`): os elementos atravessam a ponte uma única vez e permanecem em Rust, e cada chamada processa todos eles em todos os núcleos.
+Todas as linguagens, exceto C, PHP e C#, também recebem classes de processamento em lote (`--batch`): os elementos atravessam a ponte uma única vez e permanecem em Rust, e cada chamada processa todos eles em todos os núcleos.
 
 A linguagem é detetada a partir do repositório (`go.mod`, `pom.xml`, um `.csproj` ou `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json` ou, caso contrário, os ficheiros de código-fonte mais comuns). A opção `--lang` permite substituir essa deteção.
 
@@ -234,7 +234,7 @@ rust-anything app lift .
 
 - `app lift` recusa-se a continuar até que ambas as condições sejam cumpridas e indica o que está a impedir a conclusão: casos que ainda recorrem ao original, código de ligação que continua por implementar ou unidades que falham no gate.
 - Primeiro, numa cópia, remove o caminho de fallback e os interruptores de emergência, transforma cada crate de unidade numa biblioteca simples de `rust/app` (sem `cdylib`, bindings ou wrappers gerados) e adiciona `rust/app/tests/app_cases.rs`, que executa `rust/app-cases` com trycmd através de `cargo test`, para que o CI precise apenas de cargo.
-- Depois executa a lista de verificação da migração: fmt, clippy `-D warnings` e testes em cada unidade e em `rust/app`, todos os destinos indicados em `rust/DECISIONS.md compilados ou verificados onde estão instalados, ficheiros lidos em tempo de execução e pastas de recursos não incorporadas no binário, e reprodução no binário puro. As alterações só são gravadas quando tudo passa. O original nunca é alterado.
+- Depois executa a lista de verificação da migração: fmt, clippy `-D warnings` e testes em cada unidade e em `rust/app`, todos os destinos indicados em `rust/DECISIONS.md` compilados ou verificados onde estão instalados, ficheiros lidos em tempo de execução e pastas de recursos não incorporadas no binário, e reprodução no binário puro. As alterações só são gravadas quando tudo passa. O original nunca é alterado.
 
 ### Servidores
 
@@ -319,7 +319,7 @@ Em comparação com TS a realizar a mesma redução de pesquisa, Rust continua a
 
 Transformar os índices devolvidos em chaves através de um ciclo simples tem um custo 20x superior: `Array.from(order, i => keys[i])` demora 0,4 ms.
 
-Todas as linguagens recebem processamento em lote, que supera o original mesmo quando as migrações por chamada perdem.
+Todas as linguagens, exceto C, PHP e C#, recebem processamento em lote, que supera o original mesmo quando as migrações por chamada perdem.
 
 O mesmo trabalho em 4 núcleos, com resultados e erros idênticos (benchmarks em cada pasta de demonstração):
 
@@ -377,9 +377,13 @@ O plano que o rust-anything gera para todo o x18n: [`docs/examples/x18n.md`](exa
 
 ## Instalação
 
+Para instalar a partir de um clone, execute o comando na raiz do checkout do rust-anything:
+
 ```sh
 cargo install --path .
 ```
+
+Para instalar sem clonar o repositório, use `cargo install rust-anything`.
 
 `record`, `diff` e `bench` executam o original no seu próprio ambiente de execução: Node 22.6+ para TS (executa diretamente os ficheiros `.ts`), Python 3.9+ para Python e C (ctypes), Go 1.21+, Ruby 3+ e JDK 17+ (`javac` e `java`).
 
