@@ -70,11 +70,8 @@ pub fn import_path(m: &Manifest) -> Result<String> {
     })
 }
 
-fn go_version(go_mod: &str) -> String {
-    go_mod
-        .lines()
-        .find_map(|l| l.trim().strip_prefix("go ").map(|v| v.trim().to_string()))
-        .unwrap_or_else(|| "1.21".into())
+fn go_version(go_mod: &str) -> &str {
+    crate::lang::go::mod_directive(go_mod, "go").unwrap_or("1.21")
 }
 
 /// The wrapper module's path.

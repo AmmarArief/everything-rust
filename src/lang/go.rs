@@ -22,13 +22,20 @@ const SKIP_DIRS: &[&str] = &["vendor", "testdata", "node_modules", "target", ".g
 
 // ---- discovery -------------------------------------------------------------------------------
 
-/// The `module` line of a `go.mod`.
-pub fn module_path(go_mod: &str) -> Option<String> {
-    go_mod.lines().find_map(|l| {
-        l.trim()
-            .strip_prefix("module ")
-            .map(|m| m.trim().trim_matches('"').to_string())
+/// The first value on a single-line go.mod directive.
+pub(crate) fn mod_directive<'a>(go_mod: &'a str, directive: &str) -> Option<&'a str> {
+    go_mod.lines().find_map(|line| {
+        let mut words = line.split_whitespace();
+        if words.next()? != directive {
+            return None;
+        }
+        words.next().filter(|word| !word.starts_with("//"))
     })
+}
+
+/// The module path declared in a go.mod.
+pub fn module_path(go_mod: &str) -> Option<String> {
+    mod_directive(go_mod, "module").map(|path| path.trim_matches('"').to_string())
 }
 
 fn requirements(go_mod: &str) -> Vec<String> {
