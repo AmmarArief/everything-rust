@@ -1260,12 +1260,24 @@ fn alias_env(manifest: &Manifest) -> String {
 }
 
 fn file_url(path: &Path) -> String {
-    let text = path.to_string_lossy().replace('\\', "/");
-    if text.starts_with('/') {
-        format!("file://{text}")
+    use std::fmt::Write as _;
+
+    let text = path.to_string_lossy();
+    #[cfg(windows)]
+    let text = text.replace('\\', "/");
+    let mut url = if text.starts_with('/') {
+        String::from("file://")
     } else {
-        format!("file:///{text}")
+        String::from("file:///")
+    };
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b':' | b'-' | b'_' | b'.' | b'~') {
+            url.push(char::from(byte));
+        } else {
+            let _ = write!(url, "%{byte:02X}");
+        }
     }
+    url
 }
 
 const REGISTER_JS: &str =

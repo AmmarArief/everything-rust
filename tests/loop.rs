@@ -285,6 +285,26 @@ fn record_follows_bundler_style_imports() {
 }
 
 #[test]
+fn record_registers_its_resolver_from_a_path_with_url_delimiters() {
+    if !node_available() {
+        return;
+    }
+    let dir = bridged("record #1 % café");
+    let result = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 2,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    });
+    std::fs::remove_dir_all(&dir).unwrap();
+    let recorded = result.unwrap();
+    assert!(recorded.cases > 0);
+    assert_eq!(recorded.errors, 0);
+}
+
+#[test]
 fn async_functions_get_async_bindings() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/async");
     for kind in [Kind::Napi, Kind::Wasm] {
