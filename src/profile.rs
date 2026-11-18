@@ -257,7 +257,11 @@ fn node(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
     let dir = work.join("node");
     std::fs::create_dir_all(&dir)?;
     let mut options = std::env::var("NODE_OPTIONS").unwrap_or_default();
-    options.push_str(&format!(" --cpu-prof --cpu-prof-dir={}", dir.display()));
+    let dir_option = dir
+        .to_string_lossy()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"");
+    options.push_str(&format!(" --cpu-prof --cpu-prof-dir=\"{dir_option}\""));
     let status = Command::new(&command[0])
         .args(&command[1..])
         .current_dir(root)
@@ -1250,6 +1254,23 @@ mod tests {
     fn node(id: u64, name: &str, url: &str, line: i64, hits: u64, children: &[u64]) -> Value {
         json!({ "id": id, "hitCount": hits, "children": children,
                 "callFrame": { "functionName": name, "url": url, "lineNumber": line - 1 } })
+    }
+
+    #[test]
+    fn node_writes_profile_to_a_temp_path_with_spaces() {
+        if !Command::new("node")
+            .arg("--version")
+            .status()
+            .is_ok_and(|s| s.success())
+        {
+            return;
+        }
+        let dir = crate::app::temp_dir("profile with spaces").unwrap();
+        let root = dir.canonicalize().unwrap();
+        let command = ["node".into(), "-e".into(), "console.log('workload')".into()];
+        let result = super::node(&root, &command, &root);
+        std::fs::remove_dir_all(dir).unwrap();
+        assert!(result.unwrap().1 > 0.0);
     }
 
     #[test]
