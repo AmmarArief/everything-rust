@@ -88,16 +88,28 @@ pub fn lib_rs(m: &Manifest) -> String {
          //! by rust-anything from `rust-anything.json`. All of the crate's `unsafe` code lives in this file.\n\n",
         m.unit
     );
+    out.push_str("pub mod port;\n");
     if any_string {
         out.push_str(
-            "use std::ffi::{CStr, c_char};\n\npub mod port;\n\n\
-             /// A `const char *` argument as bytes; `None` for `NULL`.\n\
-             fn c_str<'a>(ptr: *const c_char) -> Option<&'a [u8]> {\n    if ptr.is_null() {\n        return None;\n    }\n\
-             \x20   // SAFETY: the C API takes NUL-terminated strings that stay valid for the call;\n\
-             \x20   // NULL is handled above.\n    Some(unsafe { CStr::from_ptr(ptr) }.to_bytes())\n}\n",
+            r#"
+use std::ffi::c_char;
+
+mod __rust_anything_c_abi {
+    use std::ffi::{CStr, c_char};
+
+    /// A `const char *` argument as bytes; `None` for `NULL`.
+    pub(super) fn c_str<'a>(ptr: *const c_char) -> Option<&'a [u8]> {
+        if ptr.is_null() {
+            return None;
+        }
+
+        // SAFETY: the C API takes NUL-terminated strings that stay valid for the call;
+        // NULL is handled above.
+        Some(unsafe { CStr::from_ptr(ptr) }.to_bytes())
+    }
+}
+"#,
         );
-    } else {
-        out.push_str("pub mod port;\n");
     }
     for f in &m.exports {
         let params: Vec<String> = f
@@ -117,7 +129,7 @@ pub fn lib_rs(m: &Manifest) -> String {
             .iter()
             .map(|p| {
                 if is_string(p) {
-                    format!("c_str({})", p.name)
+                    format!("crate::__rust_anything_c_abi::c_str({})", p.name)
                 } else {
                     p.name.clone()
                 }
