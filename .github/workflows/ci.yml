@@ -86,6 +86,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: Swatinem/rust-cache@v2
+      - name: Test Windows command parsing
+        run: cargo test --locked --lib app::tests::shell_words
       - name: Run native bridge integration tests
         run: cargo test --locked --test native -- --nocapture
 
