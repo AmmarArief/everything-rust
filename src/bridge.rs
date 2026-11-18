@@ -915,11 +915,30 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         .unwrap_or_else(|| crate::lang::Lang::detect(&root));
     let report = analyze::analyze_lang(&root, lang)?;
     let wanted = opts.unit.trim_start_matches("./");
-    let unit = report
+    let whole = report
         .units
         .iter()
-        .find(|u| u.id == wanted || u.id.trim_end_matches('/') == wanted.trim_end_matches('/'))
-        .with_context(|| format!("no unit `{wanted}`; `rust-anything analyze` lists unit ids"))?;
+        .find(|u| u.id == wanted || u.id.trim_end_matches('/') == wanted.trim_end_matches('/'));
+    let single = || {
+        report
+            .units
+            .iter()
+            .find(|u| u.files.iter().any(|f| f == wanted))
+            .map(|u| {
+                let mut one = u.clone();
+                one.id = wanted.to_string();
+                one.files = vec![wanted.to_string()];
+                one
+            })
+    };
+    let unit = match whole.cloned().or_else(single) {
+        Some(unit) => unit,
+        None => bail!(
+            "no unit or source file `{wanted}`; `rust-anything analyze` lists unit ids, and any \
+             source file inside a unit can be bridged on its own"
+        ),
+    };
+    let unit = &unit;
     if matches!(unit.status, Status::Keep | Status::Blocked) && !opts.force {
         bail!(
             "unit `{}` is {:?}: {}. Pass --force to bridge it anyway.",

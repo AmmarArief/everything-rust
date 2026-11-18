@@ -140,7 +140,7 @@ pub struct PackageReport {
     pub units: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct UnitReport {
     pub id: String,
     pub package: String,
@@ -172,7 +172,7 @@ pub struct UnitReport {
     pub notes: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct RiskReport {
     pub risk: Risk,
     pub severity: Severity,

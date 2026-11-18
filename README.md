@@ -10,6 +10,8 @@
 
 <p align="center"><em>CLIs, servers and libraries, piece by piece, checked against the original at every step.</em></p>
 
+<p align="center">Node.js and TypeScript · Python · C · Go · Ruby · Java · PHP and C# in preview</p>
+
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
@@ -27,7 +29,7 @@
 </p>
 
 **Rewrite your whole app in Rust, one piece at a time.** rust-anything records what your
-TypeScript/JavaScript, Python, C, Go, Ruby or Java app does today, then checks every piece of the
+Node.js (TypeScript/JavaScript), Python, C, Go, Ruby or Java app does today, then checks every piece of the
 Rust rewrite against that recording before it moves on, until the app is pure Rust. CLIs, HTTP
 servers and libraries; your coding agent (or you) writes the Rust. It can only catch what the
 recording covers: see [What it can't catch](#what-it-cant-catch). Only need the slow part fast?

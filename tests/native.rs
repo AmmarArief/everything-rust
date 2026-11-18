@@ -599,3 +599,46 @@ fn dataclass_parameters_get_real_instances() {
         "only {with_instance} clamp cases ran with a real Limits instance:\n{cases}"
     );
 }
+
+#[test]
+fn one_file_of_a_unit_can_be_bridged_alone() {
+    if !available("python3") {
+        eprintln!("skipped: python3 not found");
+        return;
+    }
+    let root = project(
+        "one-file",
+        &[
+            (
+                "pyproject.toml",
+                "[project]\nname = \"pkg\"\nversion = \"0.1.0\"\n",
+            ),
+            ("pkg/__init__.py", ""),
+            (
+                "pkg/core.py",
+                "def score(text: str) -> int:\n    return len(text.split())\n",
+            ),
+            (
+                "pkg/tool.py",
+                "def helper(path: str) -> str:\n    return open(path).read()\n",
+            ),
+        ],
+    );
+    let outcome = bridge_python(&root, "pkg/core.py").unwrap();
+    assert_eq!(outcome.exports, ["score"]);
+    let manifest = rust_anything::bridge::Manifest::load(&outcome.crate_dir).unwrap();
+    assert_eq!(manifest.unit, "pkg/core.py");
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &outcome.crate_dir,
+        count: 10,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    let missing = bridge_python(&root, "pkg/nope.py").unwrap_err();
+    std::fs::remove_dir_all(&root).unwrap();
+    assert!(recorded.cases > 0, "{recorded:?}");
+    assert!(format!("{missing:#}").contains("no unit or source file"));
+}
