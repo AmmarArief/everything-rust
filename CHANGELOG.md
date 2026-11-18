@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.1 (2026-11-18)
+
+- Fix ([#80](https://github.com/erkamyaman/rust-anything/issues/80)): `record` could stall for good
+  when a generated input made the original run away (a trap like `2147483647` in `[w] * n`
+  allocates gigabytes, a loop that never ends). Every recorder (TS/JS, Python, C, Go, Ruby, Java)
+  now runs under a watchdog: a case that runs past the limit (10 seconds, or
+  `RUST_ANYTHING_CASE_TIMEOUT`) stops the original, the cases recorded so far are kept, and that
+  input is left out and listed. Drivers now write each case as it finishes instead of at the end.
+
 ## 1.5.0 (2026-11-18)
 
 Twenty-two contributions from the community, Windows in CI, and a README in 16 languages.
