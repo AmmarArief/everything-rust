@@ -362,7 +362,9 @@ pub fn run(args: &[OsString]) -> ExitCode {{
     if Path::new(program)
         .file_stem()
         .and_then(|name| name.to_str())
-        .is_some_and(|name| [\"python\", \"python3\", \"py\"].contains(&name))
+        .is_some_and(|name| [\"python\", \"python3\", \"py\"]
+            .iter()
+            .any(|candidate| name.eq_ignore_ascii_case(candidate)))
         && std::env::var_os(\"PYTHONIOENCODING\").is_none()
     {{
         command.env(\"PYTHONIOENCODING\", \"utf-8\");
@@ -1077,6 +1079,16 @@ mod tests {
         assert_eq!(package_name("7zip"), "app-7zip");
         assert_eq!(ident("text-kit"), "text_kit");
         assert_eq!(ident("mod"), "unit_mod");
+    }
+
+    #[test]
+    fn generated_fallback_matches_python_stems_case_insensitively() {
+        let code = original_rs(&["Python.EXE".to_string()]);
+        assert!(
+            code.contains(".any(|candidate| name.eq_ignore_ascii_case(candidate))"),
+            "{code}"
+        );
+        assert!(code.contains("var_os(\"PYTHONIOENCODING\").is_none()"), "{code}");
     }
 
     #[test]
