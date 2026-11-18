@@ -1290,9 +1290,10 @@ import { existsSync, statSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const extra = process.env.RUST_ANYTHING_RESOLVE_FROM
-// tsconfig `paths`: [[pattern, [absolute targets]]], longest prefix first.
+// tsconfig `paths`: exact keys first, then wildcard keys by longest prefix.
+const aliasPriority = pattern => pattern.includes('*') ? pattern.indexOf('*') : Number.POSITIVE_INFINITY
 const aliases = JSON.parse(process.env.RUST_ANYTHING_PATHS || '[]')
-  .sort(([a], [b]) => b.split('*')[0].length - a.split('*')[0].length)
+  .sort(([a], [b]) => aliasPriority(b) - aliasPriority(a))
 // Workspace packages by name: `@x18n/core` and `@x18n/core/sub` resolve to source.
 const workspace = JSON.parse(process.env.RUST_ANYTHING_WORKSPACE || '{}')
 const workspaceTargets = (specifier) => {
@@ -1310,7 +1311,7 @@ const aliasTargets = (specifier) => {
     const exact = !pattern.includes('*')
     if (exact ? specifier === pattern : specifier.startsWith(prefix) && specifier.endsWith(suffix) && specifier.length >= prefix.length + suffix.length) {
       const star = exact ? '' : specifier.slice(prefix.length, specifier.length - suffix.length)
-      return targets.map(t => t.replace('*', star))
+      return targets.map(t => t.replace('*', () => star))
     }
   }
   return []

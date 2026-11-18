@@ -521,6 +521,55 @@ fn tsconfig_aliases_are_followed() {
 }
 
 #[test]
+fn record_prefers_an_exact_tsconfig_alias_to_a_matching_wildcard() {
+    if !node_available() {
+        return;
+    }
+    let root =
+        std::env::temp_dir().join(format!("rust-anything-exact-alias-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::write(root.join("package.json"), r#"{"type":"module"}"#).unwrap();
+    std::fs::write(
+        root.join("tsconfig.json"),
+        r#"{"compilerOptions":{"paths":{"@demo*":["./src/wild*"],"@demo":["./src/exact.ts"]}}}"#,
+    )
+    .unwrap();
+    std::fs::write(root.join("src/wild.ts"), "export const value = 'wild';").unwrap();
+    std::fs::write(root.join("src/exact.ts"), "export const value = 'exact';").unwrap();
+    std::fs::write(
+        root.join("src/main.ts"),
+        "import { value } from '@demo'; export function selected(): string { return value; }",
+    )
+    .unwrap();
+    let dir = root.join("bridge");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/main.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+    })
+    .unwrap();
+    let result = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 1,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    });
+    let evidence = std::fs::read_to_string(dir.join(harness::CASES));
+    std::fs::remove_dir_all(root).unwrap();
+    result.unwrap();
+    assert!(evidence.unwrap().contains(r#""ok":"exact""#));
+}
+
+#[test]
 fn record_resolves_workspace_packages_to_source() {
     if !node_available() {
         return;
