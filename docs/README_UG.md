@@ -713,6 +713,7 @@ rust-anything ھەقسىز ۋە ئوچۇق كودلۇق. ئەگەر ئۇ خىز�
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/aliyilmazco"><img src="https://github.com/aliyilmazco.png?size=100" width="80px;" alt="Ali Yilmaz"/><br /><sub><b>Ali Yilmaz</b></sub></a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ashley-hunter"><img src="https://github.com/ashley-hunter.png?size=100" width="80px;" alt="Ashley Hunter"/><br /><sub><b>Ashley Hunter</b></sub></a></td>
     </tr>
   </tbody>
 </table>
