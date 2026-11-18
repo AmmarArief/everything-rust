@@ -1416,11 +1416,11 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .timeout_secs
             .or(existing.as_ref().map(|c| c.timeout_secs))
             .unwrap_or_else(default_timeout),
-        http: if opts.http || opts.port.is_some() {
-            Some(crate::http::HttpConfig { port: opts.port })
-        } else {
-            existing.as_ref().and_then(|c| c.http.clone())
-        },
+        http: opts
+            .port
+            .map(|port| crate::http::HttpConfig { port: Some(port) })
+            .or_else(|| existing.as_ref().and_then(|c| c.http.clone()))
+            .or_else(|| opts.http.then_some(crate::http::HttpConfig { port: None })),
         float_tolerance: match opts.float_tolerance {
             Some(t) => (crate::tolerance::check(t)? > 0.0).then_some(t),
             None => existing.as_ref().and_then(|c| c.float_tolerance),
