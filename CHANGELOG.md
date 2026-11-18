@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 (2026-11-18)
 
+Fixes from the first round of outside issues and pull requests, and the project's community files.
+
+- Fix ([#31](https://github.com/erkamyaman/rust-anything/issues/31)): `bridge` takes a single source
+  file inside a unit (`rust-anything bridge . pkg/core.py`) and ports just that file, so a helper
+  script next to the real module can stay in the source language.
 - Fix ([#32](https://github.com/erkamyaman/rust-anything/issues/32)): a name defined twice in one
   unit (a wrapper in `__init__.py` and the function it wraps in a submodule, say) made one
   definition silently replace the other. `bridge` now refuses with both locations and how to
@@ -16,8 +21,9 @@
 - From @elfenomenokim: optional dataclass parameters bind as `Option` so the generated crate
   compiles (#28), and Python's whole standard library resolves as stdlib, with unknown dependencies
   named by the language's registry instead of "npm" (#29).
-- Community files: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT and ACCESSIBILITY, issue and pull
-  request templates. The README names its author up top and opens with the speed demo.
+- Community files: CONTRIBUTING, SECURITY (with private vulnerability reporting), CODE_OF_CONDUCT
+  and ACCESSIBILITY, issue and pull request templates. The README names its author up top, opens
+  with the speed demo, and lists its sponsors.
 
 ## 1.3.0 (2026-11-18)
 
