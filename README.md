@@ -4,6 +4,8 @@
 
 <h1 align="center">rust-anything</h1>
 
+<p align="center">by <a href="https://github.com/erkamyaman">Erkam Yaman</a></p>
+
 <p align="center"><em>Rewrite your whole app in Rust. Keep it working the whole way.</em></p>
 
 <p align="center"><em>CLIs, servers and libraries, piece by piece, checked against the original at every step.</em></p>
@@ -20,6 +22,10 @@
 
 <p align="center">up to 20x faster · 38,251 recorded cases replayed · 0 mismatches · one command</p>
 
+<p align="center">
+  <img src="docs/assets/race.gif" alt="Typing user.profile into x18n's search over 50,000 keys: TypeScript spends 143 ms, the rust-anything batch 6.9 ms, with the same results at every keystroke." width="820">
+</p>
+
 **Rewrite your whole app in Rust, one piece at a time.** rust-anything records what your
 TypeScript/JavaScript, Python, C, Go, Ruby or Java app does today, then checks every piece of the
 Rust rewrite against that recording before it moves on, until the app is pure Rust. CLIs, HTTP
@@ -35,10 +41,6 @@ Port just that, one hot path at a time:
 | `Shellwords.shellescape` from Ruby's standard library, 50,000 values | 88 ms | **11.8x faster** |
 | `Slugify` over 50,000 strings (Go) | 49 ms | **4x faster** |
 | `slugify` over 50,000 strings (Java) | 43 ms | **3x faster** |
-
-<p align="center">
-  <img src="docs/assets/race.gif" alt="Typing user.profile into x18n's search over 50,000 keys: TypeScript spends 143 ms, the rust-anything batch 6.9 ms, with the same results at every keystroke." width="820">
-</p>
 
 Measured on 4 cores; every number has a benchmark in [`demo/`](./demo) that first checks the
 results are identical. Calling Rust once per small function is usually *slower* than a JIT;
@@ -100,7 +102,6 @@ Or run the steps yourself:
 <p align="center">
   <img src="docs/assets/terminal.gif" alt="rust-anything profile finds fuzzyScore in a loop, bridge --batch generates the Rust crate, gate passes with 2000/2000 recorded cases, and the benchmark shows 20.7x faster than TS." width="820">
 </p>
-
 
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
@@ -506,7 +507,6 @@ cargo fmt
 
 Design choices and their reasons: [DECISIONS.md](./DECISIONS.md).
 
-
 ## Update or remove
 
 ```sh
@@ -614,10 +614,11 @@ sends it, under its own policy.
 
 ## Contributing
 
-Issues and pull requests are welcome. Before a pull request: `cargo fmt`, `cargo clippy
---all-targets -- -D warnings` and `cargo test` must pass (see [Development](#development)); design
-choices and their reasons are in [DECISIONS.md](./DECISIONS.md). Case studies of real ports are
-especially welcome.
+Issues and pull requests are welcome; [CONTRIBUTING.md](./CONTRIBUTING.md) covers the setup, where
+tests go, and how to add a language. Design choices and their reasons are in
+[DECISIONS.md](./DECISIONS.md). Case studies of real ports are especially welcome. Please report
+security problems privately ([SECURITY.md](./SECURITY.md)), and see the
+[code of conduct](./CODE_OF_CONDUCT.md).
 
 ## License
 

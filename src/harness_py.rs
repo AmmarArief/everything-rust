@@ -176,6 +176,7 @@ pub fn bench(crate_dir: &Path, manifest: &Manifest, min_ms: u64) -> Result<Vec<B
 
 /// record / diff / bench for Python. Cases and markers match the Node scripts.
 pub const DRIVER_PY: &str = r#"
+import dataclasses
 import importlib
 import json
 import math
@@ -243,7 +244,20 @@ def dec(v):
             return bytes(inner)
         if key == "$dict":
             return {dec(k): dec(x) for k, x in inner}
+    if set(v) == {"$object", "attrs"} and isinstance(v["attrs"], dict):
+        cls = dataclass_named(v["$object"])
+        if cls is not None:
+            return cls(**{k: dec(x) for k, x in v["attrs"].items()})
     return {k: dec(x) for k, x in v.items()}
+
+
+def dataclass_named(name):
+    """A dataclass the loaded modules define, for building a recorded `$object` argument."""
+    for module in list(sys.modules.values()):
+        cls = getattr(module, name, None)
+        if isinstance(cls, type) and dataclasses.is_dataclass(cls):
+            return cls
+    return None
 
 
 def canon(v, sort):

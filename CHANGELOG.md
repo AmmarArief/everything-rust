@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- Fix ([#32](https://github.com/erkamyaman/rust-anything/issues/32)): a name defined twice in one
+  unit (a wrapper in `__init__.py` and the function it wraps in a submodule, say) made one
+  definition silently replace the other. `bridge` now refuses with both locations and how to
+  bridge the module you want on its own.
+- Fix ([#33](https://github.com/erkamyaman/rust-anything/issues/33)): Python command-line entry
+  points are kept in Python instead of offered as ports: functions the
+  `if __name__ == "__main__":` block (or a package's `__main__.py`) calls, and functions returning
+  an `argparse.ArgumentParser`. `app front-door` takes the command line over in a whole-app port.
+- Fix ([#34](https://github.com/erkamyaman/rust-anything/issues/34)): a Python parameter typed with a
+  dataclass now gets real instances in recorded cases, built from the dataclass's fields (defaulted
+  fields sometimes left out), instead of only `None` and shapes that can never fit.
+- From @elfenomenokim: optional dataclass parameters bind as `Option` so the generated crate
+  compiles (#28), and Python's whole standard library resolves as stdlib, with unknown dependencies
+  named by the language's registry instead of "npm" (#29).
+- Community files: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT and ACCESSIBILITY, issue and pull
+  request templates. The README names its author up top and opens with the speed demo.
+
 ## 1.3.0 (2026-11-18)
 
 Two new languages in preview (PHP and C#), a stricter `diff`, a sturdier napi bridge, and 18

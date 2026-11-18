@@ -794,15 +794,26 @@ pub fn exports(path: &str, source: &str) -> (Vec<ExportedFn>, Vec<ExportedClass>
             names.iter().any(|n| n == name)
         })
     };
+    let entry = entry_calls(root, source, path.ends_with("__main__.py"));
     let mut functions = Vec::new();
     let mut classes = Vec::new();
     for item in named_children(root) {
         let (decorators, definition) = unwrap_decorated(item, source);
         match definition.kind() {
             "function_definition" => {
-                let Some(f) = function(path, definition, source, &decorators, false) else {
+                let Some(mut f) = function(path, definition, source, &decorators, false) else {
                     continue;
                 };
+                let parser = definition
+                    .child_by_field_name("return_type")
+                    .is_some_and(|t| text(t, source).ends_with("ArgumentParser"));
+                if parser || entry.iter().any(|n| *n == f.name) {
+                    f.blocker = Some(
+                        "a command-line entry point: it stays in Python, and `app front-door` \
+                         takes the command line over when the whole app moves"
+                            .into(),
+                    );
+                }
                 if public(&f.name) {
                     functions.push(f);
                 }
@@ -819,6 +830,99 @@ pub fn exports(path: &str, source: &str) -> (Vec<ExportedFn>, Vec<ExportedClass>
         }
     }
     (functions, classes)
+}
+
+/// Dataclasses declared at the top level of a file, as types `record` can build values of:
+/// `{ $object: "Name"; attrs: { field: type; defaulted?: type } }`, which the Python driver
+/// turns into an instance of the class.
+pub fn dataclass_types(source: &str) -> Vec<crate::ts::exports::LocalType> {
+    let Some(tree) = syntax::parse(&language(), source) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for item in named_children(tree.root_node()) {
+        let (decorators, definition) = unwrap_decorated(item, source);
+        if definition.kind() != "class_definition"
+            || !decorators.iter().any(|d| d.contains("dataclass"))
+        {
+            continue;
+        }
+        let Some(name) = definition.child_by_field_name("name") else {
+            continue;
+        };
+        let mut fields = Vec::new();
+        if let Some(body) = definition.child_by_field_name("body") {
+            for statement in named_children(body) {
+                let Some(assignment) = named_children(statement)
+                    .into_iter()
+                    .find(|n| n.kind() == "assignment")
+                else {
+                    continue;
+                };
+                let (Some(left), Some(ty)) = (
+                    assignment.child_by_field_name("left"),
+                    assignment.child_by_field_name("type"),
+                ) else {
+                    continue;
+                };
+                let hint = text(ty, source);
+                if hint.starts_with("ClassVar") || hint.starts_with("typing.ClassVar") {
+                    continue;
+                }
+                let optional = if assignment.child_by_field_name("right").is_some() {
+                    "?"
+                } else {
+                    ""
+                };
+                fields.push(format!(
+                    "{}{optional}: {}",
+                    text(left, source),
+                    to_ts_type(hint)
+                ));
+            }
+        }
+        let name = text(name, source).to_string();
+        out.push(crate::ts::exports::LocalType {
+            text: format!(
+                "{{ $object: {name:?}; attrs: {{ {} }} }}",
+                fields.join("; ")
+            ),
+            name,
+            alias: true,
+        });
+    }
+    out
+}
+
+/// Functions the file runs as a program: the calls inside `if __name__ == "__main__":`, or
+/// every top-level call in a package's `__main__.py`.
+fn entry_calls<'s>(root: Node, source: &'s str, main_module: bool) -> Vec<&'s str> {
+    let mut out = Vec::new();
+    let mut collect = |node: Node| {
+        syntax::walk(node, |n| {
+            if n.kind() == "call"
+                && let Some(f) = n.child_by_field_name("function")
+                && f.kind() == "identifier"
+            {
+                out.push(text(f, source));
+            }
+        });
+    };
+    for statement in named_children(root) {
+        let guard = statement.kind() == "if_statement"
+            && statement.child_by_field_name("condition").is_some_and(|c| {
+                let c = text(c, source).replace(' ', "").replace('\'', "\"");
+                c == "__name__==\"__main__\"" || c == "\"__main__\"==__name__"
+            });
+        if guard {
+            if let Some(body) = statement.child_by_field_name("consequence") {
+                collect(body);
+            }
+        } else if main_module && statement.kind() == "expression_statement" {
+            collect(statement);
+        }
+    }
+    out
 }
 
 fn dunder_all(root: Node, source: &str) -> Option<Vec<String>> {

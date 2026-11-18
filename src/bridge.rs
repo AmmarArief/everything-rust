@@ -1049,6 +1049,32 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             }
         }
     }
+    let mut defined: Vec<(&str, String)> = exports
+        .iter()
+        .map(|f| (f.name.as_str(), format!("{}:{}", f.file, f.line)))
+        .chain(
+            classes
+                .iter()
+                .map(|c| (c.name.as_str(), format!("{}:{}", c.file, c.line))),
+        )
+        .chain(
+            js_only
+                .iter()
+                .map(|j| (j.name.as_str(), format!("{}:{}", j.file, j.line))),
+        )
+        .collect();
+    defined.sort();
+    if let Some(pair) = defined.windows(2).find(|w| w[0].0 == w[1].0) {
+        bail!(
+            "`{}` is defined twice in `{}` ({} and {}), and the bridge names every export by \
+             itself, so one would silently replace the other. Bridge the module you want on its \
+             own (`rust-anything bridge <root> <that file>`), or rename one of them",
+            pair[0].0,
+            unit.id,
+            pair[0].1,
+            pair[1].1
+        );
+    }
     if exports.is_empty() && classes.is_empty() && !js_only.is_empty() {
         bail!(
             "every export of `{}` must stay in {}: {}",

@@ -96,6 +96,29 @@ pub struct RecordOptions<'a> {
     pub node_args: &'a [String],
 }
 
+/// The dataclasses a Python file can take: its own and its package's, so a type imported from
+/// a sibling module (`from .models import Limits`) is found too.
+fn python_types(root: &Path, file: &str) -> Vec<LocalType> {
+    let dir = root.join(file).parent().map(Path::to_path_buf);
+    let mut files = vec![root.join(file)];
+    if let Some(dir) = dir
+        && let Ok(entries) = std::fs::read_dir(dir)
+    {
+        let mut siblings: Vec<PathBuf> = entries
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == "py") && !files.contains(p))
+            .collect();
+        siblings.sort();
+        files.extend(siblings);
+    }
+    files
+        .iter()
+        .filter_map(|p| std::fs::read_to_string(p).ok())
+        .flat_map(|text| crate::lang::python::dataclass_types(&text))
+        .collect()
+}
+
 pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let manifest = Manifest::load(opts.crate_dir)?;
     let mut cases: Vec<Value> = Vec::new();
@@ -120,10 +143,12 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
                 f.file.clone(),
                 crate::risks::uses_regex(manifest.language, &text),
             );
-            scopes.insert(
-                f.file.clone(),
-                crate::bridge::types_in_scope(&manifest.root, &f.file, &text),
-            );
+            let types = if manifest.language == crate::lang::Lang::Python {
+                python_types(&manifest.root, &f.file)
+            } else {
+                crate::bridge::types_in_scope(&manifest.root, &f.file, &text)
+            };
+            scopes.insert(f.file.clone(), types);
         }
         let regex = regex_files[&f.file];
         if regex && f.params.iter().any(|p| param_type(p) == RType::Str) {

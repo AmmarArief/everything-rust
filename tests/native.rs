@@ -474,3 +474,128 @@ fn java_records_with_the_bridge_crate_inside_the_project() {
     std::fs::remove_dir_all(&root).unwrap();
     assert!(recorded.cases > 0, "{recorded:?}");
 }
+
+fn bridge_python(root: &Path, unit: &str) -> anyhow::Result<bridge::Outcome> {
+    bridge::bridge(&bridge::Options {
+        root,
+        unit,
+        kind: None,
+        out: Some(root.join("port")),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+    })
+}
+
+#[test]
+fn a_name_defined_twice_in_a_unit_is_refused() {
+    let root = project(
+        "twice",
+        &[
+            (
+                "pyproject.toml",
+                "[project]\nname = \"hp\"\nversion = \"0.1.0\"\n",
+            ),
+            (
+                "hp/__init__.py",
+                "from . import verdict as _v\n\ndef verdict(*args, **options):\n    return _v.verdict(*args, **options)\n",
+            ),
+            (
+                "hp/verdict.py",
+                "def verdict(score: int) -> str:\n    return \"ok\" if score > 0 else \"no\"\n",
+            ),
+        ],
+    );
+    let err = bridge_python(&root, "hp/").unwrap_err();
+    std::fs::remove_dir_all(&root).unwrap();
+    let text = format!("{err:#}");
+    assert!(text.contains("`verdict` is defined twice"), "{text}");
+    assert!(
+        text.contains("hp/__init__.py") && text.contains("hp/verdict.py"),
+        "{text}"
+    );
+}
+
+#[test]
+fn cli_entry_points_stay_in_python() {
+    let root = project(
+        "entry",
+        &[
+            (
+                "pyproject.toml",
+                "[project]\nname = \"tool\"\nversion = \"0.1.0\"\n",
+            ),
+            (
+                "tool/cli.py",
+                "import argparse\n\n\
+                 def build_parser() -> argparse.ArgumentParser:\n    return argparse.ArgumentParser()\n\n\
+                 def shout(text: str) -> str:\n    return text.upper()\n\n\
+                 def main() -> int:\n    build_parser().parse_args()\n    return 0\n\n\
+                 if __name__ == \"__main__\":\n    raise SystemExit(main())\n",
+            ),
+        ],
+    );
+    let outcome = bridge_python(&root, "tool/").unwrap();
+    let manifest = rust_anything::bridge::Manifest::load(&outcome.crate_dir).unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(outcome.exports, ["shout"]);
+    let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
+    assert_eq!(kept, ["build_parser", "main"]);
+    assert!(
+        manifest.js_only[0]
+            .reason
+            .contains("command-line entry point")
+    );
+}
+
+#[test]
+fn dataclass_parameters_get_real_instances() {
+    if !available("python3") {
+        eprintln!("skipped: python3 not found");
+        return;
+    }
+    let root = project(
+        "dataclass",
+        &[
+            (
+                "pyproject.toml",
+                "[project]\nname = \"clip\"\nversion = \"0.1.0\"\n",
+            ),
+            ("clip/__init__.py", ""),
+            (
+                "clip/models.py",
+                "from dataclasses import dataclass\n\n\
+                 @dataclass\nclass Limits:\n    low: int\n    high: int = 10\n",
+            ),
+            (
+                "clip/ops.py",
+                "from .models import Limits\n\n\
+                 def clamp(value: int, limits: Limits) -> int:\n    return max(limits.low, min(value, limits.high))\n",
+            ),
+        ],
+    );
+    let outcome = bridge_python(&root, "clip/").unwrap();
+    harness::record(&RecordOptions {
+        crate_dir: &outcome.crate_dir,
+        count: 40,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    let cases = std::fs::read_to_string(outcome.crate_dir.join("cases.jsonl")).unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    let with_instance = cases
+        .lines()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .filter(|c| c["fn"] == "clamp")
+        .filter(|c| c["args"][1]["$object"] == "Limits" && c.get("ok").is_some())
+        .count();
+    assert!(
+        with_instance >= 5,
+        "only {with_instance} clamp cases ran with a real Limits instance:\n{cases}"
+    );
+}
