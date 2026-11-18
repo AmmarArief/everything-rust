@@ -18,6 +18,12 @@ fn available(program: &str) -> bool {
         .is_ok_and(|o| o.status.success())
 }
 
+fn python() -> Option<&'static str> {
+    ["python3", "python"]
+        .into_iter()
+        .find(|program| available(program))
+}
+
 fn project(name: &str, files: &[(&str, &str)]) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
         "rust-anything-native-{name}-{}",
@@ -101,13 +107,13 @@ fn round_trip(root: &Path, unit: &str, kind: Kind, name: &str, body: &str) {
 }
 
 #[test]
-fn napi_addon_builds_loads_and_matches() {
+fn napi_addon_builds_loads_and_matches_in_space_and_unicode_path() {
     if !available("node") {
         eprintln!("skipped: node not found");
         return;
     }
     let root = project(
-        "napi",
+        "napi path with spaces ünïcøde",
         &[
             ("package.json", r#"{"name":"shout","version":"0.1.0"}"#),
             (
@@ -127,8 +133,8 @@ fn napi_addon_builds_loads_and_matches() {
 
 #[test]
 fn pyo3_extension_builds_imports_and_matches() {
-    if !available("python3") {
-        eprintln!("skipped: python3 not found");
+    if python().is_none() {
+        eprintln!("skipped: neither python3 nor python was found");
         return;
     }
     let root = project(
@@ -223,7 +229,11 @@ fn unported_stubs_never_match_in_typescript() {
 
 #[test]
 fn unported_stubs_never_match_in_python() {
-    stubs_fail(&fixture("python"), "src/textkit/", None, "python3");
+    let Some(python) = python() else {
+        eprintln!("skipped: neither python3 nor python was found");
+        return;
+    };
+    stubs_fail(&fixture("python"), "src/textkit/", None, python);
 }
 
 #[test]

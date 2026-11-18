@@ -368,6 +368,16 @@ fn run_in(
     if !case.inherit_env {
         cmd.env_clear();
     }
+    #[cfg(windows)]
+    if Path::new(program)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| ["python", "python3", "py"].contains(&name))
+    {
+        // Python otherwise inherits the legacy Windows console code page even though its stdio
+        // is piped. UTF-8 keeps generated Unicode traps recordable; a case can still override it.
+        cmd.env("PYTHONIOENCODING", "utf-8");
+    }
     for key in &case.env_remove {
         cmd.env_remove(key);
     }
@@ -559,7 +569,13 @@ pub(crate) fn shell_tokens(line: &str) -> Option<Vec<Tok>> {
             }
             '\\' => {
                 in_tok = true;
-                if let Some(x) = chars.next() {
+                if cfg!(windows)
+                    && !chars
+                        .peek()
+                        .is_some_and(|c| c.is_whitespace() || "'\"\\|<>&;".contains(*c))
+                {
+                    cur.push('\\');
+                } else if let Some(x) = chars.next() {
                     cur.push(x);
                 }
             }
@@ -2299,5 +2315,10 @@ mod tests {
         );
         assert!(shell_split("a | b").is_err());
         assert!(shell_tokens("echo $(date)").is_none());
+        #[cfg(windows)]
+        assert_eq!(
+            shell_split(r"C:\tools\rust-anything\app.exe --flag").unwrap(),
+            [r"C:\tools\rust-anything\app.exe", "--flag"]
+        );
     }
 }

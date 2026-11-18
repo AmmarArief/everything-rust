@@ -356,10 +356,18 @@ pub fn run(args: &[OsString]) -> ExitCode {{
     let Some((program, rest)) = RUN.split_first() else {{
         return ExitCode::from(127);
     }};
-    let status = Command::new(resolve(program))
-        .args(rest.iter().map(|w| resolve(w)))
-        .args(args)
-        .status();
+    let mut command = Command::new(resolve(program));
+    command.args(rest.iter().map(|w| resolve(w))).args(args);
+    #[cfg(windows)]
+    if Path::new(program)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| [\"python\", \"python3\", \"py\"].contains(&name))
+        && std::env::var_os(\"PYTHONIOENCODING\").is_none()
+    {{
+        command.env(\"PYTHONIOENCODING\", \"utf-8\");
+    }}
+    let status = command.status();
     match status {{
         Ok(status) => ExitCode::from(exit_code(status)),
         Err(e) => {{

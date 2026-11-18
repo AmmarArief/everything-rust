@@ -447,6 +447,31 @@ sources directly), Python 3.9+ for Python and C (ctypes), Go 1.21+, Ruby 3+, JDK
 `cargo install wasm-bindgen-cli --version <the crate's wasm-bindgen version> --locked`; `build` names
 the exact version.
 
+### Windows
+
+Native Windows CI uses the `x86_64-pc-windows-msvc` Rust target. Install the stable MSVC
+toolchain and Visual Studio Build Tools with the **Desktop development with C++** workload; the
+C compiler and linker are required for C bridges and native Rust extensions. Install the runtime
+for the source language you are migrating. Python may be available as either `python3` or
+`python`; rust-anything detects both. The GNU Windows target is not exercised by CI.
+
+Run the native bridge integration suite from a Developer PowerShell prompt:
+
+```powershell
+rustup default stable-x86_64-pc-windows-msvc
+cargo test --locked --test native -- --nocapture
+```
+
+The suite builds and loads real DLL-backed Node and Python extensions and the supported native
+bridges for each runtime present on `PATH`. Missing optional runtimes are reported as skipped;
+Cargo, the active Rust standard library, and the MSVC linker are required. If Cargo reports that
+it cannot find `std`, reinstall the active target with
+`rustup target remove x86_64-pc-windows-msvc` followed by
+`rustup target add x86_64-pc-windows-msvc`. If linking fails, run from a Visual Studio Developer
+PowerShell and verify that `where.exe link` finds the MSVC linker. Tests use temporary folders,
+including a path with spaces and Unicode characters, and remove generated artifacts after a
+successful run.
+
 For agents, `rust-anything setup` registers everything (see Quick start). To add the MCP server to
 one project by hand instead (`.mcp.json`):
 
