@@ -34,6 +34,7 @@ pub mod lang;
 pub mod library;
 pub mod lift;
 pub mod mcp;
+pub mod process;
 pub mod profile;
 pub mod recording;
 pub mod report;

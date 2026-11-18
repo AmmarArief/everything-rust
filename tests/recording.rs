@@ -182,3 +182,54 @@ fn records_the_calls_a_js_test_suite_makes_and_restores_the_source() {
     );
     assert!(inputs.contains(r#"{"fn":"label","args":[7]}"#), "{inputs}");
 }
+
+#[test]
+fn record_reports_lines_of_the_original_no_case_reached() {
+    if !Command::new("node")
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+    {
+        eprintln!("skipped: node not found");
+        return;
+    }
+    let root = project(
+        "coverage",
+        &[
+            (
+                "package.json",
+                "{\"name\": \"sign\", \"type\": \"module\"}\n",
+            ),
+            (
+                "sign.ts",
+                "export function sign(n: number, word: string): string {\n  if (word === 'xyzzy-never-generated') {\n    return 'magic'\n  }\n  return n < 0 ? 'negative' : 'other'\n}\n",
+            ),
+        ],
+    );
+    let cli = env!("CARGO_BIN_EXE_rust-anything");
+    let crate_dir = root.join("port");
+    let run = |args: &[&std::ffi::OsStr]| {
+        let out = Command::new(cli).args(args).output().unwrap();
+        assert!(out.status.success(), "{out:?}");
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    };
+    run(&[
+        "bridge".as_ref(),
+        root.as_os_str(),
+        "sign.ts".as_ref(),
+        "--out".as_ref(),
+        crate_dir.as_os_str(),
+    ]);
+    let printed = run(&["record".as_ref(), crate_dir.as_os_str()]);
+    let coverage = recording::saved_coverage(&crate_dir);
+    std::fs::remove_dir_all(&root).unwrap();
+    let coverage = coverage.expect("record saves coverage");
+    assert_eq!(coverage["lines"], 6, "{coverage}");
+    assert_eq!(coverage["reached"], 4, "{coverage}");
+    assert_eq!(coverage["files"][0]["missed"], "3-4", "{coverage}");
+    assert!(
+        printed.contains("ran 4 of the original's 6 lines"),
+        "{printed}"
+    );
+    assert!(printed.contains("sign.ts: 3-4"), "{printed}");
+}

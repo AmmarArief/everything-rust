@@ -33,8 +33,12 @@ skip a part whose runtime is missing, so install the ones you touch:
 ```sh
 git clone https://github.com/erkamyaman/rust-anything
 cd rust-anything
+git config core.hooksPath .githooks
 cargo test
 ```
+
+The hook runs `scripts/check-secrets.sh`, which refuses keys, tokens and personal home-folder
+paths in what you commit. CI runs it on every file.
 
 ## Make the change
 

@@ -56,19 +56,215 @@ pub fn fingerprint(m: &Manifest) -> Option<(String, usize)> {
     Some((format!("{hash:016x}"), files.len()))
 }
 
-/// Saves the fingerprint of the original next to `cases.jsonl`.
-pub fn save_fingerprint(crate_dir: &Path, m: &Manifest) -> Result<()> {
+/// Saves the fingerprint of the original next to `cases.jsonl`, with how much of it the recorded
+/// cases ran when that was measured.
+pub fn save_fingerprint(crate_dir: &Path, m: &Manifest, coverage: Option<&Value>) -> Result<()> {
     let path = crate_dir.join(RECORDED_FROM);
-    match fingerprint(m) {
-        Some((hash, files)) => std::fs::write(
-            &path,
-            serde_json::to_string_pretty(
-                &json!({ "unit": m.unit, "files": files, "fingerprint": hash }),
-            )? + "\n",
-        )
-        .with_context(|| format!("writing {}", path.display())),
-        None => Ok(()),
+    let Some((hash, files)) = fingerprint(m) else {
+        return Ok(());
+    };
+    let mut saved = json!({ "unit": m.unit, "files": files, "fingerprint": hash });
+    if let Some(c) = coverage {
+        saved["coverage"] = c.clone();
     }
+    std::fs::write(&path, serde_json::to_string_pretty(&saved)? + "\n")
+        .with_context(|| format!("writing {}", path.display()))
+}
+
+/// The coverage `record` saved: `{"lines", "reached", "files": [{"file", "lines", "reached",
+/// "missed"}]}`.
+pub fn saved_coverage(crate_dir: &Path) -> Option<Value> {
+    let saved: Value =
+        serde_json::from_str(&std::fs::read_to_string(crate_dir.join(RECORDED_FROM)).ok()?).ok()?;
+    saved.get("coverage").filter(|c| c.is_object()).cloned()
+}
+
+/// One line for a person: how much of the original the recorded cases ran, and where they
+/// did not reach.
+pub fn coverage_line(c: &Value) -> Option<String> {
+    let lines = c["lines"].as_u64()?;
+    let reached = c["reached"].as_u64()?;
+    if lines == 0 {
+        return None;
+    }
+    let mut files: Vec<&Value> = c["files"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|f| f["missed"].as_str().is_some_and(|m| !m.is_empty()))
+        .collect();
+    files.sort_by_key(|f| {
+        std::cmp::Reverse(f["lines"].as_u64().unwrap_or(0) - f["reached"].as_u64().unwrap_or(0))
+    });
+    let mut missed: Vec<String> = files
+        .iter()
+        .take(4)
+        .map(|f| {
+            format!(
+                "{}: {}",
+                f["file"].as_str().unwrap_or("?"),
+                f["missed"].as_str().unwrap_or_default()
+            )
+        })
+        .collect();
+    if files.len() > 4 {
+        missed.push(format!(
+            "{} more files, listed in {RECORDED_FROM}",
+            files.len() - 4
+        ));
+    }
+    let mut line = format!(
+        "the recorded cases ran {reached} of the original's {lines} lines ({:.0}%)",
+        reached as f64 * 100.0 / lines as f64
+    );
+    if !missed.is_empty() {
+        line.push_str(&format!(
+            "; never ran: {} (add inputs that reach them, e.g. `record --from-tests`)",
+            missed.join("; ")
+        ));
+    }
+    Some(line)
+}
+
+/// Line coverage of the unit's files from the V8 coverage Node writes to `dir`
+/// (`NODE_V8_COVERAGE`). A line counts when it has code; it was reached when any of its code ran
+/// in any of the record runs. Files Node transformed (not only stripped of types) are left out,
+/// since V8's offsets then point into the transformed text.
+pub fn node_coverage(dir: &Path, m: &Manifest) -> Option<Value> {
+    let mut unit: Vec<std::path::PathBuf> = m
+        .exports
+        .iter()
+        .map(|f| m.root.join(&f.file))
+        .chain(m.classes.iter().map(|c| m.root.join(&c.file)))
+        .collect();
+    unit.sort();
+    unit.dedup();
+    let root = m.root.canonicalize().unwrap_or_else(|_| m.root.clone());
+    let mut files: Vec<std::path::PathBuf> = crate::gate::with_local_imports(&m.root, unit)
+        .into_iter()
+        .filter_map(|p| p.canonicalize().ok())
+        .collect();
+    files.sort();
+    files.dedup();
+    let reports: Vec<Value> = std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .filter_map(|e| serde_json::from_str(&std::fs::read_to_string(e.path()).ok()?).ok())
+        .collect();
+    if reports.is_empty() {
+        return None;
+    }
+    let mut out = Vec::new();
+    let (mut total, mut total_reached) = (0u64, 0u64);
+    for path in files {
+        let file = path
+            .strip_prefix(&root)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let real = &path;
+        let units: usize = text.encode_utf16().count();
+        let mut ran = vec![false; units];
+        let mut seen = false;
+        for report in &reports {
+            let transformed = report["source-map-cache"]
+                .as_object()
+                .is_some_and(|c| c.keys().any(|url| same_file(url, real)));
+            if transformed {
+                continue;
+            }
+            for script in report["result"].as_array().into_iter().flatten() {
+                if !script["url"].as_str().is_some_and(|u| same_file(u, real)) {
+                    continue;
+                }
+                seen = true;
+                let mut counts = vec![0u64; units];
+                for f in script["functions"].as_array().into_iter().flatten() {
+                    for r in f["ranges"].as_array().into_iter().flatten() {
+                        let (Some(s), Some(e), Some(n)) = (
+                            r["startOffset"].as_u64(),
+                            r["endOffset"].as_u64(),
+                            r["count"].as_u64(),
+                        ) else {
+                            continue;
+                        };
+                        let (s, e) = (s as usize, (e as usize).min(units));
+                        if s < e {
+                            counts[s..e].fill(n);
+                        }
+                    }
+                }
+                for (r, c) in ran.iter_mut().zip(&counts) {
+                    *r |= *c > 0;
+                }
+            }
+        }
+        if !seen {
+            continue;
+        }
+        let mut lines: Vec<(usize, bool, bool)> = Vec::new();
+        let (mut line, mut code, mut hit) = (1usize, false, false);
+        let mut at = 0usize;
+        for ch in text.chars() {
+            if ch == '\n' {
+                lines.push((line, code, hit));
+                (line, code, hit) = (line + 1, false, false);
+            } else if !ch.is_whitespace() {
+                code = true;
+                hit |= ran.get(at).copied().unwrap_or(false);
+            }
+            at += ch.len_utf16();
+        }
+        lines.push((line, code, hit));
+        let code_lines: Vec<(usize, bool)> = lines
+            .into_iter()
+            .filter(|(_, code, _)| *code)
+            .map(|(n, _, hit)| (n, hit))
+            .collect();
+        let reached = code_lines.iter().filter(|(_, hit)| *hit).count() as u64;
+        total += code_lines.len() as u64;
+        total_reached += reached;
+        out.push(json!({
+            "file": file,
+            "lines": code_lines.len(),
+            "reached": reached,
+            "missed": spans(code_lines.iter().filter(|(_, hit)| !hit).map(|(n, _)| *n)),
+        }));
+    }
+    (!out.is_empty()).then(|| json!({ "lines": total, "reached": total_reached, "files": out }))
+}
+
+fn same_file(url: &str, real: &Path) -> bool {
+    url.strip_prefix("file://")
+        .map(|p| {
+            percent_encoding::percent_decode_str(p)
+                .decode_utf8_lossy()
+                .into_owned()
+        })
+        .is_some_and(|p| Path::new(&p) == real)
+}
+
+fn spans(lines: impl Iterator<Item = usize>) -> String {
+    let mut out: Vec<(usize, usize)> = Vec::new();
+    for n in lines {
+        match out.last_mut() {
+            Some((_, end)) if *end + 1 == n => *end = n,
+            _ => out.push((n, n)),
+        }
+    }
+    out.iter()
+        .map(|(a, b)| {
+            if a == b {
+                a.to_string()
+            } else {
+                format!("{a}-{b}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Why the recording no longer describes the original, if it does not: the unit's files changed

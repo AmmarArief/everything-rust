@@ -61,7 +61,7 @@ fn files_under(path: &Path, extensions: &[&str]) -> Vec<std::path::PathBuf> {
 /// usually re-implements what a crate already does.
 /// The unit's files and the repository files they import, directly or not: a port stands in
 /// for all of them.
-fn with_local_imports(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
+pub(crate) fn with_local_imports(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
     const TRIES: &[&str] = &[
         "",
         ".ts",
@@ -193,6 +193,16 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         });
     }
 
+    if let Some(line) = crate::recording::saved_coverage(crate_dir)
+        .and_then(|c| crate::recording::coverage_line(&c))
+    {
+        checks.push(Check {
+            name: "coverage",
+            passed: true,
+            detail: line,
+        });
+    }
+
     if !crate_dir.join(CASES).exists() {
         checks.push(Check {
             name: "behavior",
@@ -288,7 +298,7 @@ pub fn rust_checks(crate_dir: &Path, target_dir: &Path) -> Vec<Check> {
             .arg(crate_dir.join("Cargo.toml"))
             .env("CARGO_TARGET_DIR", target_dir);
         // Lint arguments go after `--`, so the manifest path must come before them.
-        match cmd.output() {
+        match crate::process::output(&mut cmd, crate::process::BUILD) {
             Ok(o) => (
                 o.status.success(),
                 last_lines(&String::from_utf8_lossy(&o.stderr), 15),
@@ -315,7 +325,7 @@ pub fn rust_checks(crate_dir: &Path, target_dir: &Path) -> Vec<Check> {
         .arg(crate_dir.join("Cargo.toml"))
         .args(["--", "-D", "warnings"])
         .env("CARGO_TARGET_DIR", target_dir);
-    let (ok, out) = match clippy.output() {
+    let (ok, out) = match crate::process::output(&mut clippy, crate::process::BUILD) {
         Ok(o) => (
             o.status.success(),
             last_lines(&String::from_utf8_lossy(&o.stderr), 15),

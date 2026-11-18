@@ -20,6 +20,7 @@ use crate::ts::shape::{self, Shape};
 
 pub const CASES: &str = "cases.jsonl";
 const WORK_DIR: &str = ".rust-anything";
+const COVERAGE_DIR: &str = "coverage";
 
 /// Strings that break naive ports: empty, case, whitespace, non-ASCII, astral, combining.
 const STRINGS: &[&str] = &[
@@ -73,6 +74,9 @@ pub struct RecordOutcome {
     /// Inputs left out because the original ran past the per-case time limit on them.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub timed_out: Vec<Value>,
+    /// Lines of the original the cases ran (TS/JS, from V8's coverage).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coverage: Option<Value>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -248,6 +252,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
 
     let timed_out_path = opts.crate_dir.join(WORK_DIR).join(TIMED_OUT);
     let _ = std::fs::remove_file(&timed_out_path);
+    let coverage_dir = opts.crate_dir.join(WORK_DIR).join(COVERAGE_DIR);
+    let _ = std::fs::remove_dir_all(&coverage_dir);
     let out = if manifest.language == crate::lang::Lang::Python {
         crate::harness_py::record(opts.crate_dir, &cases)?
     } else if manifest.kind == Kind::CAbi {
@@ -261,7 +267,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     } else {
         record_node(opts, &manifest, &cases)?
     };
-    crate::recording::save_fingerprint(opts.crate_dir, &manifest)?;
+    let coverage = crate::recording::node_coverage(&coverage_dir, &manifest);
+    crate::recording::save_fingerprint(opts.crate_dir, &manifest, coverage.as_ref())?;
     let text = std::fs::read_to_string(&out)?;
     let mut per_function = BTreeMap::new();
     let mut errors = 0;
@@ -295,6 +302,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .iter()
             .map(|c| serde_json::json!({ "fn": c["fn"].clone(), "args": c["args"].clone() }))
             .collect(),
+        coverage,
     })
 }
 
@@ -332,6 +340,7 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
                 .arg(&script)
                 .arg(inputs)
                 .arg(part)
+                .env("NODE_V8_COVERAGE", work.join(COVERAGE_DIR))
                 .env("RUST_ANYTHING_PATHS", &aliases)
                 .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
             if let Some(dir) = &resolve_from {

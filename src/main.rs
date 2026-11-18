@@ -520,6 +520,13 @@ fn run() -> Result<ExitCode> {
                     say!("  {}({})", c["fn"].as_str().unwrap_or("?"), c["args"]);
                 }
             }
+            if let Some(line) = outcome
+                .coverage
+                .as_ref()
+                .and_then(rust_anything::recording::coverage_line)
+            {
+                say!("Coverage: {line}");
+            }
         }
         Cmd::Refresh { crate_dir, batch } => {
             let r = if batch.is_empty() {
