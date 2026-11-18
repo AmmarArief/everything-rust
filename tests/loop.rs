@@ -484,6 +484,52 @@ fn python_available() -> bool {
         .is_ok_and(|o| o.status.success())
 }
 
+#[test]
+fn python_required_optional_port_local_type_compiles() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/python");
+    let dir =
+        std::env::temp_dir().join(format!("rust-anything-python-local-{}", std::process::id()));
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/textkit/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+    })
+    .unwrap();
+    let mut manifest = Manifest::load(&dir).unwrap();
+    let clipped = manifest
+        .exports
+        .iter_mut()
+        .find(|f| f.name == "clipped")
+        .unwrap();
+    clipped.params[1].optional = false;
+    clipped.params[1].default = None;
+    manifest.save(&dir).unwrap();
+    std::fs::write(
+        dir.join("src/port.rs"),
+        "pub type Settings = serde_json::Value;\n\
+         pub fn clipped(text: String, limits: Option<Settings>) -> String { let _ = limits; text }\n",
+    )
+    .unwrap();
+    bridge::refresh(&dir).unwrap();
+    let output = Command::new("cargo")
+        .arg("check")
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 fn error_checks(dir: &Path, fails: &str) -> Vec<rust_anything::gate::Check> {
     let checks = rust_anything::error_paths::checks(dir, &Manifest::load(dir).unwrap());
     let errors = &checks[0];
@@ -516,7 +562,7 @@ fn python_modules_bridge_record_and_diff() {
     assert_eq!(outcome.kind, Kind::Pyo3);
     let manifest = Manifest::load(&dir).unwrap();
     let kept: Vec<&str> = manifest.js_only.iter().map(|j| j.name.as_str()).collect();
-    assert_eq!(kept, ["walk", "apply", "configure"]);
+    assert_eq!(kept, ["walk", "apply", "configure", "Limits"]);
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
     // A literal default stays a plain value; `None` as default is an Option.
     assert!(
@@ -528,6 +574,9 @@ fn python_modules_bridge_record_and_diff() {
         lib.contains(r#"signature = (text, sep=String::from("-"), *, max_length=None)"#),
         "{lib}"
     );
+    // An optional object parameter binds as `Option<Bound>` so `None` is accepted.
+    assert!(lib.contains("limits: Option<Bound<'_, PyAny>>"), "{lib}");
+    assert!(lib.contains(r#"signature = (text, limits=None)"#), "{lib}");
     assert!(lib.contains("#[pyclass(name = \"Stack\")]"));
     let build_rs = std::fs::read_to_string(dir.join("build.rs")).unwrap();
     assert!(build_rs.contains("dynamic_lookup"), "{build_rs}");

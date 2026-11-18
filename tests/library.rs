@@ -238,7 +238,8 @@ fn a_python_library_keeps_what_cannot_move() {
         [
             "src/textkit/: walk",
             "src/textkit/: apply",
-            "src/textkit/: configure"
+            "src/textkit/: configure",
+            "src/textkit/: Limits"
         ],
         "kept in Python by bridge: {fallback:?}"
     );

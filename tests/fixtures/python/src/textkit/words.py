@@ -1,4 +1,5 @@
 """Word utilities, written the way Python code often is."""
+import dataclasses
 import re
 import unicodedata
 from typing import Optional
@@ -41,6 +42,23 @@ def page_count(total: int, per_page: int) -> int:
 
 def mean(values: list[float]) -> float:
     return sum(values) / len(values)
+
+
+@dataclasses.dataclass
+class Limits:
+    """Optional limits for `clipped`: the regression case for an optional object parameter."""
+
+    max_length: Optional[int] = None
+    sep: str = "-"
+
+
+def clipped(text: str, limits: Optional[Limits] = None) -> str:
+    """Slugify, honoring an optional limits object (`None` means defaults)."""
+    sep = limits.sep if limits is not None else "-"
+    slug = sep.join(slugify(text).split("-"))
+    if limits is not None and limits.max_length is not None:
+        slug = slug[: limits.max_length]
+    return slug
 
 
 def _private_helper(x):
