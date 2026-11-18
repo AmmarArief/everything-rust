@@ -144,12 +144,17 @@ fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
         }
     }
     let bin = dir.join("driver");
+    let mut command = go();
+    command
+        .args(["build", "-o"])
+        .arg(&bin)
+        .arg(".")
+        .current_dir(&dir);
+    if rust {
+        command.env("CGO_ENABLED", "1");
+    }
     run(
-        go().args(["build", "-o"])
-            .arg(&bin)
-            .arg(".")
-            .current_dir(&dir)
-            .env("CGO_ENABLED", if rust { "1" } else { "0" }),
+        &mut command,
         if rust {
             "go build (driver over the Rust wrapper)"
         } else {
