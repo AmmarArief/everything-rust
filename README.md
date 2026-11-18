@@ -612,6 +612,34 @@ sends it, under its own policy.
 
 **Something broke.** Open an issue with the command, its output and your platform.
 
+## Sponsors
+
+rust-anything is free and open source. If it helps your work, please consider sponsoring it. Your support keeps development going.
+
+<p>
+  <a href="https://github.com/sponsors/erkamyaman"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white" alt="Sponsor rust-anything on GitHub" /></a>
+</p>
+
+### Company sponsors
+
+<!-- prettier-ignore-start -->
+<a href="https://coderabbit.ai"><img src="https://github.com/coderabbitai.png?size=120" width="120" height="120" alt="CodeRabbit" /></a>
+<!-- prettier-ignore-end -->
+
+### Individual sponsors
+
+<!-- sponsors -->
+<!-- prettier-ignore-start -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/aliyilmazco"><img src="https://github.com/aliyilmazco.png?size=100" width="80px;" alt="Ali Yilmaz"/><br /><sub><b>Ali Yilmaz</b></sub></a></td>
+    </tr>
+  </tbody>
+</table>
+<!-- prettier-ignore-end -->
+<!-- /sponsors -->
+
 ## Contributing
 
 Issues and pull requests are welcome; [CONTRIBUTING.md](./CONTRIBUTING.md) covers the setup, where
