@@ -142,7 +142,7 @@ pub fn discover(root: &Path) -> Result<Workspace> {
                 .max_by_key(|(_, p)| p.dir.len())
                 .map_or(0, |(i, _)| i);
             let file_name = path.rsplit('/').next().unwrap_or(&path);
-            let is_test = tests.iter().any(|t| !t.is_empty() && under(&path, t))
+            let is_test = tests.contains(&packages[package].dir)
                 || file_name.ends_with("Tests.cs")
                 || file_name.ends_with("Test.cs");
             SourceFile {
@@ -763,6 +763,27 @@ mod tests {
                 facts.risks
             );
         }
+    }
+
+    #[test]
+    fn classifies_test_sources_in_a_root_project_without_test_suffixes() {
+        let dir = std::env::temp_dir().join(format!(
+            "rust-anything-csharp-test-root-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(dir.join("src")).unwrap();
+        std::fs::write(
+            dir.join("Tests.csproj"),
+            "<Project><IsTestProject>true</IsTestProject></Project>",
+        )
+        .unwrap();
+        std::fs::write(dir.join("ValidatorCases.cs"), "class ValidatorCases {}").unwrap();
+        std::fs::write(dir.join("src/Library.csproj"), "<Project />").unwrap();
+        std::fs::write(dir.join("src/Library.cs"), "public class Library {}").unwrap();
+        let ws = discover(&dir).unwrap();
+        std::fs::remove_dir_all(dir).unwrap();
+        assert_eq!(ws.files[0].kind, FileKind::Test);
+        assert_eq!(ws.files[1].kind, FileKind::Source);
     }
 
     #[test]
