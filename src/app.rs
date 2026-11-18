@@ -583,16 +583,16 @@ pub(crate) fn shell_tokens(line: &str) -> Option<Vec<Tok>> {
                 let next = following.next();
                 let after_next = following.next();
                 let escaped_substitution = next == Some('$') && after_next == Some('(');
-                let unc_prefix = cur.is_empty() && next == Some('\\')
-                    && after_next.is_some_and(|c| {
-                        !c.is_whitespace() && !"'\"\\|<>&;$`".contains(c)
-                    });
+                let unc_prefix = cur.is_empty()
+                    && next == Some('\\')
+                    && after_next
+                        .is_some_and(|c| !c.is_whitespace() && !"'\"\\|<>&;$`".contains(c));
                 if cfg!(windows)
                     && (unc_prefix
                         || (!escaped_substitution
-                            && !chars.peek().is_some_and(|c| {
-                                c.is_whitespace() || "'\"\\|<>&;`".contains(*c)
-                            })))
+                            && !chars
+                                .peek()
+                                .is_some_and(|c| c.is_whitespace() || "'\"\\|<>&;`".contains(*c))))
                 {
                     cur.push('\\');
                 } else if let Some(x) = chars.next() {
@@ -2371,9 +2371,6 @@ mod tests {
             shell_split(r"\\server\share\tool.exe --flag").unwrap(),
             [r"\\server\share\tool.exe", "--flag"]
         );
-        assert_eq!(
-            shell_split(r"echo one\\two").unwrap(),
-            ["echo", r"one\two"]
-        );
+        assert_eq!(shell_split(r"echo one\\two").unwrap(), ["echo", r"one\two"]);
     }
 }

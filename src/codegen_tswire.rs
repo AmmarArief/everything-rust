@@ -31,8 +31,6 @@ fn shape_ty(s: &Shape, types: &[LocalType], depth: usize) -> Ty {
             native: "ts".into(),
             array: false,
         },
-        // Indexed objects reserve 0xff for a key outside the schema, and the
-        // number of encoded properties also fits in one byte.
         Shape::Object(props, None) if props.len() <= usize::from(u8::MAX) => Ty::Obj(
             props
                 .iter()

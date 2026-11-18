@@ -20,7 +20,7 @@ skip a part whose runtime is missing, so install the ones you touch:
 
 | For | Install |
 | --- | --- |
-| TypeScript/JavaScript | Node 22 |
+| TypeScript/JavaScript | Node 24 (22.6+ works except for `profile`) |
 | Python | Python 3.9+ |
 | C | a C compiler (`cc`) |
 | Go | Go 1.22+ |

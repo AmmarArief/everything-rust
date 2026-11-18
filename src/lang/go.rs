@@ -324,8 +324,6 @@ fn builtin(t: &str) -> Option<&'static str> {
     })
 }
 
-/// Exported struct types of a file: name to dialect object type, from their JSON field names.
-/// Fields declared directly in this struct, excluding the fields of nested anonymous types.
 fn direct_struct_fields(struct_type: Node<'_>) -> Vec<Node<'_>> {
     named_children(struct_type)
         .into_iter()
@@ -339,6 +337,7 @@ fn direct_struct_fields(struct_type: Node<'_>) -> Vec<Node<'_>> {
         .unwrap_or_default()
 }
 
+/// Exported struct types of a file: name to dialect object type, from their JSON field names.
 fn structs(root: Node, source: &str) -> HashMap<String, String> {
     let mut out = HashMap::new();
     for decl in named_children(root)

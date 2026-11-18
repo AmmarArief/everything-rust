@@ -1088,7 +1088,10 @@ mod tests {
             code.contains(".any(|candidate| name.eq_ignore_ascii_case(candidate))"),
             "{code}"
         );
-        assert!(code.contains("var_os(\"PYTHONIOENCODING\").is_none()"), "{code}");
+        assert!(
+            code.contains("var_os(\"PYTHONIOENCODING\").is_none()"),
+            "{code}"
+        );
     }
 
     #[test]

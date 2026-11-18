@@ -206,9 +206,7 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
 fn relative(root: &Path, file: &str) -> Option<String> {
     let decoded;
     let path = if let Some(url_path) = file.strip_prefix("file://") {
-        decoded = percent_encoding::percent_decode_str(url_path)
-            .decode_utf8()
-            .ok()?;
+        decoded = percent_encoding::percent_decode_str(url_path).decode_utf8_lossy();
         decoded.as_ref()
     } else {
         file

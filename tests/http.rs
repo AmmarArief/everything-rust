@@ -105,7 +105,6 @@ fn http_record_keeps_distinct_requests_with_the_same_name() {
         ),
     )
     .unwrap();
-    // Use only the JSONL cases, so the suffixes do not depend on README examples.
     std::fs::remove_file(repo.join("README.md")).unwrap();
     let out = app::record(&RecordOptions {
         repo: &repo,
