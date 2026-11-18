@@ -164,6 +164,47 @@ fn record_and_diff_catch_a_behavior_change() {
 }
 
 #[test]
+fn diff_replays_large_strings_with_lone_surrogates() {
+    if !node_available() {
+        return;
+    }
+    let unsplit = 0xd800;
+    let mut units = vec![u16::from(b'a'); 200_000];
+    units.push(unsplit);
+    let dir = bridged("long-utf16");
+    let input = serde_json::json!({
+        "fn": "inspect",
+        "args": [{ "$utf16": units }],
+        "ok": [200_001, unsplit]
+    });
+    std::fs::write(dir.join(harness::CASES), input.to_string()).unwrap();
+    std::fs::write(
+        dir.join("index.cjs"),
+        "exports.inspect = s => [s.length, s.charCodeAt(s.length - 1)]",
+    )
+    .unwrap();
+    let result = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        float_tolerance: None,
+        node_args: &[],
+    });
+    std::fs::remove_dir_all(&dir).unwrap();
+    let outcome = result.unwrap();
+    assert_eq!(
+        outcome.passed,
+        1,
+        "{:?}",
+        outcome
+            .mismatches
+            .iter()
+            .map(|m| &m["actual"])
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn float_tolerance_preserves_object_key_order_unless_requested() {
     if !node_available() {
         return;
