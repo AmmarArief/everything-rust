@@ -69,7 +69,7 @@ Claude Code에서는 플러그인(MCP 서버 및 스킬 포함; 위 CLI가 `PATH
 /plugin install rust-anything --marketplace erkamyaman/rust-anything
 ```
 
-`setup`은 탐지된 각 에이전트에 MCP 서버를 추가하고 에이전트가 스킬을 읽는 위치에 워크플로 스킬을 설치합니다. 기존 설정은 유지되며 여러 번 다시 실행해도 안전하고 `--remove`로 되돌릴 수 있습니다. 그런 다음 에이전트에게 다음과 같이 요청해 보세요:
+`setup`은 탐지된 각 에이전트에 MCP 서버를 추가하고 에이전트가 스킬을 읽는 위치에 워크플로 스킬을 설치합니다. 기존 설정은 유지되며 여러 번 다시 실행해도 안전하고 `--remove`로 설정된 항목을 삭제할 수 있습니다(`setup`이 덮어써서 업데이트한 이전 값은 복원되지 않습니다). 그런 다음 에이전트에게 다음과 같이 요청해 보세요:
 
 - *"rust-anything으로 이 CLI를 처음부터 끝까지 Rust로 다시 작성하고, 동일하게 동작하는지 증명해 줘."*
 - *"이 검색이 느린 것 같아. rust-anything으로 프로파일링해서 핫 루프를 Rust로 옮겨 줘."*
@@ -382,7 +382,7 @@ rust-anything setup --remove && cargo uninstall rust-anything  # 제거 (Cargo)
 rust-anything setup --remove && npm uninstall -g rust-anything # 제거 (npm)
 ```
 
-`setup --remove`는 rust-anything의 항목만 제거하며, 저장된 백업 복사본(`<file>.rust-anything.bak`)은 직접 삭제할 때까지 유지됩니다.
+`setup --remove`는 rust-anything의 항목만 제거하며, 수정 전에 현재 설정 파일을 `<file>.rust-anything.bak`으로 다시 백업하므로 이전 `setup` 시점의 백업 파일은 덮어쓰여집니다. 이 백업 파일은 직접 삭제할 때까지 유지됩니다.
 
 ## 잡아내지 못하는 부분
 

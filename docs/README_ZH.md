@@ -68,7 +68,7 @@ rust-anything setup           # 自动注册到 Claude Code、Codex、Cursor 和
 /plugin install rust-anything --marketplace erkamyaman/rust-anything
 ```
 
-`setup` 会把 MCP 服务器添加到它检测到的每一个智能体中，并把工作流技能安装到对应智能体读取技能的目录。它会保留你的其他配置，支持重复安全运行，且可以用 `--remove` 撤销。之后你就可以直接向智能体提需求，例如：
+`setup` 会把 MCP 服务器添加到它检测到的每一个智能体中，并把工作流技能安装到对应智能体读取技能的目录。它会保留你的其他配置，支持重复安全运行，且可以用 `--remove` 移除这些配置（不会恢复 `setup` 曾覆盖更新过的同名旧条目）。之后你就可以直接向智能体提需求，例如：
 
 - *"使用 rust-anything 将这个 CLI 端到端重写为 Rust，并证明其行为完全一致。"*
 - *"这个搜索感觉很慢。用 rust-anything 做性能分析，把热点循环迁移到 Rust。"*
@@ -379,7 +379,7 @@ rust-anything setup --remove && cargo uninstall rust-anything  # 卸载（Cargo�
 rust-anything setup --remove && npm uninstall -g rust-anything # 卸载（npm）
 ```
 
-`setup --remove` 只会移除 rust-anything 写入的条目；此前保存的备份文件（`<file>.rust-anything.bak`）会一直保留，直到你手动删除。
+`setup --remove` 只会移除 rust-anything 写入的条目；修改前会把当前配置文件重新备份为 `<file>.rust-anything.bak`（因此会覆盖此前 `setup` 留下的同名备份），该备份文件会一直保留，直到你手动删除。
 
 ## 它捕获不到什么
 

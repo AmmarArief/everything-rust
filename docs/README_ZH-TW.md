@@ -76,7 +76,7 @@ rust-anything setup           # 向 Claude Code、Codex、Cursor 與 Gemini CLI 
 /plugin install rust-anything --marketplace erkamyaman/rust-anything
 ```
 
-`setup` 會將 MCP 伺服器加入它所偵測到的每個代理程式中，並將工作流程技能安裝至各代理程式讀取技能的目錄。它會保留你的其他設定、可安全重複執行，且可用 `--remove` 復原。
+`setup` 會將 MCP 伺服器加入它所偵測到的每個代理程式中，並將工作流程技能安裝至各代理程式讀取技能的目錄。它會保留你的其他設定、可安全重複執行，且可用 `--remove` 移除這些設定項目（不會還原先前被 `setup` 更新過的同名既有項目）。
 接著你就可以直接請你的代理程式協助，例如：
 
 - *「用 rust-anything 將這個 CLI 端到端重寫為 Rust，並證明其行為完全相同。」*
@@ -445,8 +445,8 @@ rust-anything setup --remove && cargo uninstall rust-anything  # 移除（Cargo�
 rust-anything setup --remove && npm uninstall -g rust-anything # 移除（npm）
 ```
 
-`setup --remove` 只會移除 rust-anything 寫入的設定項目；它所保存的備份檔案
-（`<file>.rust-anything.bak`）會保留至你手動刪除為止。
+`setup --remove` 只會移除 rust-anything 寫入的設定項目；修改前會將目前的設定檔重新備份至
+`<file>.rust-anything.bak`（這會覆蓋先前 `setup` 留下的備份），該備份檔案會保留至你手動刪除為止。
 
 ## 它偵測不到什麼
 

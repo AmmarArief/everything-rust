@@ -69,7 +69,7 @@ Claude Code ではプラグインとしてインストールすることもで�
 /plugin install rust-anything --marketplace erkamyaman/rust-anything
 ```
 
-`setup` は見つかった各エージェントに MCP サーバーを追加し、エージェントがスキルを読み込む場所にワークフロースキルをインストールします。他の設定は保持され、何度実行しても安全で、`--remove` で元に戻せます。あとはエージェントに次のように依頼するだけです:
+`setup` は見つかった各エージェントに MCP サーバーを追加し、エージェントがスキルを読み込む場所にワークフロースキルをインストールします。他の設定は保持され、何度実行しても安全で、`--remove` で追加・更新されたエントリを削除できます（`setup` が上書き更新した以前の値は復元されません）。あとはエージェントに次のように依頼するだけです:
 
 - *"rust-anything を使ってこの CLI をエンドツーエンドで Rust に書き直し、元の実装と同じ挙動であることを証明して。"*
 - *"この検索が遅く感じる。rust-anything でプロファイルを取って、ホットループを Rust に移して。"*
@@ -383,7 +383,7 @@ rust-anything setup --remove && cargo uninstall rust-anything  # 削除（Cargo�
 rust-anything setup --remove && npm uninstall -g rust-anything # 削除（npm）
 ```
 
-`setup --remove` は rust-anything のエントリだけを取り除きます。保存されたバックアップ（`<file>.rust-anything.bak`）はあなたが削除するまで残ります。
+`setup --remove` は rust-anything のエントリだけを取り除きます。書き込み前に現在の設定ファイルが `<file>.rust-anything.bak` に再バックアップされるため、初回 `setup` 時のバックアップは上書きされ、そのファイルはあなたが削除するまで残ります。
 
 ## 検出できないもの
 

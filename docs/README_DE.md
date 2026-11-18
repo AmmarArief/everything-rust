@@ -84,7 +84,8 @@ muss in deinem `PATH` liegen):
 
 `setup` trägt den MCP-Server bei jedem gefundenen Agenten ein und installiert den Workflow-Skill dort,
 wo der Agent Skills einliest. Deine übrigen Einstellungen bleiben erhalten, ein erneutes Ausführen ist
-gefahrlos und `--remove` macht es rückgängig. Frage deinen Agenten anschließend zum Beispiel:
+gefahrlos und `--remove` löscht die eingetragenen Konfigurationen wieder (ohne frühere Werte von
+Einträgen wiederherzustellen, die `setup` aktualisiert hat). Frage deinen Agenten anschließend zum Beispiel:
 
 - *"Schreibe dieses CLI mit rust-anything vollständig in Rust neu und beweise, dass es sich identisch verhält."*
 - *"Diese Suche fühlt sich langsam an. Erstelle ein Profil mit rust-anything und verlagere die Hot Loop nach Rust."*
@@ -547,8 +548,9 @@ rust-anything setup --remove && cargo uninstall rust-anything  # entfernen (Carg
 rust-anything setup --remove && npm uninstall -g rust-anything # entfernen (npm)
 ```
 
-`setup --remove` entfernt nur die Einträge von rust-anything; die gespeicherten Sicherungskopien
-(`<file>.rust-anything.bak`) bleiben erhalten, bis du sie löschst.
+`setup --remove` entfernt nur die Einträge von rust-anything; dabei wird die aktuelle Konfigurationsdatei
+erneut als `<file>.rust-anything.bak` gesichert (wodurch das ursprüngliche `setup`-Backup überschrieben
+wird) und bleibt erhalten, bis du sie löschst.
 
 ## Was es nicht abfangen kann
 
