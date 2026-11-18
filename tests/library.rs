@@ -53,6 +53,7 @@ fn bridged(repo: &Path, unit: &str) -> PathBuf {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap()
     .crate_dir

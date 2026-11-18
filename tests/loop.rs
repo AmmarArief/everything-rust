@@ -30,6 +30,7 @@ fn bridged(name: &str) -> PathBuf {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     dir
@@ -94,6 +95,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     });
     assert!(again.unwrap_err().to_string().contains("never overwrites"));
     let blocked = bridge::bridge(&bridge::Options {
@@ -106,6 +108,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     });
     assert!(blocked.unwrap_err().to_string().contains("Blocked"));
     std::fs::remove_dir_all(&dir).unwrap();
@@ -316,6 +319,7 @@ fn record_follows_bundler_style_imports() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -372,6 +376,7 @@ fn async_functions_get_async_bindings() {
             keep: Vec::new(),
             lang: None,
             batch: Vec::new(),
+            as_json: Vec::new(),
         })
         .unwrap();
         let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -427,6 +432,7 @@ fn benchmark_awaits_async_typescript_calls_and_counts_rejections() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     std::fs::write(
@@ -470,6 +476,7 @@ fn classes_are_bridged_recorded_and_replayed() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.exports, ["class TextStats", "class LruCache"]);
@@ -556,6 +563,7 @@ fn recording_substitutes_typescript_extensions_from_emitted_module_imports() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let result = harness::record(&RecordOptions {
@@ -597,6 +605,7 @@ fn tsconfig_aliases_are_followed() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -645,6 +654,7 @@ fn record_prefers_an_exact_tsconfig_alias_to_a_matching_wildcard() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let result = harness::record(&RecordOptions {
@@ -680,6 +690,7 @@ fn record_resolves_workspace_packages_to_source() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -710,6 +721,7 @@ fn python_required_optional_port_local_type_compiles() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let mut manifest = Manifest::load(&dir).unwrap();
@@ -768,6 +780,7 @@ fn python_modules_bridge_record_and_diff() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Pyo3);
@@ -871,6 +884,7 @@ fn c_bridge_string_helper_does_not_collide_with_source_names() {
         keep: Vec::new(),
         lang: Some(rust_anything::lang::Lang::C),
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let status = Command::new("cargo")
@@ -897,6 +911,7 @@ fn c_units_bridge_record_and_diff() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::CAbi);
@@ -968,6 +983,7 @@ fn go_packages_bridge_record_and_diff() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -1050,6 +1066,7 @@ fn ruby_modules_bridge_record_and_diff() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -1125,6 +1142,7 @@ fn java_classes_bridge_record_and_diff() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);

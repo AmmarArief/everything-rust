@@ -57,6 +57,7 @@ fn canonical(name: &str) -> String {
         "from_tests" => "test_command".into(),
         "command" | "commands" => "commands".into(),
         "route" | "routes" => "routes".into(),
+        "arg" | "args" => "args".into(),
         _ => name,
     }
 }

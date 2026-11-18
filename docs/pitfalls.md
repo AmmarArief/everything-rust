@@ -34,10 +34,19 @@ which closes stdin and stops it at a time limit; `from_tests` also sets `CI=1`.
 **Coverage listed one file three times.** Paths from import walking kept `..` segments. Compare
 and print canonical paths.
 
+**A server's recording carried state from its previous run.** json-server rewrites its database
+on every POST, so the second recording run started from the first one's writes. Record servers
+that write files with `--fresh <path>`, and `--pace` when they do work after answering.
+
 ## Numbers and claims
 
 **Benchmarks taken while other builds ran were off by a wide margin.** Run `bench` on a quiet
 machine, run it twice, and name the hardware and core count next to every published number.
+
+**A slow server row was the network, not the code.** json-server's lifted binary served a large
+list at 33 req/s while the same handler took 7 ms in process: no `TCP_NODELAY`, so the second
+write of each response waited for a delayed ACK. Time the handler in process next to every HTTP
+number; generated servers set `TCP_NODELAY`.
 
 **Every number in the docs is measured.** Say what was run, on what, and the result, including the
 slow cases (the single-call row is slower than JS on some units). No rounding up for a headline.

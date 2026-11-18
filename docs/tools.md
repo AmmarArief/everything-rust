@@ -32,6 +32,7 @@ Scaffold a Rust crate for one unit: napi-rs or wasm-bindgen bindings in src/lib.
 | `force` | boolean |  | Bridge a unit the plan marks blocked or keep. |
 | `keep` | string[] |  | Exports to keep in the source language: `name` or `name: reason`. |
 | `batch` | string[] |  | Batch classes, `function:param`: the function runs over many `param` values kept in Rust, on all cores, in one call. A `<Function>Index` struct in port.rs replaces the default per-item loop. |
+| `as_json` | string[] |  | Type parameters the app only fills with data (`T` in `paginate<T>(items: T[])`): bridged as JSON values instead of keeping the export in TS. |
 
 ## Regenerate bindings
 
@@ -165,6 +166,9 @@ Runs the original's code or commands.
 | `traps` | boolean |  | Add semantic-trap cases (default true). |
 | `http` | boolean |  | The app is a server: `run` starts it (it takes its port from PORT or {port}); cases are requests from curl lines in its docs, `inputs` ({"name", "method", "path", "headers", "body"}) and traps. |
 | `port` | integer |  | A port the server always listens on (implies http). |
+| `args` | string[] |  | Servers: arguments every start gets after its command, the original's and every build's (["db.json"]). Implies http; saved. |
+| `fresh` | string[] |  | Servers: repository files or folders the server reads or writes, snapshotted and copied into a fresh working directory before every start. Implies http; saved. |
+| `pace` | integer |  | Servers: milliseconds to wait after each response, for work the server does after answering (a file watcher). Implies http; saved and used by replay; 0 removes it. |
 | `float_tolerance` | number |  | Numeric output: numbers match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the cases; 0 removes it. |
 
 ## Replay app cases

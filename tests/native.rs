@@ -36,6 +36,7 @@ fn round_trip(root: &Path, unit: &str, kind: Kind, name: &str, body: &str) {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -164,6 +165,7 @@ fn stubs_fail(root: &Path, unit: &str, kind: Option<Kind>, program: &str) {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -301,6 +303,7 @@ fn napi_errors_keep_their_class_and_async_exports_reject() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -375,6 +378,7 @@ fn napi_carries_bytes_maps_sets_dates_and_bigints() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let mut port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -453,6 +457,7 @@ fn java_records_with_the_bridge_crate_inside_the_project() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     assert!(outcome.crate_dir.ends_with("rust/smoke-rs"), "{outcome:?}");
@@ -480,6 +485,7 @@ fn bridge_python(root: &Path, unit: &str) -> anyhow::Result<bridge::Outcome> {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
 }
 
@@ -661,6 +667,7 @@ fn napi_batches_take_structured_parameters() {
         keep: Vec::new(),
         lang: None,
         batch: vec!["label:n".into()],
+        as_json: Vec::new(),
     })
     .unwrap();
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -717,6 +724,7 @@ fn napi_string_batches_cross_joined() {
         keep: Vec::new(),
         lang: None,
         batch: vec!["wrap:s".into()],
+        as_json: Vec::new(),
     })
     .unwrap();
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();

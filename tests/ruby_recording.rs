@@ -34,6 +34,7 @@ fn ruby_recording_fails_on_unencodable_results_and_preserves_cases() {
         keep: Vec::new(),
         lang: Some(rust_anything::lang::Lang::Ruby),
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let opts = harness::RecordOptions {

@@ -127,6 +127,125 @@ What it does not cover: object lists with `keys`, extended and token search, log
 speedup needs the list to stay in Rust between searches; building it costs about as much as
 Fuse's own index (3.4 ms against 2.8 ms for 50,000 strings).
 
+## json-server
+
+[json-server](https://github.com/typicode/json-server) (75k stars, MIT, commit `89a34a4`,
+1.0.0-beta.15) serves a REST API from a JSON file: Node, tinyhttp and lowdb. It is the first whole
+app ported end to end with the whole-app flow (`app record`, `front-door`, `wire`, `lift`):
+the result is one Rust binary that answers what the Node server answers. Everything is in
+[`demo/real-world/json-server-rs`](../demo/real-world/json-server-rs).
+
+| Step | Result |
+| --- | --- |
+| `analyze --whole-app` | a server, 9 units (7 ready, 2 caution), 13 dependencies to replace (tinyhttp, lowdb, sirv, eta, milliparsec, dot-prop, sort-on, inflection...) |
+| `app record --http` | 514 cases: 268 requests given with `--inputs` (every route and method, the where operators, sort, pagination, embeds, CORS preflight, static files and ranges, 29 malformed JSON bodies, `/__proto__` and other prototype names, bad escapes) and 245 traps; each recorded twice, random ids left as `[..]` |
+| `front-door` | 513/514 at 99.8% fallback; the miss is a raw `ü` in the URL, which Node answers with 400 and the proxy re-encodes |
+| units | `where-operators` 207, `parse-where` 289, `matches-where` 1,346, `paginate` 853 cases (calls from json-server's own tests included); `service` 461 and `app` 243 through two small adapters that run Service calls and real HTTP requests; `gate` passes on all six |
+| `wire` | reads first: 514/514 at 22.6% fallback, Node answering the writes and Rust reloading the file Node wrote; then every route: 514/514 at 0% |
+| `lift` | a pure Rust binary (5.3 MB), 514/514; `bin.ts`'s command line ported by hand (help, version, the file checks, the startup banner) |
+
+After the lift the units have no bindings, so each crate's `tests/recorded.rs` replays its
+recorded cases on the port: all 3,399 run with `cargo test`.
+
+What the port had to get right, all caught by recorded cases:
+
+- tinyhttp's router does not dispatch once: after every `next()` it matches all middleware and
+  routes again, on the URL the last middleware rewrote, and runs every route for `HEAD`. So
+  `HEAD /posts` runs the GET handler, then POST's, and answers POST's 400; `//posts` skips the CORS
+  headers and the body parser. The port runs that loop as it is.
+- milliparsec parses every POST, PUT, PATCH and DELETE body as JSON, whatever its type, and a bad
+  one is a 500 with V8's message: `Expected double-quoted property name in JSON at position 7
+  (line 1 column 8)`, `Unexpected token 'x', ..."bbbbbbb": x}" is not valid JSON`. The port
+  reproduces V8's parser errors, positions in UTF-16 units included; checked against Node on
+  3,806 malformed inputs.
+- Sorting uses `localeCompare` (ICU), done with ICU4X's collator and checked on 3,000 pairs;
+  `Number()`, `JSON.stringify` (`1e+21`, integer keys first), Node's two query-string parsers
+  (which decode `é%E9` differently from WHATWG), dot-prop with its error messages, and inflection
+  for embeds (`person` and `people`) are each checked against Node in `json-server-js`.
+- `db.data[name]` reads `Object.prototype`: `/__proto__` answers `{}`, `/constructor` an empty
+  200, and `PATCH /__proto__` replaces the prototype of the database, which later lookups see.
+- Node's HTTP parser answers 400 and closes on raw non-ASCII targets and unknown methods.
+
+Found in json-server: after each of its own writes, its file watcher reloads the file. When the
+next request writes before that reload ends, the reload can wipe that write out: the first
+recording, sent as fast as the server answered, had a POST answered 201 that later reads did not
+show. `app record --pace 50` waits between requests, and the cases are recorded that way. The port
+reloads only when someone else changed the file, so it does not lose that write: a deliberate
+difference.
+
+Benchmark: Apple M4 (10 cores, 16 GB), macOS 27.3, Node 24.15.0 running `lib/bin.js` as
+`tsc` builds it for npm, the Rust binary built with `--release`. Both serve a copy of the same
+database on loopback; `ab -k` sends the same requests, 20,000 per row (40 for the slow embed on
+the big database) after a warm-up. Two runs, each started with the 1-minute load average under 3;
+cells give run 1 / run 2 in requests per second. [`bench/bench.py`](../demo/real-world/json-server-rs/bench/bench.py)
+is the script.
+
+The fixture database (6 posts, 3 comments):
+
+| Request | Node, 1 connection | Rust, 1 connection | Node, 50 connections | Rust, 50 connections |
+| --- | ---: | ---: | ---: | ---: |
+| `GET /posts` | 11.1k / 10.8k | 27.3k / 23.9k | 19.7k / 20.4k | 115.0k / 110.7k |
+| `GET /posts/1` | 11.0k / 11.3k | 27.7k / 25.4k | 21.9k / 22.6k | 119.9k / 99.0k |
+| filter, sort, page | 10.5k / 10.0k | 25.2k / 21.5k | 18.3k / 16.4k | 107.5k / 96.3k |
+| `?_embed=comments` | 8.7k / 6.6k | 22.5k / 21.8k | 13.8k / 11.0k | 98.3k / 100.6k |
+| `GET /` (index page) | 7.3k / 6.3k | 27.6k / 21.7k | 10.2k / 9.5k | 135.1k / 119.3k |
+| `GET /test.html` (static) | 12.0k / 11.0k | 25.8k / 25.9k | 30.3k / 26.1k | 103.9k / 104.4k |
+| `POST /comments`, 10 connections | | | 2,973 / 2,467 | 5,821 / 5,976 |
+
+A generated database (10,000 posts, 20,000 comments, 3.6 MB):
+
+| Request | Node, 1 connection | Rust, 1 connection | Node, 50 (10) connections | Rust, 50 (10) connections |
+| --- | ---: | ---: | ---: | ---: |
+| `GET /posts/5000` | 8.4k / 9.2k | 14.6k / 14.8k | 15.5k / 16.1k | 69.5k / 67.4k |
+| `?_page=3&_per_page=10` | 4.6k / 4.2k | 8.8k / 8.4k | 6.5k / 6.8k | 47.4k / 46.2k |
+| `title:contains`, sorted | 431 / 396 | 600 / 560 | 465 / 453 | 2,516 / 2,329 |
+| `?_embed=comments`, a page of 5 (10 connections) | 2.4 / 2.4 | 81 / 103 | 2.4 / 2.2 | 253 / 216 |
+| `GET /posts`, the whole list (10 connections) | 328 / 319 | 399 / 407 | 381 / 387 | 1,514 / 1,657 |
+| `POST /comments` (10 connections) | | | 236 / 241 | 292 / 264 |
+
+| | Node | Rust |
+| --- | ---: | ---: |
+| Start to first response, fixture database | 85 / 79 ms | 9.9 / 7.9 ms |
+| Start to first response, 10,000 posts | 95 / 91 ms | 48 / 47 ms |
+| Memory (RSS) idle, fixture database | 74 MB | 3.5 MB |
+| Memory (RSS) idle, 10,000 posts | 94 MB | 41 MB |
+| Memory (RSS) peak during the runs, fixture database | 424 / 390 MB | 18 MB |
+| Memory (RSS) peak during the runs, 10,000 posts | 462 / 485 MB | 289 / 291 MB |
+
+Where the gap is small: one connection reading the whole 10,000-post list (1.2x: both spend the
+time printing 1.5 MB of JSON), writes on the big database (1.1 to 1.2x: both rewrite the whole
+3.6 MB file on every write, Rust coalescing queued writes as lowdb does), and the sorted title
+search on one connection (1.4x). The large gains come from concurrency, which a Node process does
+not have, and from the embed, where json-server filters every comment for every post (the port
+indexes the comments once per request, same result).
+
+The first lifted binary was slower than Node on the big database (33 against 298 requests per
+second for the whole list, 39 against 217 for writes). Profiling found, in order: no
+`TCP_NODELAY` (each large response waited about 40 ms for a delayed ACK), the whole database
+cloned to add `$schema` before every write, every listed item cloned before printing, one lock
+for all requests, and `item.id` hashed with SipHash for each of 10,000 items. All fixed; the 3,399
+unit cases and 514 HTTP cases pass after each change.
+
+Found in the tool, and fixed:
+
+- A server that writes its state could not be recorded twice from the same start:
+  `--fresh <path>` now copies the database (and `public/`) into a fresh working directory for every
+  start, from a snapshot kept with the cases; `--arg` gives every build the original's arguments;
+  `--pace` is above.
+- `bridge` kept `paginate<T>(items: T[])` in TS (generic over anything, functions included);
+  `--as-json T` bridges it as JSON values.
+- The front door's routes with parameters answered axum's own 400 for `/posts/%E0`, before the
+  unit saw the request; parameters are now read from the URI.
+- `lift` staged only the wired unit, not the crates it depends on by path, and wrote a `lib.rs`
+  that `cargo fmt --check` rejected; both fixed.
+- The servers it generates did not set `TCP_NODELAY`: a response written in two parts waited
+  for the client's delayed ACK, about 40 ms. They set it now.
+
+What it does not cover: JSON5 databases (the binary says so and exits), the 100 KiB body limit
+(Node's depends on how the body arrives in 64 KiB reads; the port assumes full reads), strings
+with lone surrogates (they become U+FFFD), and a database value of `1e400` (Node keeps `Infinity`
+in memory until the next reload; the port stores `null`, which is what the file gets).
+
 ## Fixtures written to stress the tool
 
 | Fixture | Exercises | Result |

@@ -81,6 +81,9 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
         traps: true,
         timeout_secs: None,
         http: false,
+        server_args: &[],
+        fresh: &[],
+        pace_ms: None,
         port: None,
         float_tolerance: None,
     })
@@ -633,6 +636,9 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         traps: false,
         timeout_secs: None,
         http: false,
+        server_args: &[],
+        fresh: &[],
+        pace_ms: None,
         port: None,
         float_tolerance: None,
     })
@@ -887,6 +893,7 @@ fn lift_strips_bridge_bindings_in_every_language() {
             keep: Vec::new(),
             lang: None,
             batch: Vec::new(),
+            as_json: Vec::new(),
         })
         .unwrap();
         if lang == "ts" {

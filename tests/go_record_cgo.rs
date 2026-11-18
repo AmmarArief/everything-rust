@@ -43,6 +43,7 @@ fn record(root: &Path) -> anyhow::Result<()> {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })?;
     let recording = harness::record(&harness::RecordOptions {
         crate_dir: &out,

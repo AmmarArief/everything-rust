@@ -229,7 +229,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | --- | --- | --- |
 | 0. Profile | `rust-anything profile <repo> -- node bench.mjs` | Runs a real workload under the language's profiler (node, cProfile, `go test` pprof, JFR, a Ruby tracer): hot functions by inclusive time, their callers, and which loops to batch; flags code that is already compiled (numba, Cython, JAX), where Rust gains little |
 | 1. Plan | `rust-anything analyze <repo>` | Units, port order, risks with `file:line`, bridge per unit, dependency-to-crate fit, best first ports; `--whole-app` adds entry points and shape, every dependency (imported or declared) with its crate, pieces (units that import each other move together) and numbered decisions with a recommended answer |
-| 2. Bridge | `rust-anything bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`); `--batch fn:param` adds a class that keeps many `param` values in Rust |
+| 2. Bridge | `rust-anything bridge <repo> <unit>` | Crate with the bindings (`lib.rs`, plus the wrapper the source language loads) and stubs to port (`port.rs`); `--batch fn:param` adds a class that keeps many `param` values in Rust; `--as-json T` bridges a type parameter the app only fills with data as JSON values |
 | 3. Record | `rust-anything record <crate>` | Runs the original on generated edge cases (non-ASCII, emoji, `-0`, `NaN`, ints where floats are expected, ...) and on every semantic trap in every parameter (string length and case, signed division, overflow edges, float printing, map and sort order), and saves `cases.jsonl`; `--from-tests -- npx jest` (or `-- pytest`) also records every call the original's own test suite makes; `--float-tolerance 1e-9` lets floats match within that share for numeric code |
 | 3. Build | `rust-anything build <crate>` | Builds the Rust side: `.node`, wasm package, Python extension or shared library |
 | 3. Diff | `rust-anything diff <crate>` | Replays the recorded cases against Rust, called the way the original's callers call it; lists mismatches |
@@ -354,6 +354,12 @@ rust-anything app lift .
   values swapped for the same traps as CLI arguments, bodies for text and JSON traps, and an
   unknown route. Each run starts the server fresh and sends the requests in name order, so state
   between requests is kept.
+- A server that keeps state in files gets a fresh copy for every start: `--fresh db.json` (a file
+  or folder, repeatable) is snapshotted into `http/files/` and copied into a new working
+  directory each time the original, the front door or a build starts; `--arg db.json` is an
+  argument every start gets after its command, so the Rust binary is started as the original is.
+  `--pace 50` waits 50 ms after each response, for work a server does after answering (a file
+  watcher reloading what it just wrote).
 - Cases are `rust/app-cases/http/<case>.toml` (the request, the status and the headers that matter)
   and `<case>.body` (the response body, with `[..]` where two runs differed). Date, server and
   other per-response headers are left out; delete any header line you do not care about.
@@ -540,7 +546,7 @@ offers two prompts, `port_unit` and `port_whole_app`, built from the skill.
 - Exports that cannot cross a bridge stay in the source language, with the reason, and the shadow
   module re-exports the original. For TS:
   functions that take or return functions, generators and iterators, RegExp, `instanceof` checks,
-  generics, and values whose types (followed through imports, re-exports and `extends`) hold
+  generics (`--as-json T` bridges one the app only fills with data), and values whose types (followed through imports, re-exports and `extends`) hold
   functions. `--keep "name: reason"` keeps more, e.g. code that depends on `Intl` data.
 - TS types map to Rust types, with type aliases resolved through imports and parameter types
   inferred from default values; structured values cross as a generated binary wire (JSON only

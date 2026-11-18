@@ -84,6 +84,10 @@ enum Cmd {
         /// Rust, on all cores (what `profile` recommends for leaves called in loops).
         #[arg(long)]
         batch: Vec<String>,
+        /// Bridge a type parameter as JSON values (`--as-json T`) when the app only fills it
+        /// with data, instead of keeping the generic export in TS. Repeatable.
+        #[arg(long, value_name = "TYPE_PARAM")]
+        as_json: Vec<String>,
     },
     /// 2b. Regenerate the bindings (`lib.rs`, `index.cjs`, `js.rs`) from the signatures in `port.rs`.
     Refresh {
@@ -259,6 +263,21 @@ enum AppCmd {
         /// A port the server always listens on (implies --http).
         #[arg(long)]
         port: Option<u16>,
+        /// An argument every server start gets after its command, the original's and every
+        /// build's, so the Rust binary is started as the original is (`--arg db.json`).
+        /// Repeatable; implies --http; saved with the cases.
+        #[arg(long = "arg", value_name = "ARG", allow_hyphen_values = true)]
+        server_args: Vec<String>,
+        /// A file or folder of the repository the server reads or writes (a database file, a
+        /// public folder): snapshotted into `http/files/` and copied into a fresh working
+        /// directory before every start. Repeatable; implies --http; saved with the cases.
+        #[arg(long)]
+        fresh: Vec<String>,
+        /// Milliseconds to wait after each response before the next request, for work a server
+        /// does after answering (a file watcher reloading what it just wrote). Implies --http;
+        /// saved with the cases and used by replay; 0 removes it.
+        #[arg(long, value_name = "MS")]
+        pace: Option<u64>,
         /// Numbers in the output match when they differ by at most this times the larger
         /// magnitude (absolute below 1), e.g. 1e-9 for numeric code. Saved with the cases; 0
         /// removes it.
@@ -419,6 +438,7 @@ fn run() -> Result<ExitCode> {
             force,
             keep,
             batch,
+            as_json,
         } => {
             let outcome = bridge::bridge(&bridge::Options {
                 root: &root,
@@ -433,6 +453,7 @@ fn run() -> Result<ExitCode> {
                 keep,
                 lang: None,
                 batch,
+                as_json,
             })?;
             say!(
                 "Created {} ({:?}) for {}",
@@ -801,6 +822,9 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             timeout,
             http,
             port,
+            server_args,
+            fresh,
+            pace,
             float_tolerance,
             json,
             run,
@@ -815,6 +839,9 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 timeout_secs: timeout,
                 http,
                 port,
+                server_args: &server_args,
+                fresh: &fresh,
+                pace_ms: pace,
                 float_tolerance,
             })?;
             if json {

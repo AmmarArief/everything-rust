@@ -29,6 +29,7 @@ fn records_go_internal_packages() {
         keep: Vec::new(),
         lang: None,
         batch: Vec::new(),
+        as_json: Vec::new(),
     })
     .unwrap();
     let result = harness::record(&harness::RecordOptions {
