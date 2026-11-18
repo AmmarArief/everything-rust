@@ -450,11 +450,24 @@ fn split_top(text: &str) -> Vec<String> {
 
 /// The `package` of a Java file.
 pub fn package_name(source: &str) -> Option<String> {
-    source.lines().find_map(|l| {
-        l.trim()
-            .strip_prefix("package ")
-            .map(|p| p.trim_end_matches(';').trim().to_string())
-    })
+    let tree = syntax::parse(&language(), source)?;
+    package_name_in(tree.root_node(), source)
+}
+
+fn package_name_in(root: Node<'_>, source: &str) -> Option<String> {
+    let declaration = named_children(root)
+        .into_iter()
+        .find(|node| node.kind() == "package_declaration")?;
+    let name = named_children(declaration)
+        .into_iter()
+        .find(|node| matches!(node.kind(), "identifier" | "scoped_identifier"))?;
+    let mut components = Vec::new();
+    syntax::walk(name, |node| {
+        if node.kind() == "identifier" {
+            components.push(text(node, source));
+        }
+    });
+    Some(components.join("."))
 }
 
 /// `public static` methods of the file's public top-level classes. `prototype` holds the
@@ -466,7 +479,7 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
     let Some(tree) = syntax::parse(&language(), source) else {
         return Vec::new();
     };
-    let package = package_name(source);
+    let package = package_name_in(tree.root_node(), source);
     let mut out = Vec::new();
     for class in named_children(tree.root_node()) {
         if class.kind() != "class_declaration" {
