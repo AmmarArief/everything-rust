@@ -6,6 +6,8 @@
 
 <p align="center">by <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
 
+<p align="center">English · <a href="docs/README_ZH.md">简体中文</a> · <a href="docs/README_ZH-TW.md">繁體中文</a> · <a href="docs/README_DE.md">Deutsch</a> · <a href="docs/README_JA.md">日本語</a> · <a href="docs/README_KO.md">한국어</a> · <a href="docs/README_RU.md">Русский</a> · <a href="docs/README_FR.md">Français</a></p>
+
 <p align="center"><em>Rewrite your whole app in Rust. Keep it working the whole way.</em></p>
 
 <p align="center"><em>CLIs, servers and libraries, piece by piece, checked against the original at every step.</em></p>
