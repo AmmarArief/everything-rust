@@ -204,7 +204,15 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
 /// A frame's file: repository-relative, or absolute for user code elsewhere (a workload
 /// script); `None` for the runtime and installed libraries.
 fn relative(root: &Path, file: &str) -> Option<String> {
-    let path = file.strip_prefix("file://").unwrap_or(file);
+    let decoded;
+    let path = if let Some(url_path) = file.strip_prefix("file://") {
+        decoded = percent_encoding::percent_decode_str(url_path)
+            .decode_utf8()
+            .ok()?;
+        decoded.as_ref()
+    } else {
+        file
+    };
     if !path.starts_with('/') && !path.contains(":\\") {
         return None; // node:internal/..., <frozen ...>, ~
     }
@@ -1283,6 +1291,28 @@ mod tests {
         );
         assert_eq!(functions[&key("matched", 9)].total_ms, 10.0);
         assert!(functions.contains_key(&key("(anonymous):10", 10)));
+    }
+
+    #[test]
+    fn cpuprofile_recognizes_encoded_paths_in_the_repository() {
+        let root = Path::new("/repo/work area");
+        let profile = json!({
+            "startTime": 0,
+            "endTime": 10_000,
+            "samples": [1],
+            "nodes": [node(1, "hot", "file:///repo/work%20area/step%23one%25.mjs", 0, 1, &[])],
+        });
+        let mut functions = HashMap::new();
+        merge_cpuprofile(root, &profile, &mut functions);
+        assert!(
+            functions.contains_key(&("step#one%.mjs".into(), "hot".into(), 0)),
+            "{:?}",
+            functions.keys()
+        );
+        assert_eq!(
+            relative(root, "/repo/work area/step%20.mjs").as_deref(),
+            Some("step%20.mjs")
+        );
     }
 
     #[test]
