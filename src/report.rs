@@ -196,7 +196,7 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
     }
 
     if !r.dependencies.is_empty() {
-        writeln!(out, "## npm dependencies\n")?;
+        writeln!(out, "## {} dependencies\n", r.language.registry())?;
         writeln!(out, "| Package | Units | Rust | Fit | Note |")?;
         writeln!(out, "| --- | ---: | --- | --- | --- |")?;
         for d in &r.dependencies {
