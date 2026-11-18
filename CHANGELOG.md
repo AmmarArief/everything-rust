@@ -28,6 +28,8 @@
   byte-identical to Fuse, 32x faster on 50,000 strings (5.3x on one core).
 - `gate`'s size check counts the files a TS unit imports from the repository, not only the unit.
 - Batch crates with string items but other results no longer get an unused helper (clippy failed).
+- TypeScript analysis and recording keep inherited path aliases when a later tsconfig base
+  omits `compilerOptions.paths`.
 
 - Faster single calls on napi: every sync function crosses the binary wire with no napi
   arguments (each argument cost about 55 ns), behind one JS wrapper instead of two;
