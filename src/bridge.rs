@@ -787,7 +787,11 @@ pub fn match_export_names(m: &Manifest, api: &mut codegen::PortApi) {
             continue;
         }
         let rust = f.rust_name.trim_start_matches("r#");
-        if let Some(e) = m.exports.iter().find(|e| snake_case(&e.name) == rust) {
+        if let Some(e) = m
+            .exports
+            .iter()
+            .find(|e| snake_case(&e.name).trim_start_matches("r#") == rust)
+        {
             f.js_name = e.name.clone();
         }
     }

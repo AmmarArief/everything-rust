@@ -56,6 +56,22 @@ fn stand_in(dir: &Path, buggy: bool) {
 }
 
 #[test]
+fn refresh_keeps_the_original_name_for_raw_rust_identifiers() {
+    let dir = bridged("raw-identifiers");
+    let mut manifest = Manifest::load(&dir).unwrap();
+    manifest.exports.truncate(1);
+    manifest.exports[0].name = "Type".into();
+    manifest.save(&dir).unwrap();
+    std::fs::write(dir.join("src/port.rs"), "pub fn r#type() -> f64 { 1.0 }\n").unwrap();
+
+    let refreshed = bridge::refresh(&dir).unwrap();
+    assert_eq!(refreshed.functions, ["Type"]);
+    let bindings = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(bindings.contains(r#"js_name = "Type""#), "{bindings}");
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn bridge_writes_a_crate_and_never_overwrites_it() {
     let dir = bridged("bridge");
     let manifest = Manifest::load(&dir).unwrap();
