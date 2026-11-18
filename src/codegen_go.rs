@@ -1242,7 +1242,14 @@ func record(inputs, out string) {
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	defer w.Flush()
-	for _, c := range cases {
+	progress := os.Getenv("RUST_ANYTHING_PROGRESS")
+	for index, c := range cases {
+		if progress != "" {
+			if p, err := os.OpenFile(progress, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+				fmt.Fprintln(p, index)
+				p.Close()
+			}
+		}
 		result := call(c.Fn, c.Args)
 		if result["invalid"] != nil {
 			continue
@@ -1257,6 +1264,7 @@ func record(inputs, out string) {
 		}
 		w.Write(text)
 		w.WriteByte('\n')
+		w.Flush()
 	}
 }
 

@@ -471,6 +471,17 @@ fn run() -> Result<ExitCode> {
                     outcome.regex_functions.join(", ")
                 );
             }
+            if !outcome.timed_out.is_empty() {
+                say!(
+                    "Left out {} input(s) the original ran too long on (over the per-case limit, \
+                     RUST_ANYTHING_CASE_TIMEOUT seconds, 10 by default). The original does this \
+                     itself, so the port need not match it there:",
+                    outcome.timed_out.len()
+                );
+                for c in &outcome.timed_out {
+                    say!("  {}({})", c["fn"].as_str().unwrap_or("?"), c["args"]);
+                }
+            }
         }
         Cmd::Refresh { crate_dir, batch } => {
             let r = if batch.is_empty() {

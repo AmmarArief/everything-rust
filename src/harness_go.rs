@@ -182,16 +182,21 @@ fn driver_command(crate_dir: &Path, bin: &Path) -> Command {
 
 pub fn record(crate_dir: &Path, m: &Manifest, cases: &[Value]) -> Result<PathBuf> {
     let bin = build_driver(crate_dir, m, false)?;
-    let inputs = crate_dir.join(WORK_DIR).join("inputs.json");
     let slim: Vec<Value> = cases
         .iter()
         .map(|c| serde_json::json!({ "fn": c["fn"], "args": c["args"] }))
         .collect();
-    std::fs::write(&inputs, serde_json::to_string(&slim)?)?;
     let out = crate_dir.join(CASES);
-    run(
-        Command::new(&bin).arg("record").arg(&inputs).arg(&out),
+    crate::harness::record_cases(
+        &slim,
+        &crate_dir.join(WORK_DIR),
+        &out,
         "Go driver (record)",
+        |inputs, part| {
+            let mut cmd = Command::new(&bin);
+            cmd.arg("record").arg(inputs).arg(part);
+            Ok(cmd)
+        },
     )?;
     Ok(out)
 }

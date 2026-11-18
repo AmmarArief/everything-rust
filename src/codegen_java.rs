@@ -698,9 +698,14 @@ public final class RustAnythingDriver {
         Path outPath = Path.of(argv[3]);
         if (mode.equals("record")) {
             List<Object> cases = (List<Object>) RustAnythingJson.parse(Files.readString(Path.of(casesPath)));
+            String progress = System.getenv("RUST_ANYTHING_PROGRESS");
             try (BufferedWriter w = Files.newBufferedWriter(outPath, StandardCharsets.UTF_8)) {
-                for (Object o : cases) {
-                    Map<String, Object> c = (Map<String, Object>) o;
+                for (int index = 0; index < cases.size(); index++) {
+                    if (progress != null) {
+                        Files.writeString(Path.of(progress), index + "\n", StandardCharsets.UTF_8,
+                            java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+                    }
+                    Map<String, Object> c = (Map<String, Object>) cases.get(index);
                     Map<String, Object> result = call(c);
                     if (result.containsKey("invalid") || result.containsKey("missing")) {
                         continue;
@@ -711,6 +716,7 @@ public final class RustAnythingDriver {
                     line.putAll(result);
                     w.write(RustAnythingJson.write(line));
                     w.write("\n");
+                    w.flush();
                 }
             }
         } else if (mode.equals("diff")) {

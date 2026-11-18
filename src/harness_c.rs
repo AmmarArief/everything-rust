@@ -126,18 +126,22 @@ fn python() -> Command {
 pub fn record(crate_dir: &Path, manifest: &Manifest, cases: &[Value]) -> Result<PathBuf> {
     let original = build_original(crate_dir, manifest)?;
     let (driver, sigs) = driver(crate_dir, manifest)?;
-    let inputs = crate_dir.join(WORK_DIR).join("inputs.json");
-    std::fs::write(&inputs, serde_json::to_string(cases)?)?;
     let out = crate_dir.join(CASES);
-    run(
-        python()
-            .arg(&driver)
-            .arg("record")
-            .arg(&original)
-            .arg(&sigs)
-            .arg(&inputs)
-            .arg(&out),
+    crate::harness::record_cases(
+        cases,
+        &crate_dir.join(WORK_DIR),
+        &out,
         "python (ctypes)",
+        |inputs, part| {
+            let mut cmd = python();
+            cmd.arg(&driver)
+                .arg("record")
+                .arg(&original)
+                .arg(&sigs)
+                .arg(inputs)
+                .arg(part);
+            Ok(cmd)
+        },
     )?;
     Ok(out)
 }
@@ -546,11 +550,16 @@ def cases_of(path):
 
 def record(lib, sigs, inputs, out_path):
     functions = bind(lib, json.load(open(sigs)))
+    progress = os.environ.get("RUST_ANYTHING_PROGRESS")
     with open(out_path, "w", encoding="utf-8") as out:
-        for c in json.load(open(inputs, encoding="utf-8")):
+        for index, c in enumerate(json.load(open(inputs, encoding="utf-8"))):
+            if progress:
+                with open(progress, "a", encoding="utf-8") as p:
+                    p.write("%d\n" % index)
             line = {"fn": c["fn"], "args": c["args"]}
             line.update(isolated(functions, c))
             out.write(json.dumps(line, ensure_ascii=False) + "\n")
+            out.flush()
 
 
 def diff(lib, sigs, cases_path, out_path):

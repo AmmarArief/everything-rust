@@ -58,6 +58,19 @@ fn driver(
     min_ms: u64,
     rust: bool,
 ) -> Result<()> {
+    let mut cmd = driver_command(crate_dir, m, mode, cases, out, min_ms, rust)?;
+    run(&mut cmd, &format!("ruby driver ({mode})"))
+}
+
+fn driver_command(
+    crate_dir: &Path,
+    m: &Manifest,
+    mode: &str,
+    cases: &Path,
+    out: &Path,
+    min_ms: u64,
+    rust: bool,
+) -> Result<Command> {
     let work = crate_dir.join(WORK_DIR);
     std::fs::create_dir_all(&work)?;
     let script = work.join("driver.rb");
@@ -80,16 +93,19 @@ fn driver(
         .arg(out)
         .arg(min_ms.to_string())
         .args(files(crate_dir, m, rust)?);
-    run(&mut cmd, &format!("ruby driver ({mode})"))
+    Ok(cmd)
 }
 
 pub fn record(crate_dir: &Path, m: &Manifest, cases: &[Value]) -> Result<PathBuf> {
-    let inputs = crate_dir.join(WORK_DIR).join("inputs.json");
-    std::fs::create_dir_all(crate_dir.join(WORK_DIR))?;
-    std::fs::write(&inputs, serde_json::to_string(cases)?)?;
     let out = crate_dir.join(CASES);
     let pending = crate_dir.join(WORK_DIR).join("recording.jsonl");
-    driver(crate_dir, m, "record", &inputs, &pending, 0, false)?;
+    crate::harness::record_cases(
+        cases,
+        &crate_dir.join(WORK_DIR),
+        &pending,
+        "ruby driver (record)",
+        |inputs, part| driver_command(crate_dir, m, "record", inputs, part, 0, false),
+    )?;
     let recorded: std::collections::HashSet<String> = std::fs::read_to_string(&pending)?
         .lines()
         .filter_map(|l| serde_json::from_str::<Value>(l).ok())

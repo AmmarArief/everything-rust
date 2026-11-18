@@ -105,6 +105,19 @@ fn driver(
     min_ms: u64,
     rust: bool,
 ) -> Result<()> {
+    let mut cmd = driver_command(crate_dir, m, mode, cases, out, min_ms, rust)?;
+    run(&mut cmd, &format!("java driver ({mode})"))
+}
+
+fn driver_command(
+    crate_dir: &Path,
+    m: &Manifest,
+    mode: &str,
+    cases: &Path,
+    out: &Path,
+    min_ms: u64,
+    rust: bool,
+) -> Result<Command> {
     let classes = compile(crate_dir, m, rust)?;
     let work = crate_dir.join(WORK_DIR);
     let targets = work.join("targets.json");
@@ -127,15 +140,19 @@ fn driver(
         .arg(cases)
         .arg(out)
         .arg(min_ms.to_string());
-    run(&mut cmd, &format!("java driver ({mode})"))
+    Ok(cmd)
 }
 
 pub fn record(crate_dir: &Path, m: &Manifest, cases: &[Value]) -> Result<PathBuf> {
     std::fs::create_dir_all(crate_dir.join(WORK_DIR))?;
-    let inputs = crate_dir.join(WORK_DIR).join("inputs.json");
-    std::fs::write(&inputs, serde_json::to_string(cases)?)?;
     let out = crate_dir.join(CASES);
-    driver(crate_dir, m, "record", &inputs, &out, 0, false)?;
+    crate::harness::record_cases(
+        cases,
+        &crate_dir.join(WORK_DIR),
+        &out,
+        "java driver (record)",
+        |inputs, part| driver_command(crate_dir, m, "record", inputs, part, 0, false),
+    )?;
     Ok(out)
 }
 

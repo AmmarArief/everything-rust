@@ -70,6 +70,9 @@ pub struct RecordOutcome {
     /// Functions in files that use regexes: their string parameters also got the regex traps.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub regex_functions: Vec<String>,
+    /// Inputs left out because the original ran past the per-case time limit on them.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub timed_out: Vec<Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -233,6 +236,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         }
     }
 
+    let timed_out_path = opts.crate_dir.join(WORK_DIR).join(TIMED_OUT);
+    let _ = std::fs::remove_file(&timed_out_path);
     let out = if manifest.language == crate::lang::Lang::Python {
         crate::harness_py::record(opts.crate_dir, &cases)?
     } else if manifest.kind == Kind::CAbi {
@@ -264,6 +269,10 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .unwrap_or_default();
         *per_function.entry(name.to_string()).or_default() += 1;
     }
+    let timed_out: Vec<Value> = std::fs::read_to_string(&timed_out_path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
     Ok(RecordOutcome {
         path: out,
         cases: count,
@@ -271,6 +280,10 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         traps,
         per_function,
         regex_functions,
+        timed_out: timed_out
+            .iter()
+            .map(|c| serde_json::json!({ "fn": c["fn"].clone(), "args": c["args"].clone() }))
+            .collect(),
     })
 }
 
@@ -278,8 +291,6 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
 fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Result<PathBuf> {
     let work = opts.crate_dir.join(WORK_DIR);
     std::fs::create_dir_all(&work)?;
-    let inputs_path = work.join("inputs.json");
-    std::fs::write(&inputs_path, serde_json::to_string(cases)?)?;
     let script = work.join("record.mjs");
     std::fs::write(&script, format!("{CODEC_JS}\n{RECORD_JS}"))?;
     let out = opts.crate_dir.join(CASES);
@@ -291,40 +302,39 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
     let mut node_args = vec![format!("--import={}", file_url(&register))];
     node_args.extend(opts.node_args.iter().cloned());
     let aliases = alias_env(manifest);
-    let mut cmd = Command::new("node");
-    cmd.args(&node_args)
-        .arg(&script)
-        .arg(&inputs_path)
-        .arg(&out)
-        .env("RUST_ANYTHING_PATHS", &aliases)
-        .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
-    if let Some(dir) = opts.resolve_from {
-        let dir = dir
-            .canonical()
-            .with_context(|| format!("resolving {}", dir.display()))?;
-        cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
-    }
-    if let Err(error) = run(&mut cmd, "node") {
-        // Enums and parameter properties need Node to transform TS, not only strip types.
+    let resolve_from = opts
+        .resolve_from
+        .map(|dir| {
+            dir.canonical()
+                .with_context(|| format!("resolving {}", dir.display()))
+        })
+        .transpose()?;
+    let record = |transform: bool| {
+        record_cases(cases, &work, &out, "node", |inputs, part| {
+            let mut cmd = Command::new("node");
+            if transform {
+                // Enums and parameter properties need Node to transform TS, not only strip types.
+                cmd.arg("--experimental-transform-types")
+                    .arg("--no-warnings=ExperimentalWarning");
+            }
+            cmd.args(&node_args)
+                .arg(&script)
+                .arg(inputs)
+                .arg(part)
+                .env("RUST_ANYTHING_PATHS", &aliases)
+                .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
+            if let Some(dir) = &resolve_from {
+                cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
+            }
+            Ok(cmd)
+        })
+    };
+    if let Err(error) = record(false) {
         if !format!("{error:#}").contains("ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX") {
             return Err(error);
         }
-        let mut retry = Command::new("node");
-        retry
-            .arg("--experimental-transform-types")
-            .arg("--no-warnings=ExperimentalWarning")
-            .args(&node_args)
-            .arg(&script)
-            .arg(&inputs_path)
-            .arg(&out)
-            .env("RUST_ANYTHING_PATHS", &aliases)
-            .env("RUST_ANYTHING_WORKSPACE", workspace_env(manifest));
-        if let Some(dir) = opts.resolve_from {
-            retry.env("RUST_ANYTHING_RESOLVE_FROM", dir.canonical()?);
-        }
-        run(&mut retry, "node --experimental-transform-types")?;
+        record(true)?;
     }
-
     Ok(out)
 }
 
@@ -1165,6 +1175,114 @@ fn run_node(node_args: &[String], script: &Path, args: &[&std::ffi::OsStr]) -> R
     )
 }
 
+/// How long one recorded case may run before the original is stopped on it:
+/// `RUST_ANYTHING_CASE_TIMEOUT` seconds, 10 by default.
+fn case_timeout() -> std::time::Duration {
+    let secs = std::env::var("RUST_ANYTHING_CASE_TIMEOUT")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+        .filter(|s| s.is_finite() && *s > 0.0)
+        .unwrap_or(10.0);
+    std::time::Duration::from_secs_f64(secs)
+}
+
+/// Runs a record driver over `cases` with a watchdog. The driver appends the index of each case
+/// it starts to `RUST_ANYTHING_PROGRESS` and flushes each recorded line. A case that runs past
+/// the time limit (an input that makes the original allocate or loop for ever) stops the driver;
+/// the lines recorded so far are kept, that input is left out, and the driver goes on with the
+/// rest. Returns the inputs left out.
+pub(crate) fn record_cases(
+    cases: &[Value],
+    work: &Path,
+    out: &Path,
+    what: &str,
+    mut command: impl FnMut(&Path, &Path) -> Result<Command>,
+) -> Result<Vec<Value>> {
+    use std::process::Stdio;
+    use std::time::Instant;
+    std::fs::create_dir_all(work)?;
+    let timeout = case_timeout();
+    let inputs = work.join("record-inputs.json");
+    let part = work.join("record-part.jsonl");
+    let progress = work.join("record-progress");
+    let stderr_path = work.join("record-stderr");
+    let mut recorded = String::new();
+    let mut timed_out = Vec::new();
+    let mut start = 0;
+    while start < cases.len() {
+        std::fs::write(&inputs, serde_json::to_string(&cases[start..])?)?;
+        std::fs::write(&progress, "")?;
+        let _ = std::fs::remove_file(&part);
+        let mut cmd = command(&inputs, &part)?;
+        cmd.env("RUST_ANYTHING_PROGRESS", &progress)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(std::fs::File::create(&stderr_path)?);
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt as _;
+            cmd.process_group(0);
+        }
+        let mut child = cmd.spawn().with_context(|| format!("running {what}"))?;
+        let mut current: Option<(usize, Instant)> = None;
+        let status = loop {
+            if let Some(status) = child.try_wait()? {
+                break Some(status);
+            }
+            let started = std::fs::read_to_string(&progress).ok().and_then(|p| {
+                p.lines()
+                    .last()
+                    .and_then(|l| l.trim().parse::<usize>().ok())
+            });
+            match (started, current) {
+                (Some(i), Some((j, _))) if i == j => {}
+                (Some(i), _) => current = Some((i, Instant::now())),
+                (None, _) => {}
+            }
+            if let Some((_, since)) = current
+                && since.elapsed() > timeout
+            {
+                #[cfg(unix)]
+                {
+                    let _ = Command::new("/bin/kill")
+                        .args(["-KILL", "--", &format!("-{}", child.id())])
+                        .stderr(Stdio::null())
+                        .status();
+                }
+                let _ = child.kill();
+                let _ = child.wait();
+                break None;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        };
+        let written = std::fs::read_to_string(&part).unwrap_or_default();
+        let complete = written.rfind('\n').map_or("", |end| &written[..=end]);
+        recorded.push_str(complete);
+        match (status, current) {
+            (Some(status), _) if status.success() => break,
+            (Some(status), _) => {
+                let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
+                let tail: Vec<&str> = stderr.lines().rev().take(25).collect();
+                bail!(
+                    "{what} failed ({status}):\n{}",
+                    tail.into_iter().rev().collect::<Vec<_>>().join("\n")
+                );
+            }
+            (None, Some((i, _))) => {
+                timed_out.push(cases[start + i].clone());
+                start += i + 1;
+            }
+            (None, None) => unreachable!("the watchdog only stops a driver inside a case"),
+        }
+    }
+    std::fs::write(out, recorded)?;
+    std::fs::write(work.join(TIMED_OUT), serde_json::to_string(&timed_out)?)?;
+    Ok(timed_out)
+}
+
+/// Inputs the last `record` left out because the original ran past the time limit on them.
+pub(crate) const TIMED_OUT: &str = "timed-out.json";
+
 fn run(cmd: &mut Command, what: &str) -> Result<()> {
     let output = cmd.output().with_context(|| format!("running {what}"))?;
     if !output.status.success() {
@@ -1427,13 +1545,15 @@ const same = (a, b, sort = false) => JSON.stringify(canon(a, sort)) === JSON.str
 "#;
 
 const RECORD_JS: &str = r#"
-import { readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
 const [inputsPath, outPath] = process.argv.slice(2)
 const inputs = JSON.parse(readFileSync(inputsPath, 'utf8'))
 const modules = new Map()
-const lines = []
+const progress = process.env.RUST_ANYTHING_PROGRESS
+writeFileSync(outPath, '')
+const lines = { push: line => appendFileSync(outPath, `${line}\n`) }
 // A class scenario: construct, then call each method in turn; every step's result is recorded.
 const runScenario = async (Class, c) => {
   const results = []
@@ -1456,7 +1576,8 @@ const runScenario = async (Class, c) => {
   }
   return results
 }
-for (const c of inputs) {
+for (const [index, c] of inputs.entries()) {
+  if (progress) appendFileSync(progress, `${index}\n`)
   let mod = modules.get(c.module)
   if (!mod) {
     mod = await import(pathToFileURL(c.module).href)
@@ -1484,7 +1605,6 @@ for (const c of inputs) {
     lines.push(JSON.stringify({ fn: c.fn, args: c.args, error: String(error?.message ?? error) }))
   }
 }
-writeFileSync(outPath, `${lines.join('\n')}\n`)
 "#;
 
 const BENCH_JS: &str = r#"

@@ -243,13 +243,16 @@ end
 
 case mode
 when "record"
+  progress = ENV["RUST_ANYTHING_PROGRESS"]
   File.open(out_path, "w") do |out|
-    JSON.parse(File.read(cases_path)).each do |c|
+    JSON.parse(File.read(cases_path)).each_with_index do |c, index|
+      File.open(progress, "a") { |p| p.puts(index) } if progress
       line = { "fn" => c["fn"], "args" => c["args"] }
       line["kwargs"] = c["kwargs"] if c["kwargs"]
       line.merge!(call(c))
       begin
         out.puts(JSON.generate(line))
+        out.flush
       rescue JSON::GeneratorError, Encoding::UndefinedConversionError
         next
       end

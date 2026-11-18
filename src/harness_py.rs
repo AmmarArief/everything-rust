@@ -53,17 +53,24 @@ pub fn package(crate_dir: &Path, manifest: &Manifest) -> (PathBuf, String) {
 
 pub fn record(crate_dir: &Path, cases: &[Value]) -> Result<PathBuf> {
     let driver = driver(crate_dir)?;
-    let inputs = crate_dir.join(WORK_DIR).join("inputs.json");
-    std::fs::write(&inputs, serde_json::to_string(cases)?)?;
     let out = crate_dir.join(CASES);
-    run(Command::new(python())
-        .arg(&driver)
-        .arg("record")
-        .arg(&inputs)
-        .arg(&out)
-        .env("PYTHONHASHSEED", "0")
-        // Recording must not leave `__pycache__` folders in the source tree.
-        .env("PYTHONDONTWRITEBYTECODE", "1"))?;
+    crate::harness::record_cases(
+        cases,
+        &crate_dir.join(WORK_DIR),
+        &out,
+        "python",
+        |inputs, part| {
+            let mut cmd = Command::new(python());
+            cmd.arg(&driver)
+                .arg("record")
+                .arg(inputs)
+                .arg(part)
+                .env("PYTHONHASHSEED", "0")
+                // Recording must not leave `__pycache__` folders in the source tree.
+                .env("PYTHONDONTWRITEBYTECODE", "1");
+            Ok(cmd)
+        },
+    )?;
     Ok(out)
 }
 
@@ -327,14 +334,19 @@ def run_case(mod, c):
 def record(inputs_path, out_path):
     cases = json.load(open(inputs_path, encoding="utf-8"))
     modules = {}
+    progress = os.environ.get("RUST_ANYTHING_PROGRESS")
     with open(out_path, "w", encoding="utf-8") as out:
-        for c in cases:
+        for index, c in enumerate(cases):
+            if progress:
+                with open(progress, "a", encoding="utf-8") as p:
+                    p.write("%d\n" % index)
             if c["module"] not in modules:
                 modules[c["module"]] = load(c["module"])
             result = run_case(modules[c["module"]], c)
             line = {k: c[k] for k in ("fn", "class", "ctor", "calls", "args", "kwargs") if k in c}
             line.update(result)
             out.write(json.dumps(line, ensure_ascii=False) + "\n")
+            out.flush()
 
 
 def native(package_dir, name):
