@@ -162,6 +162,22 @@ fn build_driver(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<PathBuf> {
     Ok(bin)
 }
 
+/// The driver built over the Rust wrapper loads the port's shared library. Windows finds a DLL
+/// through `PATH`, not a path recorded in the binary, so its folder goes first there.
+fn driver_command(crate_dir: &Path, bin: &Path) -> Command {
+    let mut cmd = Command::new(bin);
+    if cfg!(windows) {
+        let mut dirs = vec![crate_dir.join("target").join("release")];
+        dirs.extend(std::env::split_paths(
+            &std::env::var_os("PATH").unwrap_or_default(),
+        ));
+        if let Ok(path) = std::env::join_paths(dirs) {
+            cmd.env("PATH", path);
+        }
+    }
+    cmd
+}
+
 pub fn record(crate_dir: &Path, m: &Manifest, cases: &[Value]) -> Result<PathBuf> {
     let bin = build_driver(crate_dir, m, false)?;
     let inputs = crate_dir.join(WORK_DIR).join("inputs.json");
@@ -189,7 +205,10 @@ pub fn diff(crate_dir: &Path, m: &Manifest) -> Result<DiffOutcome> {
     let bin = build_driver(crate_dir, m, true)?;
     let out = crate_dir.join(WORK_DIR).join("diff.json");
     run(
-        Command::new(&bin).arg("diff").arg(&cases).arg(&out),
+        driver_command(crate_dir, &bin)
+            .arg("diff")
+            .arg(&cases)
+            .arg(&out),
         "Go driver (diff)",
     )?;
     Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
@@ -212,7 +231,7 @@ pub fn bench(crate_dir: &Path, m: &Manifest, min_ms: u64) -> Result<Vec<BenchRow
             "bench-original.json"
         });
         run(
-            Command::new(&bin)
+            driver_command(crate_dir, &bin)
                 .arg("bench")
                 .arg(&cases)
                 .arg(&out)

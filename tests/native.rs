@@ -238,6 +238,12 @@ fn unported_stubs_never_match_in_python() {
 
 #[test]
 fn unported_stubs_never_match_a_ruby_runtime_error() {
+    if cfg!(windows) {
+        eprintln!(
+            "skipped: RubyInstaller's Ruby is built with MinGW, and an MSVC Rust extension cannot load into it"
+        );
+        return;
+    }
     let root = project(
         "stubs-ruby",
         &[
