@@ -149,6 +149,39 @@ struct Lang {
 
 fn no_build(_: &Path, _: &str, _: &str) {}
 
+#[test]
+fn http_rerecord_uses_the_existing_fixed_port() {
+    if !available("node", "--version") {
+        return;
+    }
+    let repo = fixture("ts", "saved-port");
+    let port = rust_anything::http::free_port().unwrap();
+    let server = repo.join("server.js");
+    let text = std::fs::read_to_string(&server).unwrap();
+    let condition = format!("if (Number(process.env.PORT) !== {port}) process.exit(2);");
+    std::fs::write(&server, format!("{condition}\n{text}")).unwrap();
+    let run = &words("node server.js");
+    let record = |port| {
+        app::record(&RecordOptions {
+            repo: &repo,
+            run,
+            inputs: None,
+            normalize: &[],
+            name: None,
+            traps: false,
+            timeout_secs: None,
+            http: true,
+            port,
+            float_tolerance: None,
+        })
+    };
+    let first = record(Some(port));
+    let second = record(None);
+    std::fs::remove_dir_all(repo).unwrap();
+    assert!(first.unwrap().cases > 0);
+    assert!(second.unwrap().cases > 0);
+}
+
 /// The command that runs the server; `buggy` builds a copy whose division-by-zero message changed.
 fn prepare(lang: &Lang, repo: &Path, buggy: bool) -> String {
     let mut source = lang.source.to_string();
