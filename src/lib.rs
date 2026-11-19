@@ -18,6 +18,7 @@ pub mod codegen_ruby;
 pub mod codegen_tswire;
 pub mod crates;
 pub mod doctor;
+pub mod effects;
 pub mod error_paths;
 pub mod from_tests;
 pub mod front_door;

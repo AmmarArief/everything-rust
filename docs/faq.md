@@ -8,6 +8,14 @@ Questions people ask about rust-anything. Back to the [README](../README.md).
 records what the original does and checks the Rust against it. You or your agent write the Rust
 in `port.rs`; `diff` and `gate` decide when it is right.
 
+**Does it compare side effects, not just the output?** Stdout, stderr, the exit code, the files
+the app writes and HTTP responses always. Outgoing HTTP calls (webhooks, APIs), email and the
+database when you ask for them: `app record --effects http,smtp` runs local fakes and records what
+reached them per case, in order; `--db-reset` and `--db-dump` reset the database before each case
+and record its state after. Replay compares those too, so a rewrite that returns the same JSON but
+sends an email twice, or writes different rows, fails the case. See
+[Side effects](whole-apps.md#side-effects-email-webhooks-and-databases).
+
 **Will my app's API change?** No. Callers import the same functions (or the shadow module, which
 runs both and returns the original's result while you build confidence).
 

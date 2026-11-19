@@ -159,9 +159,13 @@ usually lives outside the recording, so know where the edges are:
 - **Floats.** Number-to-text formatting differs between languages (`1e21`, `-0`, digit counts).
   The traps include those values, and they must match exactly; `--float-tolerance` forgives
   rounding only, never formatting.
-- **Anything not in the output.** Timing, memory, concurrency under load, and side effects other
-  than stdout, stderr, exit codes, written files and HTTP responses (network calls, databases,
-  signals) are not compared.
+- **Anything not in the output.** Timing, memory and concurrency under load are not compared.
+  Side effects beyond stdout, stderr, exit codes, written files and HTTP responses are compared
+  only when you record them: `app record --effects http,smtp` catches outgoing HTTP calls and
+  email, and `--db-reset`/`--db-dump` the database's state after each case
+  ([Side effects](whole-apps.md#side-effects-email-webhooks-and-databases)). HTTPS calls through
+  the proxy show only the host, and anything the app reaches some other way (a message queue,
+  signals) is still not compared.
 - **Other platforms.** A recording proves behavior on the machine that ran it. C whose results
   depend on type sizes, endianness or the compiler can behave differently on the target; `analyze`
   keeps hardware-facing C in C for that reason.

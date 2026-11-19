@@ -123,8 +123,11 @@ app's documented examples, `--inputs` for the tests, workloads and error paths y
 traps, two runs, `--normalize` for named noise. A CLI's cases are trycmd files in
 `rust/app-cases/`. For a server add `--http`: the command starts it, taking its port from `PORT`
 or `{port}` (`--port` if it is fixed), and requests come from `curl` lines in its docs and
-`--inputs` (`{"method", "path", "headers", "body"}`), stored in `rust/app-cases/http/`. Then
-`rust-anything app replay <repo>`: the original must pass 100%.
+`--inputs` (`{"method", "path", "headers", "body"}`), stored in `rust/app-cases/http/`. If the
+app sends email, calls webhooks or APIs, or writes a database, record those too: `--effects
+http,smtp` (and `--effect-env VAR=KIND` for its own URL or mail settings), `--db-reset` and
+`--db-dump` for the database. Ask the user for the reset and dump commands when the database is
+not a local file. Then `rust-anything app replay <repo>`: the original must pass 100%.
 
 ## 4. Build the front door
 

@@ -507,6 +507,10 @@ fn tool_schemas() -> Value {
                 "traps": { "type": "boolean", "description": "Add semantic-trap cases (default true)." },
                 "http": { "type": "boolean", "description": "The app is a server: `run` starts it (it takes its port from PORT or {port}); cases are requests from curl lines in its docs, `inputs` ({\"name\", \"method\", \"path\", \"headers\", \"body\"}) and traps." },
                 "port": { "type": "integer", "description": "A port the server always listens on (implies http)." },
+                "effects": { "type": "array", "items": { "type": "string" }, "description": "Record what leaves the process: \"http\" (a local sink set as HTTP_PROXY, http_proxy and RUST_ANYTHING_HTTP_SINK) and \"smtp\" (a local mail server, SMTP_HOST and SMTP_PORT). Each case stores what reached them, in order, and replay compares it." },
+                "effect_env": { "type": "array", "items": { "type": "string" }, "description": "Point the app's own settings at a sink: VAR=http-url, VAR=smtp-host, VAR=smtp-port or VAR=smtp-url." },
+                "db_reset": { "type": "string", "description": "Shell command that resets the database before each case (each start for servers); cases then run one at a time." },
+                "db_dump": { "type": "string", "description": "Shell command that prints the database's state (e.g. `sqlite3 app.db .dump`), run after each case or request and recorded with the effects." },
                 "args": { "type": "array", "items": { "type": "string" }, "description": "Servers: arguments every start gets after its command, the original's and every build's ([\"db.json\"]). Implies http; saved." },
                 "fresh": { "type": "array", "items": { "type": "string" }, "description": "Servers: repository files or folders the server reads or writes, snapshotted and copied into a fresh working directory before every start. Implies http; saved." },
                 "pace": { "type": "integer", "description": "Servers: milliseconds to wait after each response, for work the server does after answering (a file watcher). Implies http; saved and used by replay; 0 removes it." },
@@ -710,6 +714,12 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         "app_record" => {
             let repo = path("repo")?;
             let inputs = opt_path("inputs");
+            let effects = crate::effects::EffectsConfig::from_args(
+                &strings("effects"),
+                &strings("effect_env"),
+                args["db_reset"].as_str(),
+                args["db_dump"].as_str(),
+            )?;
             serde_json::to_value(app::record(&app::RecordOptions {
                 repo: &repo,
                 run: &strings("run"),
@@ -724,6 +734,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 fresh: &strings("fresh"),
                 pace_ms: args["pace"].as_u64(),
                 float_tolerance: args["float_tolerance"].as_f64(),
+                effects,
             })?)?
         }
         "app_replay" => {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `app record --effects http,smtp`, `--effect-env VAR=KIND`, `--db-reset` and `--db-dump`: record
+  what leaves the process per case (outgoing HTTP calls, email, the database's state) and compare
+  it on replay, for CLIs and servers. A rewrite that sends an email twice or writes different rows
+  now fails the case even when its output matches.
 - `map` (CLI and MCP tool): every unit of the original with the crate that ports it, functions
   in Rust and kept in the original, cases and last `diff`, the whole app's glue, units not ported
   yet, and every port whose original changed since it was recorded. `--write` saves

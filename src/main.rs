@@ -251,6 +251,7 @@ enum Cmd {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum AppCmd {
     /// Run the original CLI on cases (its own examples, `--inputs`, semantic traps), twice
     /// each, and store them as trycmd files in `<repo>/rust/app-cases/`.
@@ -302,6 +303,24 @@ enum AppCmd {
         /// removes it.
         #[arg(long)]
         float_tolerance: Option<f64>,
+        /// Record what leaves the process too: `http` runs a local sink that answers every
+        /// request (set as HTTP_PROXY, http_proxy and RUST_ANYTHING_HTTP_SINK), `smtp` a local
+        /// mail server (SMTP_HOST, SMTP_PORT). Each case stores what reached them, in order,
+        /// and replay compares it. Comma-separated or repeated. Saved with the cases.
+        #[arg(long, value_name = "KINDS")]
+        effects: Vec<String>,
+        /// Point one of the app's own settings at a sink: VAR=http-url, VAR=smtp-host,
+        /// VAR=smtp-port or VAR=smtp-url (e.g. WEBHOOK_URL=http-url). Implies that effect.
+        #[arg(long, value_name = "VAR=KIND")]
+        effect_env: Vec<String>,
+        /// A shell command run before each case (CLIs) or each start (servers) that resets the
+        /// database to a known state. Cases then run one at a time.
+        #[arg(long, value_name = "COMMAND")]
+        db_reset: Option<String>,
+        /// A shell command that prints the database's state (e.g. `sqlite3 app.db .dump`), run
+        /// after each case or request; its output is recorded with the effects.
+        #[arg(long, value_name = "COMMAND")]
+        db_dump: Option<String>,
         #[arg(long)]
         json: bool,
         /// The command that runs the original, after `--`; paths are relative to the repository.
@@ -870,9 +889,19 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             fresh,
             pace,
             float_tolerance,
+            effects,
+            effect_env,
+            db_reset,
+            db_dump,
             json,
             run,
         } => {
+            let effects = rust_anything::effects::EffectsConfig::from_args(
+                &effects,
+                &effect_env,
+                db_reset.as_deref(),
+                db_dump.as_deref(),
+            )?;
             let outcome = app::record(&app::RecordOptions {
                 repo: &repo,
                 run: &run,
@@ -887,6 +916,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 fresh: &fresh,
                 pace_ms: pace,
                 float_tolerance,
+                effects,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);

@@ -100,6 +100,8 @@ pub struct Config {
     /// match in any order.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub unordered: BTreeMap<String, Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effects: Option<crate::effects::EffectsConfig>,
 }
 
 pub(crate) fn default_timeout() -> u64 {
@@ -190,6 +192,7 @@ struct Run {
     status: Status,
     files: BTreeMap<PathBuf, Vec<u8>>,
     fallback: Option<bool>,
+    effects: Option<Vec<u8>>,
 }
 
 impl Run {
@@ -345,9 +348,15 @@ fn is_python_program(program: &str) -> bool {
         })
 }
 
-fn run_case(command: &[String], repo: &Path, case: &Case, timeout: Duration) -> Result<Run> {
+fn run_case(
+    command: &[String],
+    repo: &Path,
+    case: &Case,
+    timeout: Duration,
+    effects: Option<&crate::effects::EffectsConfig>,
+) -> Result<Run> {
     let sandbox = temp_dir("run")?;
-    let result = run_in(command, repo, case, timeout, &sandbox);
+    let result = run_in(command, repo, case, timeout, &sandbox, effects);
     let _ = std::fs::remove_dir_all(&sandbox);
     result
 }
@@ -358,6 +367,7 @@ fn run_in(
     case: &Case,
     timeout: Duration,
     sandbox: &Path,
+    effects: Option<&crate::effects::EffectsConfig>,
 ) -> Result<Run> {
     let work = sandbox.join("cwd");
     std::fs::create_dir_all(&work)?;
@@ -390,6 +400,16 @@ fn run_in(
     }
     for key in &case.env_remove {
         cmd.env_remove(key);
+    }
+    let sinks = effects
+        .map(|config| -> Result<_> {
+            let sinks = crate::effects::Sinks::start(config)?;
+            sinks.reset(repo)?;
+            Ok(sinks)
+        })
+        .transpose()?;
+    if let Some(sinks) = &sinks {
+        cmd.envs(sinks.env());
     }
     cmd.envs(&case.env).env(FALLBACK_ENV, &log);
     #[cfg(unix)]
@@ -470,12 +490,14 @@ fn run_in(
         files.insert(rel, redact(std::fs::read(&path).unwrap_or_default()));
     }
     let fallback = std::fs::metadata(&log).ok().map(|m| m.len() > 0);
+    let effects = sinks.map(|s| redact(s.take(repo)));
     Ok(Run {
         stdout: redact(stdout),
         stderr: redact(stderr),
         status,
         files,
         fallback,
+        effects,
     })
 }
 
@@ -1220,6 +1242,7 @@ pub struct RecordOptions<'a> {
     /// Numbers in the output match within this tolerance; kept from the last recording when
     /// `None`, removed with 0.
     pub float_tolerance: Option<f64>,
+    pub effects: Option<crate::effects::EffectsConfig>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1244,6 +1267,7 @@ pub struct RecordOutcome {
 struct Recorded {
     stdout: Vec<u8>,
     stderr: Vec<u8>,
+    effects: Option<Vec<u8>>,
     status: Status,
     written: BTreeMap<PathBuf, Vec<u8>>,
     binary: bool,
@@ -1319,14 +1343,25 @@ fn settle(norm: &Normalizers, case: &Case, one: &Run, two: &Run) -> Recorded {
     };
     let (stdout, out_noise) = settle_stream(&one.stdout, &two.stdout);
     let (stderr, err_noise) = settle_stream(&one.stderr, &two.stderr);
+    let (effects, fx_noise) = match (&one.effects, &two.effects) {
+        (Some(a), Some(b)) => {
+            let (bytes, noise, _) = settle_text(norm, a, b);
+            (Some(bytes), noise)
+        }
+        _ => (None, None),
+    };
     let (w1, w2) = (one.written(case), two.written(case));
     let mut unstable = one.status != two.status
         || !w1.keys().eq(w2.keys())
         || (binary && (out_noise.is_some() || err_noise.is_some()));
-    let mut noise: Vec<(String, NoiseKind)> = [("stdout", out_noise), ("stderr", err_noise)]
-        .into_iter()
-        .filter_map(|(f, k)| Some((f.to_string(), k?)))
-        .collect();
+    let mut noise: Vec<(String, NoiseKind)> = [
+        ("stdout", out_noise),
+        ("stderr", err_noise),
+        (crate::effects::EXT, fx_noise),
+    ]
+    .into_iter()
+    .filter_map(|(f, k)| Some((f.to_string(), k?)))
+    .collect();
     let mut written = BTreeMap::new();
     for (path, a) in &w1 {
         let b = w2.get(path).unwrap_or(a);
@@ -1340,6 +1375,7 @@ fn settle(norm: &Normalizers, case: &Case, one: &Run, two: &Run) -> Recorded {
     Recorded {
         stdout,
         stderr,
+        effects,
         status: one.status.clone(),
         written,
         binary,
@@ -1355,7 +1391,7 @@ fn dotted() -> Table {
 }
 
 fn write_case(dir: &Path, bin: &str, name: &str, case: &Case, rec: &Recorded) -> Result<()> {
-    for ext in ["stdin", "stdout", "stderr"] {
+    for ext in ["stdin", "stdout", "stderr", crate::effects::EXT] {
         let _ = std::fs::remove_file(dir.join(format!("{name}.{ext}")));
     }
     for ext in ["in", "out"] {
@@ -1402,6 +1438,9 @@ fn write_case(dir: &Path, bin: &str, name: &str, case: &Case, rec: &Recorded) ->
     }
     std::fs::write(dir.join(format!("{name}.stdout")), &rec.stdout)?;
     std::fs::write(dir.join(format!("{name}.stderr")), &rec.stderr)?;
+    if let Some(effects) = &rec.effects {
+        std::fs::write(dir.join(format!("{name}.{}", crate::effects::EXT)), effects)?;
+    }
     for (sub, files) in [("in", &case.files), ("out", &rec.written)] {
         for (path, bytes) in files {
             let target = dir.join(format!("{name}.{sub}")).join(path);
@@ -1480,6 +1519,10 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             None => existing.as_ref().and_then(|c| c.float_tolerance),
         },
         unordered: BTreeMap::new(),
+        effects: crate::effects::EffectsConfig::merge(
+            existing.as_ref().and_then(|c| c.effects.clone()),
+            opts.effects.clone(),
+        ),
     };
     let norm = Normalizers::new(&config)?;
     if config.http.is_some() {
@@ -1543,11 +1586,17 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     }
 
     let timeout = Duration::from_secs(config.timeout_secs);
-    let runs = par_map(&planned, |(_, case)| -> Result<(Run, Run)> {
-        let one = run_case(&config.run, &repo, case, timeout)?;
-        let two = run_case(&config.run, &repo, case, timeout)?;
+    let effects = config.effects.as_ref();
+    let run_twice = |(_, case): &(String, Case)| -> Result<(Run, Run)> {
+        let one = run_case(&config.run, &repo, case, timeout, effects)?;
+        let two = run_case(&config.run, &repo, case, timeout, effects)?;
         Ok((one, two))
-    });
+    };
+    let runs = if effects.is_some_and(crate::effects::EffectsConfig::serial) {
+        planned.iter().map(run_twice).collect()
+    } else {
+        par_map(&planned, run_twice)
+    };
     let dir = cases_dir(&repo);
     std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
     let mut outcome = RecordOutcome {
@@ -1613,6 +1662,7 @@ struct Spec {
     case: Case,
     stdout: Option<Vec<u8>>,
     stderr: Option<Vec<u8>>,
+    effects: Option<Vec<u8>>,
     status: Expect,
     out_dir: Option<PathBuf>,
     binary: bool,
@@ -1705,6 +1755,7 @@ fn load_spec(dir: &Path, path: &Path) -> Result<Spec> {
     Ok(Spec {
         stdout: side("stdout")?,
         stderr: side("stderr")?,
+        effects: side(crate::effects::EXT)?,
         status,
         out_dir: out_dir.is_dir().then_some(out_dir),
         binary: doc.get("binary").and_then(Item::as_bool).unwrap_or(false),
@@ -1822,8 +1873,9 @@ fn check(
     repo: &Path,
     spec: &Spec,
     timeout: Duration,
+    effects: Option<&crate::effects::EffectsConfig>,
 ) -> Result<(Vec<Problem>, Option<bool>)> {
-    let run = run_case(command, repo, &spec.case, timeout)?;
+    let run = run_case(command, repo, &spec.case, timeout, effects)?;
     let mut problems = Vec::new();
     let status_ok = match (&spec.status, &run.status) {
         (Expect::Code(e), Status::Code(a)) => e == a,
@@ -1843,9 +1895,15 @@ fn check(
             detail: format!("expected {expected}, got {}\n", run.status),
         });
     }
+    let no_effects = Vec::new();
     for (field, expected, actual) in [
         ("stdout", &spec.stdout, &run.stdout),
         ("stderr", &spec.stderr, &run.stderr),
+        (
+            crate::effects::EXT,
+            &spec.effects,
+            run.effects.as_ref().unwrap_or(&no_effects),
+        ),
     ] {
         if let Some(expected) = expected
             && let Some(detail) = compare(
@@ -2025,6 +2083,7 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         http: None,
         float_tolerance: None,
         unordered: BTreeMap::new(),
+        effects: None,
     });
     let norm = Normalizers::new(&config)?;
     let timeout = Duration::from_secs(opts.timeout_secs.unwrap_or(config.timeout_secs));
@@ -2034,12 +2093,18 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         );
     }
     let specs = only_case(load_specs(&dir)?, opts.case, |s| &s.name)?;
-    let results = par_map(&specs, |spec| {
+    let effects = config.effects.as_ref();
+    let check_one = |spec: &Spec| {
         if matches!(spec.status, Expect::Skip) {
             return Ok((Vec::new(), None));
         }
-        check(&norm, &command, &repo, spec, timeout)
-    });
+        check(&norm, &command, &repo, spec, timeout, effects)
+    };
+    let results: Vec<Result<_>> = if effects.is_some_and(crate::effects::EffectsConfig::serial) {
+        specs.iter().map(check_one).collect()
+    } else {
+        par_map(&specs, check_one)
+    };
     let mut outcome = ReplayOutcome {
         build: command.clone(),
         passed: 0,
@@ -2122,6 +2187,7 @@ mod tests {
                 Path::new("."),
                 &Case::new(Vec::new()),
                 Duration::from_millis(200),
+                None,
             )
             .unwrap();
             assert!(start.elapsed() < Duration::from_secs(3), "{script}");
@@ -2181,6 +2247,7 @@ mod tests {
             pace_ms: None,
             port: None,
             float_tolerance: None,
+            effects: None,
         })
         .unwrap();
         assert_eq!(recorded.cases, 1);
@@ -2213,6 +2280,7 @@ mod tests {
             http: None,
             float_tolerance: None,
             unordered: BTreeMap::new(),
+            effects: None,
         })
         .unwrap();
         let kind = |a: &str, b: &str| settle_text(&norm, a.as_bytes(), b.as_bytes()).1;
@@ -2236,6 +2304,7 @@ mod tests {
             http: None,
             float_tolerance: None,
             unordered: BTreeMap::from([("c".to_string(), vec!["stdout".to_string()])]),
+            effects: None,
         })
         .unwrap();
         assert!(norm.unordered("c", "stdout"));
@@ -2274,6 +2343,7 @@ mod tests {
             http: None,
             float_tolerance: None,
             unordered: BTreeMap::new(),
+            effects: None,
         };
         let norm = Normalizers::new(&config).unwrap();
         assert_eq!(
@@ -2363,6 +2433,7 @@ mod tests {
             pace_ms: None,
             port: None,
             float_tolerance: None,
+            effects: None,
         })
         .unwrap();
         let read = |name: &str| std::fs::read_to_string(recorded.dir.join(name)).unwrap();

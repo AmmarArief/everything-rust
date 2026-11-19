@@ -332,8 +332,10 @@ struct Server {
     child: Child,
     port: u16,
     dir: PathBuf,
+    cwd: PathBuf,
     log: PathBuf,
     stopped: bool,
+    sinks: Option<crate::effects::Sinks>,
 }
 
 impl Server {
@@ -353,6 +355,14 @@ impl Server {
             }
             None => repo.to_path_buf(),
         };
+        let sinks = launch
+            .effects
+            .map(|config| -> Result<_> {
+                let sinks = crate::effects::Sinks::start(config)?;
+                sinks.reset(&cwd)?;
+                Ok(sinks)
+            })
+            .transpose()?;
         let mut child = Command::new(program)
             .args(rest)
             .args(
@@ -362,6 +372,7 @@ impl Server {
                     .map(|a| a.replace("{port}", &port.to_string())),
             )
             .current_dir(&cwd)
+            .envs(sinks.iter().flat_map(crate::effects::Sinks::env))
             .env("PORT", port.to_string())
             .env(app::FALLBACK_ENV, &log)
             .stdin(Stdio::null())
@@ -404,8 +415,10 @@ impl Server {
             child,
             port,
             dir,
+            cwd,
             log,
             stopped: false,
+            sinks,
         })
     }
 
@@ -446,13 +459,18 @@ impl Drop for Server {
     }
 }
 
-type Answer = (std::result::Result<Resp, String>, Option<bool>);
+type Answer = (
+    std::result::Result<Resp, String>,
+    Option<bool>,
+    Option<Vec<u8>>,
+);
 
 /// What every start gets besides its command: the server's arguments and its fresh files.
 struct Launch<'a> {
     args: &'a [String],
     files: Option<&'a Path>,
     pace: Option<Duration>,
+    effects: Option<&'a crate::effects::EffectsConfig>,
 }
 
 /// Starts the server once and sends every request in order.
@@ -473,7 +491,8 @@ fn run_all(
             std::thread::sleep(pace);
         }
         let fell_back = server.fallbacks().map(|after| after > before);
-        out.push((resp, fell_back));
+        let effects = server.sinks.as_ref().map(|s| s.take(&server.cwd));
+        out.push((resp, fell_back, effects));
     }
     server.stop();
     Ok(out)
@@ -891,6 +910,7 @@ pub(crate) fn record(
         args: &http.args,
         files: files.as_deref(),
         pace: http.pace_ms.map(Duration::from_millis),
+        effects: config.effects.as_ref(),
     };
     let one = run_all(
         &config.run,
@@ -923,7 +943,7 @@ pub(crate) fn record(
         unstable: Vec::new(),
         timed_out: Vec::new(),
     };
-    for (((name, req), (a, _)), (b, _)) in planned.iter().zip(one).zip(two) {
+    for (((name, req), (a, _, fx_a)), (b, _, fx_b)) in planned.iter().zip(one).zip(two) {
         let (Ok(a), Ok(b)) = (a, b) else {
             outcome.timed_out.push(name.clone());
             continue;
@@ -931,13 +951,22 @@ pub(crate) fn record(
         let (body, body_noise, binary) = app::settle_text(norm, &a.body, &b.body);
         let (headers, header_noisy) = settle_headers(norm, &a.headers, &b.headers);
         write_case(&dir, name, req, a.status, &headers, &body, binary)?;
+        let effects_file = dir.join(format!("{name}.{}", crate::effects::EXT));
+        let _ = std::fs::remove_file(&effects_file);
+        let mut fx_noise = None;
+        if let (Some(fa), Some(fb)) = (&fx_a, &fx_b) {
+            let (fx, noise, _) = app::settle_text(norm, fa, fb);
+            std::fs::write(&effects_file, fx)?;
+            fx_noise = noise;
+        }
         outcome.cases += 1;
-        if body_noise.is_some() || header_noisy {
+        if body_noise.is_some() || header_noisy || fx_noise.is_some() {
             outcome.noisy.push(name.clone());
         }
         for (field, kind) in [
             ("body", body_noise),
             ("headers", header_noisy.then_some(app::NoiseKind::Values)),
+            (crate::effects::EXT, fx_noise),
         ] {
             if let Some(kind) = kind {
                 outcome.noise.push(app::Noise {
@@ -961,6 +990,7 @@ struct Spec {
     headers: BTreeMap<String, String>,
     body: Option<Vec<u8>>,
     binary: bool,
+    effects: Option<Vec<u8>>,
 }
 
 fn strings(item: Option<&Item>) -> BTreeMap<String, String> {
@@ -985,7 +1015,13 @@ fn load_spec(dir: &Path, path: &Path) -> Result<Spec> {
     let request = doc.get("request").context("no [request]")?;
     let response = doc.get("response").context("no [response]")?;
     let body_file = dir.join(format!("{name}.body"));
+    let effects_file = dir.join(format!("{name}.{}", crate::effects::EXT));
     Ok(Spec {
+        effects: if effects_file.exists() {
+            Some(std::fs::read(&effects_file)?)
+        } else {
+            None
+        },
         req: Req {
             method: request
                 .get("method")
@@ -1079,6 +1115,7 @@ pub(crate) fn replay(
         args: &http.args,
         files: files.as_deref(),
         pace: http.pace_ms.map(Duration::from_millis),
+        effects: config.effects.as_ref(),
     };
     let answers = run_all(command, &launch, repo, port, &reqs, timeout)?;
     let mut outcome = ReplayOutcome {
@@ -1091,7 +1128,7 @@ pub(crate) fn replay(
         report: dir.join(app::REPORT_FILE),
     };
     let (mut reported, mut fell_back) = (false, Vec::new());
-    for (spec, (answer, fallback)) in specs.iter().zip(answers) {
+    for (spec, (answer, fallback, effects)) in specs.iter().zip(answers) {
         outcome.total += 1;
         reported |= fallback.is_some();
         if fallback == Some(true) {
@@ -1144,6 +1181,20 @@ pub(crate) fn replay(
                     });
                 }
             }
+        }
+        if let Some(expected) = &spec.effects
+            && let Some(detail) = app::compare(
+                norm,
+                expected,
+                effects.as_deref().unwrap_or_default(),
+                false,
+                norm.unordered(&spec.name, crate::effects::EXT),
+            )
+        {
+            problems.push(Problem {
+                field: crate::effects::EXT.to_string(),
+                detail,
+            });
         }
         if problems.is_empty() {
             outcome.passed += 1;

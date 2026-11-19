@@ -35,6 +35,34 @@ rust-anything app replay . --build "./app-go"       # does the rewrite do the sa
 
 The unit tools (`bridge`, `record`, `diff`, `gate`) and `lift` are Rust-specific.
 
+### Side effects: email, webhooks and databases
+
+A rewrite can answer with the same JSON and still send an email twice or write different rows.
+`app record` can record what leaves the process too, per case, and `app replay` compares it:
+
+```sh
+rust-anything app record . --effects http,smtp --effect-env WEBHOOK_URL=http-url \
+  --db-reset "sh scripts/reset-db.sh" --db-dump "sqlite3 app.db .dump" -- python3 app.py
+```
+
+- **`--effects http`** runs a local HTTP sink that answers every request with `200 {}`, set as
+  `HTTP_PROXY`, `http_proxy` and `RUST_ANYTHING_HTTP_SINK`. Each request is recorded as method,
+  URL, content type and body. HTTPS through the proxy is recorded as `CONNECT host:443` and refused,
+  since the sink cannot read it: point HTTPS settings at the sink with `--effect-env` instead.
+- **`--effects smtp`** runs a local mail server (`SMTP_HOST`, `SMTP_PORT`, `RUST_ANYTHING_SMTP_SINK`)
+  that accepts everything, and records sender, recipients and the message.
+- **`--effect-env VAR=KIND`** points one of the app's own settings at a sink: `http-url`,
+  `smtp-host`, `smtp-port` or `smtp-url`. Most apps read their webhook URL or mail host from a
+  setting like this.
+- **`--db-reset` and `--db-dump`** are shell commands: reset puts the database in a known state
+  before each case (each start, for servers), and dump prints its state after each case (each
+  request, for servers). Cases then run one at a time.
+
+What reached the sinks is stored as `<case>.effects` next to the case and compared like stdout:
+the count and order of effects matter, values that differed between the original's two runs
+(dates, ids) become wildcards, and effects the original sends in varying order are compared in any
+order. The settings are saved with the cases, so replay starts the same sinks for every build.
+
 Plan first: `rust-anything analyze . --whole-app` adds the app's shape (CLI, server or library)
 and entry points, every external dependency (imported or declared) with its Rust crate and fit,
 the port order as pieces (units that import each other move together), and numbered decisions

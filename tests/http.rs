@@ -72,6 +72,7 @@ fn record(repo: &Path, run: &str, traps: bool) -> app::RecordOutcome {
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        effects: None,
     })
     .unwrap()
 }
@@ -118,6 +119,7 @@ fn http_record_keeps_distinct_requests_with_the_same_name() {
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        effects: None,
     })
     .unwrap();
     let repeated = replay(&repo, None);
@@ -178,6 +180,7 @@ fn http_fresh_files_and_arguments_reach_every_start() {
         fresh: &["data".to_string()],
         pace_ms: Some(5),
         float_tolerance: None,
+        effects: None,
     })
     .unwrap();
     let body = std::fs::read_to_string(out.dir.join("a2.body")).unwrap();
@@ -240,6 +243,7 @@ fn http_rerecord_uses_the_existing_fixed_port() {
             pace_ms: None,
             port,
             float_tolerance: None,
+            effects: None,
         })
     };
     let first = record(Some(port));
