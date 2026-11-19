@@ -212,7 +212,10 @@ pub struct GateOutcome {
 
 pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
     let manifest = Manifest::load(crate_dir)?;
+    let lockfile = lockfile_check(crate_dir);
     let mut checks = rust_checks(crate_dir, &crate_dir.join("target"));
+    checks.extend(lockfile);
+    checks.extend(advisories_check(crate_dir));
     checks.push(ported_check(crate_dir));
 
     checks.extend(size_check(crate_dir, &manifest));
@@ -340,6 +343,91 @@ pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
         passed: checks.iter().all(|c| c.passed),
         checks,
     })
+}
+
+fn lockfile_check(crate_dir: &Path) -> Option<Check> {
+    if !crate_dir.join("Cargo.lock").exists() {
+        return Some(Check {
+            fix: None,
+            name: "lockfile",
+            passed: true,
+            detail: "warning: no Cargo.lock yet; keep the one the build writes, so builds are reproducible".into(),
+        });
+    }
+    let mut cmd = Command::new("cargo");
+    cmd.args([
+        "metadata",
+        "--locked",
+        "--offline",
+        "--format-version",
+        "1",
+        "--manifest-path",
+    ])
+    .arg(crate_dir.join("Cargo.toml"));
+    let out = crate::process::output(&mut cmd, crate::process::BUILD).ok()?;
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let stale = !out.status.success() && stderr.contains("--locked");
+    Some(Check {
+        fix: None,
+        name: "lockfile",
+        passed: true,
+        detail: if stale {
+            "warning: Cargo.lock is out of date with Cargo.toml; keep the refreshed one the build wrote".into()
+        } else {
+            "Cargo.lock matches Cargo.toml".into()
+        },
+    })
+}
+
+fn advisories_check(crate_dir: &Path) -> Option<Check> {
+    let manifest = crate_dir.join("Cargo.toml");
+    let attempts: [(&str, Vec<std::ffi::OsString>); 2] = [
+        (
+            "cargo-deny",
+            vec![
+                "deny".into(),
+                "--manifest-path".into(),
+                manifest.clone().into(),
+                "check".into(),
+                "advisories".into(),
+            ],
+        ),
+        (
+            "cargo-audit",
+            vec![
+                "audit".into(),
+                "--file".into(),
+                crate_dir.join("Cargo.lock").into(),
+            ],
+        ),
+    ];
+    for (tool, args) in attempts {
+        if !crate::setup::on_path(tool) {
+            continue;
+        }
+        let mut cmd = Command::new("cargo");
+        cmd.args(&args);
+        let out = crate::process::output(&mut cmd, crate::process::BUILD).ok()?;
+        let text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        return Some(Check {
+            fix: None,
+            name: "advisories",
+            passed: true,
+            detail: if out.status.success() {
+                format!("no known advisories ({tool})")
+            } else {
+                format!(
+                    "warning: {tool} reports advisories\n{}",
+                    last_lines(&text, 15)
+                )
+            },
+        });
+    }
+    None
 }
 
 /// The checks that hold for any Rust crate, bindings or not: fmt, clippy (warnings are errors),

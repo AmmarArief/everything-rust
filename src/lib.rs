@@ -3,6 +3,8 @@
 //! The steps (`analyze`, `bridge`, `harness`, `shadow`, `gate`) are language-neutral in shape;
 //! each source language is a plugin module. TypeScript/JavaScript (`ts`) is the first.
 
+pub(crate) const MIN_RUST: &str = env!("CARGO_PKG_RUST_VERSION");
+
 pub mod analyze;
 pub mod app;
 pub mod bridge;

@@ -88,7 +88,11 @@ a signature in `port.rs`, run `rust-anything refresh <crate>`.
 - Read each risk the plan lists for the unit, at its `file:line`, before writing code.
 - String offsets: JS and Java index UTF-16 code units, Rust UTF-8 bytes: use `src/utf16.rs`.
 - Errors: return `Err("TypeName: message")`; it becomes that exception in Python, Ruby and Java,
-  and the `error` text in Go.
+  and the `error` text in Go. Inside `port.rs`, a small error enum is clearer; turn it into that
+  string only in the exported function.
+- Letters and digits: Rust's `char::is_alphanumeric` takes more than Java's
+  `Character.isLetterOrDigit` (letters and decimal digits, per UTF-16 unit, so nothing beyond
+  U+FFFF) or Python's `str.isalpha` (letters only). Match the original's rule by general category.
 - Numbers in Python and Ruby: ints that the original passes through must come back as ints;
   in Python ports use `crate::pynum::Num` for int-or-float, not `serde_json::Value`.
 - C: inputs recorded as `crash:` are undefined behavior; any result passes.
@@ -100,7 +104,10 @@ a signature in `port.rs`, run `rust-anything refresh <crate>`.
   for real text the patterns see, record it with `--inputs`, and set `unicode(false)` or spell out
   ASCII classes (`[A-Za-z0-9_]`) where the original's `\w` is ASCII-only (JS without `u`, Java).
 - No `unsafe`. If truly needed: minimal, isolated, with a `// SAFETY:` comment.
-- Add Rust unit tests in `port.rs` for the cases you reason about.
+- Add Rust unit tests in `port.rs` for the cases you reason about. `cargo test` passing with no
+  tests proves nothing: the recorded cases are the proof.
+- To silence a lint, use `#[expect(lint, reason = "...")]`, not `#[allow]`, so it is flagged once
+  it no longer applies.
 
 ## 2b. Batch a hot loop
 

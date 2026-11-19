@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- `lift`: the lifted app or library gets `rust-version` and a release profile with `lto = true`
+  and `codegen-units = 1`, unless it sets them already.
+- `bridge`: generated crates set `rust-version` and warn on `unused_lifetimes` and
+  `trivial_numeric_casts` (so `gate` fails on them).
+- `gate`: two checks that never fail it: `lockfile` warns when `Cargo.lock` is missing or out of
+  date, and `advisories` runs `cargo deny check advisories` or `cargo audit` when one is
+  installed.
+- Skill: typed errors inside `port.rs`, Rust's `is_alphanumeric` against the original's letter
+  rule, `#[expect(lint, reason = "...")]` over `#[allow]`, and `cargo test` with no tests proving
+  nothing.
+
 ## 2.0.2 (2026-11-19)
 
 - The npm package carries `mcpName`, and `server.json` describes the MCP server, so it can be

@@ -412,6 +412,24 @@ fn is_generated_main(code: &str, state: &State) -> bool {
     generated_mains(state).iter().any(|m| same_code(code, m))
 }
 
+fn ship_settings(doc: &mut DocumentMut) {
+    if doc["package"].get("rust-version").is_none() {
+        doc["package"]["rust-version"] = value(crate::MIN_RUST);
+    }
+    let release = doc["profile"]["release"].or_insert(toml_edit::table());
+    if let Some(release) = release.as_table_like_mut() {
+        if release.get("lto").is_none() {
+            release.insert("lto", value(true));
+        }
+        if release.get("codegen-units").is_none() {
+            release.insert("codegen-units", value(1));
+        }
+    }
+    if let Some(profile) = doc["profile"].as_table_mut() {
+        profile.set_implicit(true);
+    }
+}
+
 fn lift_library(stage_app: &Path, state: &mut State) -> Result<()> {
     state.lifted = true;
     let _ = std::fs::remove_file(stage_app.join(crate::library::CARGO_CONFIG));
@@ -428,6 +446,7 @@ fn lift_library(stage_app: &Path, state: &mut State) -> Result<()> {
         "`{}` in Rust, lifted by rust-anything from its units' ports",
         state.name
     ));
+    ship_settings(&mut doc);
     std::fs::write(&cargo, doc.to_string())?;
     Ok(())
 }
@@ -490,6 +509,7 @@ fn lift_app(
             state.name
         ));
     }
+    ship_settings(&mut doc);
     if http {
         if let Some(deps) = doc
             .get_mut("dependencies")

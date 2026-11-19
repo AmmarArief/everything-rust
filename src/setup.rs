@@ -98,7 +98,7 @@ impl Agent {
     }
 }
 
-fn on_path(command: &str) -> bool {
+pub(crate) fn on_path(command: &str) -> bool {
     std::env::var_os("PATH").is_some_and(|paths| {
         std::env::split_paths(&paths).any(|dir| {
             let file = dir.join(command);
