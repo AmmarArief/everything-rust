@@ -19,11 +19,8 @@
 - Skill: typed errors inside `port.rs`, Rust's `is_alphanumeric` against the original's letter
   rule, `#[expect(lint, reason = "...")]` over `#[allow]`, and `cargo test` with no tests proving
   nothing.
-- `bridge --allocator rusty_alloc`: batch crates can use rusty_alloc, a pure-Rust remake of
-  mimalloc, as their global allocator instead of mimalloc. It needs no C compiler, and wasm
-  batch crates get it too (with mimalloc they keep Rust's default allocator). mimalloc stays the
-  default. The choice is kept in `rust-anything.json`, so `refresh` keeps it, and the MCP
-  `bridge` tool takes `allocator`. Measurements are in DECISIONS S12 and #96.
+- `bridge --allocator rusty_alloc`: an opt-in pure-Rust global allocator for batch crates (wasm
+  too), kept by `refresh` and taken by the MCP `bridge` tool. mimalloc stays the default (#112).
 
 ## 2.0.2 (2026-11-19)
 

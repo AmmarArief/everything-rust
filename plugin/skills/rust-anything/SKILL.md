@@ -137,8 +137,7 @@ Close the batch when done in Go and Java (finalizers are only a fallback).
 - Items and other arguments: numbers, booleans and strings (Ruby: any value); results: numbers,
   booleans or strings. Not for C.
 - Batch crates allocate with mimalloc, which is built from C. Pass `--allocator rusty_alloc` to
-  `bridge` for a pure-Rust allocator when the target has no C compiler, or to give wasm batches
-  an allocator of their own. The choice is kept in `rust-anything.json`.
+  `bridge` if the target has no C compiler.
 
 ## 3. Prove it
 
