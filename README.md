@@ -24,7 +24,7 @@
   <a href="docs/faq.md#faq">FAQ</a>
 </p>
 
-<p align="center">Made in Türkiye 🇹🇷 by <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="LICENSE">MIT</a></p>
+<p align="center">Made in Türkiye 🇹🇷 by <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Sponsor me</a></p>
 
 <p align="center">Sponsored by <a href="https://coderabbit.ai"><img src="docs/assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
@@ -72,6 +72,12 @@ byte for byte, since anything not ported yet falls back to Prettier. json-server
 recorded HTTP cases match on a pure Rust binary. Measured on an Apple M4, two runs each, every
 output compared before timing ([details](docs/real-world.md)). Calling Rust once per small
 function is usually *slower* than a JIT; rust-anything finds the loop worth moving, and moves it.
+
+<p align="center">
+  <img src="docs/assets/prettier.gif" alt="Prettier and its Rust port format the same 59 real files, one process per file: Prettier takes 3.63 s, the Rust port 0.20 s, with the same output byte for byte." width="820">
+  <br>
+  <sub>Prettier against its Rust port on 59 real files from ms, Fuse.js and json-server (Apple M4). Same output, byte for byte. <a href="docs/real-world.md#prettier">How it was measured</a>.</sub>
+</p>
 
 > rust-anything is an independent project, not affiliated with or endorsed by the Rust Project
 > or the Rust Foundation. "Rust" is a trademark of the Rust Foundation.
@@ -147,12 +153,6 @@ the whole argv) and copy [`skills/rust-anything/`](./skills/rust-anything) to
 ```
 
 Or run the steps yourself:
-
-<p align="center">
-  <img src="docs/assets/terminal.gif" alt="rust-anything profile finds fuzzyScore in a loop, bridge --batch generates the Rust crate, gate passes with 2000/2000 recorded cases, and the benchmark shows 20.7x faster than TS." width="820">
-  <br>
-  <sub>The steps on x18n's <code>fuzzyScore</code>: <code>profile</code> finds the hot loop, <code>bridge --batch</code> generates the crate, <code>gate</code> passes, and the benchmark compares it with the TypeScript.</sub>
-</p>
 
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
