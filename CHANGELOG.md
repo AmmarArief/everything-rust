@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2.0.2 (2026-11-19)
+
+- The npm package carries `mcpName`, and `server.json` describes the MCP server, so it can be
+  listed in the official MCP Registry as `io.github.erkamyaman/rust-anything`.
+
 ## 2.0.1 (2026-11-19)
 
 - `record`: string traps now include characters that languages classify differently (`²`, `Ⅰ`,
