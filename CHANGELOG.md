@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `setup`: a symlinked settings file (a dotfiles repo) is written at its target instead of being
+  replaced by a plain file, and an existing file keeps its permissions (a `600` file stays `600`).
+
 ## 2.0.0 (2026-11-19)
 
 Highlights:
