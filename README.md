@@ -12,6 +12,8 @@
 
 <p align="center"><em>CLIs, servers and libraries, piece by piece, checked against the original at every step.</em></p>
 
+<p align="center"><b>New in 2.0: <a href="docs/real-world.md#prettier">Prettier, ported to Rust</a>. 19x faster, the same output byte for byte.</b></p>
+
 <p align="center">Node.js and TypeScript · Python · C · Go · Ruby · Java · PHP and C# in preview</p>
 
 <p align="center">
@@ -27,6 +29,7 @@
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
   <a href="#languages">Languages</a> ·
+  <a href="docs/real-world.md">Real-world ports</a> ·
   <a href="docs/how-it-works.md#how-it-works">How it works</a> ·
   <a href="docs/how-it-works.md#the-loop">The loop</a> ·
   <a href="docs/whole-apps.md#port-a-whole-app">Port a whole app</a> ·
@@ -36,13 +39,7 @@
   <a href="docs/faq.md#faq">FAQ</a>
 </p>
 
-<p align="center">up to 20x faster · 38,251 recorded cases replayed · 0 mismatches · one command</p>
-
-<p align="center">
-  <img src="docs/assets/race.gif" alt="Typing user.profile into x18n's search over 50,000 keys: TypeScript spends 143 ms, the rust-anything batch 6.9 ms, with the same results at every keystroke." width="820">
-  <br>
-  <sub>Typing a query into x18n's search over 50,000 keys: the TypeScript original against the rust-anything batch, same results at every keystroke.</sub>
-</p>
+<p align="center">Prettier in Rust: 19x faster · 17,224 recorded runs · 0 mismatches · 10 languages</p>
 
 <table>
   <tr>
@@ -69,21 +66,23 @@
 Node.js (TypeScript/JavaScript), Python, C, Go, Ruby or Java app does today, then checks every piece of the
 Rust rewrite against that recording before it moves on, until the app is pure Rust. CLIs, HTTP
 servers and libraries; your coding agent (or you) writes the Rust. It can only catch what the
-recording covers: see [What it can't catch](docs/how-it-works.md#what-it-cant-catch). Only need the slow part fast?
-Port just that, one hot path at a time:
+recording covers: see [What it can't catch](docs/how-it-works.md#what-it-cant-catch). Whole tools
+and servers, or only the slow part, one hot path at a time:
 
-| Real workload, same results as the original | Original | With rust-anything |
+| Real project, same output as the original | Original | With rust-anything |
 | --- | ---: | ---: |
-| x18n's sidebar search, 50,000 keys (TypeScript, Node) | 10 ms per query | **0.5 ms: 20x faster** |
-| The same search in the browser (wasm, one thread) | 10 ms | **0.95 ms: 11.5x** |
-| `slugify` over 20,000 strings (Python) | 98 ms | **17x faster** |
-| `Shellwords.shellescape` from Ruby's standard library, 50,000 values | 88 ms | **11.8x faster** |
-| `Slugify` over 50,000 strings (Go) | 49 ms | **4x faster** |
-| `slugify` over 50,000 strings (Java) | 43 ms | **3x faster** |
+| [Prettier](docs/real-world.md#prettier) 3.6.2, 2,360 JS/TS files from the command line | 128.6 s | **6.9 s: 19x faster** |
+| Prettier, 6,305 Markdown files from the command line | 352 s | **22.5 s: 15.6x faster** |
+| [json-server](docs/real-world.md#json-server), a whole Node server: memory at idle | 74 MB | **3.5 MB**, one 5.3 MB binary |
+| json-server, from start to first response | 79 to 85 ms | **8 to 10 ms** |
+| [Fuse.js](docs/real-world.md#fusejs) search over 50,000 strings, per query | 91.2 ms | **2.8 ms: 32x faster** |
 
-Measured on 4 cores; every number has a benchmark in [`demo/`](./demo) that first checks the
-results are identical. Calling Rust once per small function is usually *slower* than a JIT;
-rust-anything finds the loop worth moving, and moves it.
+Prettier: 15,837 of 17,224 recorded runs format fully in Rust across 10 languages (JavaScript,
+TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), and all 17,224 match Prettier
+byte for byte, since anything not ported yet falls back to Prettier. json-server: 514/514
+recorded HTTP cases match on a pure Rust binary. Measured on an Apple M4, two runs each, every
+output compared before timing ([details](docs/real-world.md)). Calling Rust once per small
+function is usually *slower* than a JIT; rust-anything finds the loop worth moving, and moves it.
 
 > rust-anything is an independent project, not affiliated with or endorsed by the Rust Project
 > or the Rust Foundation. "Rust" is a trademark of the Rust Foundation.

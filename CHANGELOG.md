@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 2.0.0 (2026-11-19)
+
+Highlights:
+
+- **Prettier, ported to Rust.** Prettier 3.6.2 behind a Rust front door: 15,837 of 17,224
+  recorded runs format fully in Rust across JavaScript, TypeScript, JSX, JSON, GraphQL, YAML,
+  Markdown, CSS, SCSS and Less, and all 17,224 match Prettier byte for byte. 19x faster on JS/TS
+  from the command line (Apple M4). See `docs/real-world.md#prettier`.
+- **json-server, ported to a pure Rust binary**: 514/514 HTTP cases, 3.5 MB of memory at idle
+  instead of 74 MB.
+- **Side effects are compared**: outgoing HTTP calls, email and the database's state, per case.
+- **`map`**: the whole port at a glance, and every piece whose original changed upstream.
+- **Plain JavaScript gets types** from JSDoc and `.d.ts`; **OpenCode** joins the agents `setup`
+  registers.
+
+Changed: `diff` exits non-zero when the recording is stale (it printed a warning and exited 0).
+
 - `app record --effects http,smtp`, `--effect-env VAR=KIND`, `--db-reset` and `--db-dump`: record
   what leaves the process per case (outgoing HTTP calls, email, the database's state) and compare
   it on replay, for CLIs and servers. A rewrite that sends an email twice or writes different rows
