@@ -4,7 +4,8 @@ What works, and how each part was last checked. Updated 2026-11-18.
 
 **Verified**: run end to end (bridge, record, port, diff, gate) on real code someone else wrote,
 named below. **Tested**: covered by this repository's tests on fixtures written for them, not yet
-run on a real project. **Preview**: works for part of the flow, as described.
+run on a real project. **Whole apps**: `analyze` and the whole-app flow (`app record`, `app replay`,
+front door); units cannot be bridged yet.
 
 ## Porting units
 
@@ -16,8 +17,8 @@ run on a real project. **Preview**: works for part of the flow, as described.
 | Ruby | Verified | `shellwords.rb` from Ruby 3.3 (2026-11-16) | 1,617/1,617; gate passes |
 | Java | Verified | JDK 21 behind a facade (2026-11-16) | 4,492/4,492; gate passes |
 | C | Verified | glibc behind a facade (2026-11-16) | 1,859/1,859 after dropping one undefined-behavior case; gate passes |
-| PHP | Preview | none | `analyze` and whole apps only; units cannot be bridged yet |
-| C# | Preview | none | `analyze` and whole apps only; units cannot be bridged yet |
+| PHP | Whole apps | none | `analyze` and whole apps only; units cannot be bridged yet |
+| C# | Whole apps | none | `analyze` and whole apps only; units cannot be bridged yet |
 
 Details of every run: [real-world.md](real-world.md) (TS/JS) and
 [real-world-languages.md](real-world-languages.md) (the others).

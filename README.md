@@ -14,12 +14,12 @@
 
 <p align="center"><b>New in 2.0: <a href="docs/real-world.md#prettier">Prettier, ported to Rust</a>. 19x faster, the same output byte for byte.</b></p>
 
-<p align="center">Node.js and TypeScript · Python · C · Go · Ruby · Java · PHP and C# in preview</p>
+<p align="center">Node.js and TypeScript · Python · C · Go · Ruby · Java · PHP · C#</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
-  <img src="https://img.shields.io/badge/languages-6%20%2B%202%20preview-E2862A" alt="6 languages, plus 2 in preview">
+  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="8 languages">
   <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-5%20agents-E2862A" alt="Works with 5 agents"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Tests"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT license"></a>
@@ -191,8 +191,8 @@ done.
 | Go | package | typed cgo calls and a generated binary wire, in a package with the original API | a generated Go driver, built as its own module |
 | Ruby | file or folder of module functions | a magnus extension under the original modules | a generated Ruby driver |
 | Java | package of `public static` methods | typed JNI and a generated binary wire, in wrapper classes with the original methods | a generated reflection driver |
-| PHP (preview) | folder of functions and `public static` methods | coming next: PHP FFI over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
-| C# (preview) | folder of `public static` methods | coming next: P/Invoke over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and ASP.NET servers (`dotnet <app>.dll`) |
+| PHP | folder of functions and `public static` methods | coming next: PHP FFI over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
+| C# | folder of `public static` methods | coming next: P/Invoke over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and ASP.NET servers (`dotnet <app>.dll`) |
 
 Every language except C also gets batch classes (`--batch`): the items cross once and stay in
 Rust, and each call runs over all of them on all cores.
@@ -203,12 +203,12 @@ The language is detected from the repository (`go.mod`, `pom.xml`, a `.csproj` o
 signatures, Ruby YARD tags, PHP types and phpdoc; untyped parameters used as numbers are inferred
 as numbers.
 
-PHP is in preview: `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
+For PHP, `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
 such as loose comparison and integer overflow into floats, Composer packages mapped to crates),
 and a PHP CLI or server can be recorded, replayed and put behind a Rust front door. Porting its
 units into Rust through PHP's FFI is the next step ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
-C# is in preview the same way: `analyze` reads `.csproj` projects and their NuGet packages
+C# works the same way: `analyze` reads `.csproj` projects and their NuGet packages
 (mapped to crates), resolves `using` directives to folders, and flags what C# does differently
 (`decimal`, `dynamic`, LINQ's deferred queries, `Task`, `lock`, reflection). A C# CLI or ASP.NET
 server can be recorded, replayed and put behind a Rust front door; porting units through P/Invoke

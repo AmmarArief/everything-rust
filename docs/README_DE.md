@@ -19,7 +19,7 @@
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io-Version"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm-Version"></a>
-  <img src="https://img.shields.io/badge/languages-6%20%2B%202%20preview-E2862A" alt="6 Sprachen, plus 2 in der Vorschau">
+  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 Sprachen, plus 2 in der Vorschau">
   <a href="#funktioniert-mit"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="Funktioniert mit 4 Agenten"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Tests"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT-Lizenz"></a>

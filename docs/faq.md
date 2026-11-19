@@ -47,7 +47,7 @@ is what moves well.
 it is. Moving the UI to Tauri (the same web UI on a Rust backend) is a separate step once the logic
 is Rust.
 
-**What about C#, Kotlin or Swift?** C# is in preview (see [Languages](../README.md#languages)); Kotlin and
+**What about C#, Kotlin or Swift?** C# is supported for whole apps (see [Languages](../README.md#languages)); Kotlin and
 Swift are not supported yet. Each language needs a parser, a recorder, a bridge and a replay
 driver, all tested end to end. Open an issue (or upvote one) for the language you need.
 

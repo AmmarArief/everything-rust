@@ -75,7 +75,7 @@ library missing from the table is reported as `unknown`; never guess a crate.
 
 ## Add a language
 
-PHP and C# were added as previews in two commits worth reading first:
+PHP and C# were added in two commits worth reading first:
 [e8ac243](https://github.com/erkamyaman/rust-anything/commit/e8ac243) (PHP) and
 [caea59a](https://github.com/erkamyaman/rust-anything/commit/caea59a) (C#). A new language starts
 the same way:

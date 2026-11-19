@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io versiyası"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm versiyası"></a>
-  <img src="https://img.shields.io/badge/languages-6%20%2B%202%20preview-E2862A" alt="6 dil, üstəgəl 2 önizləmədə">
+  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 dil, üstəgəl 2 önizləmədə">
   <a href="#dəstəklənən-agentlər"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="4 agentlə işləyir"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Testlər"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT lisenziyası"></a>
