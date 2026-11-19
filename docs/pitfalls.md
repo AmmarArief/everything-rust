@@ -63,6 +63,11 @@ way needs it too, or a longer `--timeout`.
 and collided. Given names keep 96 characters (`given_slug`); look at the case count after
 recording against the number of input lines.
 
+**A Java case failed on a JVM warning.** With many JVMs starting at once, one found its
+`/tmp/hsperfdata_<user>/<pid>` file locked and printed `[warning][perf,memops] Cannot use file`
+to stdout, so the replay's stdout differed. Java test apps run with `-XX:-UsePerfData`; an app
+recorded on a busy machine needs it too.
+
 ## Numbers and claims
 
 **Benchmarks taken while other builds ran were off by a wide margin.** Run `bench` on a quiet

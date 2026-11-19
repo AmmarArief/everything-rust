@@ -407,8 +407,8 @@ fn java_cli_records_and_replays() {
     sh(&repo, "javac", &["-d", "classes-bug", "Tcli.java"]);
     record_then_replay(
         &repo,
-        "java -cp ./classes Tcli",
-        "java -cp ./classes-bug Tcli",
+        "java -XX:-UsePerfData -cp ./classes Tcli",
+        "java -XX:-UsePerfData -cp ./classes-bug Tcli",
     );
 }
 
@@ -880,7 +880,7 @@ fn java_cli_lifts_to_pure_rust() {
     }
     let repo = fixture("java");
     sh(&repo, "javac", &["-d", "classes", "Tcli.java"]);
-    lift_end_to_end(&repo, "java -cp ./classes Tcli", &CHARS, "classes");
+    lift_end_to_end(&repo, "java -XX:-UsePerfData -cp ./classes Tcli", &CHARS, "classes");
 }
 
 #[test]
