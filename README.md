@@ -79,6 +79,12 @@ function is usually *slower* than a JIT; rust-anything finds the loop worth movi
   <sub>Prettier against its Rust port on 59 real files from ms, Fuse.js and json-server (Apple M4). Same output, byte for byte. <a href="docs/real-world.md#prettier">How it was measured</a>.</sub>
 </p>
 
+<p align="center">
+  <img src="docs/assets/json-server.gif" alt="json-server as a Node server and as one Rust binary: memory at idle 74 MB and 3.5 MB, start to first response 79 to 85 ms and 8 to 10 ms, and 514 of 514 recorded HTTP cases match." width="820">
+  <br>
+  <sub>json-server, a whole Node server, lifted to a pure Rust binary (Apple M4). <a href="docs/real-world.md#json-server">How it was measured</a>.</sub>
+</p>
+
 > rust-anything is an independent project, not affiliated with or endorsed by the Rust Project
 > or the Rust Foundation. "Rust" is a trademark of the Rust Foundation.
 
@@ -169,6 +175,14 @@ the Rust. rust-anything supplies what an agent cannot guess reliably: where the 
 first and in which order, a bridge so the rest of the code calls the Rust with its API unchanged,
 the exact behavior the port must match, a safe way to ship it, and a gate that says when a port is
 done.
+
+Same output is not enough. Record what the app sends too, and a rewrite that mails twice fails:
+
+<p align="center">
+  <img src="docs/assets/effects.gif" alt="app record with --effects smtp records one welcome email per signup; app replay of a rewrite that prints the same output but mails twice reports 0/2 cases passed, failing on effects, and the report shows the extra email." width="820">
+  <br>
+  <sub>A real run of <code>app record --effects</code> and <code>app replay</code>. See <a href="docs/whole-apps.md#side-effects-email-webhooks-and-databases">Side effects</a>.</sub>
+</p>
 
 ## Languages
 
