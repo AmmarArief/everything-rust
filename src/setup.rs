@@ -196,12 +196,23 @@ fn backup(path: &Path) -> Result<Option<PathBuf>> {
 }
 
 /// Writes `text` to `path` through a temporary file, so a failed write never leaves half a file.
+/// A symlinked file (a dotfiles repo) is written at its target, and an existing file keeps its
+/// permissions (a settings file holding tokens stays private).
 fn write(path: &Path, text: &str) -> Result<()> {
+    let path = &std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
     }
     let tmp = path.with_extension("rust-anything.tmp");
-    std::fs::write(&tmp, text).with_context(|| format!("writing {}", tmp.display()))?;
+    let mut file =
+        std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
+    if let Ok(meta) = std::fs::metadata(path) {
+        file.set_permissions(meta.permissions())
+            .with_context(|| format!("writing {}", tmp.display()))?;
+    }
+    std::io::Write::write_all(&mut file, text.as_bytes())
+        .with_context(|| format!("writing {}", tmp.display()))?;
+    drop(file);
     std::fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))
 }
 
@@ -767,6 +778,28 @@ mod tests {
         let err = setup(&opts(&home, vec![Agent::OpenCode])).unwrap_err();
         assert!(format!("{err:#}").contains("not valid JSON"), "{err:#}");
         assert_eq!(std::fs::read_to_string(&config).unwrap(), "{ not json");
+        std::fs::remove_dir_all(&home).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn keeps_a_symlinked_settings_file_and_its_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = temp_home("link");
+        let dotfiles = home.join("dotfiles");
+        std::fs::create_dir_all(&dotfiles).unwrap();
+        let real = dotfiles.join("claude.json");
+        std::fs::write(&real, r#"{"token": "secret"}"#).unwrap();
+        std::fs::set_permissions(&real, std::fs::Permissions::from_mode(0o600)).unwrap();
+        std::os::unix::fs::symlink(&real, home.join(".claude.json")).unwrap();
+
+        setup(&opts(&home, vec![Agent::Claude])).unwrap();
+        let link = std::fs::symlink_metadata(home.join(".claude.json")).unwrap();
+        assert!(link.file_type().is_symlink(), "the link is kept");
+        let text = std::fs::read_to_string(&real).unwrap();
+        assert!(text.contains("rust-anything"), "{text}");
+        let mode = std::fs::metadata(&real).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "permissions kept");
         std::fs::remove_dir_all(&home).unwrap();
     }
 

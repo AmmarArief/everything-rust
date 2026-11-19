@@ -5,6 +5,8 @@
 - `analyze`: Python packages in a workspace match their dependencies by the normalized name, so
   a package named `core_lib` is found when another one depends on `core_lib>=1` and the port
   order puts it first.
+- `setup`: a symlinked settings file (a dotfiles repo) is written at its target instead of being
+  replaced by a plain file, and an existing file keeps its permissions (a `600` file stays `600`).
 
 ## 2.0.0 (2026-11-19)
 
