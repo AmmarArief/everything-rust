@@ -34,6 +34,26 @@ pub enum Kind {
     Ffi,
 }
 
+/// The global allocator of a crate with batches (`bridge --allocator`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
+pub enum Allocator {
+    /// mimalloc, built from C with `cc`. Wasm crates keep Rust's default allocator.
+    #[default]
+    #[serde(rename = "mimalloc")]
+    #[value(name = "mimalloc")]
+    Mimalloc,
+    /// rusty_alloc, a pure-Rust remake of mimalloc: no C compiler, and wasm crates get it too.
+    #[serde(rename = "rusty_alloc")]
+    #[value(name = "rusty_alloc", alias = "rusty-alloc")]
+    RustyAlloc,
+}
+
+impl Allocator {
+    fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
 /// What `bridge` generated; every later step starts from it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
@@ -62,6 +82,9 @@ pub struct Manifest {
     /// Functions run over many items kept in Rust (`--batch function:param`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub batches: Vec<crate::codegen_batch::Batch>,
+    /// The global allocator when the crate has batches (`bridge --allocator`).
+    #[serde(default, skip_serializing_if = "Allocator::is_default")]
+    pub allocator: Allocator,
     /// Floats match within this relative tolerance (`record --float-tolerance`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub float_tolerance: Option<f64>,
@@ -210,6 +233,8 @@ pub struct Options<'a> {
     /// Type parameters the app only fills with data: bridged as JSON values instead of keeping
     /// the export in TS.
     pub as_json: Vec<String>,
+    /// The global allocator for crates with batches.
+    pub allocator: Allocator,
 }
 
 #[derive(Debug, Serialize)]
@@ -749,28 +774,38 @@ fn with_template_deps(cargo: &str, template: &str) -> Result<String> {
     Ok(doc.to_string())
 }
 
-/// Whether the crate allocates with mimalloc: crates with batches, which allocate from all cores
-/// at once (the system allocator serializes them: 1.6x on 4 cores instead of 3.2x). Not wasm,
-/// which runs on one thread. Only Rust code uses this heap; every buffer that crosses the bridge
-/// is copied or freed by Rust.
-fn needs_mimalloc(m: &Manifest) -> bool {
-    !m.batches.is_empty() && m.kind != Kind::Wasm
-}
-
-/// `lib.rs` with mimalloc as the global allocator when [`needs_mimalloc`].
-fn with_allocator(m: &Manifest, lib: String) -> String {
-    if !needs_mimalloc(m) {
-        return lib;
+/// The global allocator of a crate, if it sets one: crates with batches allocate from all cores
+/// at once (the system allocator serializes them: 1.6x on 4 cores instead of 3.2x). mimalloc
+/// leaves wasm alone, which runs on one thread; rusty_alloc also replaces Rust's wasm allocator.
+/// Only Rust code uses this heap; every buffer that crosses the bridge is copied or freed by Rust.
+fn global_allocator(m: &Manifest) -> Option<Allocator> {
+    if m.batches.is_empty() {
+        return None;
     }
-    lib.replacen(
-        "pub mod port;",
-        "pub mod port;\n\n/// Batches allocate on all cores at once; mimalloc keeps that from serializing.\n\
-         #[global_allocator]\nstatic GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;\n",
-        1,
-    )
+    match m.allocator {
+        Allocator::Mimalloc if m.kind == Kind::Wasm => None,
+        a => Some(a),
+    }
 }
 
-/// Cargo.toml with rayon (and mimalloc) when batches run on all cores.
+/// `lib.rs` with the [`global_allocator`].
+fn with_allocator(m: &Manifest, lib: String) -> String {
+    let line = match global_allocator(m) {
+        None => return lib,
+        Some(Allocator::Mimalloc) => {
+            "/// Batches allocate on all cores at once; mimalloc keeps that from serializing.\n\
+             #[global_allocator]\nstatic GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;\n"
+        }
+        Some(Allocator::RustyAlloc) => {
+            "/// Batches allocate on all cores at once; rusty_alloc keeps that from serializing.\n\
+             #[global_allocator]\n\
+             static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;\n"
+        }
+    };
+    lib.replacen("pub mod port;", &format!("pub mod port;\n\n{line}"), 1)
+}
+
+/// Cargo.toml with rayon (and the global allocator) when batches run on all cores.
 fn with_rayon(m: &Manifest, cargo: String) -> Result<String> {
     let mut doc: toml_edit::DocumentMut = cargo.parse().context("Cargo.toml")?;
     let deps = doc["dependencies"].or_insert(toml_edit::table());
@@ -804,8 +839,15 @@ fn with_rayon(m: &Manifest, cargo: String) -> Result<String> {
     if deps.get("rayon").is_none() {
         deps["rayon"] = toml_edit::value("1");
     }
-    if needs_mimalloc(m) && deps.get("mimalloc").is_none() {
-        deps["mimalloc"] = toml_edit::value("0.1");
+    let allocator = match global_allocator(m) {
+        Some(Allocator::Mimalloc) => Some(("mimalloc", "0.1")),
+        Some(Allocator::RustyAlloc) => Some(("rusty_alloc-api", "2.6")),
+        None => None,
+    };
+    if let Some((name, version)) = allocator
+        && deps.get(name).is_none()
+    {
+        deps[name] = toml_edit::value(version);
     }
     Ok(doc.to_string())
 }
@@ -1216,6 +1258,7 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
         classes: classes.clone(),
         js_only: js_only.clone(),
         batches: parse_batches(&opts.batch)?,
+        allocator: opts.allocator,
         float_tolerance: None,
     };
     if kind == Kind::CAbi {

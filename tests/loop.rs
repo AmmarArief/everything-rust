@@ -31,6 +31,7 @@ fn bridged(name: &str) -> PathBuf {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     dir
@@ -96,6 +97,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     });
     assert!(again.unwrap_err().to_string().contains("never overwrites"));
     let blocked = bridge::bridge(&bridge::Options {
@@ -109,6 +111,7 @@ fn bridge_writes_a_crate_and_never_overwrites_it() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     });
     assert!(blocked.unwrap_err().to_string().contains("Blocked"));
     std::fs::remove_dir_all(&dir).unwrap();
@@ -320,6 +323,7 @@ fn record_follows_bundler_style_imports() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -377,6 +381,7 @@ fn async_functions_get_async_bindings() {
             lang: None,
             batch: Vec::new(),
             as_json: Vec::new(),
+            allocator: Default::default(),
         })
         .unwrap();
         let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -433,6 +438,7 @@ fn benchmark_awaits_async_typescript_calls_and_counts_rejections() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     std::fs::write(
@@ -477,6 +483,7 @@ fn classes_are_bridged_recorded_and_replayed() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(outcome.exports, ["class TextStats", "class LruCache"]);
@@ -564,6 +571,7 @@ fn recording_substitutes_typescript_extensions_from_emitted_module_imports() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let result = harness::record(&RecordOptions {
@@ -606,6 +614,7 @@ fn tsconfig_aliases_are_followed() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -655,6 +664,7 @@ fn record_prefers_an_exact_tsconfig_alias_to_a_matching_wildcard() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let result = harness::record(&RecordOptions {
@@ -691,6 +701,7 @@ fn record_resolves_workspace_packages_to_source() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -722,6 +733,7 @@ fn python_required_optional_port_local_type_compiles() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let mut manifest = Manifest::load(&dir).unwrap();
@@ -781,6 +793,7 @@ fn python_modules_bridge_record_and_diff() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Pyo3);
@@ -885,6 +898,7 @@ fn c_bridge_string_helper_does_not_collide_with_source_names() {
         lang: Some(rust_anything::lang::Lang::C),
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let status = Command::new("cargo")
@@ -912,6 +926,7 @@ fn c_units_bridge_record_and_diff() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::CAbi);
@@ -984,6 +999,7 @@ fn go_packages_bridge_record_and_diff() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -1067,6 +1083,7 @@ fn ruby_modules_bridge_record_and_diff() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -1143,6 +1160,7 @@ fn java_classes_bridge_record_and_diff() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(outcome.kind, Kind::Ffi);
@@ -1303,4 +1321,97 @@ fn diff_compares_own_proto_named_properties_in_arguments_and_results() {
     std::fs::remove_dir_all(dir).unwrap();
     assert_eq!(matching.passed, 1);
     assert_eq!(changed.failed, 1);
+}
+
+/// A crate for `util.ts` with a `count:text` batch, bridged as `kind` with `allocator`.
+fn batch_crate(name: &str, kind: Kind, allocator: bridge::Allocator) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("rust-anything-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    bridge::bridge(&bridge::Options {
+        root: &fixture(),
+        unit: "packages/a/src/util.ts",
+        kind: Some(kind),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+        as_json: Vec::new(),
+        allocator,
+    })
+    .unwrap();
+    std::fs::write(
+        dir.join("src/port.rs"),
+        "pub fn count(text: String) -> f64 { text.matches(' ').count() as f64 }\n",
+    )
+    .unwrap();
+    bridge::add_batches(&dir, &["count:text".into()]).unwrap();
+    dir
+}
+
+#[test]
+fn batches_use_the_chosen_allocator() {
+    let read = |dir: &Path, file: &str| std::fs::read_to_string(dir.join(file)).unwrap();
+
+    // The default stays mimalloc, and the manifest does not mention it.
+    let dir = batch_crate("alloc-mi", Kind::Napi, bridge::Allocator::Mimalloc);
+    assert!(read(&dir, "src/lib.rs").contains("static GLOBAL: mimalloc::MiMalloc"));
+    assert!(read(&dir, "Cargo.toml").contains("mimalloc = \"0.1\""));
+    assert!(!read(&dir, "rust-anything.json").contains("allocator"));
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    // rusty_alloc replaces it, and `refresh` keeps the choice from the manifest.
+    let dir = batch_crate("alloc-ra", Kind::Napi, bridge::Allocator::RustyAlloc);
+    for _ in 0..2 {
+        let lib = read(&dir, "src/lib.rs");
+        assert!(
+            lib.contains(
+                "static GLOBAL: rusty_alloc_api::RustyAlloc = rusty_alloc_api::RustyAlloc;"
+            ),
+            "{lib}"
+        );
+        assert!(!lib.contains("mimalloc"), "{lib}");
+        let cargo = read(&dir, "Cargo.toml");
+        assert!(cargo.contains("rusty_alloc-api = \"2.6\""), "{cargo}");
+        assert!(!cargo.contains("mimalloc"), "{cargo}");
+        assert!(read(&dir, "rust-anything.json").contains("\"allocator\": \"rusty_alloc\""));
+        assert_eq!(
+            Manifest::load(&dir).unwrap().allocator,
+            bridge::Allocator::RustyAlloc
+        );
+        bridge::refresh(&dir).unwrap();
+    }
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    // wasm keeps Rust's allocator under the default, and takes rusty_alloc when asked.
+    let dir = batch_crate("alloc-wasm-mi", Kind::Wasm, bridge::Allocator::Mimalloc);
+    assert!(!read(&dir, "src/lib.rs").contains("global_allocator"));
+    assert!(!read(&dir, "Cargo.toml").contains("mimalloc"));
+    std::fs::remove_dir_all(&dir).unwrap();
+    let dir = batch_crate("alloc-wasm-ra", Kind::Wasm, bridge::Allocator::RustyAlloc);
+    assert!(read(&dir, "src/lib.rs").contains("static GLOBAL: rusty_alloc_api::RustyAlloc"));
+    assert!(read(&dir, "Cargo.toml").contains("rusty_alloc-api"));
+    std::fs::remove_dir_all(&dir).unwrap();
+
+    // Without batches there is no global allocator to choose.
+    let dir = std::env::temp_dir().join(format!("rust-anything-alloc-none-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    bridge::bridge(&bridge::Options {
+        root: &fixture(),
+        unit: "packages/a/src/util.ts",
+        kind: Some(Kind::Napi),
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+        as_json: Vec::new(),
+        allocator: bridge::Allocator::RustyAlloc,
+    })
+    .unwrap();
+    assert!(!read(&dir, "src/lib.rs").contains("global_allocator"));
+    assert!(!read(&dir, "Cargo.toml").contains("rusty_alloc"));
+    std::fs::remove_dir_all(&dir).unwrap();
 }

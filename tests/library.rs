@@ -54,6 +54,7 @@ fn bridged(repo: &Path, unit: &str) -> PathBuf {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap()
     .crate_dir

@@ -30,6 +30,7 @@ fn bridged(root: &Path) -> anyhow::Result<(PathBuf, String)> {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })?;
     let port = std::fs::read_to_string(out.join("src/port.rs"))?;
     Ok((out, port))

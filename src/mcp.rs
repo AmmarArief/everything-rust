@@ -417,6 +417,7 @@ fn tool_schemas() -> Value {
                 "keep": { "type": "array", "items": { "type": "string" }, "description": "Exports to keep in the source language: `name` or `name: reason`." },
                 "batch": { "type": "array", "items": { "type": "string" }, "description": "Batch classes, `function:param`: the function runs over many `param` values kept in Rust, on all cores, in one call. A `<Function>Index` struct in port.rs replaces the default per-item loop." },
                 "as_json": { "type": "array", "items": { "type": "string" }, "description": "Type parameters the app only fills with data (`T` in `paginate<T>(items: T[])`): bridged as JSON values instead of keeping the export in TS." },
+                "allocator": { "type": "string", "enum": ["mimalloc", "rusty_alloc"], "description": "Global allocator for crates with batches. mimalloc (default) is C and leaves wasm alone; rusty_alloc is pure Rust (no C compiler) and also serves wasm." },
             }, "required": ["root", "unit"] },
         },
         {
@@ -608,6 +609,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 lang: None,
                 batch: strings("batch"),
                 as_json: strings("as_json"),
+                allocator: match args["allocator"].as_str() {
+                    None | Some("mimalloc") => bridge::Allocator::Mimalloc,
+                    Some("rusty_alloc") => bridge::Allocator::RustyAlloc,
+                    Some(other) => {
+                        anyhow::bail!("`allocator` is mimalloc or rusty_alloc, not `{other}`")
+                    }
+                },
             })?)?
         }
         "record" => {

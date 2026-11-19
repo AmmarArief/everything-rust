@@ -37,6 +37,7 @@ fn round_trip(root: &Path, unit: &str, kind: Kind, name: &str, body: &str) {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -166,6 +167,7 @@ fn stubs_fail(root: &Path, unit: &str, kind: Option<Kind>, program: &str) {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let recorded = harness::record(&RecordOptions {
@@ -304,6 +306,7 @@ fn napi_errors_keep_their_class_and_async_exports_reject() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -379,6 +382,7 @@ fn napi_carries_bytes_maps_sets_dates_and_bigints() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let mut port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -458,6 +462,7 @@ fn java_records_with_the_bridge_crate_inside_the_project() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert!(outcome.crate_dir.ends_with("rust/smoke-rs"), "{outcome:?}");
@@ -486,6 +491,7 @@ fn bridge_python(root: &Path, unit: &str) -> anyhow::Result<bridge::Outcome> {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
 }
 
@@ -668,6 +674,7 @@ fn napi_batches_take_structured_parameters() {
         lang: None,
         batch: vec!["label:n".into()],
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -725,6 +732,7 @@ fn napi_string_batches_cross_joined() {
         lang: None,
         batch: vec!["wrap:s".into()],
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
@@ -751,6 +759,72 @@ console.log(JSON.stringify([batch.run(), batch instanceof WrapBatch, refused, ne
     assert_eq!(
         String::from_utf8_lossy(&output.stdout).trim(),
         r#"[["<>","<a>","<é>","<😀x>","<日本>","<b�c>","<ascii only>"],true,["TypeError","TypeError"],[]]"#,
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn python_batches_build_and_run_on_rusty_alloc() {
+    if !common::have("python3") {
+        return;
+    }
+    let root = project(
+        "rusty-alloc",
+        &[
+            (
+                "pyproject.toml",
+                "[project]\nname = \"tally\"\nversion = \"0.1.0\"\n",
+            ),
+            ("tally/__init__.py", ""),
+            (
+                "tally/words.py",
+                "def shout(text: str) -> str:\n    return \" \".join(w.upper() + \"!\" for w in text.split())\n",
+            ),
+        ],
+    );
+    let dir = root.join("port");
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "tally/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: None,
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: vec!["shout:text".into()],
+        as_json: Vec::new(),
+        allocator: bridge::Allocator::RustyAlloc,
+    })
+    .unwrap();
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    let port = port.replacen(
+        "unimplemented!(\"port `shout` from tally/words.py\")",
+        "Ok(text\n        .split_whitespace()\n        .map(|w| format!(\"{}!\", w.to_uppercase()))\n        .collect::<Vec<_>>()\n        .join(\" \"))",
+        1,
+    );
+    assert!(port.contains("to_uppercase"), "{port}");
+    std::fs::write(dir.join("src/port.rs"), &port).unwrap();
+    harness::build(&dir).unwrap();
+    let script = r#"
+import sys
+sys.path[:0] = [sys.argv[1] + "/python", sys.argv[2]]
+from tally_rs import ShoutBatch
+from tally.words import shout
+items = [f"item {i} of the batch, {'x' * (i % 50)}" for i in range(5000)]
+print(ShoutBatch(items).run() == [shout(t) for t in items])
+"#;
+    let output = Command::new("python3")
+        .args(["-c", script])
+        .arg(&dir)
+        .arg(&root)
+        .output()
+        .unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "True",
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );

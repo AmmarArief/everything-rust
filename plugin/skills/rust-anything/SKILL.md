@@ -136,6 +136,9 @@ Close the batch when done in Go and Java (finalizers are only a fallback).
   pre-sized `String`, avoid intermediate copies. Keep `diff` passing.
 - Items and other arguments: numbers, booleans and strings (Ruby: any value); results: numbers,
   booleans or strings. Not for C.
+- Batch crates allocate with mimalloc, which is built from C. Pass `--allocator rusty_alloc` to
+  `bridge` for a pure-Rust allocator when the target has no C compiler, or to give wasm batches
+  an allocator of their own. The choice is kept in `rust-anything.json`.
 
 ## 3. Prove it
 

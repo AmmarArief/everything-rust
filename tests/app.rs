@@ -929,6 +929,7 @@ fn lift_strips_bridge_bindings_in_every_language() {
             lang: None,
             batch: Vec::new(),
             as_json: Vec::new(),
+            allocator: Default::default(),
         })
         .unwrap();
         if lang == "ts" {
