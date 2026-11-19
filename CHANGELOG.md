@@ -7,6 +7,8 @@
   order puts it first.
 - `setup`: a symlinked settings file (a dotfiles repo) is written at its target instead of being
   replaced by a plain file, and an existing file keeps its permissions (a `600` file stays `600`).
+- `setup`: a Codex entry written as an inline table (`rust-anything = { ..., env = { ... } }`)
+  keeps its other keys on reinstall, as a `[mcp_servers.rust-anything]` table already did.
 
 ## 2.0.0 (2026-11-19)
 

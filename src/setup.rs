@@ -417,7 +417,7 @@ fn codex_server(agent: Agent, path: &Path, command: &str, opts: &Options) -> Res
         .with_context(|| format!("`mcp_servers` in {} is not a table", path.display()))?;
     let same = servers
         .get(NAME)
-        .and_then(|t| t.as_table())
+        .and_then(|t| t.as_table_like())
         .is_some_and(|t| {
             t.get("command").and_then(|c| c.as_str()) == Some(command)
                 && t.get("url").is_none()
@@ -435,11 +435,14 @@ fn codex_server(agent: Agent, path: &Path, command: &str, opts: &Options) -> Res
         "unchanged"
     } else {
         let had = servers.contains_key(NAME);
-        let mut entry = servers
-            .get(NAME)
-            .and_then(toml_edit::Item::as_table)
-            .cloned()
-            .unwrap_or_default();
+        // An entry written inline (`rust-anything = { ... }`) keeps its other keys too.
+        let mut entry = match servers.get(NAME) {
+            Some(toml_edit::Item::Table(t)) => t.clone(),
+            Some(toml_edit::Item::Value(toml_edit::Value::InlineTable(t))) => {
+                t.clone().into_table()
+            }
+            _ => toml_edit::Table::new(),
+        };
         entry["command"] = toml_edit::value(command);
         let mut args = toml_edit::Array::new();
         args.push("mcp");
@@ -686,6 +689,33 @@ mod tests {
         assert_eq!(
             codex["mcp_servers"][NAME]["tool_timeout_sec"].as_integer(),
             Some(120)
+        );
+        assert!(again.changes.iter().all(|c| c.action == "unchanged"));
+    }
+
+    #[test]
+    fn reinstall_keeps_an_inline_codex_entry() {
+        let home = temp_home("codex-inline");
+        let codex = home.join(".codex/config.toml");
+        std::fs::create_dir_all(codex.parent().unwrap()).unwrap();
+        std::fs::write(
+            &codex,
+            "[mcp_servers]\nrust-anything = { command = \"old\", args = [\"mcp\"], env = { MODE = \"custom\" } }\n",
+        )
+        .unwrap();
+
+        let options = opts(&home, vec![Agent::Codex]);
+        setup(&options).unwrap();
+        let doc: toml_edit::DocumentMut = std::fs::read_to_string(&codex).unwrap().parse().unwrap();
+        let again = setup(&options).unwrap();
+        std::fs::remove_dir_all(home).unwrap();
+        assert_eq!(
+            doc["mcp_servers"][NAME]["env"]["MODE"].as_str(),
+            Some("custom")
+        );
+        assert_eq!(
+            doc["mcp_servers"][NAME]["command"].as_str(),
+            Some("/opt/bin/rust-anything")
         );
         assert!(again.changes.iter().all(|c| c.action == "unchanged"));
     }
