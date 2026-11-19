@@ -241,8 +241,6 @@ pub fn scan(source: &str) -> FileFacts {
                 ("substring", Risk::StringOffsets),
                 ("charAt", Risk::StringOffsets),
                 ("indexOf", Risk::StringOffsets),
-                ("split(", Risk::RegexSyntax),
-                ("replace(", Risk::RegexSyntax),
                 ("toInt(", Risk::IntegerSemantics),
                 ("toLong(", Risk::IntegerSemantics),
                 ("getClass", Risk::Reflection),
@@ -713,6 +711,17 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
                 }
             }
             _ => {}
+        }
+    }
+    // The reflection driver keys methods by name alone: an overload would pick an arbitrary
+    // signature. Block every export sharing a name, not just the later declaration.
+    let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for f in &out {
+        *counts.entry(f.name.clone()).or_default() += 1;
+    }
+    for f in &mut out {
+        if counts.get(&f.name).copied().unwrap_or(0) > 1 {
+            f.blocker = Some("overloaded: one name, several signatures".into());
         }
     }
     for f in &mut out {

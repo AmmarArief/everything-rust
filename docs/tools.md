@@ -6,7 +6,7 @@ Generated from the MCP server's tool list by `tests/tools.rs`; do not edit by ha
 
 Tool `analyze` · CLI `rust-anything analyze`
 
-Map a repository (TypeScript/JavaScript, Python, C, Go, Ruby or Java): units, port order (waves), risks with file:line, bridge per unit, dependency-to-crate fit, and `start_here`: the best first ports.
+Map a repository (TypeScript/JavaScript, Python, C, Go, Ruby, Java or Kotlin): units, port order (waves), risks with file:line, bridge per unit, dependency-to-crate fit, and `start_here`: the best first ports.
 
 Read-only.
 
@@ -79,7 +79,7 @@ Runs the original's code or commands.
 | `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
 | `profile` | string |  | Build for this machine (default) or for Android. |
 | `abi` | string[] |  | Android ABIs; defaults to arm64-v8a, armeabi-v7a and x86_64. |
-| `api` | integer |  | Android API level (default 21). |
+| `api` | integer |  | Android API level (at least 26; default 26). |
 | `ndk` | string |  | Android NDK root; found from ANDROID_NDK_HOME or the SDK when omitted. |
 | `jni_libs` | string |  | Where to install the Android libraries; defaults to <crate>/jniLibs. |
 

@@ -422,7 +422,14 @@ fn stale_build(crate_dir: &Path, manifest: &Manifest) -> Option<PathBuf> {
         Kind::Pyo3 => crate::harness_py::native_file(crate_dir, manifest),
         _ => return None,
     };
-    let built_at = std::fs::metadata(&built).and_then(|m| m.modified()).ok()?;
+    sources_newer_than(crate_dir, &built).then_some(built)
+}
+
+/// True when `Cargo.toml` or any `.rs` file under `src/` is newer than `built`.
+pub(crate) fn sources_newer_than(crate_dir: &Path, built: &Path) -> bool {
+    let Ok(built_at) = std::fs::metadata(built).and_then(|m| m.modified()) else {
+        return false;
+    };
     let mut sources = vec![crate_dir.join("Cargo.toml")];
     sources.extend(
         walkdir_rs(&crate_dir.join("src"))
@@ -433,7 +440,6 @@ fn stale_build(crate_dir: &Path, manifest: &Manifest) -> Option<PathBuf> {
         .iter()
         .filter_map(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok())
         .any(|changed| changed > built_at)
-        .then_some(built)
 }
 
 fn walkdir_rs(dir: &Path) -> Vec<PathBuf> {

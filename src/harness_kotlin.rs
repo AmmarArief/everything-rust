@@ -7,6 +7,7 @@
 //! is used for record, diff and bench.
 
 use crate::walk::Canonical;
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -63,11 +64,12 @@ struct Classpath {
 }
 
 impl Classpath {
-    fn value(&self) -> String {
-        match &self.original_jar {
-            Some(jar) => format!("{}:{}", self.classes.display(), jar.display()),
-            None => self.classes.display().to_string(),
+    fn value(&self) -> Result<OsString> {
+        let mut parts = vec![self.classes.as_path()];
+        if let Some(jar) = &self.original_jar {
+            parts.push(jar.as_path());
         }
+        std::env::join_paths(parts).context("building Java classpath")
     }
 }
 
@@ -128,12 +130,9 @@ fn compile(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Classpath> {
     let mut javac = Command::new("javac");
     javac.arg("-encoding").arg("UTF-8").arg("-nowarn");
     if !cp.is_empty() {
-        javac.arg("-cp").arg(
-            cp.iter()
-                .map(|p| p.display().to_string())
-                .collect::<Vec<_>>()
-                .join(":"),
-        );
+        javac
+            .arg("-cp")
+            .arg(std::env::join_paths(&cp).context("building Java classpath")?);
     }
     javac.arg("-d").arg(&classes).args(&sources);
     run(
@@ -186,7 +185,7 @@ fn driver_command(
         ));
     }
     cmd.arg("-cp")
-        .arg(cp.value())
+        .arg(cp.value()?)
         .arg("rustanything.RustAnythingDriver")
         .arg(mode)
         .arg(&targets)

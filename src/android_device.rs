@@ -345,6 +345,14 @@ pub fn diff(crate_dir: &Path, m: &Manifest, device: Option<&str>) -> Result<Diff
             crate = crate_dir.display()
         );
     }
+    if crate::harness::sources_newer_than(crate_dir, &lib) {
+        bail!(
+            "{} is older than the crate's sources, so diff would test the previous port; run \
+             `rust-anything build {crate} --profile android --abi {abi}` first",
+            lib.display(),
+            crate = crate_dir.display()
+        );
+    }
     let work = work_dir(crate_dir, "diff")?;
     let classes = crate::harness_kotlin::android_classes(crate_dir, m, true)?;
     let jar = package(&classes, &work)?;

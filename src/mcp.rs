@@ -397,10 +397,10 @@ fn tool_schemas() -> Value {
     json!([
         {
             "name": "analyze",
-            "description": "Map a repository (TypeScript/JavaScript, Python, C, Go, Ruby or Java): units, port order (waves), risks with file:line, bridge per unit, dependency-to-crate fit, and `start_here`: the best first ports.",
+            "description": "Map a repository (TypeScript/JavaScript, Python, C, Go, Ruby, Java or Kotlin): units, port order (waves), risks with file:line, bridge per unit, dependency-to-crate fit, and `start_here`: the best first ports.",
             "inputSchema": { "type": "object", "properties": {
                 "root": { "type": "string", "description": "Repository root." },
-                "lang": { "type": "string", "enum": ["ts", "python", "c", "go", "ruby", "java", "php", "csharp"], "description": "Source language; detected from the repository when omitted." },
+                "lang": { "type": "string", "enum": ["ts", "python", "c", "go", "ruby", "java", "kotlin", "php", "csharp"], "description": "Source language; detected from the repository when omitted." },
                 "whole_app": { "type": "boolean", "description": "Plan a whole-app port: entry points and shape (cli, server, library), every dependency imported or declared with its crate and fit, pieces in port order (units that import each other together), and numbered decisions with a recommended answer for the grilling round." },
             }, "required": ["root"] },
         },
@@ -450,7 +450,7 @@ fn tool_schemas() -> Value {
                 "crate": crate_dir,
                 "profile": { "type": "string", "enum": ["host", "android"], "description": "Build for this machine (default) or for Android." },
                 "abi": { "type": "array", "items": { "type": "string", "enum": ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"] }, "description": "Android ABIs; defaults to arm64-v8a, armeabi-v7a and x86_64." },
-                "api": { "type": "integer", "description": "Android API level (default 21)." },
+                "api": { "type": "integer", "description": "Android API level (at least 26; default 26)." },
                 "ndk": { "type": "string", "description": "Android NDK root; found from ANDROID_NDK_HOME or the SDK when omitted." },
                 "jni_libs": { "type": "string", "description": "Where to install the Android libraries; defaults to <crate>/jniLibs." },
             }, "required": ["crate"] },
@@ -659,7 +659,12 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             };
             let device = args["device"].as_str();
             let mut out = serde_json::to_value(match args["profile"].as_str().unwrap_or("host") {
-                "host" => harness::record(&opts)?,
+                "host" => {
+                    if device.is_some() {
+                        anyhow::bail!("`device` needs profile `android`");
+                    }
+                    harness::record(&opts)?
+                }
                 "android" => harness::record_android(&opts, device)?,
                 other => anyhow::bail!("unknown record profile `{other}`: use host or android"),
             })?;
@@ -709,7 +714,16 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                         },
                     )?)?
                 }
-                "host" => json!({ "artifact": harness::build(&crate_dir)? }),
+                "host" => {
+                    if !args["abi"].is_null()
+                        || !args["api"].is_null()
+                        || !args["ndk"].is_null()
+                        || !args["jni_libs"].is_null()
+                    {
+                        anyhow::bail!("`abi`, `api`, `ndk` and `jni_libs` need profile `android`");
+                    }
+                    json!({ "artifact": harness::build(&crate_dir)? })
+                }
                 other => anyhow::bail!("unknown build profile `{other}`: use host or android"),
             }
         }
@@ -724,7 +738,12 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 float_tolerance: args["float_tolerance"].as_f64(),
             };
             serde_json::to_value(match args["profile"].as_str().unwrap_or("host") {
-                "host" => harness::diff(&opts)?,
+                "host" => {
+                    if !args["device"].is_null() {
+                        anyhow::bail!("`device` needs profile `android`");
+                    }
+                    harness::diff(&opts)?
+                }
                 "android" => harness::diff_android(&opts, args["device"].as_str())?,
                 other => anyhow::bail!("unknown diff profile `{other}`: use host or android"),
             })?

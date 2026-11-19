@@ -1,5 +1,5 @@
-//! On-device recording over adb. Skips unless a device, kotlinc and an SDK with d8 are present,
-//! because CI has none of them; the same path was checked by hand on an Android 11 TV.
+//! On-device recording over adb. Skips unless a device, kotlinc, d8, android.jar and `jar` are
+//! present, because CI has none of them; the same path was checked by hand on an Android 11 TV.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -14,37 +14,49 @@ fn runs(program: &str, args: &[&str]) -> Option<String> {
         .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
-fn sdk_with_d8() -> bool {
-    let mut candidates: Vec<PathBuf> = ["ANDROID_HOME", "ANDROID_SDK_ROOT"]
-        .iter()
-        .filter_map(std::env::var_os)
-        .map(PathBuf::from)
-        .collect();
-    if let Some(home) = std::env::var_os("HOME") {
-        let home = PathBuf::from(home);
-        candidates.push(home.join("Android/Sdk"));
-        candidates.push(home.join("Documents/Android/Sdk"));
+fn sdk_ready() -> bool {
+    rust_anything::android::sdk_folders()
+        .into_iter()
+        .any(|sdk| {
+            let d8 = std::fs::read_dir(sdk.join("build-tools"))
+                .ok()
+                .into_iter()
+                .flatten()
+                .flatten()
+                .any(|e| e.path().join("d8").is_file());
+            let platform = std::fs::read_dir(sdk.join("platforms"))
+                .ok()
+                .into_iter()
+                .flatten()
+                .flatten()
+                .any(|e| e.path().join("android.jar").is_file());
+            d8 && platform
+        })
+}
+
+struct Cleanup(PathBuf);
+
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
     }
-    candidates.into_iter().any(|sdk| {
-        let Ok(tools) = std::fs::read_dir(sdk.join("build-tools")) else {
-            return false;
-        };
-        tools.flatten().any(|e| e.path().join("d8").is_file())
-    })
 }
 
 #[test]
 fn records_a_kotlin_unit_on_a_connected_device() {
     let devices = runs("adb", &["devices"]).unwrap_or_default();
-    if !devices.lines().any(|l| l.ends_with("\tdevice"))
+    let one_device = devices.lines().filter(|l| l.ends_with("\tdevice")).count() == 1;
+    if !(std::env::var_os("ANDROID_SERIAL").is_some() || one_device)
         || runs("kotlinc", &["-version"]).is_none()
-        || !sdk_with_d8()
+        || runs("jar", &["--version"]).is_none()
+        || !sdk_ready()
     {
         return;
     }
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/kotlin");
     let dir = std::env::temp_dir().join(format!("rust-anything-device-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
+    let _cleanup = Cleanup(dir.clone());
     bridge::bridge(&bridge::Options {
         root: &root,
         unit: "src/main/kotlin/com/example/text/",
@@ -79,5 +91,4 @@ fn records_a_kotlin_unit_on_a_connected_device() {
         text.lines().filter(|l| !l.is_empty()).count(),
         outcome.cases
     );
-    let _ = std::fs::remove_dir_all(&dir);
 }

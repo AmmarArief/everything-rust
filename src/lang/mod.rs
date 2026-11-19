@@ -77,11 +77,25 @@ impl Lang {
             if !has("pom.xml") && (has("build.gradle.kts") || has("build.gradle")) {
                 let mut kt = 0usize;
                 let mut java = 0usize;
-                for entry in crate::walk::builder(root)
-                    .hidden(true)
-                    .require_git(false)
-                    .build()
-                    .flatten()
+                for entry in crate::walk::filtered(root, |e| {
+                    if !e.file_type().is_some_and(|kind| kind.is_dir()) {
+                        return true;
+                    }
+                    let name = e.file_name().to_string_lossy();
+                    ![
+                        "build",
+                        ".gradle",
+                        ".kotlin",
+                        "out",
+                        "node_modules",
+                        "target",
+                    ]
+                    .contains(&name.as_ref())
+                })
+                .hidden(true)
+                .require_git(false)
+                .build()
+                .flatten()
                 {
                     if !entry.file_type().is_some_and(|kind| kind.is_file()) {
                         continue;

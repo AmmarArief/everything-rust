@@ -166,9 +166,10 @@ pub fn build(crate_dir: &Path, manifest: &Manifest, opts: &Options) -> Result<Re
         let linker = bin.join(format!("{}{}-clang", abi.clang_prefix(), opts.api));
         if !linker.is_file() {
             bail!(
-                "no NDK linker for API {} at {}; the NDK supports API 21 and up, raise `--api`",
+                "no NDK linker for API {} at {}; this NDK does not ship that API level, lower `--api` (minimum {})",
                 opts.api,
-                linker.display()
+                linker.display(),
+                MIN_API
             );
         }
         let mut cmd = Command::new("cargo");
@@ -304,7 +305,7 @@ fn newest_ndk(dir: PathBuf) -> Option<PathBuf> {
     found.pop().map(|(_, p)| p)
 }
 
-pub(crate) fn sdk_folders() -> Vec<PathBuf> {
+pub fn sdk_folders() -> Vec<PathBuf> {
     let mut out = Vec::new();
     if let Some(home) = std::env::var_os("HOME") {
         let home = PathBuf::from(home);
