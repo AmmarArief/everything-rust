@@ -109,6 +109,19 @@ fn driver(
     run(&mut cmd, &format!("java driver ({mode})"))
 }
 
+/// Java class files for a dexed on-device run: support driver plus either the original Java
+/// sources (`rust: false`) or the generated JNI wrappers (`rust: true`).
+pub(crate) fn android_classes(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Vec<PathBuf>> {
+    let classes = compile(crate_dir, m, rust)?;
+    Ok(crate::walk::builder(&classes)
+        .require_git(false)
+        .build()
+        .flatten()
+        .map(|e| e.into_path())
+        .filter(|p| p.extension().is_some_and(|e| e == "class"))
+        .collect())
+}
+
 fn driver_command(
     crate_dir: &Path,
     m: &Manifest,

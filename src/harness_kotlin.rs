@@ -73,6 +73,19 @@ impl Classpath {
     }
 }
 
+fn needs_android_sdk(path: &Path) -> bool {
+    path.components()
+        .any(|c| c.as_os_str() == std::ffi::OsStr::new("androidTest"))
+        || std::fs::read_to_string(path).is_ok_and(|text| {
+            text.lines().any(|line| {
+                let line = line.trim_start();
+                line.starts_with("import android.")
+                    || line.starts_with("import androidx.")
+                    || line.starts_with("import com.google.android.")
+            })
+        })
+}
+
 /// Compiles the support driver and either the original Kotlin sources (`rust: false`) or
 /// the generated Java JNI wrappers (`rust: true`).
 fn compile(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Classpath> {
@@ -109,15 +122,16 @@ fn compile(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Classpath> {
             .filter(|f| f.kind == crate::ts::discover::FileKind::Source)
             .map(|f| m.root.join(&f.path))
             .collect();
-        // Compile the unit being ported, not every Kotlin file in the module: an Android
-        // activity or other SDK-only source elsewhere in the module must not block recording.
+        // Compile the unit being ported plus its local dependencies: an `app/Api.kt` may
+        // import `util/Helpers.kt` outside the unit. Keep Android-only sources (Activities,
+        // Compose, androidx imports) out, since they need an SDK classpath the host lacks.
         let unit = m.root.join(&m.unit);
-        let scoped: Vec<PathBuf> = all
+        let sources: Vec<PathBuf> = all
             .iter()
-            .filter(|p| p.starts_with(&unit))
+            .filter(|p| p.starts_with(&unit) || !needs_android_sdk(p))
             .cloned()
             .collect();
-        let sources = if scoped.is_empty() { all } else { scoped };
+        let sources = if sources.is_empty() { all } else { sources };
         let mut cmd = Command::new("kotlinc");
         cmd.arg("-include-runtime")
             .arg("-d")

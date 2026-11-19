@@ -298,7 +298,11 @@ pub fn record(
     check_language(m)?;
     let device = Device::connect(device)?;
     let work = work_dir(crate_dir, "record")?;
-    let classes = crate::harness_kotlin::android_classes(crate_dir, m, false)?;
+    let classes = if m.language == Lang::Java {
+        crate::harness_java::android_classes(crate_dir, m, false)?
+    } else {
+        crate::harness_kotlin::android_classes(crate_dir, m, false)?
+    };
     let jar = package(&classes, &work)?;
     let targets = targets(m, &work)?;
     let inputs = work.join("cases.json");
@@ -359,7 +363,11 @@ pub fn diff(
         );
     }
     let work = work_dir(crate_dir, "diff")?;
-    let classes = crate::harness_kotlin::android_classes(crate_dir, m, true)?;
+    let classes = if m.language == Lang::Java {
+        crate::harness_java::android_classes(crate_dir, m, true)?
+    } else {
+        crate::harness_kotlin::android_classes(crate_dir, m, true)?
+    };
     let jar = package(&classes, &work)?;
     let targets = targets(m, &work)?;
     let remote_jar = device.push(&jar, "driver.jar")?;

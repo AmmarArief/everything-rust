@@ -718,7 +718,16 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
         .next()
         .unwrap_or(path)
         .trim_end_matches(".kt");
-    let top_class = file_jvm_name(root, source).unwrap_or_else(|| format!("{stem}Kt"));
+    let top_class = file_jvm_name(root, source).unwrap_or_else(|| {
+        // Kotlin capitalizes the file's first letter for the default JVM facade:
+        // `app.kt` in package `p` becomes `p.AppKt`, not `p.appKt`.
+        let mut chars = stem.chars();
+        let head = chars
+            .next()
+            .map(|c| c.to_uppercase().collect::<String>())
+            .unwrap_or_default();
+        format!("{head}{}Kt", chars.as_str())
+    });
     let owner = |class: &str| match &package {
         Some(p) => format!("{p}.{class}"),
         None => class.to_string(),
