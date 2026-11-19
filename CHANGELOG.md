@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2.1.0 (2026-11-20)
+
+- `app record --float-file PATH=f32le|f64le`: a written file of raw floats is compared value by
+  value within `--float-tolerance` instead of byte for byte, and a mismatch reports the count,
+  the first index and the largest differences (#114).
 - Kotlin/JVM: detection, `analyze`, bridge, record and diff for Gradle modules of top-level
   functions and `@JvmStatic` methods, through the Java bridge (#117).
 - Android: `build --profile android` builds the JNI library for the NDK ABIs into `jniLibs/`,
