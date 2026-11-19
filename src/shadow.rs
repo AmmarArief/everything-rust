@@ -30,7 +30,10 @@ pub fn shadow(crate_dir: &Path, out: Option<&Path>) -> Result<ShadowOutcome> {
     if manifest.kind == crate::bridge::Kind::CAbi {
         return shadow_c(&crate_dir, &manifest, out);
     }
-    if manifest.language == crate::lang::Lang::Java {
+    if matches!(
+        manifest.language,
+        crate::lang::Lang::Java | crate::lang::Lang::Kotlin
+    ) {
         let dir = out.map_or_else(|| crate_dir.join("java"), Path::to_path_buf);
         let port = std::fs::read_to_string(crate_dir.join("src/port.rs")).unwrap_or_default();
         let mut api = crate::codegen::parse_port(&port);

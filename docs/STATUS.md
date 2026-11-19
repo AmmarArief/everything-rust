@@ -1,6 +1,6 @@
 # Status
 
-What works, and how each part was last checked. Updated 2026-11-18.
+What works, and how each part was last checked. Updated 2026-11-20.
 
 **Verified**: run end to end (bridge, record, port, diff, gate) on real code someone else wrote,
 named below. **Tested**: covered by this repository's tests on fixtures written for them, not yet
@@ -17,6 +17,8 @@ front door); units cannot be bridged yet.
 | Ruby | Verified | `shellwords.rb` from Ruby 3.3 (2026-11-16) | 1,617/1,617; gate passes |
 | Java | Verified | JDK 21 behind a facade (2026-11-16) | 4,492/4,492; gate passes |
 | C | Verified | glibc behind a facade (2026-11-16) | 1,859/1,859 after dropping one undefined-behavior case; gate passes |
+| Kotlin | Tested | none | `analyze`, detection, JNI-shaped exports, bridge, record and diff on a Gradle fixture (`tests/loop.rs`); needs `kotlinc` on PATH, so CI skips it |
+| Kotlin for Android | Tested | none | `build --profile android` builds one installed ABI per test run into `jniLibs/` with every JNI entry point and the 16 KB alignment checked; all three ABIs were also built by hand, and the `armeabi-v7a` library was loaded on an Android 11 TV and called through JNI. Needs the NDK (API 26+), so CI skips it |
 | PHP | Whole apps | none | `analyze` and whole apps only; units cannot be bridged yet |
 | C# | Whole apps | none | `analyze` and whole apps only; units cannot be bridged yet |
 
@@ -29,6 +31,7 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | --- | --- | --- |
 | `analyze` | Verified | every language above, x18n's 142 units |
 | `bridge`, `record`, `diff`, `gate`, `build` | Verified | the runs above; `bridge --as-json` on json-server's `paginate` |
+| `build --profile android` | Tested | Kotlin fixture, one ABI per test run (all three built by hand), entry points and 16 KB alignment checked; `armeabi-v7a` library loaded on an Android 11 TV and called through JNI |
 | Types for untyped JS in `bridge` (sibling `.d.ts`/`.d.mts`/`.d.cts`, then JSDoc) | Tested | `tests/untyped_js_types.rs` |
 | `bench` | Verified | the runs above; numbers in [real-world.md](real-world.md) |
 | `record --from-tests` | Verified (TS/JS), Tested (Python) | vercel/ms's Jest suite |
@@ -47,5 +50,6 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 
 ## Where the tests run
 
-CI installs Node, Python, Go, Ruby and Java on macOS and Windows. It does not install PHP or
-.NET, so the PHP and C# tests skip there and run only on a machine that has them.
+CI installs Node, Python, Go, Ruby and Java on macOS and Windows. It does not install PHP, .NET,
+Kotlin or the Android NDK, so the PHP, C#, Kotlin and Android tests skip there and run only on a
+machine that has them.

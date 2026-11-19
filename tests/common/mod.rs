@@ -26,7 +26,7 @@ fn runs(program: &str, args: &[&str]) -> bool {
 fn version_args(program: &str) -> &'static [&'static str] {
     match program {
         "go" => &["version"],
-        "java" | "javac" => &["-version"],
+        "java" | "javac" | "kotlinc" => &["-version"],
         _ => &["--version"],
     }
 }

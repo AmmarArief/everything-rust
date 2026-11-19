@@ -1213,6 +1213,149 @@ fn java_classes_bridge_record_and_diff() {
 }
 
 #[test]
+fn kotlin_functions_bridge_record_and_diff() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/kotlin");
+    let dir = std::env::temp_dir().join(format!("rust-anything-kotlin-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let outcome = bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/main/kotlin/com/example/text/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: Some("text-rs".into()),
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+        as_json: Vec::new(),
+    })
+    .unwrap();
+    assert_eq!(outcome.kind, Kind::Ffi);
+    let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
+    assert!(
+        port.contains("pub fn slugify(text: String, max: i64) -> Result<String, String>"),
+        "{port}"
+    );
+    let lib = std::fs::read_to_string(dir.join("src/lib.rs")).unwrap();
+    assert!(
+        lib.contains("fn Java_rustanything_TextRsNative_call"),
+        "{lib}"
+    );
+    // Kotlin type names must become Java ones, or javac rejects the wrapper.
+    let wrapper =
+        std::fs::read_to_string(dir.join("java/com/example/text/StringsKt.java")).unwrap();
+    assert!(
+        wrapper.contains("public static String slugify(String text, int max)"),
+        "{wrapper}"
+    );
+    assert!(
+        wrapper.contains("public static Map<String, Integer> frequencies(String text)"),
+        "{wrapper}"
+    );
+    let nums = std::fs::read_to_string(dir.join("java/com/example/text/Nums.java")).unwrap();
+    assert!(
+        nums.contains("public static long gcd(long a, long b)"),
+        "{nums}"
+    );
+    if !common::have("kotlinc") || !common::have("javac") {
+        return;
+    }
+    let recorded = harness::record(&RecordOptions {
+        crate_dir: &dir,
+        count: 10,
+        inputs: None,
+        module: None,
+        resolve_from: None,
+        node_args: &[],
+    })
+    .unwrap();
+    assert!(recorded.cases > 50, "{recorded:?}");
+    // `pages` divides by zero for a generated per-page of 0.
+    assert!(recorded.errors > 0, "{recorded:?}");
+    harness::build(&dir).unwrap();
+    let diff = harness::diff(&DiffOptions {
+        crate_dir: &dir,
+        module: None,
+        ignore_key_order: false,
+        float_tolerance: None,
+        node_args: &[],
+    })
+    .unwrap();
+    // Unported functions panic, which Java sees as a RuntimeException: nothing can match.
+    assert_eq!(diff.passed, 0, "{diff:?}");
+    assert_eq!(diff.total, recorded.cases);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The Android half: build the same JNI crate for an Android ABI and install it into `jniLibs/`.
+/// Skips when there is no NDK or the Rust target is missing, as CI usually has neither.
+#[test]
+fn android_build_installs_a_jni_library() {
+    let Ok(ndk) = rust_anything::android::ndk_root(None) else {
+        return;
+    };
+    let installed = Command::new("rustup")
+        .args(["target", "list", "--installed"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    let Some(abi) = rust_anything::android::DEFAULT_ABIS
+        .iter()
+        .find(|abi| installed.lines().any(|l| l.trim() == abi.triple()))
+    else {
+        return;
+    };
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/kotlin");
+    let dir = std::env::temp_dir().join(format!(
+        "rust-anything-android-{}-{}",
+        std::process::id(),
+        abi.name()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    bridge::bridge(&bridge::Options {
+        root: &root,
+        unit: "src/main/kotlin/com/example/text/",
+        kind: None,
+        out: Some(dir.clone()),
+        name: Some("text-rs".into()),
+        force: false,
+        keep: Vec::new(),
+        lang: None,
+        batch: Vec::new(),
+        as_json: Vec::new(),
+    })
+    .unwrap();
+    // Also exercise --jni-libs: Gradle's default is src/main/jniLibs, not the crate root.
+    let jni_libs = dir.join("libs");
+    let report = harness::build_android(
+        &dir,
+        &rust_anything::android::Options {
+            abis: vec![abi.name().into(), abi.name().into()], // duplicate ABIs build once
+            api: rust_anything::android::DEFAULT_API,
+            ndk: None,
+            out: Some(jni_libs),
+        },
+    )
+    .unwrap();
+    assert_eq!(report.ndk, ndk);
+    assert_eq!(report.libraries.len(), 1, "{report:?}");
+    let library = &report.libraries[0];
+    assert_eq!(library.abi, abi.name());
+    assert!(library.path.is_file(), "{library:?}");
+    assert!(
+        library
+            .path
+            .ends_with(format!("libs/{}/libtext_rs.so", abi.name())),
+        "{library:?}"
+    );
+    // call + the five exported functions.
+    assert_eq!(library.entry_points, 6, "{library:?}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn batches_keep_items_in_rust() {
     let dir = bridged("batch");
     std::fs::write(

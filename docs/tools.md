@@ -68,13 +68,18 @@ Runs the original's code or commands.
 
 Tool `build` · CLI `rust-anything build`
 
-Build the crate: the napi-rs .node, wasm-bindgen output, Python extension or shared library.
+Build the crate: the napi-rs .node, wasm-bindgen output, Python extension or shared library. With `profile: "android"`, build the JNI library for Android ABIs into `jniLibs/` (needs the NDK and the Rust Android targets; returned as {ndk, api, libraries} instead of {artifact}).
 
 Runs the original's code or commands.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+| `profile` | string |  | Build for this machine (default) or for Android. |
+| `abi` | string[] |  | Android ABIs; defaults to arm64-v8a, armeabi-v7a and x86_64. |
+| `api` | integer |  | Android API level (default 21). |
+| `ndk` | string |  | Android NDK root; found from ANDROID_NDK_HOME or the SDK when omitted. |
+| `jni_libs` | string |  | Where to install the Android libraries; defaults to <crate>/jniLibs. |
 
 ## Diff port against recording
 

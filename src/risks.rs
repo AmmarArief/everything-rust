@@ -277,6 +277,13 @@ pub fn uses_regex(lang: crate::lang::Lang, source: &str) -> bool {
             ".matches(",
             ".split(",
         ]),
+        Lang::Kotlin => has(&[
+            "kotlin.text.Regex",
+            "Regex(",
+            ".replace(",
+            ".matches(",
+            ".split(",
+        ]),
         Lang::C => has(&["<regex.h>", "pcre", "regcomp("]),
         Lang::Php => has(&["preg_", "mb_ereg"]),
         Lang::Csharp => has(&["Regex", "RegularExpressions"]),

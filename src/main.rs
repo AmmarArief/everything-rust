@@ -24,7 +24,7 @@ use rust_anything::{analyze, app, bridge, front_door, gate, harness, lift, mcp, 
 #[command(
     name = "rust-anything",
     version,
-    about = "Rewrite TypeScript/JavaScript, Python, C, Go, Ruby or Java apps in Rust, one verified piece at a time",
+    about = "Rewrite TypeScript/JavaScript, Python, C, Go, Ruby, Java or Kotlin apps in Rust, one verified piece at a time",
     after_help = "Loop per unit: analyze -> bridge -> record -> port src/port.rs -> build -> diff -> shadow -> gate"
 )]
 struct Cli {
@@ -36,6 +36,14 @@ struct Cli {
 enum KindArg {
     Napi,
     Wasm,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum BuildProfile {
+    /// Build for this machine.
+    Host,
+    /// Build the JNI library for Android ABIs, into `jniLibs/`.
+    Android,
 }
 
 #[derive(Subcommand)]
@@ -130,10 +138,26 @@ enum Cmd {
         #[arg(last = true)]
         test_command: Vec<String>,
     },
-    /// 3b. Build the crate's JS module (napi-rs `.node` or wasm-bindgen output).
+    /// 3b. Build the crate's JS module (napi-rs `.node`, wasm-bindgen output) or, with
+    /// `--profile android`, the JNI library for Android ABIs into `jniLibs/`.
     Build {
         #[arg(default_value = ".")]
         crate_dir: PathBuf,
+        /// Target: this machine, or Android (needs the NDK and the Rust Android targets).
+        #[arg(long, value_enum, default_value_t = BuildProfile::Host)]
+        profile: BuildProfile,
+        /// Android ABI to build; repeatable. Defaults to arm64-v8a, armeabi-v7a and x86_64.
+        #[arg(long)]
+        abi: Vec<String>,
+        /// Android API level the libraries target (at least 26; defaults to 26).
+        #[arg(long)]
+        api: Option<u32>,
+        /// Android NDK root; found from ANDROID_NDK_HOME or the SDK when omitted.
+        #[arg(long)]
+        ndk: Option<PathBuf>,
+        /// Where to install the Android libraries; defaults to `<crate>/jniLibs`.
+        #[arg(long)]
+        jni_libs: Option<PathBuf>,
     },
     /// 3c. Replay recorded cases against the Rust module.
     Diff {
@@ -605,9 +629,42 @@ fn run() -> Result<ExitCode> {
                 r.functions.join(", ")
             );
         }
-        Cmd::Build { crate_dir } => {
-            say!("Built {}", harness::build(&crate_dir)?.display());
-        }
+        Cmd::Build {
+            crate_dir,
+            profile,
+            abi,
+            api,
+            ndk,
+            jni_libs,
+        } => match profile {
+            BuildProfile::Host => {
+                if !abi.is_empty() || api.is_some() || jni_libs.is_some() || ndk.is_some() {
+                    anyhow::bail!(
+                        "`--abi`, `--api`, `--ndk` and `--jni-libs` need `--profile android`"
+                    );
+                }
+                say!("Built {}", harness::build(&crate_dir)?.display());
+            }
+            BuildProfile::Android => {
+                let report = harness::build_android(
+                    &crate_dir,
+                    &rust_anything::android::Options {
+                        abis: abi,
+                        api: api.unwrap_or(rust_anything::android::DEFAULT_API),
+                        ndk,
+                        out: jni_libs,
+                    },
+                )?;
+                for library in &report.libraries {
+                    say!(
+                        "Built {} ({} JNI entry points checked, API {})",
+                        library.path.display(),
+                        library.entry_points,
+                        report.api
+                    );
+                }
+            }
+        },
         Cmd::Diff {
             crate_dir,
             module,

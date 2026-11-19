@@ -123,6 +123,34 @@ them. Match the exact prefix you mean, and check a group's total against the cor
 lines removed the one line that differed (`/* name */ value`). Write the expected and actual
 output to files and diff them whole.
 
+## Language plugins
+
+**A tree-sitter supertype never appears in the tree.** `tree-sitter-kotlin-ng` lists
+`class_member_declaration` as a child of `class_body`, but it is a hidden supertype: the tree
+holds the concrete `function_declaration` directly. Filter on the concrete kind you parse, and
+check a small fixture's S-expression before trusting `node-types.json` child lists.
+
+**Kotlin's JVM owner is not the file name.** A top-level function compiles to a static method on
+`<File>Kt` (`NativeLib.kt` → `NativeLibKt`); only `@JvmStatic` members of an `object` or
+`companion object` live on the enclosing class. Emit prototypes in that Java shape, or the
+generated JNI symbol and the reflection driver look for a class that does not exist.
+
+**The generated Java runtime needs API 26, not API 21.** `RustAnythingError` resolves exception
+constructors with plain reflection instead of `MethodHandle.invokeExact` (which Android only
+supports from API 26), but the runtime also uses `java.util.Optional` and `java.util.function`
+(API 24) and `ThreadLocal.withInitial` (API 26). `build --profile android` therefore rejects
+`--api` below 26: a lower library would load but fail in the wrapper before reaching Rust.
+Link with `-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384` for 64-bit ABIs, or Play
+rejects the library on 16 KB devices.
+
+**NDK discovery must ignore half-installed NDKs.** `--ndk` wins, then `ANDROID_NDK_HOME` /
+`ANDROID_NDK_ROOT`, then the newest *complete* NDK under `ANDROID_HOME` / `ANDROID_SDK_ROOT`, then
+the usual `~/Android/Sdk`, `~/Library/Android/sdk` and `~/Documents/Android/Sdk`. Completeness
+means `toolchains/llvm/prebuilt/<host>/bin` exists: an interrupted `sdkmanager` download leaves a
+newer directory with only `source.properties`, which must not shadow a working NDK. The linker is
+the NDK's clang, so `cargo-ndk` is not needed, and cargo runs in the crate's directory so the
+caller's `.cargo/config.toml` cannot leak into the generated crate.
+
 ## Repository
 
 **A local path reached a committed manifest.** Demo manifests keep a placeholder `root`; check

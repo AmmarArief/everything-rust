@@ -443,8 +443,15 @@ fn tool_schemas() -> Value {
         },
         {
             "name": "build",
-            "description": "Build the crate: the napi-rs .node, wasm-bindgen output, Python extension or shared library.",
-            "inputSchema": { "type": "object", "properties": { "crate": crate_dir }, "required": ["crate"] },
+            "description": "Build the crate: the napi-rs .node, wasm-bindgen output, Python extension or shared library. With `profile: \"android\"`, build the JNI library for Android ABIs into `jniLibs/` (needs the NDK and the Rust Android targets; returned as {ndk, api, libraries} instead of {artifact}).",
+            "inputSchema": { "type": "object", "properties": {
+                "crate": crate_dir,
+                "profile": { "type": "string", "enum": ["host", "android"], "description": "Build for this machine (default) or for Android." },
+                "abi": { "type": "array", "items": { "type": "string", "enum": ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"] }, "description": "Android ABIs; defaults to arm64-v8a, armeabi-v7a and x86_64." },
+                "api": { "type": "integer", "description": "Android API level (default 21)." },
+                "ndk": { "type": "string", "description": "Android NDK root; found from ANDROID_NDK_HOME or the SDK when omitted." },
+                "jni_libs": { "type": "string", "description": "Where to install the Android libraries; defaults to <crate>/jniLibs." },
+            }, "required": ["crate"] },
         },
         {
             "name": "diff",
@@ -671,7 +678,31 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             };
             serde_json::to_value(crate::profile::profile(&path("root")?, &command, lang)?)?
         }
-        "build" => json!({ "artifact": harness::build(&path("crate")?)? }),
+        "build" => {
+            let crate_dir = path("crate")?;
+            match args["profile"].as_str().unwrap_or("host") {
+                "android" => {
+                    if !args["abi"].is_null() && !args["abi"].is_array() {
+                        anyhow::bail!("`abi` must be an array of Android ABI names");
+                    }
+                    let api = match args["api"].as_u64() {
+                        Some(v) => u32::try_from(v).context("`api` is too large")?,
+                        None => crate::android::DEFAULT_API,
+                    };
+                    serde_json::to_value(harness::build_android(
+                        &crate_dir,
+                        &crate::android::Options {
+                            abis: strings("abi"),
+                            api,
+                            ndk: opt_path("ndk"),
+                            out: opt_path("jni_libs"),
+                        },
+                    )?)?
+                }
+                "host" => json!({ "artifact": harness::build(&crate_dir)? }),
+                other => anyhow::bail!("unknown build profile `{other}`: use host or android"),
+            }
+        }
         "diff" => {
             let crate_dir = path("crate")?;
             let module = opt_path("module");

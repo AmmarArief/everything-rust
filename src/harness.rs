@@ -267,6 +267,8 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         crate::harness_ruby::record(opts.crate_dir, &manifest, &cases)?
     } else if manifest.language == crate::lang::Lang::Java {
         crate::harness_java::record(opts.crate_dir, &manifest, &cases)?
+    } else if manifest.language == crate::lang::Lang::Kotlin {
+        crate::harness_kotlin::record(opts.crate_dir, &manifest, &cases)?
     } else {
         record_node(opts, &manifest, &cases)?
     };
@@ -417,6 +419,15 @@ fn walkdir_rs(dir: &Path) -> Vec<PathBuf> {
         }
     }
     out
+}
+
+/// Builds a JNI crate for Android: one library per ABI, installed into `jniLibs/`.
+pub fn build_android(
+    crate_dir: &Path,
+    opts: &crate::android::Options,
+) -> Result<crate::android::Report> {
+    let manifest = Manifest::load(crate_dir)?;
+    crate::android::build(crate_dir, &manifest, opts)
 }
 
 pub fn build(crate_dir: &Path) -> Result<PathBuf> {
@@ -623,6 +634,9 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if manifest.language == crate::lang::Lang::Java {
         return crate::harness_java::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
+    if manifest.language == crate::lang::Lang::Kotlin {
+        return crate::harness_kotlin::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -780,6 +794,12 @@ fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
         && opts.module.is_none()
     {
         return crate::harness_java::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Kotlin
+        && opts.module.is_none()
+    {
+        return crate::harness_kotlin::diff(opts.crate_dir, &manifest);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
