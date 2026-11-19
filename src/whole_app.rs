@@ -79,6 +79,7 @@ fn main_pattern(lang: Lang) -> Option<&'static str> {
         Lang::C => r"\bint\s+main\s*\(",
         Lang::Ruby => r"^#!.*\bruby\b|\bARGV\b|__FILE__\s*==\s*\$0",
         Lang::Java => r"public\s+static\s+void\s+main\s*\(",
+        Lang::Kotlin => r"\bfun\s+main\s*\(",
         Lang::Php => r#"^#!.*\bphp\b|\$argv\b|PHP_SAPI\s*===?\s*['"]cli['"]"#,
         Lang::Csharp => r"\bstatic\s+(?:async\s+)?(?:void|int|Task(?:<int>)?)\s+Main\s*\(",
     })
@@ -414,7 +415,7 @@ pub fn declared(root: &Path, lang: Lang) -> BTreeSet<String> {
                 }
             }
         }
-        Lang::Java => {
+        Lang::Java | Lang::Kotlin => {
             let pom = read(root, "pom.xml");
             let dep = Regex::new(r"(?s)<dependency>(.*?)</dependency>").expect("valid regex");
             let tag = |block: &str, name: &str| -> Option<String> {
@@ -748,7 +749,7 @@ mod tests {
     #[test]
     fn manifests_declare_dependencies_in_every_language() {
         type Case<'a> = (Lang, &'a [(&'a str, &'a str)], &'a [&'a str]);
-        let cases: [Case; 5] = [
+        let cases: [Case; 6] = [
             (
                 Lang::Ts,
                 &[(
@@ -792,6 +793,14 @@ mod tests {
                 &[(
                     "pom.xml",
                     "<dependencies><dependency><groupId>com.google.code.gson</groupId><artifactId>gson</artifactId></dependency><dependency><groupId>org.junit</groupId><artifactId>junit</artifactId><scope>test</scope></dependency></dependencies>",
+                )],
+                &["com.google.code.gson:gson"],
+            ),
+            (
+                Lang::Kotlin,
+                &[(
+                    "build.gradle.kts",
+                    "dependencies {\n  implementation(\"com.google.code.gson:gson:2.11.0\")\n  testImplementation(\"junit:junit:4.13.2\")\n}\n",
                 )],
                 &["com.google.code.gson:gson"],
             ),

@@ -534,6 +534,17 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
             });
         }
     }
+    // The reflection driver keys methods by name alone: an overload would pick an arbitrary
+    // signature. Block every export sharing a name, not just the later declaration.
+    let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for f in &out {
+        *counts.entry(f.name.clone()).or_default() += 1;
+    }
+    for f in &mut out {
+        if counts.get(&f.name).copied().unwrap_or(0) > 1 {
+            f.blocker = Some("overloaded: one name, several signatures".into());
+        }
+    }
     out
 }
 
@@ -581,5 +592,19 @@ mod tests {
         );
         assert_eq!(fns[1].returns, "string[]");
         assert!(fns[2].blocker.is_some());
+    }
+
+    #[test]
+    fn every_overload_of_a_name_is_blocked() {
+        let src = "package com.example;\npublic final class Nums {\n\
+                   public static int add(int a, int b) { return a + b; }\n\
+                   public static double add(double a, double b) { return a + b; }\n\
+                   public static int one() { return 1; }\n}\n";
+        let fns = exports("src/main/java/com/example/Nums.java", src);
+        let blocked: Vec<(&str, bool)> = fns
+            .iter()
+            .map(|f| (f.name.as_str(), f.blocker.is_some()))
+            .collect();
+        assert_eq!(blocked, [("add", true), ("add", true), ("one", false)]);
     }
 }

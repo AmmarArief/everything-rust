@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Kotlin/JVM: detection, `analyze`, bridge, record and diff for Gradle modules of top-level
+  functions and `@JvmStatic` methods, through the Java bridge (#117).
+- Android: `build --profile android` builds the JNI library for the NDK ABIs into `jniLibs/`,
+  and `record`/`diff --profile android` run the unit under ART on a connected device; `doctor`
+  checks the NDK and Rust targets (#117).
+- Java: every overload of an exported name is blocked, since the reflection driver keys methods
+  by name; the generated Java runtime uses plain reflection, which ART also runs (#117).
 - `record`, `diff` and `bench`: the original and the port run in a temporary working folder,
   removed afterwards, so a function that writes to a path it is given no longer leaves files
   named after the generated inputs in the caller's folder (#115).

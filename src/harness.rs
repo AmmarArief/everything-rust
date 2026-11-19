@@ -19,7 +19,7 @@ use crate::ts::exports::LocalType;
 use crate::ts::shape::{self, Shape};
 
 pub const CASES: &str = "cases.jsonl";
-const WORK_DIR: &str = ".rust-anything";
+pub(crate) const WORK_DIR: &str = ".rust-anything";
 const COVERAGE_DIR: &str = "coverage";
 
 /// Strings that break naive ports: empty, case, whitespace, non-ASCII, astral, combining.
@@ -139,13 +139,11 @@ fn python_types(root: &Path, file: &str) -> Vec<LocalType> {
         .collect()
 }
 
-pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
-    let crate_dir = std::path::absolute(opts.crate_dir)?;
-    let opts = &RecordOptions {
-        crate_dir: &crate_dir,
-        ..*opts
-    };
-    let manifest = Manifest::load(opts.crate_dir)?;
+/// Generates the cases a recording runs, shared by the host and on-device drivers.
+fn generate_cases(
+    opts: &RecordOptions,
+    manifest: &Manifest,
+) -> Result<(Vec<Value>, usize, Vec<String>)> {
     let mut cases: Vec<Value> = Vec::new();
     let module_for = |file: &str| -> Result<String> {
         let path = match opts.module {
@@ -258,6 +256,18 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         }
     }
 
+    Ok((cases, traps, regex_functions))
+}
+
+pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
+    let crate_dir = std::path::absolute(opts.crate_dir)?;
+    let opts = &RecordOptions {
+        crate_dir: &crate_dir,
+        ..*opts
+    };
+    let manifest = Manifest::load(opts.crate_dir)?;
+    let (cases, traps, regex_functions) = generate_cases(opts, &manifest)?;
+
     let timed_out_path = opts.crate_dir.join(WORK_DIR).join(TIMED_OUT);
     let _ = std::fs::remove_file(&timed_out_path);
     let coverage_dir = opts.crate_dir.join(WORK_DIR).join(COVERAGE_DIR);
@@ -272,12 +282,35 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
         crate::harness_ruby::record(opts.crate_dir, &manifest, &cases)?
     } else if manifest.language == crate::lang::Lang::Java {
         crate::harness_java::record(opts.crate_dir, &manifest, &cases)?
+    } else if manifest.language == crate::lang::Lang::Kotlin {
+        crate::harness_kotlin::record(opts.crate_dir, &manifest, &cases)?
     } else {
         record_node(opts, &manifest, &cases)?
     };
     let coverage = crate::recording::node_coverage(&coverage_dir, &manifest);
     crate::recording::save_fingerprint(opts.crate_dir, &manifest, coverage.as_ref())?;
-    let text = std::fs::read_to_string(&out)?;
+    summarize(opts, &out, traps, regex_functions, coverage)
+}
+
+/// Records on a connected Android device: the cases are generated here, the original Kotlin
+/// runs under ART, and the results come back as the same `cases.jsonl`.
+pub fn record_android(opts: &RecordOptions, device: Option<&str>) -> Result<RecordOutcome> {
+    let manifest = Manifest::load(opts.crate_dir)?;
+    let (cases, traps, regex_functions) = generate_cases(opts, &manifest)?;
+    let _ = std::fs::remove_file(opts.crate_dir.join(WORK_DIR).join(TIMED_OUT));
+    let out = crate::android_device::record(opts.crate_dir, &manifest, &cases, device)?;
+    crate::recording::save_fingerprint(opts.crate_dir, &manifest, None)?;
+    summarize(opts, &out, traps, regex_functions, None)
+}
+
+fn summarize(
+    opts: &RecordOptions,
+    out: &Path,
+    traps: usize,
+    regex_functions: Vec<String>,
+    coverage: Option<Value>,
+) -> Result<RecordOutcome> {
+    let text = std::fs::read_to_string(out)?;
     let mut per_function = BTreeMap::new();
     let mut errors = 0;
     let mut count = 0;
@@ -295,12 +328,13 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .unwrap_or_default();
         *per_function.entry(name.to_string()).or_default() += 1;
     }
+    let timed_out_path = opts.crate_dir.join(WORK_DIR).join(TIMED_OUT);
     let timed_out: Vec<Value> = std::fs::read_to_string(&timed_out_path)
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or_default();
     Ok(RecordOutcome {
-        path: out,
+        path: out.to_path_buf(),
         cases: count,
         errors,
         traps,
@@ -394,7 +428,14 @@ fn stale_build(crate_dir: &Path, manifest: &Manifest) -> Option<PathBuf> {
         Kind::Pyo3 => crate::harness_py::native_file(crate_dir, manifest),
         _ => return None,
     };
-    let built_at = std::fs::metadata(&built).and_then(|m| m.modified()).ok()?;
+    sources_newer_than(crate_dir, &built).then_some(built)
+}
+
+/// True when `Cargo.toml` or any `.rs` file under `src/` is newer than `built`.
+pub(crate) fn sources_newer_than(crate_dir: &Path, built: &Path) -> bool {
+    let Ok(built_at) = std::fs::metadata(built).and_then(|m| m.modified()) else {
+        return false;
+    };
     let mut sources = vec![crate_dir.join("Cargo.toml")];
     sources.extend(
         walkdir_rs(&crate_dir.join("src"))
@@ -405,7 +446,6 @@ fn stale_build(crate_dir: &Path, manifest: &Manifest) -> Option<PathBuf> {
         .iter()
         .filter_map(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok())
         .any(|changed| changed > built_at)
-        .then_some(built)
 }
 
 fn walkdir_rs(dir: &Path) -> Vec<PathBuf> {
@@ -422,6 +462,15 @@ fn walkdir_rs(dir: &Path) -> Vec<PathBuf> {
         }
     }
     out
+}
+
+/// Builds a JNI crate for Android: one library per ABI, installed into `jniLibs/`.
+pub fn build_android(
+    crate_dir: &Path,
+    opts: &crate::android::Options,
+) -> Result<crate::android::Report> {
+    let manifest = Manifest::load(crate_dir)?;
+    crate::android::build(crate_dir, &manifest, opts)
 }
 
 pub fn build(crate_dir: &Path) -> Result<PathBuf> {
@@ -633,6 +682,9 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if manifest.language == crate::lang::Lang::Java {
         return crate::harness_java::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
+    if manifest.language == crate::lang::Lang::Kotlin {
+        return crate::harness_kotlin::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {
         bail!(
@@ -719,7 +771,24 @@ pub struct DiffOptions<'a> {
 const SHOWN_MISMATCHES: usize = 20;
 
 pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
-    let mut outcome = diff_exact(opts)?;
+    diff_after(opts, diff_exact(opts)?)
+}
+
+/// Diffs on a connected Android device, using the port built for the device's ABI.
+pub fn diff_android(
+    opts: &DiffOptions,
+    device: Option<&str>,
+    jni_libs: Option<&Path>,
+) -> Result<DiffOutcome> {
+    let manifest = Manifest::load(opts.crate_dir)?;
+    diff_after(
+        opts,
+        crate::android_device::diff(opts.crate_dir, &manifest, device, jni_libs)?,
+    )
+}
+
+fn diff_after(opts: &DiffOptions, exact: DiffOutcome) -> Result<DiffOutcome> {
+    let mut outcome = exact;
     let manifest = Manifest::load(opts.crate_dir).ok();
     let saved = manifest.as_ref().and_then(|m| m.float_tolerance);
     if let Some(t) = opts.float_tolerance.or(saved) {
@@ -795,6 +864,12 @@ fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
         && opts.module.is_none()
     {
         return crate::harness_java::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Kotlin
+        && opts.module.is_none()
+    {
+        return crate::harness_kotlin::diff(opts.crate_dir, &manifest);
     }
     let cases = opts.crate_dir.join(CASES);
     if !cases.exists() {

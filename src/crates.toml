@@ -923,3 +923,30 @@ fit = "partial"
 prefixes = ["Microsoft.Extensions.Configuration"]
 crates = "config, figment"
 fit = "good"
+
+[[kotlin]]
+prefixes = ["kotlinx.serialization"]
+crates = "serde, serde_json"
+fit = "good"
+note = "Kotlinx serialization maps to serde"
+
+[[kotlin]]
+prefixes = ["kotlinx.coroutines", "kotlinx.coroutines."]
+crates = "tokio, rayon"
+fit = "partial"
+note = "suspend functions stay in Kotlin in phase 1"
+
+[[kotlin]]
+prefixes = ["com.fasterxml.jackson", "com.google.gson", "com.google.code.gson", "org.json"]
+crates = "serde_json"
+fit = "good"
+
+[[kotlin]]
+prefixes = ["org.slf4j", "ch.qos.logback"]
+crates = "tracing"
+fit = "good"
+
+[[kotlin]]
+prefixes = ["io.ktor", "com.squareup.okhttp3"]
+crates = "axum, reqwest"
+fit = "partial"

@@ -78,7 +78,7 @@ impl Bridge {
             Lang::C => Self::CAbi,
             Lang::Go => Self::Cgo,
             Lang::Ruby => Self::Fiddle,
-            Lang::Java => Self::Jni,
+            Lang::Java | Lang::Kotlin => Self::Jni,
             Lang::Php => Self::PhpFfi,
             Lang::Csharp => Self::DotnetFfi,
         }

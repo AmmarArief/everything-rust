@@ -443,3 +443,43 @@ fn csharp_units_resolve_namespaces_and_map_nuget_packages() {
         app.dependencies
     );
 }
+
+#[test]
+fn kotlin_units_export_jvm_statics_and_map_gradle_packages() {
+    use rust_anything::lang::{Lang, exports};
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/kotlin");
+    let report = analyze(&root).unwrap();
+    assert_eq!(report.language, Lang::Kotlin);
+
+    let source =
+        std::fs::read_to_string(root.join("src/main/kotlin/com/example/text/Strings.kt")).unwrap();
+    let (fns, _) = exports(
+        Lang::Kotlin,
+        "src/main/kotlin/com/example/text/Strings.kt",
+        &source,
+    );
+    let by_name = |name: &str| fns.iter().find(|f| f.name == name).unwrap();
+    assert_eq!(
+        rust_anything::lang::kotlin::receiver(by_name("slugify")).0,
+        "com.example.text.StringsKt"
+    );
+    assert_eq!(
+        rust_anything::lang::kotlin::receiver(by_name("gcd")).0,
+        "com.example.text.Nums"
+    );
+    assert!(
+        by_name("slugify").blocker.is_none(),
+        "{:?}",
+        by_name("slugify")
+    );
+    assert_eq!(by_name("words").returns, "string[]");
+
+    let w = rust_anything::whole_app::whole_app(&root, &report);
+    let gson = w
+        .dependencies
+        .iter()
+        .find(|d| d.name == "com.google.code.gson:gson")
+        .unwrap();
+    assert!(gson.declared);
+    assert_eq!(gson.fit, "good");
+}

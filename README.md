@@ -53,7 +53,7 @@
 </table>
 
 **Rewrite your whole app in Rust, one piece at a time.** rust-anything records what your
-Node.js (TypeScript/JavaScript), Python, C, Go, Ruby or Java app does today, then checks every piece of the
+Node.js (TypeScript/JavaScript), Python, C, Go, Ruby, Java or Kotlin app does today, then checks every piece of the
 Rust rewrite against that recording before it moves on, until the app is pure Rust. CLIs, HTTP
 servers and libraries; your coding agent (or you) writes the Rust. It can only catch what the
 recording covers: see [What it can't catch](docs/how-it-works.md#what-it-cant-catch). Whole tools
@@ -195,17 +195,36 @@ Same output is not enough. Record what the app sends too, and a rewrite that mai
 | Go | package | typed cgo calls and a generated binary wire, in a package with the original API | a generated Go driver, built as its own module |
 | Ruby | file or folder of module functions | a magnus extension under the original modules | a generated Ruby driver |
 | Java | package of `public static` methods | typed JNI and a generated binary wire, in wrapper classes with the original methods | a generated reflection driver |
+| Kotlin | Gradle module of top-level functions and `@JvmStatic` methods | the Java bridge: typed JNI in Java wrapper classes calling the compiled Kotlin statics | a generated reflection driver, with the Kotlin sources compiled by `kotlinc` |
 | PHP | folder of functions and `public static` methods | coming next: PHP FFI over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
 | C# | folder of `public static` methods | coming next: P/Invoke over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and ASP.NET servers (`dotnet <app>.dll`) |
 
 Every language except C also gets batch classes (`--batch`): the items cross once and stay in
 Rust, and each call runs over all of them on all cores.
 
-The language is detected from the repository (`go.mod`, `pom.xml`, a `.csproj` or `.sln`,
-`pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, else the most common source files);
-`--lang` overrides it. Types come from the source: TS types, Python hints, C, Go, Java and C#
-signatures, Ruby YARD tags, PHP types and phpdoc; untyped parameters used as numbers are inferred
-as numbers.
+The language is detected from the repository (`go.mod`, `pom.xml`, `build.gradle`/`build.gradle.kts`,
+a `.csproj` or `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, else the most
+common source files); a Gradle module with `.kt` sources and no `.java` sources is Kotlin, mixed
+modules stay Java. `--lang` overrides it. Types come from the source: TS types, Python hints, C, Go,
+Java, Kotlin and C# signatures, Ruby YARD tags, PHP types and phpdoc; untyped parameters used as
+numbers are inferred as numbers.
+
+For Android, `rust-anything build <crate> --profile android` builds the same JNI library with the
+NDK for `arm64-v8a`, `armeabi-v7a` and `x86_64` (or the `--abi` values you pass) and installs it
+into `<crate>/jniLibs/<abi>/`; `--api` sets the API level (minimum 26, which the generated Java
+runtime needs). It finds the NDK from `ANDROID_NDK_HOME`/`ANDROID_NDK_ROOT` or the SDK, needs the
+Rust targets (`rustup target add aarch64-linux-android armv7-linux-androideabi
+x86_64-linux-android`), links 64-bit libraries with 16 KB page alignment, and checks that every
+JNI entry point is exported. Gradle looks in `src/main/jniLibs` by default, so pass
+`--jni-libs app/src/main/jniLibs` or add `<crate>/jniLibs` to `sourceSets.main.jniLibs.srcDirs`.
+`rust-anything record <crate> --profile android` runs the original Kotlin unit under ART on a
+connected device (adb), dexes the generated driver with `d8` from the SDK's build-tools, and pulls
+the results back as the same `cases.jsonl`; `diff <crate> --profile android` replays them against
+the `.so` built for the device's ABI. Both need `adb`, a device, `kotlinc`, an SDK with build-tools
+and a platform, and `--device <serial>` when more than one device is connected. The profile covers
+logic units: Activity/Compose/XML UI, lifecycle and SDK-only classes stay in Kotlin, and each call
+crosses JNI, so prefer the generated batch wrappers for hot loops. On a host, `record` and `diff`
+keep using the desktop JVM.
 
 For PHP, `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
 such as loose comparison and integer overflow into floats, Composer packages mapped to crates),

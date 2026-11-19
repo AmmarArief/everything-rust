@@ -63,7 +63,7 @@ pub fn lib_rs(m: &Manifest, api: &PortApi) -> String {
             out = out_expr(f),
         );
     }
-    let entry = if m.language == Lang::Java {
+    let entry = if matches!(m.language, Lang::Java | Lang::Kotlin) {
         format!(
             r#"
 /// `static native String call(String name, String args)` of `rustanything.{class}`.
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn rust_anything_free(ptr: *mut c_char) {
 "#
         .to_string()
     };
-    let imports = if m.language == Lang::Java {
+    let imports = if matches!(m.language, Lang::Java | Lang::Kotlin) {
         "use serde_json::{Value, json};\n"
     } else {
         "use std::ffi::{CStr, CString, c_char};\n\nuse serde_json::{Value, json};\n"
@@ -224,7 +224,7 @@ pub fn call_json(name: &str, args: &str) -> String {{
 
 pub fn cargo_toml(m: &Manifest) -> String {
     let (crate_types, extra) = match m.language {
-        Lang::Java => ("\"cdylib\", \"rlib\"", "jni = \"0.21\"\n"),
+        Lang::Java | Lang::Kotlin => ("\"cdylib\", \"rlib\"", "jni = \"0.21\"\n"),
         Lang::Go => ("\"cdylib\", \"rlib\"", ""),
         _ => ("\"cdylib\", \"staticlib\", \"rlib\"", ""),
     };

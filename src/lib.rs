@@ -6,6 +6,8 @@
 pub(crate) const MIN_RUST: &str = env!("CARGO_PKG_RUST_VERSION");
 
 pub mod analyze;
+pub mod android;
+pub mod android_device;
 pub mod app;
 pub mod bridge;
 pub mod codegen;
@@ -15,6 +17,7 @@ pub mod codegen_c;
 pub mod codegen_ffi;
 pub mod codegen_go;
 pub mod codegen_java;
+pub mod codegen_kotlin;
 pub mod codegen_py;
 pub mod codegen_ruby;
 pub mod codegen_tswire;
@@ -30,6 +33,7 @@ pub mod harness;
 pub mod harness_c;
 pub mod harness_go;
 pub mod harness_java;
+pub mod harness_kotlin;
 pub mod harness_py;
 pub mod harness_ruby;
 pub mod http;

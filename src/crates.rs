@@ -76,6 +76,16 @@ pub fn find(lang: &str, name: &str) -> Option<CrateMatch> {
         })
 }
 
+/// The longest configured prefix of `lang` that starts `name`, if any.
+pub fn longest_prefix(lang: &str, name: &str) -> Option<&'static str> {
+    table()
+        .get(lang)?
+        .iter()
+        .flat_map(|e| e.prefixes.iter().map(String::as_str))
+        .filter(|p| name.starts_with(p))
+        .max_by_key(|p| p.len())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,7 +93,7 @@ mod tests {
     #[test]
     fn the_table_parses_and_every_entry_names_something() {
         let parsed = parse(TABLE).unwrap();
-        assert_eq!(parsed.len(), 8);
+        assert_eq!(parsed.len(), 9);
         for (lang, entries) in &parsed {
             for e in entries {
                 assert!(

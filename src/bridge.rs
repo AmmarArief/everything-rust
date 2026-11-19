@@ -1396,7 +1396,10 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
         ]
     } else {
         let mut lib = crate::codegen_ffi::lib_rs(m, api);
-        if m.language == crate::lang::Lang::Java {
+        if matches!(
+            m.language,
+            crate::lang::Lang::Java | crate::lang::Lang::Kotlin
+        ) {
             lib.push_str(&crate::codegen_java::typed_rs(m, api));
         }
         if m.language == crate::lang::Lang::Go {
@@ -1404,17 +1407,26 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
             lib.push_str(&crate::codegen_go::wire_rs(m, api));
             lib.push_str(&crate::codegen_batch_native::go_rs(m, api).map_err(anyhow::Error::msg)?);
         }
-        if m.language == crate::lang::Lang::Java {
+        if matches!(
+            m.language,
+            crate::lang::Lang::Java | crate::lang::Lang::Kotlin
+        ) {
             lib.push_str(&crate::codegen_java::wire_rs(m, api));
             lib.push_str(
                 &crate::codegen_batch_native::java_rs(m, api).map_err(anyhow::Error::msg)?,
             );
         }
-        if matches!(m.language, crate::lang::Lang::Go | crate::lang::Lang::Java) {
+        if matches!(
+            m.language,
+            crate::lang::Lang::Go | crate::lang::Lang::Java | crate::lang::Lang::Kotlin
+        ) {
             lib = lib.replacen("pub mod port;", "pub mod port;\npub mod wire;", 1);
         }
         let mut files = vec![("src/lib.rs".to_string(), with_allocator(m, lib))];
-        if matches!(m.language, crate::lang::Lang::Go | crate::lang::Lang::Java) {
+        if matches!(
+            m.language,
+            crate::lang::Lang::Go | crate::lang::Lang::Java | crate::lang::Lang::Kotlin
+        ) {
             files.push(("src/wire.rs".to_string(), crate::wire::WIRE_RS.to_string()));
         }
         files
@@ -1442,7 +1454,7 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 crate::codegen_ruby::wrapper(m, api).map_err(anyhow::Error::msg)?,
             ));
         }
-        crate::lang::Lang::Java => {
+        crate::lang::Lang::Java | crate::lang::Lang::Kotlin => {
             files.extend(crate::codegen_java::wrappers(m, api));
             files.extend(
                 crate::codegen_batch_native::java_files(m, api).map_err(anyhow::Error::msg)?,

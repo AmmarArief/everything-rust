@@ -183,6 +183,10 @@ pub fn profile(root: &Path, command: &[String], lang: Option<Lang>) -> Result<Re
         Lang::Python => python(&root, command, &work)?,
         Lang::Go => go(&root, command, &work)?,
         Lang::Java => java(&root, command, &work)?,
+        Lang::Kotlin => bail!(
+            "`profile` does not run Kotlin workloads yet; use JFR (`jfr print --stack-depth 256`) \
+             and port the hot loops it shows"
+        ),
         Lang::Ruby => ruby(&root, command, &work)?,
         Lang::C => bail!(
             "`profile` runs TS/JS, Python, Go, Java and Ruby workloads; for C, use `perf record -g` \
