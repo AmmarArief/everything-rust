@@ -10,6 +10,10 @@
   warning says "Stale recording" (#102).
 - `analyze` says what a wasm-bindgen bridge needs installed, and that `--kind napi` runs with
   what Node already has (#102).
+- `bridge` reads types for plain JavaScript: from a sibling `.d.ts`/`.d.mts`/`.d.cts`, then
+  JSDoc `@param {T} name` (with `[name]`, defaults and `opts.field` shapes) and `@returns {T}`.
+  Before, only parameters with a literal default were typed and the rest became `unknown`, so
+  `record` generated mostly wrong-typed inputs (#100).
 - TypeScript analysis and recording resolve path aliases against the inherited `baseUrl`,
   including when the two options come from separate tsconfig files.
 - `setup` also registers OpenCode: the MCP server in `~/.config/opencode/opencode.json`
