@@ -140,6 +140,11 @@ fn python_types(root: &Path, file: &str) -> Vec<LocalType> {
 }
 
 pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
+    let crate_dir = std::path::absolute(opts.crate_dir)?;
+    let opts = &RecordOptions {
+        crate_dir: &crate_dir,
+        ..*opts
+    };
     let manifest = Manifest::load(opts.crate_dir)?;
     let mut cases: Vec<Value> = Vec::new();
     let module_for = |file: &str| -> Result<String> {
@@ -607,6 +612,11 @@ pub struct BenchOptions<'a> {
 
 /// Times the recorded cases against the original and the built Rust module, bridge included.
 pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
+    let crate_dir = std::path::absolute(opts.crate_dir)?;
+    let opts = &BenchOptions {
+        crate_dir: &crate_dir,
+        ..*opts
+    };
     let manifest = Manifest::load(opts.crate_dir)?;
     if manifest.language == crate::lang::Lang::Python {
         return crate::harness_py::bench(opts.crate_dir, &manifest, opts.min_ms);
@@ -740,6 +750,11 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
 }
 
 fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
+    let crate_dir = std::path::absolute(opts.crate_dir)?;
+    let opts = &DiffOptions {
+        crate_dir: &crate_dir,
+        ..*opts
+    };
     if opts.module.is_none()
         && let Ok(manifest) = Manifest::load(opts.crate_dir)
         && let Some(built) = stale_build(opts.crate_dir, &manifest)
@@ -1274,6 +1289,7 @@ pub(crate) fn record_cases(
             use std::os::unix::process::CommandExt as _;
             cmd.process_group(0);
         }
+        let _scratch = scratch_cwd(&mut cmd)?;
         let mut child = cmd.spawn().with_context(|| format!("running {what}"))?;
         let mut current: Option<(usize, Instant)> = None;
         let status = loop {
@@ -1334,7 +1350,25 @@ pub(crate) fn record_cases(
 /// Inputs the last `record` left out because the original ran past the time limit on them.
 pub(crate) const TIMED_OUT: &str = "timed-out.json";
 
+pub(crate) struct Scratch(PathBuf);
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+pub(crate) fn scratch_cwd(cmd: &mut Command) -> Result<Option<Scratch>> {
+    if cmd.get_current_dir().is_some() {
+        return Ok(None);
+    }
+    let dir = crate::app::temp_dir("unit")?;
+    cmd.current_dir(&dir);
+    Ok(Some(Scratch(dir)))
+}
+
 fn run(cmd: &mut Command, what: &str) -> Result<()> {
+    let _scratch = scratch_cwd(cmd)?;
     let output = cmd.output().with_context(|| format!("running {what}"))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

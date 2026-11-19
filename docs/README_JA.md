@@ -6,7 +6,7 @@
 
 <p align="center"><b>アプリを Rust で書き直し、元と同じように動くことを証明する。</b></p>
 
-<p align="center">2.0 の新機能: <a href="real-world.md#prettier">Prettier を Rust に移植</a>。19x 高速 · 17,224 件の記録済み実行 · 不一致 0 件</p>
+<p align="center">2.0 の新機能: <a href="real-world.md#prettier">Prettier を Rust に移植</a>。19x 高速 · 記録済み実行 17,224 件中 15,837 件が完全に Rust · すべてバイト単位で一致</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io バージョン"></a>

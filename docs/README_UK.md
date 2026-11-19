@@ -6,7 +6,7 @@
 
 <p align="center"><b>Перепишіть свій застосунок на Rust і доведіть, що він поводиться так само.</b></p>
 
-<p align="center">Нове у 2.0: <a href="real-world.md#prettier">Prettier, портований на Rust</a>. У 19x швидше · 17,224 записаних запуски · 0 розбіжностей</p>
+<p align="center">Нове у 2.0: <a href="real-world.md#prettier">Prettier, портований на Rust</a>. У 19x швидше · 15,837 із 17,224 записаних запусків повністю на Rust · усі збігаються байт у байт</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="Версія на crates.io"></a>

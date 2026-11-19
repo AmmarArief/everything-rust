@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `record`, `diff` and `bench`: the original and the port run in a temporary working folder,
+  removed afterwards, so a function that writes to a path it is given no longer leaves files
+  named after the generated inputs in the caller's folder (#115).
+- `analyze`: Python functions with numpy array parameters (`np.ndarray`, `NDArray`) carry a new
+  risk, since `record` cannot generate arrays for them yet: record the app instead (#113).
+- README: the 2.0 headline says how many Prettier runs are fully in Rust (15,837 of 17,224)
+  rather than only that none mismatch (#118).
 - `lift`: the lifted app or library gets `rust-version` and a release profile with `lto = true`
   and `codegen-units = 1`, unless it sets them already.
 - `bridge`: generated crates set `rust-version` and warn on `unused_lifetimes` and

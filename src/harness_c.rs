@@ -15,6 +15,7 @@ use crate::lang::c::{defines_main, scalar};
 const WORK_DIR: &str = ".rust-anything";
 
 fn run(cmd: &mut Command, what: &str) -> Result<()> {
+    let _scratch = crate::harness::scratch_cwd(cmd)?;
     let output = cmd.output().with_context(|| format!("running {what}"))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

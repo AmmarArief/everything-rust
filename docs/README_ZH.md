@@ -6,7 +6,7 @@
 
 <p align="center"><b>用 Rust 重写你的应用，并证明它的行为依然完全一致。</b></p>
 
-<p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次录制运行 · 0 差异</p>
+<p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次录制运行中 15,837 次完全由 Rust 执行 · 全部逐字节一致</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io 版本"></a>

@@ -149,6 +149,26 @@ fn python_packages_match_dependencies_by_normalized_name() {
 }
 
 #[test]
+fn numpy_array_parameters_are_flagged() {
+    let root = std::env::temp_dir().join(format!("rust-anything-ndarray-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("arrkit")).unwrap();
+    std::fs::write(
+        root.join("pyproject.toml"),
+        "[project]\nname = \"arrkit\"\ndependencies = [\"numpy\"]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("arrkit/__init__.py"),
+        "import numpy as np\n\ndef scale(a: np.ndarray, k: float) -> np.ndarray:\n    return a * k\n",
+    )
+    .unwrap();
+    let report = analyze(&root);
+    std::fs::remove_dir_all(&root).unwrap();
+    let json = serde_json::to_string(&report.unwrap()).unwrap();
+    assert!(json.contains("array-parameters"), "{json}");
+}
+
+#[test]
 fn json_output_is_versioned() {
     let json = serde_json::to_value(mini()).unwrap();
     assert_eq!(json["schema"], "rust-anything/analyze@1");

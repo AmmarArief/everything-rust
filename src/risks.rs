@@ -36,6 +36,8 @@ pub enum Risk {
     Monkeypatching,
     /// Code already compiled to machine code (numba, Cython, JAX): Rust gains little speed.
     AlreadyCompiled,
+    /// Parameters typed as numpy arrays, which `record` cannot generate.
+    ArrayParameters,
     /// C that depends on the target: inline assembly, `volatile` hardware access, bitfields,
     /// packed layouts, compiler extensions, integers cast to addresses.
     PlatformSpecific,
@@ -82,6 +84,7 @@ impl Risk {
             | Self::Concurrency
             | Self::NullReferences
             | Self::AlreadyCompiled => Severity::Medium,
+            Self::ArrayParameters => Severity::High,
         }
     }
 
@@ -109,6 +112,7 @@ impl Risk {
             Self::NullReferences => "Null references",
             Self::Monkeypatching => "Runtime changes to code",
             Self::AlreadyCompiled => "Already compiled (numba, Cython, JAX)",
+            Self::ArrayParameters => "numpy array parameters",
             Self::PlatformSpecific => "Platform-specific C (asm, volatile, bitfields, packing)",
         }
     }
@@ -212,6 +216,12 @@ impl Risk {
                  LLVM, like Rust): a Rust port is unlikely to run much faster. Port it for a pure \
                  Rust app, not for speed, and profile first. Its floats may not match Rust's bit for \
                  bit (fastmath, operation order): record with `--float-tolerance`."
+            }
+            Self::ArrayParameters => {
+                "`record` passes JSON values, never numpy arrays, so a function that takes \
+                 `np.ndarray` gets no valid cases on the unit path. Record the app instead \
+                 (`app record`, `app replay`), or port the function together with a caller that \
+                 takes and returns plain lists."
             }
             Self::PlatformSpecific => {
                 "This C depends on its target: register access, memory layout, the compiler's \

@@ -25,6 +25,7 @@ fn python() -> &'static str {
 }
 
 fn run(cmd: &mut Command) -> Result<()> {
+    let _scratch = crate::harness::scratch_cwd(cmd)?;
     let output = cmd.output().context("running python")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

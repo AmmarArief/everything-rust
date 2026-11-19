@@ -305,6 +305,14 @@ pub fn scan(source: &str) -> FileFacts {
         "decorator" if crate::risks::compiled_by(text(node, source)).is_some() => {
             add(&mut facts, Risk::AlreadyCompiled, node)
         }
+        "typed_parameter" | "typed_default_parameter"
+            if node.child_by_field_name("type").is_some_and(|t| {
+                let t = text(t, source);
+                t.contains("ndarray") || t.contains("NDArray")
+            }) =>
+        {
+            add(&mut facts, Risk::ArrayParameters, node)
+        }
         "raise_statement" | "try_statement" => add(&mut facts, Risk::Exceptions, node),
         "yield" => add(&mut facts, Risk::Generators, node),
         "await" => add(&mut facts, Risk::Async, node),
