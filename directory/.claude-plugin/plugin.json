@@ -15,5 +15,9 @@
     "migration",
     "mcp",
     "ffi"
-  ]
+  ],
+  "documentationUrl": "https://github.com/erkamyaman/rust-anything#readme",
+  "supportUrl": "https://github.com/erkamyaman/rust-anything/issues",
+  "privacyPolicyUrl": "https://github.com/erkamyaman/rust-anything/blob/main/docs/privacy.md",
+  "termsOfServiceUrl": "https://github.com/erkamyaman/rust-anything/blob/main/LICENSE"
 }
