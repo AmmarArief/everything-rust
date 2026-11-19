@@ -4,25 +4,14 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">by <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>Rewrite your app in Rust, and prove it still behaves the same.</b></p>
 
-<p align="center">English · <a href="docs/README_TR.md">Türkçe</a> · <a href="docs/README_UK.md">Українська</a> · <a href="docs/README_ZH.md">简体中文</a> · <a href="docs/README_ZH-TW.md">繁體中文</a> · <a href="docs/README_DE.md">Deutsch</a> · <a href="docs/README_FR.md">Français</a> · <a href="docs/README_RU.md">Русский</a> · <a href="docs/README_JA.md">日本語</a> · <a href="docs/README_KO.md">한국어</a> · <a href="docs/README_AZ.md">Azərbaycanca</a> · <a href="docs/README_UZ.md">Oʻzbekcha</a> · <a href="docs/README_KK.md">Қазақша</a> · <a href="docs/README_KY.md">Кыргызча</a> · <a href="docs/README_TK.md">Türkmençe</a> · <a href="docs/README_TT.md">Татарча</a> · <a href="docs/README_UG.md">ئۇيغۇرچە</a> · <a href="docs/README_PT.md">Português</a> · <a href="docs/README_VI.md">Tiếng Việt</a></p>
-
-<p align="center"><em>Rewrite your whole app in Rust. Keep it working the whole way.</em></p>
-
-<p align="center"><em>CLIs, servers and libraries, piece by piece, checked against the original at every step.</em></p>
-
-<p align="center"><b>New in 2.0: <a href="docs/real-world.md#prettier">Prettier, ported to Rust</a>. 19x faster, the same output byte for byte.</b></p>
-
-<p align="center">Node.js and TypeScript · Python · C · Go · Ruby · Java · PHP · C#</p>
+<p align="center">New in 2.0: <a href="docs/real-world.md#prettier">Prettier, ported to Rust</a>. 19x faster · 17,224 recorded runs · 0 mismatches</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="8 languages">
-  <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-5%20agents-E2862A" alt="Works with 5 agents"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Tests"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT license"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
 </p>
 
@@ -31,15 +20,13 @@
   <a href="#languages">Languages</a> ·
   <a href="docs/real-world.md">Real-world ports</a> ·
   <a href="docs/how-it-works.md#how-it-works">How it works</a> ·
-  <a href="docs/how-it-works.md#the-loop">The loop</a> ·
-  <a href="docs/whole-apps.md#port-a-whole-app">Port a whole app</a> ·
-  <a href="docs/how-it-works.md#hot-paths-keep-the-data-in-rust">Hot paths</a> ·
-  <a href="docs/install.md#install">Install</a> ·
-  <a href="docs/how-it-works.md#what-it-cant-catch">What it can't catch</a> ·
+  <a href="docs/whole-apps.md#port-a-whole-app">Whole apps</a> ·
   <a href="docs/faq.md#faq">FAQ</a>
 </p>
 
-<p align="center">Prettier in Rust: 19x faster · 17,224 recorded runs · 0 mismatches · 10 languages</p>
+<p align="center">Made in Türkiye 🇹🇷 by <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="LICENSE">MIT</a></p>
+
+<p align="center"><sub>English · <a href="docs/README_TR.md">Türkçe</a> · <a href="docs/README_UK.md">Українська</a> · <a href="docs/README_ZH.md">简体中文</a> · <a href="docs/README_ZH-TW.md">繁體中文</a> · <a href="docs/README_DE.md">Deutsch</a> · <a href="docs/README_FR.md">Français</a> · <a href="docs/README_RU.md">Русский</a> · <a href="docs/README_JA.md">日本語</a> · <a href="docs/README_KO.md">한국어</a> · <a href="docs/README_AZ.md">Azərbaycanca</a> · <a href="docs/README_UZ.md">Oʻzbekcha</a> · <a href="docs/README_KK.md">Қазақша</a> · <a href="docs/README_KY.md">Кыргызча</a> · <a href="docs/README_TK.md">Türkmençe</a> · <a href="docs/README_TT.md">Татарча</a> · <a href="docs/README_UG.md">ئۇيغۇرچە</a> · <a href="docs/README_PT.md">Português</a> · <a href="docs/README_VI.md">Tiếng Việt</a></sub></p>
 
 <table>
   <tr>
