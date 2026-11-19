@@ -764,11 +764,15 @@ pub fn diff(opts: &DiffOptions) -> Result<DiffOutcome> {
 }
 
 /// Diffs on a connected Android device, using the port built for the device's ABI.
-pub fn diff_android(opts: &DiffOptions, device: Option<&str>) -> Result<DiffOutcome> {
+pub fn diff_android(
+    opts: &DiffOptions,
+    device: Option<&str>,
+    jni_libs: Option<&Path>,
+) -> Result<DiffOutcome> {
     let manifest = Manifest::load(opts.crate_dir)?;
     diff_after(
         opts,
-        crate::android_device::diff(opts.crate_dir, &manifest, device)?,
+        crate::android_device::diff(opts.crate_dir, &manifest, device, jni_libs)?,
     )
 }
 

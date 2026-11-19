@@ -462,6 +462,7 @@ fn tool_schemas() -> Value {
                 "crate": crate_dir,
                 "profile": { "type": "string", "enum": ["host", "android"], "description": "Diff on this machine (default) or on a connected Android device (JVM crates)." },
                 "device": { "type": "string", "description": "Android device serial; picked automatically when only one is connected." },
+                "jni_libs": { "type": "string", "description": "Android libraries folder to diff; defaults to <crate>/jniLibs." },
                 "ignore_key_order": { "type": "boolean" },
                 "module": { "type": "string", "description": "Test this JS module instead of the crate's `index.cjs`." },
                 "node_args": { "type": "array", "items": { "type": "string" }, "description": "Extra arguments for node, e.g. [\"--import=tsx\"]." },
@@ -739,12 +740,16 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             };
             serde_json::to_value(match args["profile"].as_str().unwrap_or("host") {
                 "host" => {
-                    if !args["device"].is_null() {
-                        anyhow::bail!("`device` needs profile `android`");
+                    if !args["device"].is_null() || !args["jni_libs"].is_null() {
+                        anyhow::bail!("`device` and `jni_libs` need profile `android`");
                     }
                     harness::diff(&opts)?
                 }
-                "android" => harness::diff_android(&opts, args["device"].as_str())?,
+                "android" => harness::diff_android(
+                    &opts,
+                    args["device"].as_str(),
+                    args["jni_libs"].as_str().map(Path::new),
+                )?,
                 other => anyhow::bail!("unknown diff profile `{other}`: use host or android"),
             })?
         }

@@ -103,12 +103,21 @@ fn compile(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Classpath> {
     if !rust {
         let jar = work.join("kotlin-original.jar");
         let ws = crate::lang::kotlin::discover(&m.root)?;
-        let sources: Vec<PathBuf> = ws
+        let all: Vec<PathBuf> = ws
             .files
             .iter()
             .filter(|f| f.kind == crate::ts::discover::FileKind::Source)
             .map(|f| m.root.join(&f.path))
             .collect();
+        // Compile the unit being ported, not every Kotlin file in the module: an Android
+        // activity or other SDK-only source elsewhere in the module must not block recording.
+        let unit = m.root.join(&m.unit);
+        let scoped: Vec<PathBuf> = all
+            .iter()
+            .filter(|p| p.starts_with(&unit))
+            .cloned()
+            .collect();
+        let sources = if scoped.is_empty() { all } else { scoped };
         let mut cmd = Command::new("kotlinc");
         cmd.arg("-include-runtime")
             .arg("-d")

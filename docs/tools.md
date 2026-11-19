@@ -96,6 +96,7 @@ Runs the original's code or commands.
 | `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
 | `profile` | string |  | Diff on this machine (default) or on a connected Android device (JVM crates). |
 | `device` | string |  | Android device serial; picked automatically when only one is connected. |
+| `jni_libs` | string |  | Android libraries folder to diff; defaults to <crate>/jniLibs. |
 | `ignore_key_order` | boolean |  |  |
 | `module` | string |  | Test this JS module instead of the crate's `index.cjs`. |
 | `node_args` | string[] |  | Extra arguments for node, e.g. ["--import=tsx"]. |

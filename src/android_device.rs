@@ -322,7 +322,12 @@ pub fn record(
 }
 
 /// Diffs the Android `.so` built for the connected device's ABI against the recording.
-pub fn diff(crate_dir: &Path, m: &Manifest, device: Option<&str>) -> Result<DiffOutcome> {
+pub fn diff(
+    crate_dir: &Path,
+    m: &Manifest,
+    device: Option<&str>,
+    jni_libs: Option<&Path>,
+) -> Result<DiffOutcome> {
     check_language(m)?;
     let cases = crate_dir.join(crate::harness::CASES);
     if !cases.is_file() {
@@ -334,10 +339,10 @@ pub fn diff(crate_dir: &Path, m: &Manifest, device: Option<&str>) -> Result<Diff
     }
     let device = Device::connect(device)?;
     let abi = device.abi()?;
-    let lib = crate_dir
-        .join("jniLibs")
-        .join(&abi)
-        .join(format!("lib{}.so", m.lib_name()));
+    let base = jni_libs
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| crate_dir.join("jniLibs"));
+    let lib = base.join(&abi).join(format!("lib{}.so", m.lib_name()));
     if !lib.is_file() {
         bail!(
             "no {} for the device ABI {abi}; run `rust-anything build {crate} --profile android --abi {abi}` first",

@@ -175,6 +175,9 @@ enum Cmd {
         /// Android device serial; picked automatically when only one is connected.
         #[arg(long)]
         device: Option<String>,
+        /// Android libraries folder to diff; defaults to `<crate>/jniLibs`.
+        #[arg(long)]
+        jni_libs: Option<PathBuf>,
         /// Test this JS module instead of the crate's `index.cjs`.
         #[arg(long)]
         module: Option<PathBuf>,
@@ -692,6 +695,7 @@ fn run() -> Result<ExitCode> {
             crate_dir,
             profile,
             device,
+            jni_libs,
             module,
             ignore_key_order,
             float_tolerance,
@@ -707,12 +711,14 @@ fn run() -> Result<ExitCode> {
             };
             let d = match profile {
                 Profile::Host => {
-                    if device.is_some() {
-                        anyhow::bail!("`--device` needs `--profile android`");
+                    if device.is_some() || jni_libs.is_some() {
+                        anyhow::bail!("`--device` and `--jni-libs` need `--profile android`");
                     }
                     harness::diff(&opts)?
                 }
-                Profile::Android => harness::diff_android(&opts, device.as_deref())?,
+                Profile::Android => {
+                    harness::diff_android(&opts, device.as_deref(), jni_libs.as_deref())?
+                }
             };
             let stale = rust_anything::bridge::Manifest::load(&crate_dir)
                 .ok()

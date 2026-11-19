@@ -67,8 +67,15 @@ pub fn discover(root: &Path) -> Result<Workspace> {
     let mut packages: Vec<Package> = Vec::new();
     let mut files = Vec::new();
     let walker = crate::walk::filtered(root, |e| {
-        !(e.file_type().is_some_and(|t| t.is_dir())
-            && SKIP_DIRS.contains(&e.file_name().to_string_lossy().as_ref()))
+        if !e.file_type().is_some_and(|t| t.is_dir())
+            || !SKIP_DIRS.contains(&e.file_name().to_string_lossy().as_ref())
+        {
+            return true;
+        }
+        // `src/main/kotlin/build/` can be a real package; other `build/` folders are output.
+        !e.path()
+            .components()
+            .any(|c| c.as_os_str() == std::ffi::OsStr::new("src"))
     })
     .hidden(true)
     .require_git(false)
@@ -268,28 +275,47 @@ pub fn scan(source: &str) -> FileFacts {
 }
 
 pub fn resolve(spec: &str, index: &HashMap<&str, usize>, ws: &Workspace) -> super::Resolution {
+    // `import a.b.C as Alias` keeps the dotted path, not the local alias.
+    let spec = spec.split(" as ").next().unwrap_or(spec).trim();
+    let wildcard = spec.ends_with(".*");
     let first = spec.split('.').next().unwrap_or("");
     if matches!(first, "kotlin" | "java" | "javax" | "jdk" | "sun") || spec.starts_with("com.sun.")
     {
         return super::Resolution::Stdlib;
     }
     let path = spec.trim_end_matches(".*").replace('.', "/");
-    for p in &ws.packages {
-        let file = join(&p.src_root, &format!("{path}.kt"));
-        if let Some(i) = index.get(file.as_str()) {
-            return super::Resolution::File(*i);
+    let find = |p: &str, packages: &[Package]| -> Option<usize> {
+        for pkg in packages {
+            let file = join(&pkg.src_root, &format!("{p}.kt"));
+            if let Some(i) = index.get(file.as_str()) {
+                return Some(*i);
+            }
+            // Kotlin `package a.b` maps to a folder; find any file in that folder.
+            let dir = join(&pkg.src_root, p);
+            if let Some((_, i)) = index
+                .iter()
+                .filter(|(f, _)| f.rsplit_once('/').is_some_and(|(d, _)| d == dir))
+                .min_by_key(|(f, _)| **f)
+            {
+                return Some(*i);
+            }
         }
-        // Kotlin `package a.b` maps to a folder; find any file in that folder.
-        let dir = join(&p.src_root, &path);
-        if let Some((_, i)) = index
-            .iter()
-            .filter(|(f, _)| f.rsplit_once('/').is_some_and(|(d, _)| d == dir))
-            .min_by_key(|(f, _)| **f)
-        {
-            return super::Resolution::File(*i);
-        }
+        None
+    };
+    if let Some(i) = find(&path, &ws.packages) {
+        return super::Resolution::File(i);
     }
-    super::Resolution::External(spec.split('.').take(2).collect::<Vec<_>>().join("."))
+    // A class import can also resolve to a file in its parent package.
+    if !wildcard
+        && let Some((parent, _)) = path.rsplit_once('/')
+        && let Some(i) = find(parent, &ws.packages)
+    {
+        return super::Resolution::File(i);
+    }
+    let external = crate::crates::longest_prefix("kotlin", spec)
+        .map(str::to_string)
+        .unwrap_or_else(|| spec.split('.').take(2).collect::<Vec<_>>().join("."));
+    super::Resolution::External(external)
 }
 
 pub fn lookup(name: &str) -> Option<CrateMatch> {
@@ -538,6 +564,15 @@ fn collect(
         };
         let name = text(name_node, source).to_string();
         let mut blocker = None;
+        // `fun Foo.bar()` needs a dispatched receiver; the JVM owner would not be the file class.
+        if source
+            .get(function.start_byte()..name_node.start_byte())
+            .unwrap_or_default()
+            .trim_end()
+            .ends_with('.')
+        {
+            blocker.get_or_insert_with(|| "extension functions need a receiver".into());
+        }
         if mods.split_whitespace().any(|w| w == "suspend") {
             blocker = Some("suspend functions keep their continuation in Kotlin".into());
         }
@@ -597,8 +632,23 @@ fn collect(
         }
         let ret = named_children(function)
             .iter()
-            .find(|n| is_type_node(n.kind()))
-            .map_or_else(|| "Unit".to_string(), |n| type_text(*n, source));
+            .find(|n| n.start_byte() > name_node.end_byte() && is_type_node(n.kind()))
+            .map_or_else(
+                || {
+                    if source
+                        .get(name_node.end_byte()..function.end_byte())
+                        .unwrap_or_default()
+                        .trim_start()
+                        .starts_with('=')
+                    {
+                        blocker.get_or_insert_with(|| {
+                            "expression body has no explicit return type".into()
+                        });
+                    }
+                    "Unit".to_string()
+                },
+                |n| type_text(*n, source),
+            );
         let returns = kotlin_to_ts(&ret).unwrap_or_else(|reason| {
             blocker.get_or_insert(reason);
             "unknown".into()
@@ -701,9 +751,20 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
                 for member in named_children(child) {
                     if member.kind() == "class_body" {
                         for decl in named_children(member) {
-                            if decl.kind() == "companion_object"
-                                || decl.kind() == "object_declaration"
-                            {
+                            if decl.kind() == "object_declaration" {
+                                // A nested object has its own JVM class; only a companion
+                                // object's statics live on the enclosing class.
+                                if let Some(nested) = decl.child_by_field_name("name") {
+                                    collect(
+                                        decl,
+                                        source,
+                                        &owner(text(nested, source)),
+                                        path,
+                                        false,
+                                        &mut out,
+                                    );
+                                }
+                            } else if decl.kind() == "companion_object" {
                                 collect(decl, source, &class_owner, path, false, &mut out);
                             }
                         }
