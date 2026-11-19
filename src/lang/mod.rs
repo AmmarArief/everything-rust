@@ -77,12 +77,13 @@ impl Lang {
             if !has("pom.xml") && (has("build.gradle.kts") || has("build.gradle")) {
                 let mut kt = 0usize;
                 let mut java = 0usize;
-                for entry in crate::walk::filtered(root, |e| {
+                let module = root.to_path_buf();
+                for entry in crate::walk::filtered(root, move |e| {
                     if !e.file_type().is_some_and(|kind| kind.is_dir()) {
                         return true;
                     }
                     let name = e.file_name().to_string_lossy();
-                    ![
+                    if ![
                         "build",
                         ".gradle",
                         ".kotlin",
@@ -91,6 +92,15 @@ impl Lang {
                         "target",
                     ]
                     .contains(&name.as_ref())
+                    {
+                        return true;
+                    }
+                    // `src/main/java/com/acme/build/` is a package, not build output.
+                    !e.path()
+                        .strip_prefix(&module)
+                        .unwrap_or(e.path())
+                        .components()
+                        .any(|c| c.as_os_str() == std::ffi::OsStr::new("src"))
                 })
                 .hidden(true)
                 .require_git(false)

@@ -624,6 +624,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         }
         "record" => {
             let crate_dir = path("crate")?;
+            let profile = args["profile"].as_str().unwrap_or("host");
+            if profile == "host" && !args["device"].is_null() {
+                anyhow::bail!("`device` needs profile `android`");
+            }
+            if !matches!(profile, "host" | "android") {
+                anyhow::bail!("unknown record profile `{profile}`: use host or android");
+            }
             let mut inputs = opt_path("inputs");
             let test_command = strings("test_command");
             let captured = if test_command.is_empty() {
@@ -659,13 +666,8 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 node_args: &strings("node_args"),
             };
             let device = args["device"].as_str();
-            let mut out = serde_json::to_value(match args["profile"].as_str().unwrap_or("host") {
-                "host" => {
-                    if device.is_some() {
-                        anyhow::bail!("`device` needs profile `android`");
-                    }
-                    harness::record(&opts)?
-                }
+            let mut out = serde_json::to_value(match profile {
+                "host" => harness::record(&opts)?,
                 "android" => harness::record_android(&opts, device)?,
                 other => anyhow::bail!("unknown record profile `{other}`: use host or android"),
             })?;

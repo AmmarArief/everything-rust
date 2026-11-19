@@ -15,23 +15,27 @@ fn runs(program: &str, args: &[&str]) -> Option<String> {
 }
 
 fn sdk_ready() -> bool {
-    rust_anything::android::sdk_folders()
-        .into_iter()
-        .any(|sdk| {
-            let d8 = std::fs::read_dir(sdk.join("build-tools"))
-                .ok()
-                .into_iter()
-                .flatten()
-                .flatten()
-                .any(|e| e.path().join("d8").is_file());
-            let platform = std::fs::read_dir(sdk.join("platforms"))
-                .ok()
-                .into_iter()
-                .flatten()
-                .flatten()
-                .any(|e| e.path().join("android.jar").is_file());
-            d8 && platform
-        })
+    let mut candidates: Vec<PathBuf> = ["ANDROID_HOME", "ANDROID_SDK_ROOT"]
+        .iter()
+        .filter_map(std::env::var_os)
+        .map(PathBuf::from)
+        .collect();
+    candidates.extend(rust_anything::android::sdk_folders());
+    candidates.into_iter().any(|sdk| {
+        let d8 = std::fs::read_dir(sdk.join("build-tools"))
+            .ok()
+            .into_iter()
+            .flatten()
+            .flatten()
+            .any(|e| e.path().join("d8").is_file());
+        let platform = std::fs::read_dir(sdk.join("platforms"))
+            .ok()
+            .into_iter()
+            .flatten()
+            .flatten()
+            .any(|e| e.path().join("android.jar").is_file());
+        d8 && platform
+    })
 }
 
 struct Cleanup(PathBuf);
