@@ -23,7 +23,7 @@ for _ in range(times):
     m["To"] = name + "@example.test"
     m["Subject"] = "welcome"
     m.set_content("hi " + name)
-    with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"])) as s:
+    with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"]), local_hostname="localhost") as s:
         s.send_message(m)
 print("signed up", name)
 "#;
@@ -147,7 +147,7 @@ class H(BaseHTTPRequestHandler):
             m["To"] = user + "@example.test"
             m["Subject"] = "welcome"
             m.set_content("hi " + user)
-            with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"])) as s:
+            with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ["SMTP_PORT"]), local_hostname="localhost") as s:
                 s.send_message(m)
         self.reply(201, {"user": user})
 

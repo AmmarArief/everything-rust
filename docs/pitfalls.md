@@ -38,6 +38,11 @@ and print canonical paths.
 on every POST, so the second recording run started from the first one's writes. Record servers
 that write files with `--fresh <path>`, and `--pace` when they do work after answering.
 
+**Mail cases timed out on macOS CI.** Python's `smtplib` looks up the machine's full host name
+for its greeting, and on GitHub's macOS runners that lookup outlasted the 30-second case limit.
+Test apps that send mail pass `local_hostname="localhost"`; an app under test that hangs the same
+way needs it too, or a longer `--timeout`.
+
 ## Numbers and claims
 
 **Benchmarks taken while other builds ran were off by a wide margin.** Run `bench` on a quiet
