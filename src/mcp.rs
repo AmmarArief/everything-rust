@@ -560,6 +560,17 @@ fn tool_schemas() -> Value {
     ])
 }
 
+/// `bridge`'s `allocator`: the default when omitted (or null), an error for any other value
+/// than the two names, so a mistyped argument never bridges with an allocator nobody chose.
+fn allocator_arg(args: &Value) -> Result<bridge::Allocator> {
+    Ok(match args.get("allocator") {
+        None | Some(Value::Null) => bridge::Allocator::default(),
+        Some(Value::String(s)) if s == "mimalloc" => bridge::Allocator::Mimalloc,
+        Some(Value::String(s)) if s == "rusty_alloc" => bridge::Allocator::RustyAlloc,
+        Some(other) => anyhow::bail!("`allocator` is \"mimalloc\" or \"rusty_alloc\", not {other}"),
+    })
+}
+
 fn call(name: &str, args: &Value) -> Result<Value> {
     let path = |key: &str| -> Result<PathBuf> {
         args[key]
@@ -598,6 +609,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 _ => None,
             };
             let root = path("root")?;
+            let allocator = allocator_arg(args)?;
             serde_json::to_value(bridge::bridge(&bridge::Options {
                 root: &root,
                 unit: args["unit"].as_str().context("missing `unit`")?,
@@ -609,13 +621,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 lang: None,
                 batch: strings("batch"),
                 as_json: strings("as_json"),
-                allocator: match args["allocator"].as_str() {
-                    None | Some("mimalloc") => bridge::Allocator::Mimalloc,
-                    Some("rusty_alloc") => bridge::Allocator::RustyAlloc,
-                    Some(other) => {
-                        anyhow::bail!("`allocator` is mimalloc or rusty_alloc, not `{other}`")
-                    }
-                },
+                allocator,
             })?)?
         }
         "record" => {
@@ -791,6 +797,51 @@ fn call(name: &str, args: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn allocator_defaults_only_when_omitted() {
+        let pick = |v: Value| allocator_arg(&v);
+        assert_eq!(pick(json!({})).unwrap(), bridge::Allocator::Mimalloc);
+        assert_eq!(
+            pick(json!({ "allocator": null })).unwrap(),
+            bridge::Allocator::Mimalloc
+        );
+        assert_eq!(
+            pick(json!({ "allocator": "mimalloc" })).unwrap(),
+            bridge::Allocator::Mimalloc
+        );
+        assert_eq!(
+            pick(json!({ "allocator": "rusty_alloc" })).unwrap(),
+            bridge::Allocator::RustyAlloc
+        );
+        for bad in [
+            json!(false),
+            json!(42),
+            json!("jemalloc"),
+            json!(["rusty_alloc"]),
+        ] {
+            let err = pick(json!({ "allocator": bad.clone() })).unwrap_err();
+            assert!(
+                format!("{err}").contains("\"mimalloc\" or \"rusty_alloc\""),
+                "{bad}: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn bridge_refuses_a_bad_allocator_before_writing_anything() {
+        let out =
+            std::env::temp_dir().join(format!("rust-anything-mcp-alloc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&out);
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mini");
+        let err = call(
+            "bridge",
+            &json!({ "root": root, "unit": "packages/a/src/util.ts", "out": out, "allocator": 42 }),
+        )
+        .unwrap_err();
+        assert!(format!("{err}").contains("`allocator`"), "{err}");
+        assert!(!out.exists(), "a refused bridge must not create the crate");
+    }
 
     #[test]
     fn speaks_mcp() {
