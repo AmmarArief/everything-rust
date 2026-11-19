@@ -703,9 +703,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                     if !args["abi"].is_null() && !args["abi"].is_array() {
                         anyhow::bail!("`abi` must be an array of Android ABI names");
                     }
-                    let api = match args["api"].as_u64() {
-                        Some(v) => u32::try_from(v).context("`api` is too large")?,
-                        None => crate::android::DEFAULT_API,
+                    let api = if args["api"].is_null() {
+                        crate::android::DEFAULT_API
+                    } else {
+                        let v = args["api"]
+                            .as_u64()
+                            .context("`api` must be a non-negative integer")?;
+                        u32::try_from(v).context("`api` is too large")?
                     };
                     serde_json::to_value(harness::build_android(
                         &crate_dir,
