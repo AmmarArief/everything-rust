@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.0.1 (2026-11-19)
+
 - `analyze`: Python packages in a workspace match their dependencies by the normalized name, so
   a package named `core_lib` is found when another one depends on `core_lib>=1` and the port
   order puts it first.
