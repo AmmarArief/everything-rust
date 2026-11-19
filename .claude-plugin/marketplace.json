@@ -3,7 +3,7 @@
   "owner": {
     "name": "Erkam Yaman"
   },
-  "description": "rust-anything: find the hot loop in your TypeScript, Python, C, Go, Ruby or Java code, move it to Rust, and prove nothing else changed.",
+  "description": "rust-anything: rewrite your app in Rust one piece at a time, and prove it still behaves the same.",
   "plugins": [
     {
       "name": "rust-anything",
