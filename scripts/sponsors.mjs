@@ -7,7 +7,7 @@ const MAINTAINER = 'erkamyaman'
 
 const COMPANIES = [{ login: 'coderabbitai', name: 'CodeRabbit', url: 'coderabbit.ai' }]
 
-const KNOWN_ORDER = ['santoshyadavdev', 'aliyilmazco', 'ashley-hunter', 'fatihuzuntas']
+const KNOWN_ORDER = ['santoshyadavdev', 'hakansoyturk', 'aliyilmazco', 'ashley-hunter', 'fatihuzuntas']
 const rank = (login) => {
   const i = KNOWN_ORDER.indexOf(login)
   return i === -1 ? KNOWN_ORDER.length : i
@@ -26,6 +26,7 @@ function individuals() {
     console.error(`gh api failed (${e.message.split('\n')[0]}), keeping the list in this script`)
     return [
       { login: 'santoshyadavdev', name: 'Santosh Yadav' },
+      { login: 'hakansoyturk', name: 'Hakan Soytürk' },
       { login: 'aliyilmazco', name: 'Ali Yilmaz' },
       { login: 'ashley-hunter', name: 'Ashley Hunter' },
       { login: 'fatihuzuntas', name: 'Fatih Uzuntaş' },
