@@ -4,6 +4,13 @@
 
 ## 2.0.1 (2026-11-19)
 
+- `record`: string traps now include characters that languages classify differently (`²`, `Ⅰ`,
+  `½`, `①`, vowel signs such as `ि`, Arabic-Indic digits and letters beyond U+FFFF), so a port
+  that tests letters and digits with Rust's `char::is_alphanumeric` instead of the original's
+  rule fails `diff`.
+- Java demo: `slugify` in `demo/fixtures/java-text-rs` now matches Java's
+  `Character.isLetterOrDigit` per UTF-16 unit, and the Java benchmark claims (3x batch) are
+  withdrawn: the batch ran on 4 cores against a serial loop. Reported in #110.
 - `analyze`: Python packages in a workspace match their dependencies by the normalized name, so
   a package named `core_lib` is found when another one depends on `core_lib>=1` and the port
   order puts it first.

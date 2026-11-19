@@ -880,7 +880,12 @@ fn java_cli_lifts_to_pure_rust() {
     }
     let repo = fixture("java");
     sh(&repo, "javac", &["-d", "classes", "Tcli.java"]);
-    lift_end_to_end(&repo, "java -XX:-UsePerfData -cp ./classes Tcli", &CHARS, "classes");
+    lift_end_to_end(
+        &repo,
+        "java -XX:-UsePerfData -cp ./classes Tcli",
+        &CHARS,
+        "classes",
+    );
 }
 
 #[test]

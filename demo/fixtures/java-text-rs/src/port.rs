@@ -46,12 +46,7 @@ pub fn slugify(text: String, max: i64) -> Result<String, String> {
     let mut out = String::with_capacity(text.len());
     let mut dash = false;
     let mut push = |c: char| {
-        let alnum = if c.is_ascii() {
-            c.is_ascii_alphanumeric()
-        } else {
-            c.is_alphanumeric()
-        };
-        if alnum {
+        if java_letter_or_digit(c) {
             out.push(c);
             dash = false;
         } else if !dash && !out.is_empty() {
@@ -83,6 +78,23 @@ pub fn slugify(text: String, max: i64) -> Result<String, String> {
         out = out.chars().take(max as usize).collect();
     }
     Ok(out)
+}
+
+fn java_letter_or_digit(c: char) -> bool {
+    use unicode_general_category::{GeneralCategory as G, get_general_category};
+    if c.is_ascii() {
+        return c.is_ascii_alphanumeric();
+    }
+    u32::from(c) <= 0xFFFF
+        && matches!(
+            get_general_category(c),
+            G::UppercaseLetter
+                | G::LowercaseLetter
+                | G::TitlecaseLetter
+                | G::ModifierLetter
+                | G::OtherLetter
+                | G::DecimalNumber
+        )
 }
 
 /// Java's `\\s`: ASCII whitespace only, unlike `char::is_whitespace`.

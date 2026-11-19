@@ -864,7 +864,18 @@ fn trap_values(t: &RType) -> Vec<Value> {
     match t {
         RType::Str => crate::app::STRING_TRAPS
             .iter()
-            .chain(["ΣΊΣΥΦΟΣ", "a😀b", "\u{FEFF}bom"].iter())
+            .chain(
+                [
+                    "ΣΊΣΥΦΟΣ",
+                    "a😀b",
+                    "\u{FEFF}bom",
+                    "a²b x½ y①",
+                    "aⅠb Ⅻ",
+                    "a𐐀b 𝐀bc",
+                    "कि ٣٤",
+                ]
+                .iter(),
+            )
             .map(|s| json!(s))
             .collect(),
         RType::Int => [

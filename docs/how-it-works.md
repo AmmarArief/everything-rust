@@ -75,21 +75,20 @@ x18n's sidebar search over 50,000 keys, typed letter by letter, with identical r
 Against TS doing the same narrowing, Rust is still 7-12x faster (wasm 5x). Turn the returned
 indexes into keys with a plain loop: `Array.from(order, i => keys[i])` cost 20x more, 0.4 ms.
 
-Every language gets batches, and they beat the original even where per-call ports lose. The
-same work on 4 cores, identical results and errors (benchmarks in each demo folder):
+Every language gets batches. Below, the Rust batch runs on 4 cores and the original on one
+thread, as the original code is written. Identical results and errors (benchmarks in each demo
+folder):
 
-| Language | Workload | Original | Per-call port vs original | Batch vs original |
+| Language | Workload | Original (1 thread) | Per-call port vs original | Batch (4 cores) vs original |
 | --- | --- | ---: | ---: | ---: |
 | TS | x18n search, 50,000 keys | 10 ms | 0.2-0.4x | **20x** |
 | Python | `slugify`, 20,000 strings | 98 ms | - | **17x** |
 | Ruby | `slugify`, 20,000 strings | 110 ms | - | **12.7x** |
 | Ruby | `shellescape` (stdlib), 50,000 mixed values | 88 ms | - | **11.8x** |
-| Go | `Slugify`, 50,000 strings | 49 ms | 0.93x | **4x** |
-| Java | `slugify`, 50,000 strings | 43 ms | 0.68x | **3x** |
 
-Compiled originals gain less: the per-item work is already fast, so the batch wins by the number of
-cores. Batch crates allocate with mimalloc: with the system allocator the Go batch was slower than
-one thread. Demo: [`demo/x18n-search`](../demo/x18n-search/README.md).
+Go and Java are left out: they can run the original on 4 threads just as easily, and measured
+that way the Java original beats the Rust batch ([#110](https://github.com/erkamyaman/rust-anything/issues/110)). Batch crates allocate with
+mimalloc: with the system allocator the Go batch was slower than one thread. Demo: [`demo/x18n-search`](../demo/x18n-search/README.md).
 
 ## What `bridge` decides
 

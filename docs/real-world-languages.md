@@ -80,10 +80,11 @@ library calls (`memchr`, `memcmp`) costing more than plain loops on 30-byte keys
 is the algorithm, so the benchmark also runs TS with the same narrowing: Rust is 7-12x faster
 than that (wasm 5x).
 
-The same pattern in the other languages, against the originals (4 cores, identical results and
-errors):
+The same pattern in the other languages: the Rust batch on 4 cores against the original on one
+thread, identical results and errors. The Go and Java rows are not a fair race; see the
+correction below.
 
-| Language | Workload | Original | Per-call port vs original | Batch vs original |
+| Language | Workload | Original (1 thread) | Per-call port vs original | Batch (4 cores) vs original |
 | --- | --- | ---: | ---: | ---: |
 | Python | fixture `slugify`, 20,000 strings | 98 ms | - | 17x |
 | Ruby | fixture `slugify`, 20,000 strings | 110 ms | - | 12.7x |
@@ -104,6 +105,21 @@ thread the Rust `slugify` was barely faster than Go's and slower than Java's JIT
 without table lookups and without an intermediate string fixed that; Java's port keeps the
 final-sigma rule by lowering only the whitespace-separated piece that holds a `Σ` as a whole.
 Per call, the Go port went from 0.73x to 0.93x, the Java one from 0.46x to 0.68x.
+
+**Correction (2026-11-19, [#110](https://github.com/erkamyaman/rust-anything/issues/110)).** The Java `slugify` numbers above do not hold up:
+
+- **The port was wrong on some text.** Java's `Character.isLetterOrDigit` takes letters and
+  decimal digits per UTF-16 unit; the port used Rust's `char::is_alphanumeric`, which also takes
+  `²`, `Ⅰ`, `½`, vowel signs such as `ि` and characters beyond U+FFFF. `slugify("a²b", 0)` gave
+  `a²b` instead of `a-b`. The 50,000 benchmark strings had none of them, and neither did the
+  recording. The port now checks the general category per UTF-16 unit, `record` adds those
+  characters to every string trap, and the fixture records 1,596/1,596.
+- **The race was not even.** The batch ran on 4 cores against Java's serial loop, the batch was
+  built before the timer, and each side reported its best of 15 calls. With JMH, the same inputs,
+  the same number of workers and the copies inside the timer, the reporter measured the original
+  Java at 9.8 ms and the Rust batch at 24.7 ms on 4 workers, 34.1 ms and 43.0 ms on one (50,000
+  strings, Windows, Core i5-12450H). The Java original is faster. The Go row was measured the same
+  way and has not been re-run.
 
 ## What the runs found
 
