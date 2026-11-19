@@ -113,6 +113,42 @@ fn picks_status_and_bridge() {
 }
 
 #[test]
+fn python_packages_match_dependencies_by_normalized_name() {
+    let root =
+        std::env::temp_dir().join(format!("rust-anything-python-names-{}", std::process::id()));
+    let package = |dir: &str, toml: &str| {
+        std::fs::create_dir_all(root.join(dir).join(dir)).unwrap();
+        std::fs::write(root.join(dir).join("pyproject.toml"), toml).unwrap();
+        std::fs::write(
+            root.join(dir).join(dir).join("__init__.py"),
+            "def f():\n    return 1\n",
+        )
+        .unwrap();
+    };
+    package(
+        "app",
+        "[project]\nname = \"app\"\ndependencies = [\"core_lib>=1\"]\n",
+    );
+    package("core", "[project]\nname = \"Core_Lib\"\n");
+    let report = analyze(&root);
+    std::fs::remove_dir_all(&root).unwrap();
+    let packages: Vec<(&str, Vec<String>, usize)> = report
+        .as_ref()
+        .unwrap()
+        .packages
+        .iter()
+        .map(|p| (p.name.as_str(), p.workspace_deps.clone(), p.order))
+        .collect();
+    assert_eq!(
+        packages,
+        [
+            ("core-lib", vec![], 1),
+            ("app", vec!["core-lib".to_string()], 2)
+        ]
+    );
+}
+
+#[test]
 fn json_output_is_versioned() {
     let json = serde_json::to_value(mini()).unwrap();
     assert_eq!(json["schema"], "rust-anything/analyze@1");

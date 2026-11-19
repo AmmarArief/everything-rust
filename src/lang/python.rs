@@ -136,7 +136,7 @@ fn read_package(root: &Path, dir: &str) -> Package {
             .get("project")
             .and_then(|p| p.get("name"))
             .and_then(|n| n.as_str())
-            .map(str::to_string);
+            .map(normalized_name);
         if let Some(list) = doc
             .get("project")
             .and_then(|p| p.get("dependencies"))
@@ -176,11 +176,20 @@ fn read_package(root: &Path, dir: &str) -> Package {
 
 /// `requests>=2.0; python_version>"3"` -> `requests`.
 fn requirement_name(line: &str) -> String {
-    line.split(|c: char| !(c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
-        .next()
-        .unwrap_or("")
+    normalized_name(
+        line.split(|c: char| !(c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
+            .next()
+            .unwrap_or(""),
+    )
+}
+
+/// A distribution name as pip compares it (PEP 503): `Core_Lib.x` -> `core-lib-x`.
+fn normalized_name(name: &str) -> String {
+    name.split(['-', '_', '.'])
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
         .to_lowercase()
-        .replace('_', "-")
 }
 
 // ---- scanning --------------------------------------------------------------------------------
