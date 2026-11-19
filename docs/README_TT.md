@@ -4,47 +4,32 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">авторы: <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>Кушымтагызны Rust телендә яңадан языгыз һәм аның элеккечә эшләвен исбатлагыз.</b></p>
 
-<p align="center"><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · Татарча · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></p>
-
-<p align="center"><sub>Бу тәрҗемәне җәмәгатьчелек алып бара, шуңа күрә ул <a href="../README.md">инглизчә README</a> файлыннан калышырга мөмкин.</sub></p>
-
-<p align="center"><em>Бөтен кушымтагызны Rust телендә яңадан языгыз. Һәм ул юл буе эшләп торсын.</em></p>
-
-<p align="center"><em>CLI, серверлар һәм китапханәләр, өлешләп, һәр адымда оригинал белән чагыштырып тикшерелә.</em></p>
-
-<p align="center">Node.js һәм TypeScript · Python · C · Go · Ruby · Java · PHP һәм C# preview рәвешендә</p>
+<p align="center">2.0 версиясендә яңа: <a href="real-world.md#prettier">Prettier, Rust'ка күчерелде</a>. 19x тизрәк · язып алынган 17,224 җибәрү · 0 туры килмәү</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io версиясе"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm версиясе"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 тел, өстәвенә 2 тел preview рәвешендә">
-  <a href="#кайсы-агентлар-белән-эшли"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="4 агент белән эшли"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Тестлар"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT лицензиясе"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub йолдызлары"></a>
 </p>
 
 <p align="center">
   <a href="#тиз-башлау">Тиз башлау</a> ·
   <a href="#телләр">Телләр</a> ·
+  <a href="real-world.md">Чын портлар</a> ·
   <a href="how-it-works.md#how-it-works">Ничек эшли</a> ·
-  <a href="how-it-works.md#the-loop">Цикл</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Бөтен кушымтаны күчерү</a> ·
-  <a href="how-it-works.md#hot-paths-keep-the-data-in-rust">Кайнар юллар</a> ·
-  <a href="install.md#install">Урнаштыру</a> ·
-  <a href="how-it-works.md#what-it-cant-catch">Ул нәрсәне тотып кала алмый</a> ·
+  <a href="whole-apps.md#port-a-whole-app">Бөтен кушымталар</a> ·
   <a href="faq.md#faq">Еш бирелә торган сораулар</a>
 </p>
 
-<p align="center">20x кадәр тизрәк · язып алынган 38,251 очрак кабат уйнатылды · 0 туры килмәү · бер команда</p>
+<p align="center">Төркиядә 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> ясаган · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Миңа спонсор булыгыз</a></p>
 
-<p align="center">
-  <img src="assets/race.gif" alt="x18n эзләвенә 50,000 ачкыч буенча user.profile язу: TypeScript 143 ms сарыф итә, rust-anything batch 6.9 ms, һәр төймә басылганда нәтиҗәләр бертөрле." width="820">
-  <br>
-  <sub>x18n эзләвенә 50,000 ачкыч буенча сорау язу: TypeScript оригиналы rust-anything batch'ына каршы, һәр төймә басылганда нәтиҗәләр бертөрле.</sub>
-</p>
+<p align="center">Спонсор: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
+
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · Татарча · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>Бу тәрҗемәне җәмәгатьчелек алып бара, шуңа күрә ул <a href="../README.md">инглизчә README</a> файлыннан калышырга мөмкин.</sub></p>
 
 <table>
   <tr>
@@ -71,21 +56,36 @@
 Python, C, Go, Ruby яки Java кушымтагыз бүген нәрсә эшләгәнен язып ала, аннары Rust телендәге
 яңа версиянең һәр өлешен, алга барганчы, шул язма белән чагыштырып тикшерә, кушымта саф Rust булганчы. CLI, HTTP
 серверлар һәм китапханәләр; Rust кодын сезнең программалау агенты (яки сез үзегез) яза. Ул язма
-нәрсәне колачлаганын гына тотып кала ала: [Ул нәрсәне тотып кала алмый](how-it-works.md#what-it-cant-catch) бүлеген карагыз. Бары тик әкрен өлешне генә тизләтергә кирәкме?
-Шуны гына күчерегез, бер тапкырда бер кайнар юл (hot path):
+нәрсәне колачлаганын гына тотып кала ала: [Ул нәрсәне тотып кала алмый](how-it-works.md#what-it-cant-catch) бүлеген карагыз. Бөтен кораллар һәм серверлар, яки әкрен өлеш кенә,
+бер тапкырда бер кайнар юл (hot path):
 
-| Чын эш йөкләмәсе, нәтиҗәләр оригиналдагы кебек | Оригинал | rust-anything белән |
+| Чын проект, нәтиҗә оригиналдагы кебек | Оригинал | rust-anything белән |
 | --- | ---: | ---: |
-| x18n ян панелендәге эзләү, 50,000 ачкыч (TypeScript, Node) | бер сорауга 10 ms | **0.5 ms: 20x тизрәк** |
-| Шул ук эзләү браузерда (wasm, бер агым) | 10 ms | **0.95 ms: 11.5x** |
-| 20,000 юлга `slugify` (Python) | 98 ms | **17x тизрәк** |
-| Ruby стандарт китапханәсеннән `Shellwords.shellescape`, 50,000 кыйммәт | 88 ms | **11.8x тизрәк** |
-| 50,000 юлга `Slugify` (Go) | 49 ms | **4x тизрәк** |
-| 50,000 юлга `slugify` (Java) | 43 ms | **3x тизрәк** |
+| [Prettier](real-world.md#prettier) 3.6.2, командалар юлыннан 2,360 JS/TS файл | 128.6 s | **6.9 s: 19x тизрәк** |
+| Prettier, командалар юлыннан 6,305 Markdown файл | 352 s | **22.5 s: 15.6x тизрәк** |
+| [json-server](real-world.md#json-server), бөтен бер Node сервер: буш торганда хәтер | 74 MB | **3.5 MB**, бер 5.3 MB бинар файл |
+| json-server, җибәрүдән беренче җавапка кадәр | 79 белән 85 ms арасы | **8 белән 10 ms арасы** |
+| [Fuse.js](real-world.md#fusejs) белән 50,000 юл буенча эзләү, бер сорауга | 91.2 ms | **2.8 ms: 32x тизрәк** |
 
-4 ядрода үлчәнде; һәр санның [`demo/`](../demo) эчендә бенчмаркы бар, ул башта
-нәтиҗәләрнең бертөрле булуын тикшерә. Һәр кечкенә функция өчен Rust'ны аерым чакыру гадәттә JIT'тан *әкренрәк*;
-rust-anything күчерергә лаеклы циклны таба һәм аны күчерә.
+Prettier: язып алынган 17,224 җибәрүдән 15,837 җибәрү 10 телдә (JavaScript, TypeScript, JSX, JSON,
+GraphQL, YAML, Markdown, CSS, SCSS, Less) тулысынча Rust'та форматлана, һәм бөтен 17,224 җибәрү дә
+Prettier белән байтка-байт туры килә, чөнки әле күчерелмәгән һәрнәрсә Prettier'га кире кайта (fallback).
+json-server: язып алынган 514/514 HTTP очрагы саф Rust бинар файлында туры килә. Apple M4'та үлчәнде,
+һәрберсе ике тапкыр җибәрелде, һәр нәтиҗә вакыт үлчәнгәнче чагыштырылды ([тулырак](real-world.md)).
+Һәр кечкенә функция өчен Rust'ны аерым чакыру гадәттә JIT'тан *әкренрәк*; rust-anything күчерергә
+лаеклы циклны таба һәм аны күчерә.
+
+<p align="center">
+  <img src="assets/prettier.gif" alt="Prettier һәм аның Rust порты шул ук 59 чын файлны форматлый, һәр файлга бер процесс: Prettier 3.63 s, Rust порты 0.20 s сарыф итә, нәтиҗә байтка-байт бертөрле." width="820">
+  <br>
+  <sub>ms, Fuse.js һәм json-server проектларыннан алынган 59 чын файлда Prettier һәм аның Rust порты (Apple M4). Нәтиҗә байтка-байт бертөрле. <a href="real-world.md#prettier">Ничек үлчәнде</a>.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/json-server.gif" alt="json-server Node сервер буларак һәм бер Rust бинар файлы буларак: буш торганда хәтер 74 MB һәм 3.5 MB, җибәрүдән беренче җавапка кадәр 79 белән 85 ms һәм 8 белән 10 ms арасы, язып алынган 514 HTTP очракның 514е туры килә." width="820">
+  <br>
+  <sub>json-server, бөтен бер Node сервер, саф Rust бинар файлына әйләндерелде (Apple M4). <a href="real-world.md#json-server">Ничек үлчәнде</a>.</sub>
+</p>
 
 > rust-anything бәйсез проект, ул Rust Project яки Rust Foundation белән бәйле түгел һәм алар тарафыннан хупланмаган.
 > "Rust" Rust Foundation'ның сәүдә билгесе.
@@ -99,7 +99,7 @@ rust-anything күчерергә лаеклы циклны таба һәм ан�
 
 ## Тиз башлау
 
-Моны Claude Code, Codex, Cursor яки Gemini CLI эченә куегыз һәм агентыгыз аны урнаштырсын:
+Моны Claude Code, Codex, Cursor, Gemini CLI яки OpenCode эченә куегыз һәм агентыгыз аны урнаштырсын:
 
 ```text
 Install rust-anything: run `cargo install rust-anything`, then `rust-anything setup`.
@@ -110,7 +110,7 @@ Tell me when to restart you.
 
 ```sh
 cargo install rust-anything   # crates.io'дан
-rust-anything setup           # аны Claude Code, Codex, Cursor һәм Gemini CLI'да теркәп куя
+rust-anything setup           # аны Claude Code, Codex, Cursor, Gemini CLI һәм OpenCode'та теркәп куя
 ```
 
 Әле Rust toolchain юкмы? macOS, Linux һәм Windows өчен әзер бинар файллар һәр
@@ -141,17 +141,26 @@ Claude Code'та аны плагин итеп тә урнаштырып була
 | Codex | `~/.codex/config.toml` эчендә MCP сервер, `~/.codex/skills/` эчендә skill |
 | Cursor | `~/.cursor/mcp.json` эчендә MCP сервер |
 | Gemini CLI | `~/.gemini/settings.json` эчендә MCP сервер |
+| OpenCode | `~/.config/opencode/opencode.json` эчендә MCP сервер (`mcp.servers`), `~/.config/opencode/skills/` эчендә skill |
 | Башка теләсә нинди MCP клиент | `rust-anything mcp` командасын stdio сервер итеп кулдан өстәгез ([Урнаштыру](install.md#install) бүлеген карагыз) |
 
 Булган файлны үзгәртер алдыннан `setup` аның күчермәсен янәшәдә саклый (`<file>.rust-anything.bak`).
 
-Яки адымнарны үзегез башкарыгыз:
+OpenCode'ны кулдан тоташтыру өчен серверны `~/.config/opencode/opencode.json` эченә куегыз
+(`command` бөтен argv була) һәм [`skills/rust-anything/`](../skills/rust-anything) папкасын
+`~/.config/opencode/skills/rust-anything/` эченә күчерегез:
 
-<p align="center">
-  <img src="assets/terminal.gif" alt="rust-anything profile циклда fuzzyScore'ны таба, bridge --batch Rust crate ясый, gate язып алынган 2000/2000 очрак белән уза, ә бенчмарк TS'тан 20.7x тизрәк икәнен күрсәтә." width="820">
-  <br>
-  <sub>x18n'ның <code>fuzzyScore</code> функциясендә адымнар: <code>profile</code> кайнар циклны таба, <code>bridge --batch</code> crate ясый, <code>gate</code> уза, ә бенчмарк аны TypeScript белән чагыштыра.</sub>
-</p>
+```json
+{
+  "mcp": {
+    "servers": {
+      "rust-anything": { "type": "local", "command": ["rust-anything", "mcp"] }
+    }
+  }
+}
+```
+
+Яки адымнарны үзегез башкарыгыз:
 
 ```sh
 rust-anything profile . -- node bench.mjs              # нәрсә кайнар һәм аны кем чакыра
@@ -163,11 +172,20 @@ rust-anything bench rust/fuzzy-rs                      # тизрәкме? нә�
 rust-anything gate rust/fuzzy-rs                       # бу узса, эш бетте
 ```
 
-rust-anything кодны тәрҗемә итми: Rust кодын сезнең программалау агенты (Claude Code, Codex, Cursor, ...) яки сез
+rust-anything кодны тәрҗемә итми: Rust кодын сезнең программалау агенты (Claude Code, Codex, Cursor, OpenCode, ...) яки сез
 үзегез язасыз. rust-anything агент ышанычлы итеп чамалый алмаган нәрсәләрне бирә: вакыт кая китә, нәрсәне
 беренче һәм нинди тәртиптә күчерергә, калган код Rust'ны API үзгәрмичә чакырсын өчен bridge,
 порт туры килергә тиешле төгәл тәртип, аны чыгаруның куркынычсыз ысулы һәм порт кайчан
 әзер икәнен әйтүче gate.
+
+Бертөрле нәтиҗә генә җитми. Кушымта тышка нәрсә җибәргәнен дә язып алыгыз, шунда хатны ике тапкыр
+җибәрүче яңа версия узмый:
+
+<p align="center">
+  <img src="assets/effects.gif" alt="--effects smtp белән app record һәр теркәлү өчен бер сәламләү хатын язып ала; шул ук нәтиҗәне чыгаручы, ләкин хатны ике тапкыр җибәрүче яңа версиядә app replay 0/2 очрак узганын һәм effects буенча уңышсыз булганын хәбәр итә, ә хисап артык хатны күрсәтә." width="820">
+  <br>
+  <sub><code>app record --effects</code> һәм <code>app replay</code> командаларының чын җибәрелеше. <a href="whole-apps.md#side-effects-email-webhooks-and-databases">Ян йогынтылар</a> бүлеген карагыз.</sub>
+</p>
 
 ## Телләр
 
@@ -179,8 +197,8 @@ rust-anything кодны тәрҗемә итми: Rust кодын сезнең �
 | Go | пакет | типлы cgo чакырулары һәм ясалган бинар wire формат, оригинал API'лы пакетта | ясалган Go драйверы, аерым модуль итеп җыела |
 | Ruby | модуль функцияләре булган файл яки папка | оригинал модульләр астында magnus киңәйтмәсе | ясалган Ruby драйверы |
 | Java | `public static` методлар пакеты | типлы JNI һәм ясалган бинар wire формат, оригинал методлы wrapper класслар эчендә | ясалган reflection драйверы |
-| PHP (preview) | функцияләр һәм `public static` методлар папкасы | киләсе адым: C ABI өстендә PHP FFI | бүген үк бөтен кушымталар: `app record`, `app replay` һәм front door, CLI һәм серверлар өчен (`php -S`) |
-| C# (preview) | `public static` методлар папкасы | киләсе адым: C ABI өстендә P/Invoke | бүген үк бөтен кушымталар: `app record`, `app replay` һәм front door, CLI һәм ASP.NET серверлар өчен (`dotnet <app>.dll`) |
+| PHP | функцияләр һәм `public static` методлар папкасы | киләсе адым: C ABI өстендә PHP FFI | бүген үк бөтен кушымталар: `app record`, `app replay` һәм front door, CLI һәм серверлар өчен (`php -S`) |
+| C# | `public static` методлар папкасы | киләсе адым: C ABI өстендә P/Invoke | бүген үк бөтен кушымталар: `app record`, `app replay` һәм front door, CLI һәм ASP.NET серверлар өчен (`dotnet <app>.dll`) |
 
 C'тан кала һәр тел batch класслар да ала (`--batch`): элементлар бер тапкыр күчә һәм
 Rust'та кала, ә һәр чакыру аларның барысын да барлык ядроларда эшкәртә.
@@ -191,12 +209,12 @@ Rust'та кала, ә һәр чакыру аларның барысын да б
 сигнатуралары, Ruby YARD теглары, PHP типлары һәм phpdoc; сан итеп кулланылган типсыз параметрлар
 сан дип чыгарыла.
 
-PHP preview рәвешендә: `analyze` PHP кушымтасын планлаштыра (Composer пакетлары һәм PSR-4 autoloading, катгый булмаган
+PHP өчен `analyze` PHP кушымтасын планлаштыра (Composer пакетлары һәм PSR-4 autoloading, катгый булмаган
 чагыштыру һәм бөтен саннарның float'ка ташып чыгуы кебек куркынычлар, Composer пакетларына туры килгән crate'лар),
 ә PHP CLI яки серверны язып алып, кабат уйнатып, Rust front door артына куеп була. Аның
 берәмлекләрен PHP FFI аша Rust'ка күчерү киләсе адым ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
-C# та шулай ук preview рәвешендә: `analyze` `.csproj` проектларын һәм аларның NuGet пакетларын укый
+C# та шулай ук эшли: `analyze` `.csproj` проектларын һәм аларның NuGet пакетларын укый
 (crate'ларга туры китереп), `using` директиваларын папкаларга бәйли һәм C# нәрсәне башкача эшләгәнен билгели
 (`decimal`, `dynamic`, LINQ'ның кичектерелгән сораулары, `Task`, `lock`, reflection). C# CLI яки ASP.NET
 серверын язып алып, кабат уйнатып, Rust front door артына куеп була; берәмлекләрне P/Invoke аша күчерү
@@ -204,7 +222,7 @@ C# та шулай ук preview рәвешендә: `analyze` `.csproj` прое
 
 ## Күбрәк белү
 
-- [Ничек эшли](how-it-works.md): цикл, `bridge` һәм `analyze` нәрсәне хәл итә, кайнар юллар һәм ул нәрсәне тотып кала алмый
+- [Ничек эшли](how-it-works.md): цикл, `bridge` һәм `analyze` нәрсәне хәл итә, кайнар юллар, ул нәрсәне тотып кала алмый, чын порт нәрсә таләп итә һәм оригиналдан калышмау (`map`)
 - [Бөтен кушымтаны күчерү](whole-apps.md): серверлар, CLI һәм китапханәләр, front door'дан `app lift`'ка кадәр
 - [Мисаллар һәм тикшеренүләр](examples.md): x18n һәм алты телдәге чын код
 - [Чын портлар](real-world.md): json-server, Fuse.js, vercel/ms, бенчмарклар белән

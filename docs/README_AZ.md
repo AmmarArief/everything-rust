@@ -4,46 +4,32 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">Müəllif: <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>Tətbiqinizi Rust-da yenidən yazın və onun hələ də eyni davrandığını sübut edin.</b></p>
 
-<p align="center"><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · Azərbaycanca · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></p>
-<p align="center"><sub>Bu tərcümə icma tərəfindən dəstəklənir və <a href="../README.md">ingiliscə README</a>-dən geri qala bilər.</sub></p>
-
-<p align="center"><em>Bütün tətbiqinizi Rust-da yenidən yazın. Bütün yol boyu işlək qalsın.</em></p>
-
-<p align="center"><em>CLI-lar, serverlər və kitabxanalar, hissə-hissə, hər addımda orijinalla yoxlanılaraq.</em></p>
-
-<p align="center">Node.js və TypeScript · Python · C · Go · Ruby · Java · PHP və C# önizləmədə</p>
+<p align="center">2.0-da yeni: <a href="real-world.md#prettier">Prettier, Rust-a port edildi</a>. 19x daha sürətli · 17,224 qeydə alınmış icra · 0 uyğunsuzluq</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io versiyası"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm versiyası"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 dil, üstəgəl 2 önizləmədə">
-  <a href="#dəstəklənən-agentlər"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="4 agentlə işləyir"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Testlər"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT lisenziyası"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub ulduzları"></a>
 </p>
 
 <p align="center">
   <a href="#sürətli-başlanğıc">Sürətli başlanğıc</a> ·
   <a href="#dillər">Dillər</a> ·
+  <a href="real-world.md">Real portlar</a> ·
   <a href="how-it-works.md#how-it-works">Necə işləyir</a> ·
-  <a href="how-it-works.md#the-loop">Dövr</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Bütöv tətbiqi port etmək</a> ·
-  <a href="how-it-works.md#hot-paths-keep-the-data-in-rust">Hot path-lar</a> ·
-  <a href="install.md#install">Quraşdırma</a> ·
-  <a href="how-it-works.md#what-it-cant-catch">Nəyi tuta bilmir</a> ·
+  <a href="whole-apps.md#port-a-whole-app">Bütöv tətbiqlər</a> ·
   <a href="faq.md#faq">Tez-tez verilən suallar</a>
 </p>
 
-<p align="center">20x-ə qədər daha sürətli · 38,251 qeydə alınmış hal təkrar oynadılıb · 0 uyğunsuzluq · bir əmr</p>
+<p align="center">Türkiyədə 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> tərəfindən hazırlanıb · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Sponsor olun</a></p>
 
-<p align="center">
-  <img src="assets/race.gif" alt="x18n-in 50,000 açar üzrə axtarışına user.profile yazılır: TypeScript 143 ms sərf edir, rust-anything batch-i 6.9 ms, hər düymə basışında eyni nəticələrlə." width="820">
-  <br>
-  <sub>x18n-in 50,000 açar üzrə axtarışına sorğu yazılır: TypeScript orijinalı rust-anything batch-inə qarşı, hər düymə basışında eyni nəticələr.</sub>
-</p>
+<p align="center">Sponsor: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
+
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · Azərbaycanca · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>Bu tərcümə icma tərəfindən dəstəklənir və <a href="../README.md">ingiliscə README</a>-dən geri qala bilər.</sub></p>
 
 <table>
   <tr>
@@ -71,21 +57,36 @@
 sonra Rust-da yenidən yazılmış hər hissəni növbətiyə keçməzdən əvvəl bu qeydlə yoxlayır, tətbiq
 tamamilə Rust olana qədər. CLI-lar, HTTP serverləri və kitabxanalar; Rust kodunu kodlaşdırma
 agentiniz (və ya siz) yazır. O, yalnız qeydin əhatə etdiyini tuta bilər: bax
-[Nəyi tuta bilmir](how-it-works.md#what-it-cant-catch). Yalnız yavaş hissənin sürətlənməsi lazımdır? Yalnız onu,
-hər dəfə bir hot path olmaqla port edin:
+[Nəyi tuta bilmir](how-it-works.md#what-it-cant-catch). Bütöv alətlər və serverlər, yaxud yalnız
+yavaş hissə, hər dəfə bir hot path:
 
-| Real iş yükü, orijinalla eyni nəticələr | Orijinal | rust-anything ilə |
+| Real layihə, orijinalla eyni çıxış | Orijinal | rust-anything ilə |
 | --- | ---: | ---: |
-| x18n-in yan panel axtarışı, 50,000 açar (TypeScript, Node) | sorğu başına 10 ms | **0.5 ms: 20x daha sürətli** |
-| Eyni axtarış brauzerdə (wasm, bir thread) | 10 ms | **0.95 ms: 11.5x** |
-| 20,000 string üzərində `slugify` (Python) | 98 ms | **17x daha sürətli** |
-| Ruby-nin standart kitabxanasından `Shellwords.shellescape`, 50,000 dəyər | 88 ms | **11.8x daha sürətli** |
-| 50,000 string üzərində `Slugify` (Go) | 49 ms | **4x daha sürətli** |
-| 50,000 string üzərində `slugify` (Java) | 43 ms | **3x daha sürətli** |
+| [Prettier](real-world.md#prettier) 3.6.2, komanda sətrindən 2,360 JS/TS faylı | 128.6 s | **6.9 s: 19x daha sürətli** |
+| Prettier, komanda sətrindən 6,305 Markdown faylı | 352 s | **22.5 s: 15.6x daha sürətli** |
+| [json-server](real-world.md#json-server), bütöv bir Node serveri: boş vəziyyətdə yaddaş | 74 MB | **3.5 MB**, tək bir 5.3 MB binary |
+| json-server, işə salınmadan ilk cavaba qədər | 79 ilə 85 ms arası | **8 ilə 10 ms arası** |
+| 50,000 string üzərində [Fuse.js](real-world.md#fusejs) axtarışı, sorğu başına | 91.2 ms | **2.8 ms: 32x daha sürətli** |
 
-4 nüvədə ölçülüb; hər rəqəmin [`demo/`](../demo) qovluğunda əvvəlcə nəticələrin eyni olduğunu
-yoxlayan bir benchmark-ı var. Hər kiçik funksiya üçün Rust-u ayrıca çağırmaq adətən JIT-dən *daha
-yavaşdır*; rust-anything köçürməyə dəyən dövrü tapır və onu köçürür.
+Prettier: 17,224 qeydə alınmış icradan 15,837-si 10 dildə (JavaScript, TypeScript, JSX, JSON,
+GraphQL, YAML, Markdown, CSS, SCSS, Less) tamamilə Rust-da formatlanır və 17,224-ün hamısı Prettier
+ilə bayt-bayt uyğun gəlir, çünki hələ port edilməmiş hər şey Prettier-ə qayıdır. json-server: qeydə
+alınmış 514/514 HTTP halı təmiz Rust binary-si üzərində uyğun gəlir. Apple M4-də, hər biri iki dəfə
+işə salınaraq ölçülüb; hər çıxış vaxt ölçülməzdən əvvəl müqayisə edilir ([ətraflı](real-world.md)).
+Hər kiçik funksiya üçün Rust-u ayrıca çağırmaq adətən JIT-dən *daha yavaşdır*; rust-anything
+köçürməyə dəyən dövrü tapır və onu köçürür.
+
+<p align="center">
+  <img src="assets/prettier.gif" alt="Prettier və onun Rust portu eyni 59 real faylı, hər fayl üçün bir proses olmaqla formatlayır: Prettier 3.63 s, Rust portu 0.20 s çəkir və çıxış bayt-bayt eynidir." width="820">
+  <br>
+  <sub>ms, Fuse.js və json-server-dən götürülmüş 59 real faylda Prettier onun Rust portuna qarşı (Apple M4). Bayt-bayt eyni çıxış. <a href="real-world.md#prettier">Necə ölçülüb</a>.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/json-server.gif" alt="Node serveri kimi və tək bir Rust binary-si kimi json-server: boş vəziyyətdə yaddaş 74 MB və 3.5 MB, işə salınmadan ilk cavaba qədər 79 ilə 85 ms və 8 ilə 10 ms arası, qeydə alınmış 514 HTTP halından 514-ü uyğun gəlir." width="820">
+  <br>
+  <sub>Bütöv bir Node serveri olan json-server təmiz Rust binary-sinə çevrildi (Apple M4). <a href="real-world.md#json-server">Necə ölçülüb</a>.</sub>
+</p>
 
 > rust-anything müstəqil layihədir, Rust Project və ya Rust Foundation ilə əlaqəli deyil və onlar
 > tərəfindən dəstəklənmir. "Rust" Rust Foundation-ın əmtəə nişanıdır.
@@ -99,7 +100,7 @@ yavaşdır*; rust-anything köçürməyə dəyən dövrü tapır və onu köçü
 
 ## Sürətli başlanğıc
 
-Bunu Claude Code, Codex, Cursor və ya Gemini CLI-a yapışdırın və quraşdırmanı agentinizə həvalə edin:
+Bunu Claude Code, Codex, Cursor, Gemini CLI və ya OpenCode-a yapışdırın və quraşdırmanı agentinizə həvalə edin:
 
 ```text
 rust-anything-i quraşdır: `cargo install rust-anything`, sonra `rust-anything setup` işə sal.
@@ -110,7 +111,7 @@ Və ya özünüz:
 
 ```sh
 cargo install rust-anything   # crates.io-dan
-rust-anything setup           # Claude Code, Codex, Cursor və Gemini CLI-da qeydiyyatdan keçirir
+rust-anything setup           # Claude Code, Codex, Cursor, Gemini CLI və OpenCode-da qeydiyyatdan keçirir
 ```
 
 Hələ Rust toolchain-iniz yoxdur? macOS, Linux və Windows üçün hazır binary fayllar hər
@@ -141,17 +142,26 @@ etdiklərini geri qaytarır. Sonra agentinizdən, məsələn, bunları istəyin:
 | Codex | `~/.codex/config.toml`-da MCP server, `~/.codex/skills/`-də skill |
 | Cursor | `~/.cursor/mcp.json`-da MCP server |
 | Gemini CLI | `~/.gemini/settings.json`-da MCP server |
+| OpenCode | `~/.config/opencode/opencode.json`-da MCP server (`mcp.servers`), `~/.config/opencode/skills/`-də skill |
 | İstənilən digər MCP müştərisi | `rust-anything mcp`-ni əllə stdio server kimi əlavə edin (bax [Quraşdırma](install.md#install)) |
 
 Mövcud faylı dəyişməzdən əvvəl `setup` onun yanında bir surətini saxlayır (`<file>.rust-anything.bak`).
 
-Və ya addımları özünüz icra edin:
+OpenCode-u əllə qoşmaq üçün serveri `~/.config/opencode/opencode.json`-a yazın (`command` bütöv
+argv-dir) və [`skills/rust-anything/`](../skills/rust-anything) qovluğunu
+`~/.config/opencode/skills/rust-anything/`-ə kopyalayın:
 
-<p align="center">
-  <img src="assets/terminal.gif" alt="rust-anything profile dövr daxilində fuzzyScore-u tapır, bridge --batch Rust crate-ini yaradır, gate 2000/2000 qeydə alınmış halla keçir və benchmark TS-dən 20.7x daha sürətli olduğunu göstərir." width="820">
-  <br>
-  <sub>x18n-in <code>fuzzyScore</code> funksiyası üzərində addımlar: <code>profile</code> isti dövrü tapır, <code>bridge --batch</code> crate-i yaradır, <code>gate</code> keçir və benchmark onu TypeScript ilə müqayisə edir.</sub>
-</p>
+```json
+{
+  "mcp": {
+    "servers": {
+      "rust-anything": { "type": "local", "command": ["rust-anything", "mcp"] }
+    }
+  }
+}
+```
+
+Və ya addımları özünüz icra edin:
 
 ```sh
 rust-anything profile . -- node bench.mjs              # isti olan nədir və onu kim çağırır
@@ -163,11 +173,19 @@ rust-anything bench rust/fuzzy-rs                      # daha sürətlidir? hök
 rust-anything gate rust/fuzzy-rs                       # hazırdır, yəni bu keçir
 ```
 
-rust-anything kodu tərcümə etmir: Rust-u kodlaşdırma agentiniz (Claude Code, Codex, Cursor, ...) və ya
+rust-anything kodu tərcümə etmir: Rust-u kodlaşdırma agentiniz (Claude Code, Codex, Cursor, OpenCode, ...) və ya
 siz yazırsınız. rust-anything agentin etibarlı şəkildə təxmin edə bilmədiyini təmin edir: vaxtın hara
 getdiyini, əvvəlcə nəyin və hansı ardıcıllıqla port ediləcəyini, kodun qalan hissəsinin Rust-u API-si
 dəyişmədən çağıra bilməsi üçün körpünü (bridge), portun uyğun gəlməli olduğu dəqiq davranışı, onu
 buraxmağın təhlükəsiz yolunu və portun nə vaxt hazır olduğunu deyən gate-i.
+
+Eyni çıxış kifayət deyil. Tətbiqin göndərdiklərini də qeydə alın, onda e-poçtu iki dəfə göndərən yenidən yazılmış versiya uğursuz olur:
+
+<p align="center">
+  <img src="assets/effects.gif" alt="--effects smtp ilə app record hər qeydiyyat üçün bir salamlama e-poçtunu qeydə alır; eyni çıxışı çap edən, lakin e-poçtu iki dəfə göndərən yenidən yazılmış versiyanın app replay-i 0/2 halın keçdiyini, effektlərdə uğursuz olduğunu bildirir və hesabat artıq e-poçtu göstərir." width="820">
+  <br>
+  <sub><code>app record --effects</code> və <code>app replay</code>-in real icrası. Bax: <a href="whole-apps.md#side-effects-email-webhooks-and-databases">Yan təsirlər</a>.</sub>
+</p>
 
 ## Dillər
 
@@ -179,8 +197,8 @@ buraxmağın təhlükəsiz yolunu və portun nə vaxt hazır olduğunu deyən ga
 | Go | paket | orijinal API-li paketdə tipli cgo çağırışları və yaradılmış binary wire | öz modulu kimi qurulan yaradılmış Go drayveri |
 | Ruby | modul funksiyalarından ibarət fayl və ya qovluq | orijinal modulların altında magnus genişlənməsi | yaradılmış Ruby drayveri |
 | Java | `public static` metodlardan ibarət paket | orijinal metodlara malik wrapper siniflərdə tipli JNI və yaradılmış binary wire | yaradılmış reflection drayveri |
-| PHP (önizləmə) | funksiyalardan və `public static` metodlardan ibarət qovluq | növbədə: C ABI üzərindən PHP FFI | bu gün bütöv tətbiqlər: CLI-lar və serverlər (`php -S`) üçün `app record`, `app replay` və front door |
-| C# (önizləmə) | `public static` metodlardan ibarət qovluq | növbədə: C ABI üzərindən P/Invoke | bu gün bütöv tətbiqlər: CLI-lar və ASP.NET serverləri (`dotnet <app>.dll`) üçün `app record`, `app replay` və front door |
+| PHP | funksiyalardan və `public static` metodlardan ibarət qovluq | növbədə: C ABI üzərindən PHP FFI | bu gün bütöv tətbiqlər: CLI-lar və serverlər (`php -S`) üçün `app record`, `app replay` və front door |
+| C# | `public static` metodlardan ibarət qovluq | növbədə: C ABI üzərindən P/Invoke | bu gün bütöv tətbiqlər: CLI-lar və ASP.NET serverləri (`dotnet <app>.dll`) üçün `app record`, `app replay` və front door |
 
 C-dən başqa hər dil batch sinifləri də alır (`--batch`): elementlər körpünü bir dəfə keçir və
 Rust-da qalır, hər çağırış isə bütün nüvələrdə hamısının üzərində işləyir.
@@ -191,13 +209,13 @@ bunu əvəz edir. Tiplər mənbədən gəlir: TS tipləri, Python type hint-lər
 imzaları, Ruby YARD teqləri, PHP tipləri və phpdoc; rəqəm kimi istifadə olunan tipsiz parametrlər
 rəqəm kimi müəyyən edilir.
 
-PHP önizləmədədir: `analyze` PHP tətbiqini planlaşdırır (Composer paketləri və PSR-4 autoloading,
+PHP üçün `analyze` PHP tətbiqini planlaşdırır (Composer paketləri və PSR-4 autoloading,
 sərbəst müqayisə və tam ədədin float-a daşması kimi risklər, crate-lərə uyğunlaşdırılmış Composer
 paketləri), PHP CLI və ya serveri isə qeydə alına, təkrar oynadıla və Rust front door-unun arxasına
 qoyula bilər. Onun vahidlərini PHP-nin FFI-ı vasitəsilə Rust-a port etmək növbəti addımdır
 ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
-C# da eyni şəkildə önizləmədədir: `analyze` `.csproj` layihələrini və onların NuGet paketlərini
+C# da eyni şəkildə işləyir: `analyze` `.csproj` layihələrini və onların NuGet paketlərini
 oxuyur (crate-lərə uyğunlaşdırılmış), `using` direktivlərini qovluqlara həll edir və C#-ın fərqli
 etdiyi şeyləri işarələyir (`decimal`, `dynamic`, LINQ-in təxirə salınmış sorğuları, `Task`, `lock`,
 reflection). C# CLI və ya ASP.NET serveri qeydə alına, təkrar oynadıla və Rust front door-unun
@@ -205,7 +223,7 @@ arxasına qoyula bilər; vahidləri P/Invoke vasitəsilə port etmək növbədə
 
 ## Ətraflı
 
-- [Necə işləyir](how-it-works.md): dövr, `bridge` və `analyze` nəyə qərar verir, hot path-lar və nəyi tuta bilmir
+- [Necə işləyir](how-it-works.md): dövr, `bridge` və `analyze` nəyə qərar verir, hot path-lar, nəyi tuta bilmir, real portun nə tələb etdiyi və orijinalla ayaqlaşmaq (`map`)
 - [Bütöv tətbiqi port etmək](whole-apps.md): serverlər, CLI-lar və kitabxanalar, front door-dan `app lift`-ə qədər
 - [Nümunələr və nümunə araşdırmaları](examples.md): x18n və altı dildə real kod
 - [Real portlar](real-world.md): json-server, Fuse.js, vercel/ms, benchmark-larla

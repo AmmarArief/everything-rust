@@ -4,48 +4,32 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">автор: <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>Перепишите своё приложение на Rust и докажите, что оно ведёт себя так же.</b></p>
 
-<p align="center"><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · Русский · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></p>
-
-<p align="center"><sub>Этот перевод поддерживается сообществом и может отставать от <a href="../README.md">английского README</a>.</sub></p>
-
-<p align="center"><em>Перепишите всё приложение на Rust. Сохраняя его работоспособность на каждом шаге.</em></p>
-
-<p align="center"><em>CLI, серверы и библиотеки, по частям, с проверкой на соответствие оригиналу на каждом этапе.</em></p>
-
-<p align="center">Node.js и TypeScript · Python · C · Go · Ruby · Java · PHP и C# в превью</p>
+<p align="center">Новое в 2.0: <a href="real-world.md#prettier">Prettier, портированный на Rust</a>. В 19x быстрее · 17,224 записанных запуска · 0 расхождений</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="Версия на crates.io"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="Версия в npm"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 языков и ещё 2 в превью">
-  <a href="#поддерживаемые-агенты"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="Работает с 4 агентами"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Тесты"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="Лицензия MIT"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="Звёзды на GitHub"></a>
 </p>
 
 <p align="center">
   <a href="#быстрый-старт">Быстрый старт</a> ·
   <a href="#поддерживаемые-языки">Языки</a> ·
+  <a href="real-world.md">Реальные порты</a> ·
   <a href="how-it-works.md#how-it-works">Как это работает</a> ·
-  <a href="how-it-works.md#the-loop">Цикл работы</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Портирование целого приложения</a> ·
-  <a href="how-it-works.md#hot-paths-keep-the-data-in-rust">Горячие пути</a> ·
-  <a href="install.md#install">Установка</a> ·
-  <a href="how-it-works.md#what-it-cant-catch">Что он не может отловить</a> ·
+  <a href="whole-apps.md#port-a-whole-app">Целые приложения</a> ·
   <a href="faq.md#faq">FAQ</a>
 </p>
 
-<p align="center">до 20x быстрее · воспроизведено 38,251 записанных кейсов · 0 расхождений · одна команда</p>
+<p align="center">Сделано в Турции 🇹🇷, автор: <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Поддержать меня</a></p>
 
-<p align="center">
-  <img src="assets/race.gif" alt="Ввод user.profile в поиске x18n по 50,000 ключей: TypeScript тратит 143 ms, пакетная обработка rust-anything 6.9 ms, с одинаковыми результатами при каждом нажатии клавиши." width="820">
-  <br>
-  <sub>Ввод запроса в поиске x18n по 50,000 ключей: оригинал на TypeScript против пакетной обработки rust-anything, одинаковые результаты при каждом нажатии клавиши.</sub>
-</p>
+<p align="center">Спонсор: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · Русский · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>Этот перевод поддерживается сообществом и может отставать от <a href="../README.md">английского README</a>.</sub></p>
 <table>
   <tr>
     <td width="25%" valign="top">
@@ -67,18 +51,29 @@
   </tr>
 </table>
 
-**Перепишите всё приложение на Rust, по одной части за раз.** rust-anything записывает поведение вашего текущего приложения на Node.js (TypeScript/JavaScript), Python, C, Go, Ruby или Java, а затем сверяет каждую переписанную на Rust часть с этой записью, прежде чем двигаться дальше, пока всё приложение не станет чистым Rust. Поддерживаются CLI, HTTP-серверы и библиотеки; код на Rust пишет ваш агент разработки (или вы сами). Инструмент способен отловить только то, что покрыто записью: см. [Что он не может отловить](how-it-works.md#what-it-cant-catch). Нужно ускорить только медленную часть? Переносите именно её, по одному горячему пути за раз:
+**Перепишите всё приложение на Rust, по одной части за раз.** rust-anything записывает поведение вашего текущего приложения на Node.js (TypeScript/JavaScript), Python, C, Go, Ruby или Java, а затем сверяет каждую переписанную на Rust часть с этой записью, прежде чем двигаться дальше, пока всё приложение не станет чистым Rust. Поддерживаются CLI, HTTP-серверы и библиотеки; код на Rust пишет ваш агент разработки (или вы сами). Инструмент способен отловить только то, что покрыто записью: см. [Что он не может отловить](how-it-works.md#what-it-cant-catch). Целые инструменты и серверы или только медленная часть, по одному горячему пути за раз:
 
-| Реальная нагрузка, результаты идентичны оригиналу | Оригинал | С rust-anything |
+| Реальный проект, тот же вывод, что у оригинала | Оригинал | С rust-anything |
 | --- | ---: | ---: |
-| Поиск в боковой панели x18n, 50,000 ключей (TypeScript, Node) | 10 ms на запрос | **0.5 ms: в 20x быстрее** |
-| Тот же поиск в браузере (wasm, один поток) | 10 ms | **0.95 ms: 11.5x** |
-| `slugify` на 20,000 строк (Python) | 98 ms | **в 17x быстрее** |
-| `Shellwords.shellescape` из стандартной библиотеки Ruby, 50,000 значений | 88 ms | **в 11.8x быстрее** |
-| `Slugify` на 50,000 строк (Go) | 49 ms | **в 4x быстрее** |
-| `slugify` на 50,000 строк (Java) | 43 ms | **в 3x быстрее** |
+| [Prettier](real-world.md#prettier) 3.6.2, 2,360 файлов JS/TS из командной строки | 128.6 s | **6.9 s: в 19x быстрее** |
+| Prettier, 6,305 файлов Markdown из командной строки | 352 s | **22.5 s: в 15.6x быстрее** |
+| [json-server](real-world.md#json-server), целый Node-сервер: память в простое | 74 MB | **3.5 MB**, один бинарник на 5.3 MB |
+| json-server, от запуска до первого ответа | от 79 до 85 ms | **от 8 до 10 ms** |
+| Поиск [Fuse.js](real-world.md#fusejs) по 50,000 строк, на запрос | 91.2 ms | **2.8 ms: в 32x быстрее** |
 
-Замеры выполнены на 4 ядрах; для каждого числа в [`demo/`](../demo) есть бенчмарк, который сначала проверяет идентичность результатов. Вызывать Rust по одному разу на каждую мелкую функцию обычно *медленнее*, чем JIT; rust-anything находит цикл, который действительно стоит перенести, и переносит его.
+Prettier: 15,837 из 17,224 записанных запусков полностью форматируются на Rust на 10 языках (JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), и все 17,224 совпадают с Prettier байт в байт, поскольку всё, что ещё не портировано, откатывается на Prettier. json-server: 514/514 записанных HTTP-кейсов совпадают на бинарнике на чистом Rust. Замеры выполнены на Apple M4, по два прогона, каждый вывод сравнивается перед замером времени ([подробности](real-world.md)). Вызывать Rust по одному разу на каждую мелкую функцию обычно *медленнее*, чем JIT; rust-anything находит цикл, который действительно стоит перенести, и переносит его.
+
+<p align="center">
+  <img src="assets/prettier.gif" alt="Prettier и его порт на Rust форматируют одни и те же 59 реальных файлов, по одному процессу на файл: Prettier тратит 3.63 s, порт на Rust 0.20 s, а вывод совпадает байт в байт." width="820">
+  <br>
+  <sub>Prettier против своего порта на Rust на 59 реальных файлах из ms, Fuse.js и json-server (Apple M4). Одинаковый вывод, байт в байт. <a href="real-world.md#prettier">Как измеряли</a>.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/json-server.gif" alt="json-server как Node-сервер и как один бинарник на Rust: память в простое 74 MB и 3.5 MB, от запуска до первого ответа от 79 до 85 ms и от 8 до 10 ms, и 514 из 514 записанных HTTP-кейсов совпадают." width="820">
+  <br>
+  <sub>json-server, целый Node-сервер, перенесённый в бинарник на чистом Rust (Apple M4). <a href="real-world.md#json-server">Как измеряли</a>.</sub>
+</p>
 
 > rust-anything является независимым проектом, не связанным с Rust Project или Rust Foundation и не одобренным ими. «Rust» является товарным знаком Rust Foundation.
 
@@ -91,7 +86,7 @@
 
 ## Быстрый старт
 
-Вставьте это в Claude Code, Codex, Cursor или Gemini CLI, и пусть ваш агент всё установит:
+Вставьте это в Claude Code, Codex, Cursor, Gemini CLI или OpenCode, и пусть ваш агент всё установит:
 
 ```text
 Установи rust-anything: выполни `cargo install rust-anything`, затем `rust-anything setup`.
@@ -102,7 +97,7 @@
 
 ```sh
 cargo install rust-anything   # из crates.io
-rust-anything setup           # регистрирует инструмент в Claude Code, Codex, Cursor и Gemini CLI
+rust-anything setup           # регистрирует инструмент в Claude Code, Codex, Cursor, Gemini CLI и OpenCode
 ```
 
 Ещё не установлен тулчейн Rust? Готовые бинарные файлы для macOS, Linux и Windows прикреплены к каждому [релизу на GitHub](https://github.com/erkamyaman/rust-anything/releases), а для JavaScript-проектов тот же бинарник устанавливается командой `npm install -g rust-anything`.
@@ -128,17 +123,24 @@ rust-anything setup           # регистрирует инструмент в
 | Codex | MCP-сервер в `~/.codex/config.toml`, навык в `~/.codex/skills/` |
 | Cursor | MCP-сервер в `~/.cursor/mcp.json` |
 | Gemini CLI | MCP-сервер в `~/.gemini/settings.json` |
+| OpenCode | MCP-сервер в `~/.config/opencode/opencode.json` (`mcp.servers`), навык в `~/.config/opencode/skills/` |
 | Любой другой MCP-клиент | добавьте `rust-anything mcp` как stdio-сервер вручную (см. [Установка](install.md#install)) |
 
 Перед изменением существующего файла `setup` сохраняет копию рядом с ним (`<file>.rust-anything.bak`).
 
-Либо выполняйте шаги вручную:
+Чтобы подключить OpenCode вручную, добавьте сервер в `~/.config/opencode/opencode.json` (`command` содержит весь argv) и скопируйте [`skills/rust-anything/`](../skills/rust-anything) в `~/.config/opencode/skills/rust-anything/`:
 
-<p align="center">
-  <img src="assets/terminal.gif" alt="rust-anything profile находит fuzzyScore в цикле, bridge --batch генерирует Rust-крейт, gate проходит с 2000/2000 записанных кейсов, а бенчмарк показывает ускорение в 20.7x по сравнению с TS." width="820">
-  <br>
-  <sub>Шаги на <code>fuzzyScore</code> из x18n: <code>profile</code> находит горячий цикл, <code>bridge --batch</code> генерирует крейт, <code>gate</code> проходит, а бенчмарк сравнивает результат с TypeScript.</sub>
-</p>
+```json
+{
+  "mcp": {
+    "servers": {
+      "rust-anything": { "type": "local", "command": ["rust-anything", "mcp"] }
+    }
+  }
+}
+```
+
+Либо выполняйте шаги вручную:
 
 ```sh
 rust-anything profile . -- node bench.mjs              # что тормозит и кто это вызывает
@@ -150,7 +152,15 @@ rust-anything bench rust/fuzzy-rs                      # стало быстре
 rust-anything gate rust/fuzzy-rs                       # готово, когда эта проверка пройдена
 ```
 
-rust-anything не переводит код: код на Rust пишете вы или ваш агент разработки (Claude Code, Codex, Cursor и др.). rust-anything даёт то, что агент не может надёжно угадать: куда уходит время, что переносить первым и в каком порядке, мост, чтобы остальной код вызывал Rust с неизменным API, точное поведение, которому порт обязан соответствовать, безопасный способ выкатки и гейт, который говорит, когда порт готов.
+rust-anything не переводит код: код на Rust пишете вы или ваш агент разработки (Claude Code, Codex, Cursor, OpenCode и др.). rust-anything даёт то, что агент не может надёжно угадать: куда уходит время, что переносить первым и в каком порядке, мост, чтобы остальной код вызывал Rust с неизменным API, точное поведение, которому порт обязан соответствовать, безопасный способ выкатки и гейт, который говорит, когда порт готов.
+
+Одинакового вывода недостаточно. Записывайте и то, что приложение отправляет наружу, и переписанная версия, которая шлёт письмо дважды, не пройдёт проверку:
+
+<p align="center">
+  <img src="assets/effects.gif" alt="app record с --effects smtp записывает одно приветственное письмо на каждую регистрацию; app replay переписанной версии, которая выводит то же самое, но шлёт письмо дважды, сообщает, что прошло 0/2 кейсов из-за сбоя на эффектах, а отчёт показывает лишнее письмо." width="820">
+  <br>
+  <sub>Реальный запуск <code>app record --effects</code> и <code>app replay</code>. См. <a href="whole-apps.md#side-effects-email-webhooks-and-databases">Побочные эффекты</a>.</sub>
+</p>
 
 ## Поддерживаемые языки
 
@@ -162,20 +172,20 @@ rust-anything не переводит код: код на Rust пишете вы
 | Go | пакет | типизированные вызовы cgo и сгенерированный бинарный протокол в пакете с исходным API | сгенерированный Go-драйвер, собранный как отдельный модуль |
 | Ruby | файл или каталог с функциями модуля | расширение magnus в исходных модулях | сгенерированный Ruby-драйвер |
 | Java | пакет методов `public static` | типизированный JNI и сгенерированный бинарный протокол в классах-обёртках с исходными методами | сгенерированный драйвер на рефлексии |
-| PHP (превью) | каталог функций и методов `public static` | далее: PHP FFI поверх C ABI | целые приложения уже сейчас: `app record`, `app replay` и входная точка для CLI и серверов (`php -S`) |
-| C# (превью) | каталог методов `public static` | далее: P/Invoke поверх C ABI | целые приложения уже сейчас: `app record`, `app replay` и входная точка для CLI и серверов ASP.NET (`dotnet <app>.dll`) |
+| PHP | каталог функций и методов `public static` | далее: PHP FFI поверх C ABI | целые приложения уже сейчас: `app record`, `app replay` и входная точка для CLI и серверов (`php -S`) |
+| C# | каталог методов `public static` | далее: P/Invoke поверх C ABI | целые приложения уже сейчас: `app record`, `app replay` и входная точка для CLI и серверов ASP.NET (`dotnet <app>.dll`) |
 
 Для каждого языка, кроме C, также генерируются пакетные классы (`--batch`): элементы пересекают границу один раз и остаются в Rust, а каждый вызов обрабатывает их все на всех ядрах.
 
 Язык определяется по репозиторию (`go.mod`, `pom.xml`, `.csproj` или `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, иначе по преобладающим исходным файлам); флаг `--lang` переопределяет автоопределение. Типы берутся из исходного кода: типы TS, аннотации типов Python, сигнатуры C, Go, Java и C#, теги YARD в Ruby, типы и phpdoc в PHP; нетипизированные параметры, используемые как числа, выводятся как числовые.
 
-PHP находится в превью: `analyze` планирует PHP-приложение (пакеты Composer и автозагрузка PSR-4, риски вроде нестрогого сравнения и переполнения целых чисел во float, сопоставление пакетов Composer с крейтами), а PHP CLI или сервер можно записать, воспроизвести и поставить за входную точку на Rust. Перенос отдельных модулей в Rust через PHP FFI станет следующим этапом ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
+Для PHP `analyze` планирует PHP-приложение (пакеты Composer и автозагрузка PSR-4, риски вроде нестрогого сравнения и переполнения целых чисел во float, сопоставление пакетов Composer с крейтами), а PHP CLI или сервер можно записать, воспроизвести и поставить за входную точку на Rust. Перенос отдельных модулей в Rust через PHP FFI станет следующим этапом ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
-C# находится в превью аналогичным образом: `analyze` читает проекты `.csproj` и их пакеты NuGet (сопоставляемые с крейтами), разрешает директивы `using` в каталоги и отмечает особенности C# (`decimal`, `dynamic`, отложенные запросы LINQ, `Task`, `lock`, рефлексия). C# CLI или сервер ASP.NET можно записать, воспроизвести и поставить за входную точку на Rust; перенос отдельных модулей через P/Invoke появится далее.
+C# работает аналогичным образом: `analyze` читает проекты `.csproj` и их пакеты NuGet (сопоставляемые с крейтами), разрешает директивы `using` в каталоги и отмечает особенности C# (`decimal`, `dynamic`, отложенные запросы LINQ, `Task`, `lock`, рефлексия). C# CLI или сервер ASP.NET можно записать, воспроизвести и поставить за входную точку на Rust; перенос отдельных модулей через P/Invoke появится далее.
 
 ## Подробнее
 
-- [Как это работает](how-it-works.md): цикл работы, что решают `bridge` и `analyze`, горячие пути и что инструмент не может отловить
+- [Как это работает](how-it-works.md): цикл работы, что решают `bridge` и `analyze`, горячие пути, что инструмент не может отловить, чего требует реальный порт и как не отставать от оригинала (`map`)
 - [Портирование целого приложения](whole-apps.md): серверы, CLI и библиотеки, от входной точки до `app lift`
 - [Примеры и разборы кейсов](examples.md): x18n и реальный код на шести языках
 - [Реальные порты](real-world.md): json-server, Fuse.js, vercel/ms, с бенчмарками

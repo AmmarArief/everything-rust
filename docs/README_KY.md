@@ -4,47 +4,32 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">автору: <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>Колдонмоңузду Rust тилинде кайра жазып, анын мурункудай иштээрин далилдеңиз.</b></p>
 
-<p align="center"><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · Кыргызча · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></p>
-
-<p align="center"><sub>Бул котормону коомчулук колдойт, ошондуктан ал <a href="../README.md">англисче README</a> нускасынан артта калышы мүмкүн.</sub></p>
-
-<p align="center"><em>Бүт колдонмоңузду Rust тилинде кайра жазыңыз. Бүт жол бою анын иштеп турушун сактаңыз.</em></p>
-
-<p align="center"><em>CLI'лар, серверлер жана китепканалар, бөлүк-бөлүгү менен, ар бир кадамда түп нуска менен салыштырылып текшерилет.</em></p>
-
-<p align="center">Node.js жана TypeScript · Python · C · Go · Ruby · Java · PHP жана C# preview абалында</p>
+<p align="center">2.0 версиясындагы жаңылык: <a href="real-world.md#prettier">Prettier, Rust'ка порттолду</a>. 19x ылдамыраак · 17,224 жазылган иштетүү · 0 дал келбестик</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io версиясы"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm версиясы"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 тил, дагы 2 preview абалында">
-  <a href="#шайкеш-агенттер"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="4 агент менен иштейт"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Тесттер"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT лицензиясы"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub жылдыздары"></a>
 </p>
 
 <p align="center">
   <a href="#тез-баштоо">Тез баштоо</a> ·
   <a href="#тилдер">Тилдер</a> ·
+  <a href="real-world.md">Чыныгы порттор</a> ·
   <a href="how-it-works.md#how-it-works">Кантип иштейт</a> ·
-  <a href="how-it-works.md#the-loop">Цикл</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Бүт колдонмону порттоо</a> ·
-  <a href="how-it-works.md#hot-paths-keep-the-data-in-rust">Hot path'тар</a> ·
-  <a href="install.md#install">Орнотуу</a> ·
-  <a href="how-it-works.md#what-it-cant-catch">Ал эмнени кармай албайт</a> ·
+  <a href="whole-apps.md#port-a-whole-app">Бүт колдонмолор</a> ·
   <a href="faq.md#faq">Көп берилүүчү суроолор</a>
 </p>
 
-<p align="center">20x чейин ылдамыраак · 38,251 жазылган кейс кайра ойнотулду · 0 дал келбестик · бир буйрук</p>
+<p align="center">Түркияда 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> жасаган · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Мага демөөрчү болуңуз</a></p>
 
-<p align="center">
-  <img src="assets/race.gif" alt="x18n издөөсүнө 50,000 ачкыч боюнча user.profile терилүүдө: TypeScript 143 ms коротот, rust-anything batch 6.9 ms, ар бир баскычты басканда натыйжалар бирдей." width="820">
-  <br>
-  <sub>x18n'дин 50,000 ачкыч боюнча издөөсүнө суроо терилүүдө: TypeScript түп нускасы rust-anything batch'ына каршы, ар бир баскычты басканда натыйжалар бирдей.</sub>
-</p>
+<p align="center">Демөөрчү: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
+
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · Кыргызча · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>Бул котормону коомчулук колдойт, ошондуктан ал <a href="../README.md">англисче README</a> нускасынан артта калышы мүмкүн.</sub></p>
 
 <table>
   <tr>
@@ -72,21 +57,36 @@
 алат, андан кийин Rust нускасынын ар бир бөлүгүн кийинкисине өтүүдөн мурун ошол жазуу менен салыштырып
 текшерет, колдонмо толугу менен таза Rust болгонго чейин. CLI'лар, HTTP серверлер жана китепканалар;
 Rust кодун сиздин коддоо агентиңиз (же өзүңүз) жазат. Ал жазуу камтыган нерсени гана кармай алат:
-[Ал эмнени кармай албайт](how-it-works.md#what-it-cant-catch) бөлүмүн караңыз. Жай бөлүгүн гана
-ылдамдатуу керекпи? Ошону гана порттоңуз, бир убакта бир hot path:
+[Ал эмнени кармай албайт](how-it-works.md#what-it-cant-catch) бөлүмүн караңыз. Бүт куралдар жана
+серверлер, же жай бөлүгү гана, бир убакта бир hot path:
 
-| Чыныгы жүктөм, натыйжалары түп нуска менен бирдей | Түп нуска | rust-anything менен |
+| Чыныгы долбоор, чыгышы түп нуска менен бирдей | Түп нуска | rust-anything менен |
 | --- | ---: | ---: |
-| x18n каптал панелиндеги издөө, 50,000 ачкыч (TypeScript, Node) | бир суроого 10 ms | **0.5 ms: 20x ылдамыраак** |
-| Ошол эле издөө браузерде (wasm, бир агым) | 10 ms | **0.95 ms: 11.5x** |
-| `slugify`, 20,000 сап (Python) | 98 ms | **17x ылдамыраак** |
-| Ruby стандарттык китепканасындагы `Shellwords.shellescape`, 50,000 маани | 88 ms | **11.8x ылдамыраак** |
-| `Slugify`, 50,000 сап (Go) | 49 ms | **4x ылдамыраак** |
-| `slugify`, 50,000 сап (Java) | 43 ms | **3x ылдамыраак** |
+| [Prettier](real-world.md#prettier) 3.6.2, командалык саптан 2,360 JS/TS файл | 128.6 s | **6.9 s: 19x ылдамыраак** |
+| Prettier, командалык саптан 6,305 Markdown файл | 352 s | **22.5 s: 15.6x ылдамыраак** |
+| [json-server](real-world.md#json-server), бүт Node сервер: бош турганда эс тутум | 74 MB | **3.5 MB**, бир 5.3 MB бинардык файл |
+| json-server, иштетүүдөн биринчи жоопко чейин | 79 менен 85 ms аралыгы | **8 менен 10 ms аралыгы** |
+| [Fuse.js](real-world.md#fusejs) менен 50,000 сап боюнча издөө, бир суроого | 91.2 ms | **2.8 ms: 32x ылдамыраак** |
 
-4 ядродо өлчөндү; ар бир сан үчүн [`demo/`](../demo) ичинде адегенде натыйжалардын бирдей экенин
-текшерген бенчмарк бар. Ар бир кичинекей функция үчүн Rust'ту өзүнчө чакыруу адатта JIT'тен *жайыраак*;
-rust-anything көчүрүүгө арзый турган циклди таап, ошону көчүрөт.
+Prettier: 17,224 жазылган иштетүүнүн ичинен 15,837 иштетүү 10 тилде (JavaScript, TypeScript, JSX,
+JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less) толугу менен Rust ичинде форматталат, ал эми бардык
+17,224 иштетүү Prettier менен байтма-байт дал келет, анткени азырынча порттолбогон ар бир нерсе
+Prettier'ге кайтарылат (fallback). json-server: жазылган 514/514 HTTP кейс таза Rust бинардык
+файлында дал келет. Apple M4'тө өлчөндү, ар бири эки жолу иштетилди, ар бир чыгыш убакыт өлчөнгөнгө
+чейин салыштырылды ([кеңири](real-world.md)). Ар бир кичинекей функция үчүн Rust'ту өзүнчө чакыруу
+адатта JIT'тен *жайыраак*; rust-anything көчүрүүгө арзый турган циклди таап, ошону көчүрөт.
+
+<p align="center">
+  <img src="assets/prettier.gif" alt="Prettier жана анын Rust порту ошол эле 59 чыныгы файлды форматтайт, ар бир файлга бир процесс: Prettier 3.63 s, Rust порту 0.20 s коротот, чыгышы байтма-байт бирдей." width="820">
+  <br>
+  <sub>ms, Fuse.js жана json-server долбоорлорунан алынган 59 чыныгы файлда Prettier жана анын Rust порту (Apple M4). Чыгышы байтма-байт бирдей. <a href="real-world.md#prettier">Кантип өлчөнгөн</a>.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/json-server.gif" alt="json-server Node сервер катары жана бир Rust бинардык файлы катары: бош турганда эс тутум 74 MB жана 3.5 MB, иштетүүдөн биринчи жоопко чейин 79 менен 85 ms жана 8 менен 10 ms аралыгы, жазылган 514 HTTP кейстин 514ү дал келет." width="820">
+  <br>
+  <sub>json-server, бүт Node сервер, таза Rust бинардык файлына айлантылды (Apple M4). <a href="real-world.md#json-server">Кантип өлчөнгөн</a>.</sub>
+</p>
 
 > rust-anything көз карандысыз долбоор, ал Rust Project же Rust Foundation уюмдары менен байланышкан
 > эмес жана алар тарабынан колдоого алынган эмес. "Rust" Rust Foundation уюмунун соода белгиси.
@@ -101,7 +101,7 @@ rust-anything көчүрүүгө арзый турган циклди таап, 
 
 ## Тез баштоо
 
-Муну Claude Code, Codex, Cursor же Gemini CLI ичине чаптап, орнотууну агентиңизге тапшырыңыз:
+Муну Claude Code, Codex, Cursor, Gemini CLI же OpenCode ичине чаптап, орнотууну агентиңизге тапшырыңыз:
 
 ```text
 Install rust-anything: run `cargo install rust-anything`, then `rust-anything setup`.
@@ -112,7 +112,7 @@ Tell me when to restart you.
 
 ```sh
 cargo install rust-anything   # from crates.io
-rust-anything setup           # registers it with Claude Code, Codex, Cursor and Gemini CLI
+rust-anything setup           # registers it with Claude Code, Codex, Cursor, Gemini CLI and OpenCode
 ```
 
 Rust toolchain азырынча жокпу? macOS, Linux жана Windows үчүн даяр бинардык файлдар ар бир
@@ -143,17 +143,26 @@ Claude Code ичинде аны плагин катары да орнотсоң�
 | Codex | `~/.codex/config.toml` ичинде MCP сервер, `~/.codex/skills/` ичинде skill |
 | Cursor | `~/.cursor/mcp.json` ичинде MCP сервер |
 | Gemini CLI | `~/.gemini/settings.json` ичинде MCP сервер |
+| OpenCode | `~/.config/opencode/opencode.json` ичинде MCP сервер (`mcp.servers`), `~/.config/opencode/skills/` ичинде skill |
 | Башка каалаган MCP кардар | `rust-anything mcp` буйругун stdio сервер катары кол менен кошуңуз ([Орнотуу](install.md#install) бөлүмүн караңыз) |
 
 Бар файлды өзгөртүүдөн мурун `setup` анын көчүрмөсүн жанына сактайт (`<file>.rust-anything.bak`).
 
-Же кадамдарды өзүңүз аткарыңыз:
+OpenCode'ду кол менен туташтыруу үчүн серверди `~/.config/opencode/opencode.json` ичине коюңуз
+(`command` толук argv болуп саналат) жана [`skills/rust-anything/`](../skills/rust-anything) папкасын
+`~/.config/opencode/skills/rust-anything/` ичине көчүрүңүз:
 
-<p align="center">
-  <img src="assets/terminal.gif" alt="rust-anything profile циклдеги fuzzyScore функциясын табат, bridge --batch Rust crate'ин генерациялайт, gate 2000/2000 жазылган кейс менен өтөт, ал эми бенчмарк TS'тен 20.7x ылдамыраак экенин көрсөтөт." width="820">
-  <br>
-  <sub>x18n'дин <code>fuzzyScore</code> функциясындагы кадамдар: <code>profile</code> hot loop'ту табат, <code>bridge --batch</code> crate'ти генерациялайт, <code>gate</code> өтөт, ал эми бенчмарк аны TypeScript менен салыштырат.</sub>
-</p>
+```json
+{
+  "mcp": {
+    "servers": {
+      "rust-anything": { "type": "local", "command": ["rust-anything", "mcp"] }
+    }
+  }
+}
+```
+
+Же кадамдарды өзүңүз аткарыңыз:
 
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
@@ -165,11 +174,20 @@ rust-anything bench rust/fuzzy-rs                      # faster? the verdict say
 rust-anything gate rust/fuzzy-rs                       # done means this passes
 ```
 
-rust-anything кодду которбойт: Rust кодун сиздин коддоо агентиңиз (Claude Code, Codex, Cursor, ...)
+rust-anything кодду которбойт: Rust кодун сиздин коддоо агентиңиз (Claude Code, Codex, Cursor, OpenCode, ...)
 же өзүңүз жазасыз. rust-anything агент ишенимдүү түрдө болжолдой албаган нерселерди берет: убакыт
 кайда кетет, адегенде эмнени жана кандай тартипте порттоо керек, калган код Rust'ту API'син өзгөртпөй
 чакырышы үчүн bridge, порт дал келиши керек болгон так жүрүм-турум, аны чыгаруунун коопсуз жолу жана
 порт качан даяр болгонун айткан gate.
+
+Бирдей чыгыш жетиштүү эмес. Колдонмо сыртка эмне жөнөтөрүн да жазып алыңыз, ошондо катты эки жолу
+жөнөткөн кайра жазылган нуска өтпөй калат:
+
+<p align="center">
+  <img src="assets/effects.gif" alt="--effects smtp менен app record ар бир катталуу үчүн бир саламдашуу катын жазып алат; бирдей чыгыш берген, бирок катты эки жолу жөнөткөн кайра жазылган нускада app replay 0/2 кейс өткөнүн жана effects боюнча ийгиликсиз болгонун билдирет, ал эми отчет ашыкча катты көрсөтөт." width="820">
+  <br>
+  <sub><code>app record --effects</code> жана <code>app replay</code> буйруктарынын чыныгы иштетилиши. <a href="whole-apps.md#side-effects-email-webhooks-and-databases">Кошумча таасирлер</a> бөлүмүн караңыз.</sub>
+</p>
 
 ## Тилдер
 
@@ -181,8 +199,8 @@ rust-anything кодду которбойт: Rust кодун сиздин код
 | Go | пакет | типтелген cgo чакыруулары жана генерацияланган бинардык wire, түп нуска API'си бар пакетте | генерацияланган Go драйвери, өзүнчө модуль катары курулат |
 | Ruby | модуль функцияларынан турган файл же папка | түп нуска модулдардын астындагы magnus кеңейтүүсү | генерацияланган Ruby драйвери |
 | Java | `public static` методдорунан турган пакет | типтелген JNI жана генерацияланган бинардык wire, түп нуска методдору бар wrapper класстарында | генерацияланган reflection драйвери |
-| PHP (preview) | функциялар жана `public static` методдорунан турган папка | кийинки кезекте: C ABI аркылуу PHP FFI | бүгүн бүт колдонмолор: `app record`, `app replay` жана front door, CLI'лар жана серверлер үчүн (`php -S`) |
-| C# (preview) | `public static` методдорунан турган папка | кийинки кезекте: C ABI аркылуу P/Invoke | бүгүн бүт колдонмолор: `app record`, `app replay` жана front door, CLI'лар жана ASP.NET серверлери үчүн (`dotnet <app>.dll`) |
+| PHP | функциялар жана `public static` методдорунан турган папка | кийинки кезекте: C ABI аркылуу PHP FFI | бүгүн бүт колдонмолор: `app record`, `app replay` жана front door, CLI'лар жана серверлер үчүн (`php -S`) |
+| C# | `public static` методдорунан турган папка | кийинки кезекте: C ABI аркылуу P/Invoke | бүгүн бүт колдонмолор: `app record`, `app replay` жана front door, CLI'лар жана ASP.NET серверлери үчүн (`dotnet <app>.dll`) |
 
 C'дан башка ар бир тил batch класстарын да алат (`--batch`): элементтер чектен бир жолу өтүп, Rust
 ичинде калат, ал эми ар бир чакыруу алардын баарын бардык ядролордо иштетет.
@@ -193,13 +211,13 @@ C'дан башка ар бир тил batch класстарын да алат 
 сигнатуралары, Ruby YARD тегдери, PHP типтери жана phpdoc; сан катары колдонулган типсиз параметрлер
 сан деп эсептелет.
 
-PHP preview абалында: `analyze` PHP колдонмосун пландайт (Composer пакеттери жана PSR-4 autoloading,
+PHP үчүн `analyze` PHP колдонмосун пландайт (Composer пакеттери жана PSR-4 autoloading,
 loose comparison жана integer'дин float'ка толуп кетиши сыяктуу тобокелдиктер, crate'терге шайкештелген
 Composer пакеттери), ал эми PHP CLI же серверин жазып алууга, кайра ойнотууга жана Rust front door'дун
 артына коюуга болот. Анын бирдиктерин PHP FFI аркылуу Rust'ка порттоо кийинки кадам
 ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
-C# да ушундай эле preview абалында: `analyze` `.csproj` долбоорлорун жана алардын NuGet пакеттерин
+C# да ушундай эле иштейт: `analyze` `.csproj` долбоорлорун жана алардын NuGet пакеттерин
 окуйт (crate'терге шайкештелет), `using` директиваларын папкаларга чечет жана C# башкача кылган
 нерселерди белгилейт (`decimal`, `dynamic`, LINQ'тун кийинкиге калтырылган суроо-талаптары, `Task`,
 `lock`, reflection). C# CLI же ASP.NET серверин жазып алууга, кайра ойнотууга жана Rust front door'дун
@@ -207,7 +225,7 @@ C# да ушундай эле preview абалында: `analyze` `.csproj` до
 
 ## Көбүрөөк билүү
 
-- [Кантип иштейт](how-it-works.md): цикл, `bridge` жана `analyze` эмнени чечет, hot path'тар жана ал эмнени кармай албайт
+- [Кантип иштейт](how-it-works.md): цикл, `bridge` жана `analyze` эмнени чечет, hot path'тар, ал эмнени кармай албайт, чыныгы порт эмнени талап кылат жана түп нускадагы өзгөрүүлөрдөн артта калбоо (`map`)
 - [Бүт колдонмону порттоо](whole-apps.md): серверлер, CLI'лар жана китепканалар, front door'дон `app lift`'ке чейин
 - [Мисалдар жана практикалык изилдөөлөр](examples.md): x18n жана алты тилдеги чыныгы код
 - [Чыныгы порттор](real-world.md): json-server, Fuse.js, vercel/ms, бенчмарктары менен

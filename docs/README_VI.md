@@ -4,47 +4,32 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">Tác giả: <a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>Viết lại ứng dụng bằng Rust, và chứng minh nó vẫn hoạt động y như cũ.</b></p>
 
-<p align="center"><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · Tiếng Việt</p>
-
-<p align="center"><sub>Bản dịch này do cộng đồng duy trì và có thể chậm hơn <a href="../README.md">README tiếng Anh</a>.</sub></p>
-
-<p align="center"><em>Viết lại toàn bộ ứng dụng bằng Rust, từng phần một. Ứng dụng vẫn chạy được trong suốt quá trình.</em></p>
-
-<p align="center"><em>CLI, máy chủ hay thư viện đều có thể chuyển từng phần, rồi đối chiếu từng phần với bản gốc.</em></p>
-
-<p align="center">Node.js và TypeScript · Python · C · Go · Ruby · Java · PHP và C# đang ở giai đoạn preview</p>
+<p align="center">Mới trong 2.0: <a href="real-world.md#prettier">Prettier đã được port sang Rust</a>. Nhanh hơn 19x · 17,224 lần chạy đã ghi · 0 sai khác</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="phiên bản crates.io"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="phiên bản npm"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 ngôn ngữ chính và 2 ngôn ngữ preview">
-  <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="Hỗ trợ 4 agent"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="Các bài kiểm tra"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="giấy phép MIT"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="Lượt sao trên GitHub"></a>
 </p>
 
 <p align="center">
   <a href="#quick-start">Bắt đầu nhanh</a> ·
   <a href="#languages">Ngôn ngữ</a> ·
+  <a href="real-world.md">Các bản port thực tế</a> ·
   <a href="how-it-works.md#how-it-works">Cách hoạt động</a> ·
-  <a href="how-it-works.md#the-loop">Quy trình</a> ·
   <a href="whole-apps.md#port-a-whole-app">Chuyển cả ứng dụng</a> ·
-  <a href="how-it-works.md#hot-paths-keep-the-data-in-rust">Hot path</a> ·
-  <a href="install.md#install">Cài đặt</a> ·
-  <a href="how-it-works.md#what-it-cant-catch">Giới hạn</a> ·
   <a href="faq.md#faq">FAQ</a>
 </p>
 
-<p align="center">nhanh hơn tới 20 lần · chạy lại 38.251 ca đã ghi · không sai khác · chỉ với một lệnh</p>
+<p align="center">Làm tại Thổ Nhĩ Kỳ 🇹🇷 bởi <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Tài trợ cho tôi</a></p>
 
-<p align="center">
-  <img src="assets/race.gif" alt="Tìm user.profile trong 50.000 khóa của x18n: TypeScript mất 143 ms, còn batch của rust-anything mất 6,9 ms. Kết quả giống nhau sau mỗi lần gõ." width="820">
-  <br>
-  <sub>Tìm từ khóa trong 50.000 khóa của x18n bằng TypeScript gốc và batch của rust-anything. Kết quả giống nhau sau mỗi lần gõ.</sub>
-</p>
+<p align="center">Được tài trợ bởi <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
+
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · Tiếng Việt</sub></p>
+<p align="center"><sub>Bản dịch này do cộng đồng duy trì và có thể chậm hơn <a href="../README.md">README tiếng Anh</a>.</sub></p>
 
 <table>
   <tr>
@@ -67,20 +52,29 @@
   </tr>
 </table>
 
-**Viết lại toàn bộ ứng dụng bằng Rust, từng phần một.** rust-anything ghi lại cách ứng dụng Node.js (TypeScript/JavaScript), Python, C, Go, Ruby hoặc Java hoạt động. Sau đó, công cụ đối chiếu từng phần Rust với bản ghi trước khi chuyển sang phần tiếp theo, cho đến khi ứng dụng chạy hoàn toàn bằng Rust. Dùng được cho CLI, HTTP server và thư viện. Rust do coding agent hoặc bạn viết. Công cụ chỉ kiểm tra được những gì có trong bản ghi; xem thêm [Những gì công cụ không kiểm tra được](how-it-works.md#what-it-cant-catch).
+**Viết lại toàn bộ ứng dụng bằng Rust, từng phần một.** rust-anything ghi lại cách ứng dụng Node.js (TypeScript/JavaScript), Python, C, Go, Ruby hoặc Java hoạt động. Sau đó, công cụ đối chiếu từng phần Rust với bản ghi trước khi chuyển sang phần tiếp theo, cho đến khi ứng dụng chạy hoàn toàn bằng Rust. Dùng được cho CLI, HTTP server và thư viện. Rust do coding agent hoặc bạn viết. Công cụ chỉ kiểm tra được những gì có trong bản ghi; xem thêm [Những gì công cụ không kiểm tra được](how-it-works.md#what-it-cant-catch). Có thể chuyển cả công cụ và server, hoặc chỉ phần chạy chậm, từng hot path một:
 
-Nếu chỉ muốn tăng tốc đoạn chạy chậm, hãy chuyển riêng đoạn đó, từng hot path một:
-
-| Tác vụ thực tế, kết quả vẫn như bản gốc | Bản gốc | Với rust-anything |
+| Dự án thực tế, đầu ra giống bản gốc | Bản gốc | Với rust-anything |
 | --- | ---: | ---: |
-| Tìm kiếm ở thanh bên của x18n, 50.000 keys (TypeScript, Node) | 10 ms/ query | **0,5 ms: nhanh hơn 20 lần** |
-| Cùng tác vụ tìm kiếm trên trình duyệt (wasm, 1 luồng) | 10 ms | **0,95 ms: nhanh hơn 11,5 lần** |
-| `slugify` với 20.000 strings (Python) | 98 ms | **nhanh hơn 17 lần** |
-| `Shellwords.shellescape` trong thư viện chuẩn Ruby, 50.000 values | 88 ms | **nhanh hơn 11,8 lần** |
-| `Slugify` với 50.000 strings (Go) | 49 ms | **nhanh hơn 4 lần** |
-| `slugify` với 50.000 strings (Java) | 43 ms | **nhanh hơn 3 lần** |
+| [Prettier](real-world.md#prettier) 3.6.2, 2,360 file JS/TS từ dòng lệnh | 128.6 s | **6.9 s: nhanh hơn 19x** |
+| Prettier, 6,305 file Markdown từ dòng lệnh | 352 s | **22.5 s: nhanh hơn 15.6x** |
+| [json-server](real-world.md#json-server), cả một Node server: bộ nhớ khi rảnh | 74 MB | **3.5 MB**, một binary 5.3 MB |
+| json-server, từ lúc khởi động đến phản hồi đầu tiên | 79 đến 85 ms | **8 đến 10 ms** |
+| Tìm kiếm [Fuse.js](real-world.md#fusejs) trên 50,000 chuỗi, mỗi truy vấn | 91.2 ms | **2.8 ms: nhanh hơn 32x** |
 
-Các phép đo chạy trên 4 nhân. Mỗi benchmark trong [`../demo/`](../demo) đều kiểm tra kết quả trước khi đo. Gọi Rust riêng cho từng hàm nhỏ thường còn *chậm hơn* JIT; rust-anything tìm vòng lặp đáng chuyển rồi đưa vòng lặp đó sang Rust.
+Prettier: 15,837 trong 17,224 lần chạy đã ghi được định dạng hoàn toàn bằng Rust trên 10 ngôn ngữ (JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), và cả 17,224 lần đều khớp với Prettier đến từng byte, vì phần nào chưa port sẽ fallback về Prettier. json-server: 514/514 ca HTTP đã ghi khớp trên một binary Rust thuần. Đo trên Apple M4, mỗi phép đo chạy hai lần, mọi đầu ra đều được so sánh trước khi đo thời gian ([chi tiết](real-world.md)). Gọi Rust riêng cho từng hàm nhỏ thường còn *chậm hơn* JIT; rust-anything tìm vòng lặp đáng chuyển rồi đưa vòng lặp đó sang Rust.
+
+<p align="center">
+  <img src="assets/prettier.gif" alt="Prettier và bản port Rust định dạng cùng 59 file thực tế, mỗi file một tiến trình: Prettier mất 3.63 s, bản port Rust mất 0.20 s, đầu ra giống nhau đến từng byte." width="820">
+  <br>
+  <sub>Prettier so với bản port Rust trên 59 file thực tế lấy từ ms, Fuse.js và json-server (Apple M4). Đầu ra giống nhau đến từng byte. <a href="real-world.md#prettier">Cách đo</a>.</sub>
+</p>
+
+<p align="center">
+  <img src="assets/json-server.gif" alt="json-server dưới dạng Node server và dưới dạng một binary Rust: bộ nhớ khi rảnh 74 MB và 3.5 MB, từ khởi động đến phản hồi đầu tiên 79 đến 85 ms và 8 đến 10 ms, 514 trên 514 ca HTTP đã ghi đều khớp." width="820">
+  <br>
+  <sub>json-server, cả một Node server, được lift thành binary Rust thuần (Apple M4). <a href="real-world.md#json-server">Cách đo</a>.</sub>
+</p>
 
 > rust-anything là dự án độc lập, không liên kết với Rust Project hay Rust Foundation, cũng không được hai tổ chức này bảo trợ. "Rust" là nhãn hiệu của Rust Foundation.
 
@@ -89,7 +83,7 @@ Các phép đo chạy trên 4 nhân. Mỗi benchmark trong [`../demo/`](../demo)
 
 <h2 id="quick-start">Bắt đầu nhanh</h2>
 
-Dán đoạn này vào Claude Code, Codex, Cursor hoặc Gemini CLI để agent tự cài:
+Dán đoạn này vào Claude Code, Codex, Cursor, Gemini CLI hoặc OpenCode để agent tự cài:
 
 ```text
 Install rust-anything: run `cargo install rust-anything`, then `rust-anything setup`.
@@ -100,7 +94,7 @@ Hoặc tự tay cài:
 
 ```sh
 cargo install rust-anything   # from crates.io
-rust-anything setup           # registers it with Claude Code, Codex, Cursor và Gemini CLI
+rust-anything setup           # registers it with Claude Code, Codex, Cursor, Gemini CLI và OpenCode
 ```
 
 Chưa có bộ công cụ Rust? Tải binary dựng sẵn cho macOS, Linux hoặc Windows ở mục [GitHub release](https://github.com/erkamyaman/rust-anything/releases). Với project JavaScript, chạy `npm install -g rust-anything` để cài binary đó.
@@ -128,17 +122,24 @@ Sau đó, bạn có thể yêu cầu agent:
 | Codex | MCP server in `~/.codex/config.toml`, skill in `~/.codex/skills/` |
 | Cursor | MCP server in `~/.cursor/mcp.json` |
 | Gemini CLI | MCP server in `~/.gemini/settings.json` |
+| OpenCode | MCP server in `~/.config/opencode/opencode.json` (`mcp.servers`), skill in `~/.config/opencode/skills/` |
 | các MCP client khác | tự thêm `rust-anything mcp` làm stdio server (xem [Install](install.md#install)) |
 
 Trước khi sửa file có sẵn, `setup` lưu một bản sao cạnh file đó (`<file>.rust-anything.bak`).
 
-Hoặc tự chạy từng bước:
+Để tự cấu hình OpenCode, hãy đặt server vào `~/.config/opencode/opencode.json` (`command` là toàn bộ argv) và chép [`skills/rust-anything/`](../skills/rust-anything) vào `~/.config/opencode/skills/rust-anything/`:
 
-<p align="center">
-  <img src="assets/terminal.gif" alt="rust-anything profile tìm thấy fuzzyScore trong vòng lặp, bridge --batch tạo crate Rust, gate đạt 2000/2000 ca đã ghi và benchmark cho thấy nhanh hơn TypeScript 20,7 lần." width="820">
-  <br>
-  <sub>Thử với <code>fuzzyScore</code> của x18n: <code>profile</code> tìm vòng lặp nóng, <code>bridge --batch</code> tạo crate, <code>gate</code> kiểm tra các ca đã ghi, rồi benchmark so sánh với TypeScript.</sub>
-</p>
+```json
+{
+  "mcp": {
+    "servers": {
+      "rust-anything": { "type": "local", "command": ["rust-anything", "mcp"] }
+    }
+  }
+}
+```
+
+Hoặc tự chạy từng bước:
 
 ```sh
 rust-anything profile . -- node bench.mjs              # what is hot, and who calls it
@@ -150,7 +151,15 @@ rust-anything bench rust/fuzzy-rs                      # faster? the verdict say
 rust-anything gate rust/fuzzy-rs                       # done means this passes
 ```
 
-rust-anything không tự dịch code sang Rust. Bạn hoặc coding agent (Claude Code, Codex, Cursor...) sẽ viết phần Rust. Công cụ giúp tìm đoạn code tốn thời gian, chọn phần nên chuyển trước và sắp xếp thứ tự thực hiện. `bridge` tạo cầu nối để phần còn lại tiếp tục gọi code Rust qua API cũ. Bản ghi làm chuẩn để kiểm tra hành vi, còn `gate` cho biết khi nào bản port đã sẵn sàng phát hành.
+rust-anything không tự dịch code: bạn hoặc coding agent (Claude Code, Codex, Cursor, OpenCode, ...) sẽ viết phần Rust. rust-anything cung cấp những gì agent khó đoán chính xác: thời gian tiêu tốn ở đâu, nên chuyển phần nào trước và theo thứ tự nào, một cầu nối để phần code còn lại gọi Rust mà không phải đổi API, hành vi chính xác mà bản port phải khớp, một cách phát hành an toàn và một gate cho biết khi nào bản port hoàn tất.
+
+Đầu ra giống nhau là chưa đủ. Hãy ghi lại cả những gì ứng dụng gửi đi, và một bản viết lại gửi mail hai lần sẽ bị đánh trượt:
+
+<p align="center">
+  <img src="assets/effects.gif" alt="app record với --effects smtp ghi lại một email chào mừng cho mỗi lượt đăng ký; app replay trên một bản viết lại in ra cùng đầu ra nhưng gửi mail hai lần báo 0/2 ca đạt, trượt ở phần effects, và báo cáo hiển thị email bị gửi thừa." width="820">
+  <br>
+  <sub>Một lần chạy thật của <code>app record --effects</code> và <code>app replay</code>. Xem <a href="whole-apps.md#side-effects-email-webhooks-and-databases">Side effects</a>.</sub>
+</p>
 
 <h2 id="languages">Ngôn ngữ</h2>
 
@@ -162,20 +171,20 @@ rust-anything không tự dịch code sang Rust. Bạn hoặc coding agent (Clau
 | Go | package | lời gọi cgo có kiểu rõ ràng, dùng wire nhị phân do công cụ tạo; nằm trong package giữ nguyên API | Go driver do công cụ tạo, build thành module riêng |
 | Ruby | tệp hoặc thư mục chứa các module có function | extension magnus nằm trong các module gốc | Ruby driver do công cụ tạo |
 | Java | package chứa các hàm `public static` | JNI có kiểu rõ ràng, dùng wire nhị phân do công cụ tạo; wrapper class giữ nguyên method gốc | reflection driver do công cụ tạo |
-| PHP (preview) | thư mục chứa function và method `public static` | sắp tới: PHP FFI dựa trên C ABI | có thể chạy với cả ứng dụng ngay hôm nay: `app record`, `app replay` và front door cho CLI lẫn server (`php -S`) |
-| C# (preview) | thư mục chứa các method `public static` | sắp tới: P/Invoke dựa trên C ABI | có thể chạy với cả ứng dụng ngay hôm nay: `app record`, `app replay` và front door cho CLI lẫn server ASP.NET (`dotnet <app>.dll`) |
+| PHP | thư mục chứa function và method `public static` | sắp tới: PHP FFI dựa trên C ABI | có thể chạy với cả ứng dụng ngay hôm nay: `app record`, `app replay` và front door cho CLI lẫn server (`php -S`) |
+| C# | thư mục chứa các method `public static` | sắp tới: P/Invoke dựa trên C ABI | có thể chạy với cả ứng dụng ngay hôm nay: `app record`, `app replay` và front door cho CLI lẫn server ASP.NET (`dotnet <app>.dll`) |
 
-TypeScript/JavaScript, Python, Go, Ruby và Java hỗ trợ batch class (`--batch`); PHP và C# chưa được hỗ trợ. Dữ liệu chỉ qua cầu nối một lần rồi nằm trong Rust, mỗi lần gọi sẽ xử lý cả lô trên mọi core.
+Mọi ngôn ngữ trừ C đều có thêm batch class (`--batch`): dữ liệu chỉ qua cầu nối một lần rồi nằm trong Rust, mỗi lần gọi sẽ xử lý cả lô trên mọi core.
 
 Công cụ nhận diện ngôn ngữ qua repo dựa trên các file như `go.mod`, `pom.xml`, `.csproj`, `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json` hoặc phần mở rộng xuất hiện nhiều nhất. Muốn chỉ định ngôn ngữ, dùng `--lang`. Kiểu dữ liệu được đọc từ source: type của TypeScript, type hint của Python, chữ ký hàm của C, Go, Java và C#, YARD tag của Ruby, type và phpdoc của PHP. Tham số không khai báo kiểu nhưng được dùng như số sẽ được suy luận là kiểu số.
 
-PHP hiện ở trạng thái preview. `analyze` lập kế hoạch chuyển app PHP, gồm package Composer, PSR-4 autoloading và các rủi ro như so sánh lỏng lẻo, tràn số nguyên thành float hay ánh xạ package Composer sang crate. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI hoặc server PHP. Bước tiếp theo là chuyển từng unit sang Rust qua PHP FFI ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
+Với PHP, `analyze` lập kế hoạch chuyển app PHP, gồm package Composer và PSR-4 autoloading, các rủi ro như so sánh lỏng lẻo hay tràn số nguyên thành float, và ánh xạ package Composer sang crate. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI hoặc server PHP. Bước tiếp theo là chuyển từng unit sang Rust qua PHP FFI ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
 
-C# cũng đang ở trạng thái preview. `analyze` đọc project `.csproj` và package NuGet, ánh xạ package sang crate, phân giải `using` thành thư mục rồi cảnh báo về các điểm riêng của C# như `decimal`, `dynamic`, deferred query của LINQ, `Task`, `lock` và reflection. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI C# hoặc server ASP.NET. Tiếp theo là chuyển các unit qua P/Invoke.
+C# cũng hoạt động theo cách tương tự. `analyze` đọc project `.csproj` và package NuGet, ánh xạ package sang crate, phân giải `using` thành thư mục rồi cảnh báo về các điểm riêng của C# như `decimal`, `dynamic`, deferred query của LINQ, `Task`, `lock` và reflection. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI C# hoặc server ASP.NET. Tiếp theo là chuyển các unit qua P/Invoke.
 
 <h2 id="learn-more">Đọc thêm</h2>
 
-- [Cách hoạt động](how-it-works.md): quy trình, cách `bridge` và `analyze` đưa ra quyết định, hot path và những gì công cụ không kiểm tra được
+- [Cách hoạt động](how-it-works.md): quy trình, cách `bridge` và `analyze` đưa ra quyết định, hot path, những gì công cụ không kiểm tra được, một bản port thực sự cần những gì, và cách theo kịp bản gốc (`map`)
 - [Chuyển cả ứng dụng](whole-apps.md): chuyển server, CLI và thư viện từ front door đến `app lift`
 - [Ví dụ và tình huống thực tế](examples.md): x18n và code thực tế bằng sáu ngôn ngữ
 - [Các bản port thực tế](real-world.md): json-server, Fuse.js, vercel/ms và benchmark

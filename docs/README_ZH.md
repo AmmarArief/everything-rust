@@ -4,47 +4,33 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center">作者：<a href="https://github.com/erkamyaman">erKam Yaman</a></p>
+<p align="center"><b>用 Rust 重写你的应用，并证明它的行为依然完全一致。</b></p>
 
-<p align="center"><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · 简体中文 · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></p>
-
-<p align="center"><sub>本译文由社区维护，可能落后于<a href="../README.md">英文 README</a>。</sub></p>
-
-<p align="center"><em>用 Rust 重写你的整个应用，并在每一步都保持正常运行。</em></p>
-
-<p align="center"><em>无论是命令行工具（CLI）、服务端还是库，都能逐块迁移，每一步都与原实现严格比对校验。</em></p>
-
-<p align="center">Node.js 与 TypeScript · Python · C · Go · Ruby · Java · PHP 与 C# 处于预览阶段</p>
+<p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次录制运行 · 0 差异</p>
 
 <p align="center">
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io 版本"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm 版本"></a>
-  <img src="https://img.shields.io/badge/languages-8-E2862A" alt="6 种语言，另有 2 种处于预览阶段">
-  <a href="#适配工具"><img src="https://img.shields.io/badge/works%20with-4%20agents-E2862A" alt="适配 4 种智能体"></a>
   <a href="https://github.com/erkamyaman/rust-anything/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/erkamyaman/rust-anything/ci.yml?branch=main&label=tests" alt="测试"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-E2862A" alt="MIT 许可证"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
   <a href="#快速开始">快速开始</a> ·
   <a href="#支持语言">支持语言</a> ·
+  <a href="real-world.md">真实项目迁移</a> ·
   <a href="how-it-works.md#how-it-works">工作原理</a> ·
-  <a href="how-it-works.md#the-loop">核心闭环</a> ·
-  <a href="whole-apps.md#port-a-whole-app">迁移整个应用</a> ·
-  <a href="how-it-works.md#hot-paths-keep-the-data-in-rust">热点路径</a> ·
-  <a href="install.md#install">安装</a> ·
-  <a href="how-it-works.md#what-it-cant-catch">它捕获不到什么</a> ·
+  <a href="whole-apps.md#port-a-whole-app">整应用迁移</a> ·
   <a href="faq.md#faq">常见问题</a>
 </p>
 
-<p align="center">最高提速 20 倍 · 回放 38,251 条录制用例 · 0 差异 · 一条命令搞定</p>
+<p align="center">由 <a href="https://github.com/erkamyaman">erKam Yaman</a> 在土耳其 🇹🇷 打造 · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ 赞助我</a></p>
 
-<p align="center">
-  <img src="assets/race.gif" alt="在 x18n 的 50,000 个键中搜索 user.profile：TypeScript 耗时 143 ms，rust-anything 批处理仅耗时 6.9 ms，且每次击键的结果完全一致。" width="820">
-  <br>
-  <sub>在 x18n 的 50,000 个键中输入查询：TypeScript 原实现对比 rust-anything 批处理，每次击键的结果完全一致。</sub>
-</p>
+<p align="center">赞助商：<a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
+
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · 简体中文 · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+
+<p align="center"><sub>本译文由社区维护，可能落后于<a href="../README.md">英文 README</a>。</sub></p>
 
 <table>
   <tr>
@@ -67,18 +53,29 @@
   </tr>
 </table>
 
-**逐块将你的整个应用重写为 Rust。** rust-anything 会先录制你现有的 Node.js（TypeScript/JavaScript）、Python、C、Go、Ruby 或 Java 应用的行为，然后每重写一块 Rust 代码就对照录制结果进行校验，合格后再继续推进，直到整个应用变成纯 Rust。无论是 CLI、HTTP 服务端还是程序库都能适用，由你的编程智能体（或你本人）来编写 Rust 代码。它只能捕获录制用例覆盖到的行为，详见[它捕获不到什么](how-it-works.md#what-it-cant-catch)。如果只想加速慢的部分，也可以只针对热点路径逐个迁移：
+**逐块将你的整个应用重写为 Rust。** rust-anything 会先录制你现有的 Node.js（TypeScript/JavaScript）、Python、C、Go、Ruby 或 Java 应用的行为，然后每重写一块 Rust 代码就对照录制结果进行校验，合格后再继续推进，直到整个应用变成纯 Rust。无论是 CLI、HTTP 服务端还是程序库都能适用，由你的编程智能体（或你本人）来编写 Rust 代码。它只能捕获录制用例覆盖到的行为，详见[它捕获不到什么](how-it-works.md#what-it-cant-catch)。既可以迁移整个工具和服务端，也可以只迁移慢的部分，一次一条热点路径：
 
-| 真实工作负载（结果与原实现完全一致） | 原实现 | 使用 rust-anything |
+| 真实项目（输出与原实现完全一致） | 原实现 | 使用 rust-anything |
 | --- | ---: | ---: |
-| x18n 侧边栏搜索，50,000 个键（TypeScript，Node） | 每次查询 10 ms | **0.5 ms：提速 20 倍** |
-| 浏览器端同一搜索（wasm，单线程） | 10 ms | **0.95 ms：提速 11.5 倍** |
-| 20,000 个字符串的 `slugify`（Python） | 98 ms | **提速 17 倍** |
-| Ruby 标准库 `Shellwords.shellescape`，50,000 个值 | 88 ms | **提速 11.8 倍** |
-| 50,000 个字符串的 `Slugify`（Go） | 49 ms | **提速 4 倍** |
-| 50,000 个字符串的 `slugify`（Java） | 43 ms | **提速 3 倍** |
+| [Prettier](real-world.md#prettier) 3.6.2，命令行格式化 2,360 个 JS/TS 文件 | 128.6 s | **6.9 s：提速 19 倍** |
+| Prettier，命令行格式化 6,305 个 Markdown 文件 | 352 s | **22.5 s：提速 15.6 倍** |
+| [json-server](real-world.md#json-server)，完整的 Node 服务端：空闲内存占用 | 74 MB | **3.5 MB**，单个 5.3 MB 二进制文件 |
+| json-server，从启动到首次响应 | 79 至 85 ms | **8 至 10 ms** |
+| [Fuse.js](real-world.md#fusejs) 在 50,000 个字符串中搜索，每次查询 | 91.2 ms | **2.8 ms：提速 32 倍** |
 
-以上数据均在 4 核环境下测得；每一项数字在 [`demo/`](../demo) 中都有对应的基准测试，并且都会先校验结果完全一致。逐个小函数调用 Rust 通常比 JIT 更*慢*；rust-anything 会找出真正值得迁移的循环，再把整个循环搬过去。
+Prettier：在 17,224 次录制运行中，有 15,837 次完全由 Rust 完成格式化，覆盖 10 种语言（JavaScript、TypeScript、JSX、JSON、GraphQL、YAML、Markdown、CSS、SCSS、Less），并且全部 17,224 次都与 Prettier 逐字节一致，因为尚未移植的部分会回退到 Prettier。json-server：514/514 条录制的 HTTP 用例在纯 Rust 二进制文件上全部一致。以上数据在 Apple M4 上测得，每项运行两次，计时前先比对每一份输出（[详情](real-world.md)）。逐个小函数调用 Rust 通常比 JIT 更*慢*；rust-anything 会找出真正值得迁移的循环，再把整个循环搬过去。
+
+<p align="center">
+  <img src="assets/prettier.gif" alt="Prettier 与其 Rust 移植版格式化同样的 59 个真实文件，每个文件一个进程：Prettier 耗时 3.63 s，Rust 移植版 0.20 s，输出逐字节一致。" width="820">
+  <br>
+  <sub>在来自 ms、Fuse.js 和 json-server 的 59 个真实文件上，Prettier 对比其 Rust 移植版（Apple M4）。输出逐字节一致。<a href="real-world.md#prettier">测量方法</a>。</sub>
+</p>
+
+<p align="center">
+  <img src="assets/json-server.gif" alt="json-server 作为 Node 服务端与作为单个 Rust 二进制文件对比：空闲内存 74 MB 与 3.5 MB，从启动到首次响应 79 至 85 ms 与 8 至 10 ms，514 条录制的 HTTP 用例全部一致。" width="820">
+  <br>
+  <sub>json-server，一个完整的 Node 服务端，被整体迁移为纯 Rust 二进制文件（Apple M4）。<a href="real-world.md#json-server">测量方法</a>。</sub>
+</p>
 
 > rust-anything 是一个独立项目，与 Rust Project 或 Rust Foundation 没有任何关联或背书关系。“Rust” 是 Rust Foundation 的商标。
 
@@ -87,7 +84,7 @@
 
 ## 快速开始
 
-将下面这段话粘贴给 Claude Code、Codex、Cursor 或 Gemini CLI，让你的智能体自动完成安装：
+将下面这段话粘贴给 Claude Code、Codex、Cursor、Gemini CLI 或 OpenCode，让你的智能体自动完成安装：
 
 ```text
 安装 rust-anything：先运行 `cargo install rust-anything`，再运行 `rust-anything setup`。
@@ -98,7 +95,7 @@
 
 ```sh
 cargo install rust-anything   # 从 crates.io 安装
-rust-anything setup           # 自动注册到 Claude Code、Codex、Cursor 和 Gemini CLI
+rust-anything setup           # 自动注册到 Claude Code、Codex、Cursor、Gemini CLI 和 OpenCode
 ```
 
 还没有安装 Rust 工具链？每个 [GitHub release](https://github.com/erkamyaman/rust-anything/releases) 都附带了 macOS、Linux 和 Windows 的预编译二进制文件；对于 JavaScript 项目，也可以直接运行 `npm install -g rust-anything` 安装相同的二进制文件。
@@ -124,17 +121,24 @@ rust-anything setup           # 自动注册到 Claude Code、Codex、Cursor 和
 | Codex | `~/.codex/config.toml` 中的 MCP 服务器、`~/.codex/skills/` 中的技能 |
 | Cursor | `~/.cursor/mcp.json` 中的 MCP 服务器 |
 | Gemini CLI | `~/.gemini/settings.json` 中的 MCP 服务器 |
+| OpenCode | `~/.config/opencode/opencode.json` 中的 MCP 服务器（`mcp.servers`）、`~/.config/opencode/skills/` 中的技能 |
 | 其他任意 MCP 客户端 | 手动将 `rust-anything mcp` 添加为 stdio 服务器（见[安装](install.md#install)） |
 
 修改任何已有配置文件前，`setup` 都会在同目录下保存一份备份（`<file>.rust-anything.bak`）。
 
-你也可以手动执行每一步：
+如需手动接入 OpenCode，将服务器写入 `~/.config/opencode/opencode.json`（`command` 是完整的 argv），并把 [`skills/rust-anything/`](../skills/rust-anything) 复制到 `~/.config/opencode/skills/rust-anything/`：
 
-<p align="center">
-  <img src="assets/terminal.gif" alt="rust-anything profile 定位到循环中的 fuzzyScore，bridge --batch 生成 Rust crate，gate 通过全部 2000/2000 条录制用例，基准测试显示比 TS 快 20.7 倍。" width="820">
-  <br>
-  <sub>以 x18n 的 <code>fuzzyScore</code> 为例：<code>profile</code> 找到热点循环，<code>bridge --batch</code> 生成 crate，<code>gate</code> 通过，基准测试再将其与 TypeScript 版本做对比。</sub>
-</p>
+```json
+{
+  "mcp": {
+    "servers": {
+      "rust-anything": { "type": "local", "command": ["rust-anything", "mcp"] }
+    }
+  }
+}
+```
+
+你也可以手动执行每一步：
 
 ```sh
 rust-anything profile . -- node bench.mjs              # 找出热点函数及其调用方
@@ -146,7 +150,15 @@ rust-anything bench rust/fuzzy-rs                      # 是否更快？由基�
 rust-anything gate rust/fuzzy-rs                       # 通过该门禁才算完成
 ```
 
-rust-anything 并不负责自动翻译代码：具体 Rust 代码由你的编程智能体（Claude Code、Codex、Cursor 等）或你本人编写。rust-anything 提供的是智能体难以靠猜测稳妥获得的东西：时间花在哪里、先迁移什么以及按什么顺序迁移、让其余代码无需改动 API 就能调用 Rust 的桥接层、移植代码必须匹配的精确行为、安全的上线方式，以及判断迁移是否达标的门禁。
+rust-anything 并不负责自动翻译代码：具体 Rust 代码由你的编程智能体（Claude Code、Codex、Cursor、OpenCode 等）或你本人编写。rust-anything 提供的是智能体难以靠猜测稳妥获得的东西：时间花在哪里、先迁移什么以及按什么顺序迁移、让其余代码无需改动 API 就能调用 Rust 的桥接层、移植代码必须匹配的精确行为、安全的上线方式，以及判断迁移是否达标的门禁。
+
+仅输出一致还不够。把应用对外发送的内容也录制下来，这样发了两次邮件的重写版本就会被判定失败：
+
+<p align="center">
+  <img src="assets/effects.gif" alt="带 --effects smtp 的 app record 为每次注册录制一封欢迎邮件；对一个输出相同但发送了两次邮件的重写版本运行 app replay，报告 0/2 条用例通过，失败原因是副作用不一致，报告中列出了多发的那封邮件。" width="820">
+  <br>
+  <sub><code>app record --effects</code> 与 <code>app replay</code> 的一次真实运行。参见<a href="whole-apps.md#side-effects-email-webhooks-and-databases">副作用</a>。</sub>
+</p>
 
 ## 支持语言
 
@@ -158,20 +170,20 @@ rust-anything 并不负责自动翻译代码：具体 Rust 代码由你的编程
 | Go | 包（package） | 类型化 cgo 调用与生成的二进制传输协议，封装为保持原 API 的包 | 生成独立的 Go 驱动模块进行构建运行 |
 | Ruby | 包含模块函数的文件或文件夹 | 挂载在原模块名下的 magnus 扩展 | 生成的 Ruby 驱动 |
 | Java | 包含 `public static` 方法的包 | 类型化 JNI 与生成的二进制传输协议，封装为保持原方法的包装类 | 生成的反射驱动 |
-| PHP（预览） | 包含函数和 `public static` 方法的文件夹 | 下一步规划：基于 C ABI 的 PHP FFI | 现已支持整应用级工作流：`app record`、`app replay` 和前门代理，适用于 CLI 与服务端（`php -S`） |
-| C#（预览） | 包含 `public static` 方法的文件夹 | 下一步规划：基于 C ABI 的 P/Invoke | 现已支持整应用级工作流：`app record`、`app replay` 和前门代理，适用于 CLI 与 ASP.NET 服务端（`dotnet <app>.dll`） |
+| PHP | 包含函数和 `public static` 方法的文件夹 | 下一步规划：基于 C ABI 的 PHP FFI | 现已支持整应用级工作流：`app record`、`app replay` 和前门代理，适用于 CLI 与服务端（`php -S`） |
+| C# | 包含 `public static` 方法的文件夹 | 下一步规划：基于 C ABI 的 P/Invoke | 现已支持整应用级工作流：`app record`、`app replay` 和前门代理，适用于 CLI 与 ASP.NET 服务端（`dotnet <app>.dll`） |
 
 除 C 语言外，每种语言都支持生成批处理类（`--batch`）：数据只需跨边界传入一次并常驻 Rust 侧，每次调用即可在全部 CPU 核心上并行处理所有条目。
 
 语言会根据代码库自动检测（依次检查 `go.mod`、`pom.xml`、`.csproj` 或 `.sln`、`pyproject.toml`、`Gemfile`、`composer.json`、`package.json`，否则统计最常见的源码文件）；也可以通过 `--lang` 手动指定。类型信息直接从源码提取：TS 类型、Python 类型注解、C/Go/Java/C# 函数签名、Ruby YARD 标签、PHP 类型与 phpdoc；对于未标注类型但按数值使用的参数，会自动推断为数值类型。
 
-PHP 目前处于预览阶段：`analyze` 可为 PHP 应用生成迁移规划（支持 Composer 包与 PSR-4 自动加载、识别松散比较和整数溢出转浮点等风险、将 Composer 包映射为 Rust crate），并且支持对 PHP CLI 或服务端进行录制、回放与 Rust 前门接管。通过 PHP FFI 将单元逐个迁入 Rust 是下一步计划（[issue #2](https://github.com/erkamyaman/rust-anything/issues/2)）。
+对于 PHP，`analyze` 可为 PHP 应用生成迁移规划（支持 Composer 包与 PSR-4 自动加载、识别松散比较和整数溢出转浮点等风险、将 Composer 包映射为 Rust crate），并且支持对 PHP CLI 或服务端进行录制、回放与 Rust 前门接管。通过 PHP FFI 将单元逐个迁入 Rust 是下一步计划（[issue #2](https://github.com/erkamyaman/rust-anything/issues/2)）。
 
-C# 同样处于预览阶段：`analyze` 会读取 `.csproj` 工程及其 NuGet 包（映射为 crate），将 `using` 指令解析到对应目录，并标记 C# 特有的语义差异（`decimal`、`dynamic`、LINQ 延迟查询、`Task`、`lock`、反射）。现已支持对 C# CLI 或 ASP.NET 服务端进行录制、回放与 Rust 前门接管；通过 P/Invoke 迁移单个单元将在后续支持。
+C# 的支持方式相同：`analyze` 会读取 `.csproj` 工程及其 NuGet 包（映射为 crate），将 `using` 指令解析到对应目录，并标记 C# 特有的语义差异（`decimal`、`dynamic`、LINQ 延迟查询、`Task`、`lock`、反射）。现已支持对 C# CLI 或 ASP.NET 服务端进行录制、回放与 Rust 前门接管；通过 P/Invoke 迁移单个单元将在后续支持。
 
 ## 了解更多
 
-- [工作原理](how-it-works.md)：核心闭环、`bridge` 和 `analyze` 如何做决定、热点路径，以及它捕获不到什么
+- [工作原理](how-it-works.md)：核心闭环、`bridge` 和 `analyze` 如何做决定、热点路径、它捕获不到什么、一次真实迁移需要做哪些工作，以及如何跟进原项目的更新（`map`）
 - [迁移整个应用](whole-apps.md)：服务端、CLI 和程序库，从前门到 `app lift`
 - [示例与案例研究](examples.md)：x18n，以及六种语言的真实代码
 - [真实项目迁移](real-world.md)：json-server、Fuse.js、vercel/ms，附基准测试
