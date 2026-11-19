@@ -143,6 +143,15 @@ supports from API 26), but the runtime also uses `java.util.Optional` and `java.
 Link with `-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384` for 64-bit ABIs, or Play
 rejects the library on 16 KB devices.
 
+**ART is not a desktop JVM, even when the bytecode is Java 8.** The generated driver uses
+`Paths.get`, not `Path.of`, and reads/writes files with `Files.readAllBytes`/`Files.write`, not
+Java 11's `Files.readString`/`writeString`: those methods throw `NoSuchMethodError` on Android even
+at API 30. The driver is dexed with `d8 --min-api 26` and started with `app_process`.
+
+**On-device recording needs Android SDK build-tools.** `d8` and a platform's `android.jar` come
+from the SDK, which can live somewhere other than `ANDROID_HOME` (the variable often points at an
+old SDK); the device scratch directory under `/data/local/tmp` is removed after every run.
+
 **NDK discovery must ignore half-installed NDKs.** `--ndk` wins, then `ANDROID_NDK_HOME` /
 `ANDROID_NDK_ROOT`, then the newest *complete* NDK under `ANDROID_HOME` / `ANDROID_SDK_ROOT`, then
 the usual `~/Android/Sdk`, `~/Library/Android/sdk` and `~/Documents/Android/Sdk`. Completeness

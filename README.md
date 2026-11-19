@@ -217,7 +217,14 @@ Rust targets (`rustup target add aarch64-linux-android armv7-linux-androideabi
 x86_64-linux-android`), links 64-bit libraries with 16 KB page alignment, and checks that every
 JNI entry point is exported. Gradle looks in `src/main/jniLibs` by default, so pass
 `--jni-libs app/src/main/jniLibs` or add `<crate>/jniLibs` to `sourceSets.main.jniLibs.srcDirs`.
-Recording and diffing still run on a desktop JVM; on-device recording is not implemented.
+`rust-anything record <crate> --profile android` runs the original Kotlin unit under ART on a
+connected device (adb), dexes the generated driver with `d8` from the SDK's build-tools, and pulls
+the results back as the same `cases.jsonl`; `diff <crate> --profile android` replays them against
+the `.so` built for the device's ABI. Both need `adb`, a device, `kotlinc`, an SDK with build-tools
+and a platform, and `--device <serial>` when more than one device is connected. The profile covers
+logic units: Activity/Compose/XML UI, lifecycle and SDK-only classes stay in Kotlin, and each call
+crosses JNI, so prefer the generated batch wrappers for hot loops. On a host, `record` and `diff`
+keep using the desktop JVM.
 
 For PHP, `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
 such as loose comparison and integer overflow into floats, Composer packages mapped to crates),

@@ -304,7 +304,7 @@ fn newest_ndk(dir: PathBuf) -> Option<PathBuf> {
     found.pop().map(|(_, p)| p)
 }
 
-fn sdk_folders() -> Vec<PathBuf> {
+pub(crate) fn sdk_folders() -> Vec<PathBuf> {
     let mut out = Vec::new();
     if let Some(home) = std::env::var_os("HOME") {
         let home = PathBuf::from(home);

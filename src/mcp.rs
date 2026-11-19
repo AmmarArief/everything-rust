@@ -439,6 +439,8 @@ fn tool_schemas() -> Value {
                 "float_tolerance": { "type": "number", "description": "Numeric code: floats match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the crate for diff and gate; 0 removes it." },
                 "node_args": { "type": "array", "items": { "type": "string" }, "description": "Extra arguments for node, e.g. [\"--import=tsx\"]." },
                 "test_command": { "type": "array", "items": { "type": "string" }, "description": "TS/JS or Python: also record every call the original's own test suite makes to the unit's functions, e.g. [\"npx\", \"jest\"] or [\"pytest\"]. Runs in the original's folder." },
+                "profile": { "type": "string", "enum": ["host", "android"], "description": "Record on this machine (default) or on a connected Android device (JVM crates)." },
+                "device": { "type": "string", "description": "Android device serial; picked automatically when only one is connected." },
             }, "required": ["crate"] },
         },
         {
@@ -455,9 +457,11 @@ fn tool_schemas() -> Value {
         },
         {
             "name": "diff",
-            "description": "Replay cases.jsonl against the built Rust module and list mismatches.",
+            "description": "Replay cases.jsonl against the built Rust module and list mismatches. With `profile: \"android\"`, replay on the device against the .so built for its ABI.",
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
+                "profile": { "type": "string", "enum": ["host", "android"], "description": "Diff on this machine (default) or on a connected Android device (JVM crates)." },
+                "device": { "type": "string", "description": "Android device serial; picked automatically when only one is connected." },
                 "ignore_key_order": { "type": "boolean" },
                 "module": { "type": "string", "description": "Test this JS module instead of the crate's `index.cjs`." },
                 "node_args": { "type": "array", "items": { "type": "string" }, "description": "Extra arguments for node, e.g. [\"--import=tsx\"]." },
@@ -643,7 +647,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 manifest.float_tolerance = (crate::tolerance::check(t)? > 0.0).then_some(t);
                 manifest.save(&crate_dir)?;
             }
-            let mut out = serde_json::to_value(harness::record(&harness::RecordOptions {
+            let opts = harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count: args["count"]
                     .as_u64()
@@ -652,7 +656,13 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 module: module.as_deref(),
                 resolve_from: resolve_from.as_deref(),
                 node_args: &strings("node_args"),
-            })?)?;
+            };
+            let device = args["device"].as_str();
+            let mut out = serde_json::to_value(match args["profile"].as_str().unwrap_or("host") {
+                "host" => harness::record(&opts)?,
+                "android" => harness::record_android(&opts, device)?,
+                other => anyhow::bail!("unknown record profile `{other}`: use host or android"),
+            })?;
             if let Some(c) = captured {
                 out["from_tests"] = c;
             }
@@ -706,13 +716,18 @@ fn call(name: &str, args: &Value) -> Result<Value> {
         "diff" => {
             let crate_dir = path("crate")?;
             let module = opt_path("module");
-            serde_json::to_value(harness::diff(&harness::DiffOptions {
+            let opts = harness::DiffOptions {
                 crate_dir: &crate_dir,
                 module: module.as_deref(),
                 ignore_key_order: args["ignore_key_order"].as_bool().unwrap_or(false),
                 node_args: &strings("node_args"),
                 float_tolerance: args["float_tolerance"].as_f64(),
-            })?)?
+            };
+            serde_json::to_value(match args["profile"].as_str().unwrap_or("host") {
+                "host" => harness::diff(&opts)?,
+                "android" => harness::diff_android(&opts, args["device"].as_str())?,
+                other => anyhow::bail!("unknown diff profile `{other}`: use host or android"),
+            })?
         }
         "bench" => {
             let crate_dir = path("crate")?;

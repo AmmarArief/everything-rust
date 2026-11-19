@@ -39,7 +39,7 @@ enum KindArg {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
-enum BuildProfile {
+enum Profile {
     /// Build for this machine.
     Host,
     /// Build the JNI library for Android ABIs, into `jniLibs/`.
@@ -137,6 +137,12 @@ enum Cmd {
         /// The test command for `--from-tests`, after `--`; it runs in the original's folder.
         #[arg(last = true)]
         test_command: Vec<String>,
+        /// Target: this machine, or a connected Android device (for JVM crates).
+        #[arg(long, value_enum, default_value_t = Profile::Host)]
+        profile: Profile,
+        /// Android device serial; picked automatically when only one is connected.
+        #[arg(long)]
+        device: Option<String>,
     },
     /// 3b. Build the crate's JS module (napi-rs `.node`, wasm-bindgen output) or, with
     /// `--profile android`, the JNI library for Android ABIs into `jniLibs/`.
@@ -144,8 +150,8 @@ enum Cmd {
         #[arg(default_value = ".")]
         crate_dir: PathBuf,
         /// Target: this machine, or Android (needs the NDK and the Rust Android targets).
-        #[arg(long, value_enum, default_value_t = BuildProfile::Host)]
-        profile: BuildProfile,
+        #[arg(long, value_enum, default_value_t = Profile::Host)]
+        profile: Profile,
         /// Android ABI to build; repeatable. Defaults to arm64-v8a, armeabi-v7a and x86_64.
         #[arg(long)]
         abi: Vec<String>,
@@ -163,6 +169,12 @@ enum Cmd {
     Diff {
         #[arg(default_value = ".")]
         crate_dir: PathBuf,
+        /// Target: this machine, or a connected Android device (for JVM crates).
+        #[arg(long, value_enum, default_value_t = Profile::Host)]
+        profile: Profile,
+        /// Android device serial; picked automatically when only one is connected.
+        #[arg(long)]
+        device: Option<String>,
         /// Test this JS module instead of the crate's `index.cjs`.
         #[arg(long)]
         module: Option<PathBuf>,
@@ -540,6 +552,8 @@ fn run() -> Result<ExitCode> {
             float_tolerance,
             from_tests,
             test_command,
+            profile,
+            device,
         } => {
             anyhow::ensure!(
                 from_tests || test_command.is_empty(),
@@ -575,14 +589,23 @@ fn run() -> Result<ExitCode> {
                 manifest.float_tolerance = (rust_anything::tolerance::check(t)? > 0.0).then_some(t);
                 manifest.save(&crate_dir)?;
             }
-            let outcome = harness::record(&harness::RecordOptions {
+            let opts = harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count,
                 inputs: inputs.as_deref(),
                 module: module.as_deref(),
                 resolve_from: resolve_from.as_deref(),
                 node_args: &node_args,
-            })?;
+            };
+            let outcome = match profile {
+                Profile::Host => {
+                    if device.is_some() {
+                        anyhow::bail!("`--device` needs `--profile android`");
+                    }
+                    harness::record(&opts)?
+                }
+                Profile::Android => harness::record_android(&opts, device.as_deref())?,
+            };
             say!(
                 "Recorded {} cases ({} threw) in {}",
                 outcome.cases,
@@ -637,7 +660,7 @@ fn run() -> Result<ExitCode> {
             ndk,
             jni_libs,
         } => match profile {
-            BuildProfile::Host => {
+            Profile::Host => {
                 if !abi.is_empty() || api.is_some() || jni_libs.is_some() || ndk.is_some() {
                     anyhow::bail!(
                         "`--abi`, `--api`, `--ndk` and `--jni-libs` need `--profile android`"
@@ -645,7 +668,7 @@ fn run() -> Result<ExitCode> {
                 }
                 say!("Built {}", harness::build(&crate_dir)?.display());
             }
-            BuildProfile::Android => {
+            Profile::Android => {
                 let report = harness::build_android(
                     &crate_dir,
                     &rust_anything::android::Options {
@@ -667,19 +690,30 @@ fn run() -> Result<ExitCode> {
         },
         Cmd::Diff {
             crate_dir,
+            profile,
+            device,
             module,
             ignore_key_order,
             float_tolerance,
             json,
             node_args,
         } => {
-            let d = harness::diff(&harness::DiffOptions {
+            let opts = harness::DiffOptions {
                 crate_dir: &crate_dir,
                 module: module.as_deref(),
                 ignore_key_order,
                 node_args: &node_args,
                 float_tolerance,
-            })?;
+            };
+            let d = match profile {
+                Profile::Host => {
+                    if device.is_some() {
+                        anyhow::bail!("`--device` needs `--profile android`");
+                    }
+                    harness::diff(&opts)?
+                }
+                Profile::Android => harness::diff_android(&opts, device.as_deref())?,
+            };
             let stale = rust_anything::bridge::Manifest::load(&crate_dir)
                 .ok()
                 .and_then(|m| rust_anything::recording::stale(&crate_dir, &m));

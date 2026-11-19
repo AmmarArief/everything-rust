@@ -42,12 +42,16 @@ fn run(cmd: &mut Command, what: &str) -> Result<()> {
 }
 
 fn java_files(dir: &Path) -> Vec<PathBuf> {
+    files_with_ext(dir, "java")
+}
+
+fn files_with_ext(dir: &Path, ext: &str) -> Vec<PathBuf> {
     crate::walk::builder(dir)
         .require_git(false)
         .build()
         .flatten()
         .map(|e| e.into_path())
-        .filter(|p| p.extension().is_some_and(|e| e == "java"))
+        .filter(|p| p.extension().is_some_and(|e| e == ext))
         .collect()
 }
 
@@ -144,6 +148,17 @@ fn compile(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Classpath> {
         classes,
         original_jar,
     })
+}
+
+/// Java class files for a dexed on-device run: the support driver plus either the original
+/// Kotlin fat jar (`rust: false`) or the generated JNI wrappers (`rust: true`).
+pub(crate) fn android_classes(crate_dir: &Path, m: &Manifest, rust: bool) -> Result<Vec<PathBuf>> {
+    let cp = compile(crate_dir, m, rust)?;
+    let mut files = files_with_ext(&cp.classes, "class");
+    if let Some(jar) = cp.original_jar {
+        files.push(jar);
+    }
+    Ok(files)
 }
 
 fn driver_command(

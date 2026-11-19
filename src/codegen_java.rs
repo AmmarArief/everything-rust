@@ -598,6 +598,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -607,11 +608,25 @@ import java.util.Map;
 public final class RustAnythingDriver {
     private RustAnythingDriver() {}
 
+    // ART has java.nio.file from API 26 but not Java 11's Files.readString/writeString.
+    private static String read(Path p) throws Exception {
+        return new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
+    }
+
+    private static void write(Path p, String text) throws Exception {
+        Files.write(p, text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void append(Path p, String text) throws Exception {
+        Files.write(p, text.getBytes(StandardCharsets.UTF_8),
+            java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+    }
+
     private static final Map<String, Method> METHODS = new LinkedHashMap<>();
 
     @SuppressWarnings("unchecked")
     private static void load(String targetsPath) throws Exception {
-        Map<String, Object> targets = (Map<String, Object>) RustAnythingJson.parse(Files.readString(Path.of(targetsPath)));
+        Map<String, Object> targets = (Map<String, Object>) RustAnythingJson.parse(read(Paths.get(targetsPath)));
         for (Map.Entry<String, Object> e : targets.entrySet()) {
             List<Object> t = (List<Object>) e.getValue();
             try {
@@ -671,7 +686,7 @@ public final class RustAnythingDriver {
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> lines(String path) throws Exception {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (String line : Files.readAllLines(Path.of(path), StandardCharsets.UTF_8)) {
+        for (String line : Files.readAllLines(Paths.get(path), StandardCharsets.UTF_8)) {
             if (!line.isBlank()) {
                 out.add((Map<String, Object>) RustAnythingJson.parse(line));
             }
@@ -695,15 +710,14 @@ public final class RustAnythingDriver {
         String mode = argv[0];
         load(argv[1]);
         String casesPath = argv[2];
-        Path outPath = Path.of(argv[3]);
+        Path outPath = Paths.get(argv[3]);
         if (mode.equals("record")) {
-            List<Object> cases = (List<Object>) RustAnythingJson.parse(Files.readString(Path.of(casesPath)));
+            List<Object> cases = (List<Object>) RustAnythingJson.parse(read(Paths.get(casesPath)));
             String progress = System.getenv("RUST_ANYTHING_PROGRESS");
             try (BufferedWriter w = Files.newBufferedWriter(outPath, StandardCharsets.UTF_8)) {
                 for (int index = 0; index < cases.size(); index++) {
                     if (progress != null) {
-                        Files.writeString(Path.of(progress), index + "\n", StandardCharsets.UTF_8,
-                            java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+                        append(Paths.get(progress), index + "\n");
                     }
                     Map<String, Object> c = (Map<String, Object>) cases.get(index);
                     Map<String, Object> result = call(c);
@@ -757,7 +771,7 @@ public final class RustAnythingDriver {
             summary.put("failed", failed);
             summary.put("missing", missing);
             summary.put("mismatches", mismatches);
-            Files.writeString(outPath, RustAnythingJson.write(summary));
+            write(outPath, RustAnythingJson.write(summary));
         } else if (mode.equals("bench")) {
             long minMs = Long.parseLong(argv[4]);
             Map<String, List<Map<String, Object>>> groups = new LinkedHashMap<>();
@@ -822,7 +836,7 @@ public final class RustAnythingDriver {
                     }
                 }
             }
-            Files.writeString(outPath, RustAnythingJson.write(result));
+            write(outPath, RustAnythingJson.write(result));
         }
     }
 }

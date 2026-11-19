@@ -114,8 +114,11 @@
 
 ### Task 6: On-device recording (phase 3)
 
-**Files:** `src/app.rs`, `src/harness_kotlin.rs`, docs
+**Files:** `src/android_device.rs`, `src/harness_kotlin.rs`, `src/harness.rs`, docs
 
-- [ ] **Step 1: `app record --profile android`** via adb instrumentation driver.
-- [ ] **Step 2: Document limits**: SDK classes, UI/Compose stays Kotlin, ART JNI exceptions.
-- [ ] **Step 3: Commit** `feat: add on-device Android recording profile`.
+- [x] **Step 1: `record`/`diff --profile android`** via adb: dexed `RustAnythingDriver` started
+  with `app_process`, cases/results pushed and pulled through `/data/local/tmp`. The leanest
+  option: no instrumentation APK is needed for logic units. Whole-app (`app record`) recording
+  remains out of scope.
+- [x] **Step 2: Document limits**: SDK classes, UI/Compose stays Kotlin, ART JNI exceptions.
+- [x] **Step 3: Commit** `feat: add on-device Android record and diff profile` (`c541a5f`).

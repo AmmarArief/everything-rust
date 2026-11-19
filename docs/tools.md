@@ -63,6 +63,8 @@ Runs the original's code or commands.
 | `float_tolerance` | number |  | Numeric code: floats match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the crate for diff and gate; 0 removes it. |
 | `node_args` | string[] |  | Extra arguments for node, e.g. ["--import=tsx"]. |
 | `test_command` | string[] |  | TS/JS or Python: also record every call the original's own test suite makes to the unit's functions, e.g. ["npx", "jest"] or ["pytest"]. Runs in the original's folder. |
+| `profile` | string |  | Record on this machine (default) or on a connected Android device (JVM crates). |
+| `device` | string |  | Android device serial; picked automatically when only one is connected. |
 
 ## Build crate
 
@@ -85,13 +87,15 @@ Runs the original's code or commands.
 
 Tool `diff` · CLI `rust-anything diff`
 
-Replay cases.jsonl against the built Rust module and list mismatches.
+Replay cases.jsonl against the built Rust module and list mismatches. With `profile: "android"`, replay on the device against the .so built for its ABI.
 
 Runs the original's code or commands.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+| `profile` | string |  | Diff on this machine (default) or on a connected Android device (JVM crates). |
+| `device` | string |  | Android device serial; picked automatically when only one is connected. |
 | `ignore_key_order` | boolean |  |  |
 | `module` | string |  | Test this JS module instead of the crate's `index.cjs`. |
 | `node_args` | string[] |  | Extra arguments for node, e.g. ["--import=tsx"]. |
