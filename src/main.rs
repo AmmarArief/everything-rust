@@ -88,6 +88,10 @@ enum Cmd {
         /// with data, instead of keeping the generic export in TS. Repeatable.
         #[arg(long, value_name = "TYPE_PARAM")]
         as_json: Vec<String>,
+        /// Global allocator for crates with batches: `mimalloc` (C; wasm keeps Rust's default)
+        /// or `rusty_alloc` (pure Rust, no C compiler; wasm too). Kept in `rust-anything.json`.
+        #[arg(long, value_enum, default_value = "mimalloc")]
+        allocator: bridge::Allocator,
     },
     /// 2b. Regenerate the bindings (`lib.rs`, `index.cjs`, `js.rs`) from the signatures in `port.rs`.
     Refresh {
@@ -477,6 +481,7 @@ fn run() -> Result<ExitCode> {
             keep,
             batch,
             as_json,
+            allocator,
         } => {
             let outcome = bridge::bridge(&bridge::Options {
                 root: &root,
@@ -492,6 +497,7 @@ fn run() -> Result<ExitCode> {
                 lang: None,
                 batch,
                 as_json,
+                allocator,
             })?;
             say!(
                 "Created {} ({:?}) for {}",

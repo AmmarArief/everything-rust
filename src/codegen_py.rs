@@ -1151,6 +1151,7 @@ mod tests {
             classes: Vec::new(),
             js_only: Vec::new(),
             batches: Vec::new(),
+            allocator: Default::default(),
             float_tolerance: None,
         }
     }

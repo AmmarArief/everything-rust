@@ -35,6 +35,7 @@ fn map_lists_ports_and_marks_upstream_changes() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
 
@@ -77,6 +78,7 @@ fn map_lists_ports_and_marks_upstream_changes() {
         lang: None,
         batch: Vec::new(),
         as_json: Vec::new(),
+        allocator: Default::default(),
     })
     .unwrap();
     assert_eq!(port_map::map(&repo, &[]).unwrap().ports.len(), 1);

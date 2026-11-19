@@ -33,6 +33,7 @@ Scaffold a Rust crate for one unit: napi-rs or wasm-bindgen bindings in src/lib.
 | `keep` | string[] |  | Exports to keep in the source language: `name` or `name: reason`. |
 | `batch` | string[] |  | Batch classes, `function:param`: the function runs over many `param` values kept in Rust, on all cores, in one call. A `<Function>Index` struct in port.rs replaces the default per-item loop. |
 | `as_json` | string[] |  | Type parameters the app only fills with data (`T` in `paginate<T>(items: T[])`): bridged as JSON values instead of keeping the export in TS. |
+| `allocator` | string |  | Global allocator for crates with batches. mimalloc (default) is C and leaves wasm alone; rusty_alloc is pure Rust (no C compiler) and also serves wasm. |
 
 ## Regenerate bindings
 
