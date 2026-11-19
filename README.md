@@ -217,7 +217,7 @@ comes next.
 
 ## Learn more
 
-- [How it works](docs/how-it-works.md): the loop, what `bridge` and `analyze` decide, hot paths, and what it can't catch
+- [How it works](docs/how-it-works.md): the loop, what `bridge` and `analyze` decide, hot paths, what it can't catch, what a real port takes, and keeping up with the original (`map`)
 - [Port a whole app](docs/whole-apps.md): servers, CLIs and libraries, from the front door to `app lift`
 - [Examples and case studies](docs/examples.md): x18n, and real code in six languages
 - [Real-world ports](docs/real-world.md): json-server, Fuse.js, vercel/ms, with benchmarks

@@ -334,6 +334,15 @@ pub fn track(crate_dir: &Path, passed: usize, total: usize) -> Option<Trend> {
     ))
 }
 
+pub fn last_diff(crate_dir: &Path) -> Option<(usize, usize)> {
+    let text = std::fs::read_to_string(crate_dir.join(HISTORY)).ok()?;
+    let last: Value = serde_json::from_str(text.lines().last()?).ok()?;
+    Some((
+        usize::try_from(last["passed"].as_u64()?).ok()?,
+        usize::try_from(last["total"].as_u64()?).ok()?,
+    ))
+}
+
 fn trend(passed: Vec<usize>, total: usize) -> Trend {
     let n = passed.len();
     let stalled = n > STALL_AFTER

@@ -165,3 +165,51 @@ usually lives outside the recording, so know where the edges are:
 - **Other platforms.** A recording proves behavior on the machine that ran it. C whose results
   depend on type sizes, endianness or the compiler can behave differently on the target; `analyze`
   keeps hardware-facing C in C for that reason.
+
+## What a real port takes
+
+A small module is the loop above, once. A real application is not one command: it is many units
+in an order, and most of the work is in behavior the original never wrote down. json-server
+([report](real-world.md#json-server)) took nine units, 514 recorded HTTP cases, two adapters, a
+front door, two wiring steps and a hand-ported command line before `lift` gave one Rust binary.
+What made it slow was not the Rust: it was tinyhttp re-running its routes after every `next()`,
+V8's exact JSON error messages with UTF-16 positions, ICU collation in `sort`, and
+`/__proto__` reaching `Object.prototype`. Every one of those was found by a recorded case, not by
+reading the code.
+
+What helps:
+
+- **Expect milestones, not a switch.** The front door starts at 100% fallback and every wired unit
+  lowers it. A port that is half done still answers every case, through the original where Rust
+  is missing, so it can ship at every step.
+- **Port the hot path first** when speed is the goal ([batches](#hot-paths-keep-the-data-in-rust)):
+  most of the gain is often one loop.
+- **Give it real inputs.** Generated cases find edge cases; `--inputs` with real traffic or real
+  files finds what users actually send.
+- **Keep a map** (`rust-anything map`, below) so a long port can stop and resume, and so you can
+  see what is left.
+
+## Keep the original's shape
+
+A port keeps the original's units, names and public API: one crate per unit, the same exported
+functions and classes, the same arguments and errors. The front door keeps the original's
+commands and flags. That is what lets callers switch without changes, lets `diff` compare
+function by function, and lets the original's maintainers read the Rust next to the code they
+know. Change the design after the port matches, not during it.
+
+## Keep up with the original
+
+The original keeps changing after a port starts. `record` saves a fingerprint of the unit's
+files; when they change, `diff` reports a stale recording (and exits non-zero) and `gate` fails,
+so an upstream change cannot pass silently.
+
+`rust-anything map` shows the whole port at once: every unit of the original, the crate that
+ports it, the functions in Rust and kept in the original, the cases and the last `diff`, the
+whole app's glue (Rust only, or still handing cases to the original), the units not ported yet,
+and every port whose original changed since it was recorded. `map --write` saves it as
+`rust/PORT_MAP.md`; committed, it shows each upstream change as a diff. `map --check` exits 1
+while any recording is stale, for CI.
+
+After an upstream change: pull it, run `map`, and for each port marked **changed** run `record`
+again, then `diff`. The new mismatches are exactly what changed upstream; port those.
+

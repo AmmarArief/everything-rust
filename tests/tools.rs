@@ -12,7 +12,9 @@ const CLI: &str = env!("CARGO_BIN_EXE_rust-anything");
 
 /// Options only the terminal needs: how output is printed, and `analyze`'s output file.
 fn cli_only(tool: &str, option: &str) -> bool {
-    option == "json" || (tool == "analyze" && option == "out")
+    option == "json"
+        || (tool == "analyze" && option == "out")
+        || (tool == "map" && matches!(option, "write" | "check"))
 }
 
 fn tools() -> Vec<Value> {

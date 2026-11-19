@@ -22,6 +22,11 @@ A session **claims** one unit in the map before it starts, ports that unit, and 
 with its gate and replay results. A claimed unit belongs to its session: pick another. A new
 session starts by reading `MAP.md`, then `HANDOFF.md` when there is one.
 
+`rust-anything map --write` generates `rust/PORT_MAP.md` from the crates themselves: functions in
+Rust and kept in the original, cases, last `diff`, glue that still falls back, units not ported,
+and ports whose original changed upstream. Run it at each checkpoint and check `MAP.md` against
+it; the generated file is the measured state, `MAP.md` is the plan and the claims.
+
 ## 1. Grill the user
 
 Interview the user until every decision the port depends on is settled. Map them as a **design

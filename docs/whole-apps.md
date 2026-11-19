@@ -23,6 +23,18 @@ with the decisions only you can make:
 Grilling, research and these practices are adapted from
 [Matt Pocock's skills](https://github.com/mattpocock/skills).
 
+**Checking a rewrite in any language.** `app record` and `app replay` only run programs: the
+recording is what the original did from the outside (arguments, stdin, files, HTTP), and
+`app replay --build "<command>"` runs any build against it. A rewrite in Go, or by hand, is
+checked the same way as the Rust front door:
+
+```sh
+rust-anything app record . -- java -jar app.jar     # what the original does
+rust-anything app replay . --build "./app-go"       # does the rewrite do the same?
+```
+
+The unit tools (`bridge`, `record`, `diff`, `gate`) and `lift` are Rust-specific.
+
 Plan first: `rust-anything analyze . --whole-app` adds the app's shape (CLI, server or library)
 and entry points, every external dependency (imported or declared) with its Rust crate and fit,
 the port order as pieces (units that import each other move together), and numbered decisions

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `map` (CLI and MCP tool): every unit of the original with the crate that ports it, functions
+  in Rust and kept in the original, cases and last `diff`, the whole app's glue, units not ported
+  yet, and every port whose original changed since it was recorded. `--write` saves
+  `rust/PORT_MAP.md`; `--check` exits 1 while a recording is stale.
+- Docs: what a real port takes, keeping the original's shape, keeping up with the original, and
+  checking a rewrite in any language with `app record` and `app replay --build`.
 - `bench` and `record` pass `--experimental-transform-types` only when Node accepts it: Node 26
   removed the option and refused to start (#99).
 - `profile` keeps a Python workload script given as a relative path (`python3 bench.py`); its

@@ -223,6 +223,25 @@ enum Cmd {
         #[arg(long)]
         json: bool,
     },
+    /// Map the port: every unit of the original, the crate that ports it, its cases and last
+    /// diff, the whole app's glue, and which recordings the original changed past since they
+    /// were made. Commit the map (`--write`) to see upstream changes in it.
+    Map {
+        /// Repository root.
+        #[arg(default_value = ".")]
+        repo: PathBuf,
+        /// Also look for crates in this folder (crates kept outside the repository).
+        #[arg(long = "crates")]
+        crates: Vec<PathBuf>,
+        /// Write the map to rust/PORT_MAP.md in the repository instead of printing it.
+        #[arg(long)]
+        write: bool,
+        /// Exit 1 when the original changed since any port was recorded.
+        #[arg(long)]
+        check: bool,
+        #[arg(long)]
+        json: bool,
+    },
     /// Check the language runtimes, the agent setup and the MCP server, with the command that
     /// fixes each problem. Exits 1 when something required is missing.
     Doctor {
@@ -795,6 +814,30 @@ fn run() -> Result<ExitCode> {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
                 print!("{}", rust_anything::setup::text(&report));
+            }
+        }
+        Cmd::Map {
+            repo,
+            crates,
+            write,
+            check,
+            json,
+        } => {
+            let map = rust_anything::port_map::map(&repo, &crates)?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&map)?);
+            } else if write {
+                let path = map.root.join(rust_anything::port_map::MAP_FILE);
+                if let Some(dir) = path.parent() {
+                    std::fs::create_dir_all(dir)?;
+                }
+                std::fs::write(&path, rust_anything::port_map::markdown(&map))?;
+                say!("Wrote {}", path.display());
+            } else {
+                say_raw!("{}", rust_anything::port_map::markdown(&map));
+            }
+            if check && map.changed() > 0 {
+                return Ok(ExitCode::FAILURE);
             }
         }
         Cmd::Doctor { json } => {

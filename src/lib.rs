@@ -37,6 +37,7 @@ pub mod library;
 pub mod lift;
 pub mod mcp;
 pub mod mcp_prompts;
+pub mod port_map;
 pub mod process;
 pub mod profile;
 pub mod recording;

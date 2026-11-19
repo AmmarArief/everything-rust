@@ -143,7 +143,9 @@ intended (the user wants the port to fix a bug of the original), ask the user fi
 line per case to `<crate>/known-diffs.jsonl`: `{"fn", "args", "actual", "reason"}`, with `fn`,
 `args` and `actual` copied from `diff --json`. That case then passes only with exactly that result,
 and `gate` fails once it no longer differs, so remove the line then. If `gate` says the recording
-is stale, the original changed: record again before porting further.
+is stale, the original changed: record again before porting further. After pulling upstream
+changes, run `rust-anything map` (the `map` tool): every port marked changed needs `record`, then
+`diff`, and the new mismatches are what changed upstream.
 
 When `diff` says the port is stalled (its `trend.stalled`: three changes to `port.rs` in a row
 gained no matching case), stop editing. Show the user the remaining mismatches and ask: they may

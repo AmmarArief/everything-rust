@@ -354,6 +354,7 @@ const TOOL_META: &[ToolMeta] = &[
         "Check definition of done",
         [false, false, true, true],
     ),
+    meta("map", "Map the port", [true, false, true, false]),
     meta(
         "app_record",
         "Record whole app",
@@ -479,6 +480,14 @@ fn tool_schemas() -> Value {
             "name": "shadow",
             "description": "Generate a drop-in shadow (a TS or Python module, Go package, Ruby file, Java classes or C file) that runs the original and the Rust port side by side and reports mismatches; RUST_ANYTHING_MODE=old|shadow|new switches at runtime.",
             "inputSchema": { "type": "object", "properties": { "crate": crate_dir, "out": { "type": "string" } }, "required": ["crate"] },
+        },
+        {
+            "name": "map",
+            "description": "Port map of a repository: each unit of the original with the crate that ports it, its functions in Rust and kept in the original, its cases and last diff, the whole app's glue (Rust only, or still handing cases to the original), the units not ported yet in the order analyze suggests, and every port whose original changed since it was recorded (`changed_upstream`: re-record it and diff). Read-only; the CLI's `map --write` saves it as rust/PORT_MAP.md.",
+            "inputSchema": { "type": "object", "properties": {
+                "repo": { "type": "string", "description": "Repository root." },
+                "crates": { "type": "array", "items": { "type": "string" }, "description": "Folders with crates kept outside the repository." }
+            }, "required": ["repo"] },
         },
         {
             "name": "gate",
@@ -689,6 +698,11 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             let out = opt_path("out");
             serde_json::to_value(shadow::shadow(&path("crate")?, out.as_deref())?)?
         }
+        "map" => {
+            let crates: Vec<std::path::PathBuf> =
+                strings("crates").into_iter().map(Into::into).collect();
+            serde_json::to_value(crate::port_map::map(&path("repo")?, &crates)?)?
+        }
         "gate" => serde_json::to_value(gate::gate(
             Path::new(&path("crate")?),
             &strings("node_args"),
@@ -785,6 +799,7 @@ mod tests {
                 "profile",
                 "bench",
                 "shadow",
+                "map",
                 "gate",
                 "app_record",
                 "app_replay",

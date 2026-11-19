@@ -134,6 +134,19 @@ Runs the original's code or commands.
 | `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
 | `out` | string |  |  |
 
+## Map the port
+
+Tool `map` · CLI `rust-anything map`
+
+Port map of a repository: each unit of the original with the crate that ports it, its functions in Rust and kept in the original, its cases and last diff, the whole app's glue (Rust only, or still handing cases to the original), the units not ported yet in the order analyze suggests, and every port whose original changed since it was recorded (`changed_upstream`: re-record it and diff). Read-only; the CLI's `map --write` saves it as rust/PORT_MAP.md.
+
+Read-only.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `repo` | string | yes | Repository root. |
+| `crates` | string[] |  | Folders with crates kept outside the repository. |
+
 ## Check definition of done
 
 Tool `gate` · CLI `rust-anything gate`

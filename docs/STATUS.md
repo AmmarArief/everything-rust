@@ -36,6 +36,7 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | wasm bridge (`--kind wasm`) | Verified | x18n search |
 | `shadow` | Verified | x18n's `packages/core` |
 | `profile` | Tested | |
+| `map` | Tested | ports, upstream changes and `--crates` in `tests/port_map.rs` |
 | `app record`, `app replay` | Verified (servers), Tested (CLIs) | json-server: 514 HTTP cases with `--fresh`, `--arg`, `--pace`; CLIs in `tests/app.rs` |
 | Front door (`front-door`), `wire` | Verified (TS server) | json-server: reads wired first (22.6% fallback), then every route (0%); servers in eight languages in `tests/http.rs` |
 | `lift` | Verified (TS server), Tested (CLIs) | json-server: pure Rust binary, 514/514; CLIs in all eight languages in `tests/app.rs` |
