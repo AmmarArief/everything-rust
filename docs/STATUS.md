@@ -10,7 +10,7 @@ run on a real project. **Preview**: works for part of the flow, as described.
 
 | Language | Status | Last real run | Result |
 | --- | --- | --- | --- |
-| TypeScript/JavaScript | Verified | [json-server](real-world.md#json-server) (2026-11-18), [Fuse.js](real-world.md#fusejs) (2026-11-18), [vercel/ms](real-world.md#vercelms) (2026-11-18), x18n's `packages/core` | json-server: six units, 3,399 cases, gate passes on each; Fuse.js, vercel/ms, x18n: 3,414/3,414, 975/975 and 7,925 cases match |
+| TypeScript/JavaScript | Verified | [Prettier](real-world.md#prettier) (2026-11-18), [json-server](real-world.md#json-server) (2026-11-18), [Fuse.js](real-world.md#fusejs) (2026-11-18), [vercel/ms](real-world.md#vercelms) (2026-11-18), x18n's `packages/core` | Prettier: `doc-printer-rs` 2,848/2,848 and `js-format-rs` 15,753/15,753, gate passes on both; json-server: six units, 3,399 cases, gate passes on each; Fuse.js, vercel/ms, x18n: 3,414/3,414, 975/975 and 7,925 cases match |
 | Python | Verified | `colorsys.py` from CPython 3.13 (2026-11-16) | 2,400/2,400; gate passes |
 | Go | Verified | `path` from Go 1.24 (2026-11-16) | 2,642/2,642; gate passes |
 | Ruby | Verified | `shellwords.rb` from Ruby 3.3 (2026-11-16) | 1,617/1,617; gate passes |
@@ -37,9 +37,9 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | `shadow` | Verified | x18n's `packages/core` |
 | `profile` | Tested | |
 | `map` | Tested | ports, upstream changes and `--crates` in `tests/port_map.rs` |
-| `app record`, `app replay` | Verified (servers), Tested (CLIs) | json-server: 514 HTTP cases with `--fresh`, `--arg`, `--pace`; CLIs in `tests/app.rs` |
+| `app record`, `app replay` | Verified (servers and CLIs) | json-server: 514 HTTP cases with `--fresh`, `--arg`, `--pace`; Prettier: 17,224 CLI cases with `--inputs`, 63 of them with config files around the input; CLIs in `tests/app.rs` |
 | Side effects (`app record --effects`, `--db-reset`, `--db-dump`) | Tested | email, webhooks and SQLite rows for a CLI and a server in `tests/effects.rs` |
-| Front door (`front-door`), `wire` | Verified (TS server) | json-server: reads wired first (22.6% fallback), then every route (0%); servers in eight languages in `tests/http.rs` |
+| Front door (`front-door`), `wire` | Verified (TS server and CLI) | Prettier: one unit wired, 17,224/17,224 at 8.1% fallback (JS, TS, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less in Rust), glue declining per case with `original::run_with_stdin`; json-server: reads wired first (22.6% fallback), then every route (0%); servers in eight languages in `tests/http.rs` |
 | `lift` | Verified (TS server), Tested (CLIs) | json-server: pure Rust binary, 514/514; CLIs in all eight languages in `tests/app.rs` |
 | MCP server (`mcp`) | Tested | protocol test in `src/mcp.rs` |
 | `setup` | Tested | registers the MCP server (and the skill, where the agent reads skills) with Claude Code, Codex, Cursor, Gemini CLI and OpenCode; per-agent tests in `src/setup.rs`, read back in `src/doctor.rs` and `tests/doctor.rs`. The OpenCode entry was also confirmed by OpenCode 2.3.2 itself (`mcp.servers`, `command` as an array) |

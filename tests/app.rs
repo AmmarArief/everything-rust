@@ -200,6 +200,25 @@ pub fn run(_command: &str, _matches: &ArgMatches) -> ExitCode {
 }
 ";
 
+const WORDCOUNT_DECLINING_GLUE: &str = "use std::io::Read;
+use std::process::ExitCode;
+
+use clap::ArgMatches;
+
+pub fn run(_command: &str, _matches: &ArgMatches) -> ExitCode {
+    let mut input = Vec::new();
+    if std::io::stdin().read_to_end(&mut input).is_err() {
+        return ExitCode::from(1);
+    }
+    if input.starts_with(b\"#original\") {
+        let argv: Vec<std::ffi::OsString> = std::env::args_os().collect();
+        return crate::original::run_with_stdin(&argv[1..], &input);
+    }
+    println!(\"{}\", wordcount_rs::port::count_words(&input));
+    ExitCode::SUCCESS
+}
+";
+
 /// The front door answers everything through the original; then a unit takes over `words`.
 fn front_door_then_wire(repo: &Path) {
     let door = front_door::front_door(&FrontDoorOptions {
@@ -253,7 +272,7 @@ fn front_door_then_wire(repo: &Path) {
         failing.failures
     );
 
-    std::fs::write(&stub.glue, WORDCOUNT_GLUE).unwrap();
+    std::fs::write(&stub.glue, WORDCOUNT_DECLINING_GLUE).unwrap();
     let wired = wire(&[]);
     assert!(!wired.glue_pending);
     assert_eq!(wired.commands, ["words"]);
@@ -278,7 +297,7 @@ fn front_door_then_wire(repo: &Path) {
 
     let exe = &replay.build[0];
     let log = repo.join("fallback.log");
-    let run = |switch: Option<&str>| {
+    let run = |switch: Option<&str>, input: &[u8]| {
         let _ = std::fs::remove_file(&log);
         let mut cmd = Command::new(exe);
         cmd.arg("words")
@@ -289,12 +308,7 @@ fn front_door_then_wire(repo: &Path) {
             cmd.env("RUST_ANYTHING_UNIT_WORDCOUNT", value);
         }
         let mut child = cmd.spawn().unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(b"one two  three\n")
-            .unwrap();
+        child.stdin.take().unwrap().write_all(input).unwrap();
         let out = child.wait_with_output().unwrap();
         assert!(out.status.success());
         assert_eq!(
@@ -305,11 +319,16 @@ fn front_door_then_wire(repo: &Path) {
         );
         std::fs::read_to_string(&log).unwrap()
     };
-    assert_eq!(run(None), "", "Rust answered");
+    assert_eq!(run(None, b"one two  three\n"), "", "Rust answered");
     assert_eq!(
-        run(Some("original")),
+        run(Some("original"), b"one two  three\n"),
         "words\n",
         "the kill switch fell back"
+    );
+    assert_eq!(
+        run(None, b"#original two three\n"),
+        "words\n",
+        "the glue declined and passed stdin on"
     );
 }
 
@@ -680,7 +699,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         .unwrap()
     };
     let words_glue = wire("wordcount", &["words"], false).glue;
-    std::fs::write(words_glue, WORDCOUNT_GLUE).unwrap();
+    std::fs::write(&words_glue, WORDCOUNT_DECLINING_GLUE).unwrap();
     let partial = wire("textops", &["upper", "len"], true);
     let fallback = partial.replay.unwrap().fallback.unwrap();
     assert!(fallback.cases > 0);
@@ -694,6 +713,15 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         "{:?}",
         blocked.blockers
     );
+    assert!(
+        blocked
+            .blockers
+            .iter()
+            .any(|b| b.contains("wordcount") && b.contains("hands cases to the original")),
+        "{:?}",
+        blocked.blockers
+    );
+    std::fs::write(&words_glue, WORDCOUNT_GLUE).unwrap();
     std::fs::write(&partial.glue, TEXTOPS_GLUE).unwrap();
     let blocked = lift::lift(&LiftOptions { repo }).unwrap();
     assert!(

@@ -681,9 +681,16 @@ pub fn lift(opts: &LiftOptions) -> Result<LiftOutcome> {
         let glue = app_dir
             .join("src/units")
             .join(format!("{}.rs", front_door::ident(&unit.name)));
-        if !library && front_door::is_stub(&std::fs::read_to_string(&glue).unwrap_or_default()) {
+        let glue_text = std::fs::read_to_string(&glue).unwrap_or_default();
+        if !library && front_door::is_stub(&glue_text) {
             blockers.push(format!(
                 "{}: the glue in {} is still the generated stub",
+                unit.name,
+                glue.display()
+            ));
+        } else if !library && glue_text.contains("original::") {
+            blockers.push(format!(
+                "{}: the glue in {} still hands cases to the original (`original::`): answer them in Rust, then lift again",
                 unit.name,
                 glue.display()
             ));

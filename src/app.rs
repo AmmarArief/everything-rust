@@ -1203,6 +1203,16 @@ fn trap_cases(bases: &[Case]) -> Vec<Case> {
 }
 
 pub(crate) fn slug(text: &str) -> String {
+    slug_max(text, 24)
+}
+
+/// A case name the user gave in `--inputs`: longer than a generated one, so names that differ
+/// only past the 24th character stay apart.
+pub(crate) fn given_slug(text: &str) -> String {
+    slug_max(text, 96)
+}
+
+fn slug_max(text: &str, max: usize) -> String {
     let mut out = String::new();
     for c in text.chars() {
         if c.is_ascii_alphanumeric() {
@@ -1211,7 +1221,7 @@ pub(crate) fn slug(text: &str) -> String {
             out.push('-');
         }
     }
-    out.truncate(24);
+    out.truncate(max);
     out.trim_end_matches('-').to_string()
 }
 
@@ -1548,7 +1558,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             return false;
         }
         let base_name = match given {
-            Some(g) if !slug(&g).is_empty() => slug(&g),
+            Some(g) if !given_slug(&g).is_empty() => given_slug(&g),
             _ => match case.args.first().map(|a| slug(a)).filter(|s| !s.is_empty()) {
                 Some(s) => format!("{prefix}-{n:03}-{s}"),
                 None => format!("{prefix}-{n:03}"),
@@ -2152,6 +2162,18 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn given_names_keep_their_tail() {
+        let a = given_slug("tests/format/typescript/conformance/types/never/never.ts");
+        let b = given_slug("tests/format/typescript/conformance/types/tuple/tuple.ts");
+        assert_ne!(a, b);
+        assert_eq!(
+            a,
+            "tests-format-typescript-conformance-types-never-never-ts"
+        );
+        assert_eq!(slug(&a).len(), 23);
+    }
 
     #[test]
     fn reports_do_not_carry_sandbox_paths() {

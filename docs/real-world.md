@@ -246,6 +246,223 @@ What it does not cover: JSON5 databases (the binary says so and exits), the 100 
 with lone surrogates (they become U+FFFD), and a database value of `1e400` (Node keeps `Infinity`
 in memory until the next reload; the port stores `null`, which is what the file gets).
 
+## Prettier
+
+[Prettier](https://github.com/prettier/prettier) (MIT, tag `3.6.2`, commit `7a8b05f`) is the
+first large tool ported with the whole-app flow where the port covers only part of the input:
+the front door formats a file in Rust when every construct in it is ported, and hands the whole
+file to Prettier otherwise. Everything is in
+[`demo/real-world/prettier-rs`](../demo/real-world/prettier-rs); its `DECISIONS.md` records the
+choices (whole-file fallback, oxc for parsing, Prettier's own printer code ported rather than an
+existing Rust formatter, byte-identical output as the bar).
+
+| Step | Result |
+| --- | --- |
+| `app record --inputs` | 3,080 CLI cases in 134 s: 1,525 of Prettier's own `tests/format` JS/TS fixtures, 1,196 runs of 200 of those fixtures with six common options (`--no-semi`, `--single-quote`, `--trailing-comma none`, `--use-tabs`, `--print-width 40` and `120`), 59 files of three real repositories (ms, Fuse.js, json-server), and 300 traps the tool adds; then 63 cases with config files, `.editorconfig` and ignore files around the input; stdout, stderr and exit code |
+| `front-door` | 3,080/3,080 at 100% fallback (before the config cases) |
+| oxc check | Prettier formatting with its own oxc parser gives output byte-identical to its Babel/TypeScript parsers on 1,351/1,351 fixtures oxc parses (64 fixtures do not parse in oxc); so the port reads oxc's ESTree |
+| `doc-printer-rs` | `printDocToString` and `getStringWidth` (`src/document/`), recorded on 2,848 docs (2,570 harvested from the fixtures, 180 written to reach the rest); `gate` passes, 608 of the printer's 613 lines reached |
+| `prettier-js-rs` | the JavaScript and TypeScript printer, 12,000 lines of Rust: statements, expressions, member chains, call arguments, assignments, binary operators, arrays, objects, functions and arrows, modules, template literals, ternaries (both styles), classes and decorators, JSX, every TypeScript node, `needs-parens`, comments (attachment with the JavaScript and TypeScript handlers, printing, every comment branch in those printers) and `prettier-ignore` |
+| `js-format-rs` | Prettier's `format()` bridged and backed by `prettier-js-rs`; recorded on the 15,753 `format()` calls the CLI cases make for files the port covers; `gate` passes 15,753/15,753 |
+| `wire` | milestone 1: 3,143/3,143 at 51.9% fallback (1,513 in Rust); milestone 2, TypeScript: 3,143/3,143 at 22.5% (2,436 in Rust); with JSON: 4,621/4,621 at 25.8% (3,431 in Rust); with GraphQL: 5,468/5,468 at 22.9% (4,218 in Rust); with YAML: 8,812/8,812 at 14.6% (7,527 in Rust); with Markdown: 15,162/15,162 at 9.8% (13,676 in Rust); with CSS, SCSS and Less: **17,224/17,224 at 8.1% fallback, 15,837 cases formatted fully in Rust**, byte-identical |
+| config | the glue resolves Prettier's config as its CLI does (closest `.prettierrc`/`.prettierrc.json`/`package.json` `"prettier"` key with `overrides`, `.editorconfig` up to the project root, `.gitignore`/`.prettierignore` and `node_modules`), and hands YAML, TOML, JSON5 and JavaScript configs, unknown options and ignored files to Prettier; 44 of the 63 config cases run in Rust |
+| JSON | 1,478 more cases (`gen-json-inputs.mjs`): Prettier's 55 JSON fixtures as `.json`, `.jsonc`, `.json5` and `package.json`, ten option variants, 26 real JSON files (`package.json`, `tsconfig.json`, lock files...) and edge snippets; the port picks `json`, `jsonc`, `json5` or `json-stringify` from the file name as Prettier's language list does, parses the value with oxc, checks it with Prettier's `assertJsonNode`, and prints it with the same printer (keys quoted, double quotes, no trailing commas for `json`) or, for `json-stringify`, with a port of `printer-estree-json.js`; 995 of the 1,019 JSON cases Prettier formats run in Rust |
+| GraphQL | 847 more cases (`gen-graphql-inputs.mjs`): Prettier's 58 GraphQL fixtures (49 in `tests/format/graphql`, 9 pragma and error fixtures) as `.graphql`, `.gql` and `.graphqls`, eight option variants, `--parser graphql` on a `.txt` path, and edge snippets (block strings, escapes, legacy fragment variables, comments in every position, `prettier-ignore`, CRLF, BOM, 13 invalid inputs); the port is `graphql.rs`: graphql-js 16.11's lexer and parser (with `allowLegacyFragmentVariables`, block string dedent, every syntax error kept as an error), Prettier's generic comment attachment and printing (GraphQL has no comment handlers), and `printer-graphql.js`; **all 787 GraphQL cases Prettier formats run in Rust**, the other 60 are Prettier's own syntax errors and stay on Prettier |
+| YAML | 3,344 more cases (`gen-yaml-inputs.mjs`): Prettier's 355 YAML fixtures (348 in `tests/format/yaml`, the rest pragma, parser-inference and error fixtures) as `.yml` and `.yaml`, six option variants (`--prose-wrap always` and `never`, `--tab-width 4`, `--no-bracket-spacing`, `--single-quote`, `--print-width 40`), every fixture with CRLF line ends, 35 real files (Prettier's and the three repositories' GitHub workflows, issue templates, `.codecov.yml`...), YAML file names (`CITATION.cff`, `.clang-format`, `.prettierrc`, `yarn.lock`) and edge snippets (anchors, tags, `%TAG` directives, documents, block scalars, duplicate keys, bad indentation); the port is `src/yaml/`: yaml 1.10.2's CST parser and the checks its `Document#parse` makes (anchors, tags, pairs, duplicate keys, every error it reports), yaml-unist-parser 2.0.5's transform, comment attachment and position updates, and `printer-yaml.js`; **3,309 of the 3,310 YAML cases Prettier formats run in Rust** (the one left is `.prettierrc`, which Prettier prints as JSON), the other 34 are Prettier's own errors |
+| Markdown | 6,350 more cases (`gen-markdown-inputs.mjs`): Prettier's 852 Markdown fixtures (821 in `tests/format/markdown`, the rest pragma and front matter fixtures), five option variants (`--prose-wrap always` and `never`, `--tab-width 4`, `--print-width 40`, `--single-quote`), every fixture with CRLF, a quarter of them as `.markdown`, 54 real files (Prettier's docs and READMEs, the three repositories' Markdown) twice, and edge snippets (lists, tasks, tables, links, footnotes, math, liquid, wiki links, entities, `prettier-ignore` ranges, CJK text); the port is `src/markdown/`: remark-parse 8.0.3 with remark-footnotes, remark-math and Prettier's front matter, liquid and wiki link tokenizers, parse-entities, Prettier's preprocess and `printer-markdown.js`; code blocks in JavaScript, TypeScript, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less, and YAML front matter, are formatted by the other ports as Prettier does; **6,305 of the 6,350 Markdown cases run in Rust**, the rest hold HTML code blocks (not ported) or code oxc does not parse |
+| CSS, SCSS, Less | 2,062 more cases (`gen-css-inputs.mjs`): Prettier's 248 style fixtures (109 CSS, 80 SCSS, 36 Less, 23 in `tests/format/misc`), the CSS fixtures again as `.scss` and `.less`, five option variants (`--single-quote`, `--tab-width 4`, `--print-width 40`, `--trailing-comma none`, `--use-tabs`), every fixture with CRLF, 6 real files (Prettier's website styles, Fuse.js's docs styles) and 22 edge snippets in all three languages; the port is `src/css/`: postcss 8.5.6's tokenizer and parser with postcss-scss 4.0.9's changes (`//` comments, `#{}` interpolation, nested properties) and postcss-less 6.0.0's (inline comments, mixin calls, `each`, variables, `@{}` interpolation, `extend`), Prettier's `parseNestedCSS` and its quote masking for Less comments, postcss-values-parser 2.0.1 in loose mode, postcss-selector-parser 2.2.3, postcss-media-query-parser 0.2.3, and `printer-postcss.js` with its value group printers; **all 2,004 CSS, SCSS and Less cases Prettier formats run in Rust** (890 CSS, 711 SCSS, 403 Less), the other 58 are Prettier's own errors |
+
+Formatted fully in Rust, by group: 1,295 of the 1,525 fixtures, 1,016 of the 1,196 option
+variants, all 59 real files, 20 of the 300 traps, and 46 of the 63 config cases. Of the 929
+TypeScript cases, 849 run in Rust. (The milestone 1 figure of 44 real files was low: the
+corpus checker skipped every case whose name contained `config-`, which also hid four real
+files such as `vitest.config.ts`; the replay's own fallback rate was not affected.) What still goes to Prettier, by the first thing the port does
+not handle: oxc parse errors 379, invalid CLI input 220 (200 traps with a file name Prettier
+cannot infer a parser for, 20 with an invalid `--trailing-comma`; errors stay on Prettier by
+design), embedded CSS/GraphQL/HTML/Markdown 86, `f<<T>` type arguments that oxc accepts and
+TypeScript rejects 5, and 17 of the config cases.
+
+The JSON cases that still go to Prettier are the 459 it rejects itself (invalid JSON, comments
+in `package.json`, expressions) and one fixture with keys like `1e400`, which serde_json cannot
+read back from oxc's ESTree (24 cases with its variants).
+
+The oxc parse errors split in two. About 290 are inputs Prettier rejects too (invalid syntax in
+the fixtures, cursor and range markers); they would fall back anyway. About 90 are Babel proposal
+syntax oxc does not parse (`do` expressions, private-name destructuring, module blocks, `::`,
+optional chaining assignment); a printer port cannot reach them. oxc also reports TypeScript and
+JavaScript checks that Prettier's parsers do not (an initializer in an ambient context,
+`'private'` with `'abstract'`, an empty type argument list, `return` outside a function...); the
+port accepts 16 of those messages, where oxc still builds the whole tree, and two it tried
+(computed enum members, an index signature without a type) were taken back off the list because
+oxc's tree came back incomplete.
+
+How a fallback works: the glue resolves the options for the file first (an ignored file, or a
+config it does not read, goes to Prettier); then it reads stdin, tries the Rust port, and on any
+`Unsupported` calls `original::run_with_stdin` with the bytes already read. The port refuses
+rather than guesses: it bails on syntax it does not print and on a comment that would go
+unprinted (Prettier's own `ensureAllCommentsPrinted` check).
+
+What the port had to get right, all caught by recorded cases:
+
+- Prettier's docs share subtrees (the same group in two `conditionalGroup` states), and
+  `propagateBreaks` marks a shared group once for all its uses. The Rust doc keeps that identity
+  with `Rc`, and the harvested docs are taken after `propagateBreaks` so they compare.
+- `path.match` hands predicate *i* the node *i* levels up and the key below it; `needs-parens`
+  depends on it.
+- `.js` files parse as modules (top-level `await`), `.cjs` as scripts.
+- Comment attachment depends on node order: children are sorted by start, then end, and a tie
+  between two comments is broken by the gap text (whitespace or `(` only).
+- Closure type casts (`/** @type {X} */ (y)`) keep their parentheses, so the
+  `ParenthesizedExpression` stays in the tree for them.
+- JSX children are cleaned up by comparing docs with `===` against the shared `hardline`,
+  `softline` and `{" "}` docs; the port keeps those identities as an enum until the final doc is
+  built, and treats `{" "}` children as text, as Prettier rewrites them.
+- In an override, Prettier matches patterns without a slash against the file's basename, and in
+  that pass tests `excludeFiles` against the basename too, so `excludeFiles: "legacy/*.js"` does
+  not exclude `legacy/a.js` from `files: "*.js"`.
+- TypeScript comes out of oxc with the template element ranges espree uses (delimiters
+  included) and `TSImportType.source` where Prettier reads `argument`; Prettier corrects both in
+  its own postprocess for its oxc parser, and the port does the same.
+- `prettier-ignore` prints the node's original text and marks every comment inside it printed;
+  inside unions and mapped types the comment handlers flag the next node instead, and that
+  comment is then no longer an ignore comment.
+- `cleanDoc` runs on nested binary expressions that carry comments, merging strings and
+  flattening arrays, and the next step looks for the first group in what it returns.
+
+Benchmark: Apple M4 (10 cores, 16 GB), macOS 27.3, Node 24.15.0 running Prettier 3.6.2's
+`dist` build, the Rust built with `--release`, after milestone 2. Two runs, each started with the
+1-minute load average under 3 (2.60 and 2.95); cells give run 1 / run 2. The scripts are in
+[`demo/real-world/prettier-rs/bench`](../demo/real-world/prettier-rs/bench) and
+`prettier-js-rs/examples/bench.rs`; every CLI output was compared and matched in both runs.
+
+| What | Prettier | Rust | |
+| --- | ---: | ---: | ---: |
+| CLI, one process per file, 2,360 files the port covers | 128.6 s / 143.4 s | 6.9 s / 7.2 s | 18.8x / 19.8x |
+| CLI, the 59 real repository files | 3.63 s / 3.61 s | 0.20 s / 0.20 s | 18x / 18x |
+| In process, `format()` warmed up, the same 2,360 files, 20 calls each | 600 / 637 ms | 143 / 150 ms | 4.2x / 4.2x |
+| In process, per file (geometric mean / median) | | | 7.4x / 6.9x and 7.4x / 7.0x |
+| In process, the slowest file for Rust (`js-arrays-nested`, `js-method-chain-first-long`) | | | 1.47x / 1.52x |
+| Doc printer alone, called from JS through the napi bridge, 2,848 docs | 65 / 66 µs a call | 134 / 133 µs | 0.48x / 0.49x |
+
+Most of the CLI gain is Node's start-up (about 55 ms a file against 3 ms). In process, where
+Prettier is warmed up, no file was slower in either run. The largest file, Fuse.js's 31 KB
+`fuzzy-search.test.js`, is 2.3x faster, ms's `index.test.ts` 3.2x. The doc printer alone is
+slower than JS because each call converts the whole doc to JSON and back across the bridge; the
+front door does not use it that way.
+
+GraphQL, measured the same way after its port (same machine, two runs started at 1-minute
+load 2.81 and 2.23), on the 787 GraphQL cases Prettier formats:
+
+| What | Prettier | Rust | |
+| --- | ---: | ---: | ---: |
+| CLI, one process per file, 787 files (every output identical) | 36.6 s / 36.9 s | 2.11 s / 2.11 s | 17.3x / 17.5x |
+| In process, `format()` warmed up, 781 files, 20 calls each | 102.6 / 87.0 ms | 10.1 / 8.8 ms | 10.2x / 9.9x |
+| In process, per file (median) | | | 17.7x / 18.0x |
+| In process, the slowest file for Rust | | | 1.61x / 2.9x |
+
+Six whitespace-only cases return before parsing in both and are left out of the in-process rows.
+No GraphQL file was slower in either run.
+
+YAML, the same way after its port (two runs started at 1-minute load 2.72 and 2.71), on the
+YAML cases Prettier formats:
+
+| What | Prettier | Rust | |
+| --- | ---: | ---: | ---: |
+| CLI, one process per file, 3,292 files (every output identical) | 160.8 s / 158.9 s | 8.98 s / 8.89 s | 17.9x / 17.9x |
+| In process, `format()` warmed up, 3,272 files, 20 calls each | 488.7 / 459.5 ms | 51.4 / 49.6 ms | 9.5x / 9.3x |
+| In process, per file (median) | | | 13.2x / 13.2x |
+| In process, the slowest file for Rust | | | 2.55x / 2.98x |
+
+Twenty whitespace-only cases are left out of the in-process rows, as for GraphQL. No YAML file
+was slower in either run.
+
+CSS, SCSS and Less, and Markdown, the same way after their ports (CSS runs started at 1-minute
+load 2.61 and 2.98, Markdown at 2.84 and 2.91; the load reached 3.0 to 3.6 by the end of each
+run), on the cases Prettier formats:
+
+| What | Prettier | Rust | |
+| --- | ---: | ---: | ---: |
+| CSS/SCSS/Less CLI, one process per file, 2,004 files (every output identical) | 107.5 s / 110.9 s | 12.7 s / 13.1 s | 8.5x / 8.5x |
+| CSS/SCSS/Less in process, `format()` warmed up, 2,001 files, 20 calls each | 1,116 / 1,101 ms | 203 / 208 ms | 5.5x / 5.3x |
+| CSS/SCSS/Less in process, per file (median) | | | 9.7x / 9.5x |
+| Markdown CLI, one process per file, 6,305 files (every output identical) | 352.2 s / 357.4 s | 22.5 s / 22.9 s | 15.6x / 15.6x |
+| Markdown in process, `format()` warmed up, 6,299 files, 20 calls each | 1,731 / 1,547 ms | 176 / 175 ms | 9.8x / 8.8x |
+| Markdown in process, per file (median) | | | 25.2x / 24.6x |
+
+Empty cases (three CSS, six Markdown) return before parsing and are left out of the in-process
+rows. In each language's second run one file came out slower than Prettier (0.82x and 0.88x):
+`crlf-less-less-comments-less` took 135 µs against 8.5 µs in the first run, and
+`single-quote-markdown-linkreference-cjk-md` 182 µs against 35 µs, so both were one-off stalls;
+in the first runs no file was slower, and the slowest file for Rust was 3.09x (CSS) and 2.27x
+(Markdown). The CSS CLI gain is lower than for the other languages because each style file is
+small and process start dominates; the front door's 6.3 ms per file is mostly that.
+
+The benchmarks found three problems, all fixed. First, a 40x slowdown on arrays of numbers:
+the port of `printNumber` compiled its four regular expressions on every call (cached, 23 ms
+became 0.3 ms). Second, run from inside the Prettier checkout, the Rust path ignored the config
+files around the input (Prettier read that repository's `.prettierrc`) because the recorded
+cases all ran in an empty folder; the glue now resolves that config itself (the `config` row
+above), checked by 63 recorded cases. Its first version doubled the CLI time by compiling the
+`.editorconfig` parser's patterns for every directory up to `/`. Third, the remaining time was
+in reading oxc's ESTree as `serde_json::Value`: the bridge crates need serde_json's ordered maps,
+which hash every field name. The port now reads the tree into its own value type (fields in a
+small vector with interned keys), hashes with an Fx-style hasher, and keeps static strings in
+the doc as borrowed `Cow`s; the largest file went from 6.7 ms to 4.0 ms, and the median file
+from 4.7x to 7x faster than Prettier.
+
+Found in the tool, and fixed:
+
+- With `CARGO_TARGET_DIR` set, every front door built into the same directory, so app tests
+  replayed each other's binaries; the front door now builds into its own `rust/app/target`.
+- Glue had no way to decline one case after reading stdin; `original::run_with_stdin` passes the
+  bytes on, and `lift` refuses while any glue still calls `original::`.
+- Case and input lines deeper than 128 levels (Prettier's doc trees) failed to parse; the
+  harness and generated `from_json` read them without a depth limit.
+- `--inputs` case names were cut to 24 characters and collided; given names keep 96.
+- `bridge` found no exports in `export { a, b as c }` lists; it reads them now.
+
+Not fixed yet, and noted in [`pitfalls.md`](pitfalls.md): `gate`'s unwrap, panic and size
+checks read only `port.rs`, so a port living in a dependency crate (as `prettier-js-rs` does)
+is checked by hand; `size` counts the whole import closure, `node_modules` included; and
+`app replay` without `--build` replays the original command and reports no fallback rate.
+`analyze --whole-app` counted 1,436 fixture files as parse errors and Prettier's `src/` as one
+import cycle.
+
+What it does not cover: YAML, TOML, JSON5 and JavaScript config files, embedded languages,
+files oxc cannot parse, options beyond the common ones, and every language other than JavaScript,
+TypeScript, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less. Those files are formatted by Prettier through the front door, and every recorded
+case, Rust or fallback, matches.
+
+Other languages beyond JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less are not started. Each needs a Rust parser that produces the AST Prettier's
+printer for it expects, a corpus recorded the same way, and the printer itself:
+
+| Language | Prettier printer (lines of JS) | Parser Prettier uses | Fixtures in `tests/format` |
+| --- | ---: | --- | ---: |
+| JSON | shares the JavaScript printer | Babel's expression parser | 43 |
+| GraphQL | 672 | `graphql-js` | 49 |
+| YAML | 1,406 | `yaml` with Prettier's own AST | 348 |
+| CSS, SCSS, Less | 3,249 | `postcss` with `postcss-scss`/`postcss-less` | 225 |
+| Markdown | 2,373 | `remark` | 821 |
+| HTML, Vue, Angular | 4,118 | `angular-html-parser` | 285 |
+
+JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less are done (above). GraphQL took one module of
+about 2,000 lines with its parser; YAML about 4,400 (CST parser 1,300, document checks and tree
+2,100, printer 1,000); Markdown about 5,100 (remark-parse with its plugins 3,500, printer 1,650);
+CSS, SCSS and Less about 5,600 (postcss with both syntaxes 1,550, value, selector and media query
+parsers 1,850, `parseNestedCSS` and the printer 2,150). HTML is the one left. Embedded CSS, GraphQL and HTML in template literals would come with
+those printers (embedded GraphQL needs only the template glue now).
+
+Beyond the recorded cases, the new parsers were fuzzed against Prettier: 13,991 YAML
+files, 6,000 GraphQL files, 20,000 Markdown files and 11,997 CSS, SCSS and Less files made by deleting, inserting and re-indenting
+pieces of the fixtures. Rust formatted 9,973 of the YAML files, 2,131 of the GraphQL files (every
+GraphQL file Prettier accepted) 19,150 of the Markdown files and 8,153 of the 8,223 style files Prettier accepted, each
+byte-identical to Prettier, and accepted no file that Prettier rejects. The first Markdown run
+found one: `![][x` with no closing bracket, where Prettier puts `null` in its doc and throws; the
+port now refuses it too. The style runs found two: `@function f($a, $args\n...)`, where Prettier's
+`$x ...` regex matches the first `$` that has `...` after it, not the first `$`; and `pow(, 2)`,
+an empty comma group on which Prettier's printer throws (the port now refuses it). One CSS mutant
+made Prettier loop forever, so each fuzz file now runs in a child process with a 10 s limit.
+
 ## Fixtures written to stress the tool
 
 | Fixture | Exercises | Result |

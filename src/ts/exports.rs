@@ -285,77 +285,120 @@ fn functions(path: &str, source: &str, declarations: bool) -> Vec<ExportedFn> {
         (ann, _) => annotation(ann),
     };
 
-    let mut out = Vec::new();
-    for statement in &ret.program.body {
-        let declaration = match statement {
-            Statement::ExportDeclaration(export) => Some(&export.declaration),
-            _ => None,
+    let function_entry = |f: &oxc_ast::ast::Function, doc: &JsDoc, exported: Option<String>| {
+        let id = f.id.as_ref()?;
+        Some(ExportedFn {
+            name: exported.unwrap_or_else(|| id.name.as_str().to_string()),
+            file: path.to_string(),
+            line: line(f.span.start),
+            params: params(&f.params, doc),
+            returns: returns_of(f.return_type.as_deref(), doc),
+            is_async: f.r#async,
+            is_generator: f.generator,
+            type_params: type_params_of(f.type_parameters.as_deref(), &text),
+            uses_instanceof: uses_instanceof(&text(f.span)),
+            ..Default::default()
+        })
+    };
+    let declarator_entry =
+        |declarator: &oxc_ast::ast::VariableDeclarator, doc: &JsDoc, exported: Option<String>| {
+            let name = binding_name(&declarator.id)?;
+            let type_names =
+                |tp: Option<&oxc_ast::ast::TSTypeParameterDeclaration>| type_params_of(tp, &text);
+            let (fn_params, returns, is_async, is_generator, span, type_params) =
+                match &declarator.init {
+                    Some(Expression::ArrowFunctionExpression(f)) => (
+                        &f.params,
+                        f.return_type.as_deref(),
+                        f.r#async,
+                        false,
+                        f.span,
+                        type_names(f.type_parameters.as_deref()),
+                    ),
+                    Some(Expression::FunctionExpression(f)) => (
+                        &f.params,
+                        f.return_type.as_deref(),
+                        f.r#async,
+                        f.generator,
+                        f.span,
+                        type_names(f.type_parameters.as_deref()),
+                    ),
+                    _ => return None,
+                };
+            Some(ExportedFn {
+                name: exported.unwrap_or(name),
+                file: path.to_string(),
+                line: line(span.start),
+                params: params(fn_params, doc),
+                returns: returns_of(returns, doc),
+                is_async,
+                is_generator,
+                type_params,
+                uses_instanceof: uses_instanceof(&text(span)),
+                ..Default::default()
+            })
         };
+
+    let mut out = Vec::new();
+    let mut local = std::collections::HashMap::new();
+    let mut listed = Vec::new();
+    for statement in &ret.program.body {
         let doc = jsdoc::leading(source, statement.span().start as usize).unwrap_or_default();
-        match declaration {
-            // Overload signatures have no body: the implementation signature follows them.
-            Some(Declaration::FunctionDeclaration(f)) if f.body.is_some() != declarations => {
-                if let Some(id) = &f.id {
-                    out.push(ExportedFn {
-                        name: id.name.as_str().to_string(),
-                        file: path.to_string(),
-                        line: line(f.span.start),
-                        params: params(&f.params, &doc),
-                        returns: returns_of(f.return_type.as_deref(), &doc),
-                        is_async: f.r#async,
-                        is_generator: f.generator,
-                        type_params: type_params_of(f.type_parameters.as_deref(), &text),
-                        uses_instanceof: uses_instanceof(&text(f.span)),
-                        ..Default::default()
-                    });
+        match statement {
+            Statement::ExportDeclaration(export) => match &export.declaration {
+                // Overload signatures have no body: the implementation signature follows them.
+                Declaration::FunctionDeclaration(f) if f.body.is_some() != declarations => {
+                    out.extend(function_entry(f, &doc, None));
+                }
+                Declaration::VariableDeclaration(vars) if !declarations => {
+                    for declarator in &vars.declarations {
+                        out.extend(declarator_entry(declarator, &doc, None));
+                    }
+                }
+                _ => {}
+            },
+            Statement::ExportNamedDeclaration(export)
+                if !declarations && !export.export_kind.is_type() =>
+            {
+                for spec in &export.specifiers {
+                    if !spec.export_kind.is_type() {
+                        listed.push((
+                            spec.local.name().to_string(),
+                            spec.exported.name().to_string(),
+                        ));
+                    }
                 }
             }
-            Some(Declaration::VariableDeclaration(vars)) if !declarations => {
+            Statement::FunctionDeclaration(f) if f.body.is_some() => {
+                if let Some(id) = &f.id {
+                    local.insert(id.name.as_str().to_string(), (Local::Function(f), doc));
+                }
+            }
+            Statement::VariableDeclaration(vars) => {
                 for declarator in &vars.declarations {
-                    let Some(name) = binding_name(&declarator.id) else {
-                        continue;
-                    };
-                    let type_names = |tp: Option<&oxc_ast::ast::TSTypeParameterDeclaration>| {
-                        type_params_of(tp, &text)
-                    };
-                    let (fn_params, returns, is_async, is_generator, span, type_params) =
-                        match &declarator.init {
-                            Some(Expression::ArrowFunctionExpression(f)) => (
-                                &f.params,
-                                f.return_type.as_deref(),
-                                f.r#async,
-                                false,
-                                f.span,
-                                type_names(f.type_parameters.as_deref()),
-                            ),
-                            Some(Expression::FunctionExpression(f)) => (
-                                &f.params,
-                                f.return_type.as_deref(),
-                                f.r#async,
-                                f.generator,
-                                f.span,
-                                type_names(f.type_parameters.as_deref()),
-                            ),
-                            _ => continue,
-                        };
-                    out.push(ExportedFn {
-                        name,
-                        file: path.to_string(),
-                        line: line(span.start),
-                        params: params(fn_params, &doc),
-                        returns: returns_of(returns, &doc),
-                        is_async,
-                        is_generator,
-                        type_params,
-                        uses_instanceof: uses_instanceof(&text(span)),
-                        ..Default::default()
-                    });
+                    if let Some(name) = binding_name(&declarator.id) {
+                        local.insert(name, (Local::Declarator(declarator), doc.clone()));
+                    }
                 }
             }
             _ => {}
         }
     }
+    for (name, exported) in listed {
+        match local.get(&name) {
+            Some((Local::Function(f), doc)) => out.extend(function_entry(f, doc, Some(exported))),
+            Some((Local::Declarator(d), doc)) => {
+                out.extend(declarator_entry(d, doc, Some(exported)));
+            }
+            None => {}
+        }
+    }
     out
+}
+
+enum Local<'b, 'a> {
+    Function(&'b oxc_ast::ast::Function<'a>),
+    Declarator(&'b oxc_ast::ast::VariableDeclarator<'a>),
 }
 
 /// Type parameters as `T`, or `T extends <constraint>` when constrained.
@@ -544,5 +587,21 @@ mod tests {
         assert_eq!(names, ["LineIndex", "Id"]);
         assert!(types[0].text.contains("=>") && !types[0].alias);
         assert_eq!((types[1].text.as_str(), types[1].alias), ("string", true));
+    }
+
+    #[test]
+    fn reads_export_lists() {
+        let found = exported_functions(
+            "a.js",
+            "function printDoc(doc, options) { return doc }\n\
+             const width = (text) => text.length\n\
+             function hidden() {}\n\
+             const value = 1\n\
+             export { printDoc, width as getWidth, value };\n",
+        );
+        let names: Vec<&str> = found.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, ["printDoc", "getWidth"]);
+        assert_eq!(found[0].params.len(), 2);
+        assert_eq!(found[1].line, 2);
     }
 }

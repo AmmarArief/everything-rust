@@ -866,7 +866,7 @@ pub(crate) fn record(
         }
         counts[kind] += 1;
         let prefix = ["example", "input", "trap"][kind];
-        let name = match given.map(|g| app::slug(&g)).filter(|g| !g.is_empty()) {
+        let name = match given.map(|g| app::given_slug(&g)).filter(|g| !g.is_empty()) {
             Some(g) => g,
             None => format!("{prefix}-{:03}-{}", counts[kind], case_slug(&req)),
         };

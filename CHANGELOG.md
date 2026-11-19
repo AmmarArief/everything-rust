@@ -29,6 +29,34 @@
 - `setup` also registers OpenCode: the MCP server in `~/.config/opencode/opencode.json`
   (`mcp.servers`, the whole argv in `command`) and the workflow skill in
   `~/.config/opencode/skills/`, and `doctor` reads that entry back.
+- A port of [Prettier](https://github.com/prettier/prettier) 3.6.2 behind a Rust front door in
+  `demo/real-world/prettier-rs` and `docs/real-world.md`: 17,224/17,224 recorded CLI cases match,
+  15,837 of them (91.9%) formatted fully in Rust and byte-identical to Prettier, the rest handed to
+  Prettier per file (8.1% fallback). JavaScript, TypeScript (849 of 929 cases), JSX, JSON in
+  all four flavours (995 of the 1,019 JSON cases Prettier formats), GraphQL (all 787 cases
+  Prettier formats, with graphql-js's parser ported) YAML (3,309 of 3,310, with yaml's CST
+  parser and yaml-unist-parser ported), Markdown (6,305 of 6,350, with remark-parse ported and
+  code blocks formatted by the other ports) and CSS, SCSS and Less (all 2,004 cases Prettier
+  formats, with postcss, postcss-scss, postcss-less and the value, selector and media query
+  parsers ported) run in Rust, as do all 59 real repository
+  files. Ported: the doc printer (`gate` 2,848/2,848), the printer on oxc's ESTree with
+  comments, classes, decorators, template literals, ternaries and `prettier-ignore` (`gate`
+  15,753/15,753 on `format()`), and the CLI's config resolution (`.prettierrc` JSON,
+  `package.json`, overrides, `.editorconfig`, ignore files). On an M4 against Node 24: 19x faster
+  per file from the command line, 7x on the median JavaScript/TypeScript file in process (18x on
+  the median GraphQL file, 13x on the median YAML file, 25x on the median Markdown file, 9.5x on
+  the median CSS/SCSS/Less file); per file from the command line 8.5x for style files and 15.6x
+  for Markdown. No file was slower in a first run; one per language was in a second run (a one-off
+  stall, 135 µs against 8.5 µs in the first).
+- Glue can decline one case after reading stdin: `original::run_with_stdin(args, input)` hands the
+  case and its bytes to the original; `lift` refuses while any glue still calls `original::`.
+- `bridge` reads `export { a, b as c }` lists.
+- Fix: with `CARGO_TARGET_DIR` set, every front door built into the same directory and replays
+  ran another app's binary; the front door builds into its own `rust/app/target`.
+- Fix: case and input lines nested deeper than 128 levels failed to parse; the harness and
+  generated `from_json` read them without a depth limit.
+- Fix: `--inputs` case names were cut to 24 characters and collided; given names keep 96.
+
 - A port of [json-server](https://github.com/typicode/json-server) to a pure Rust binary in
   `demo/real-world/json-server-rs` and `docs/real-world.md`: 514/514 recorded HTTP cases match
   with no fallback, and six units pass `gate`. Against Node 24 on an M4: first response in 8 to

@@ -220,7 +220,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             .enumerate()
             .filter(|(_, l)| !l.trim().is_empty())
         {
-            let mut case: Value = serde_json::from_str(line).with_context(|| {
+            let mut case: Value = parse_deep(line).with_context(|| {
                 format!(
                     "{}:{} (values use the record codec: {{\"$undefined\": true}}, {{\"$num\": \"NaN\"}}, \
                      and {{\"$utf16\": [code units]}} for strings with lone surrogates)",
@@ -277,7 +277,7 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let mut errors = 0;
     let mut count = 0;
     for line in text.lines().filter(|l| !l.is_empty()) {
-        let case: Value = serde_json::from_str(line)?;
+        let case: Value = parse_deep(line)?;
         count += 1;
         let class_error = case["results"]
             .as_array()
@@ -1839,6 +1839,14 @@ mod tests {
     }
 
     #[test]
+    fn reads_case_lines_deeper_than_128() {
+        let deep = format!("{}1{}", "[".repeat(300), "]".repeat(300));
+        assert!(serde_json::from_str::<Value>(&deep).is_err());
+        assert!(parse_deep(&deep).is_ok());
+        assert!(parse_deep("[1] x").is_err());
+    }
+
+    #[test]
     fn generates_deterministic_distinct_inputs() {
         let a = generate(&f(&[("q", "string"), ("t", "string")]), 50, &[]);
         let b = generate(&f(&[("q", "string"), ("t", "string")]), 50, &[]);
@@ -1916,4 +1924,14 @@ mod verdict_tests {
                 .starts_with("No call overhead")
         );
     }
+}
+
+/// Parses one case line: recorded values (a pretty-printer's document trees) nest deeper than
+/// serde_json's default limit of 128.
+pub(crate) fn parse_deep(text: &str) -> serde_json::Result<Value> {
+    let mut de = serde_json::Deserializer::from_str(text);
+    de.disable_recursion_limit();
+    let value = Value::deserialize(&mut de)?;
+    de.end()?;
+    Ok(value)
 }

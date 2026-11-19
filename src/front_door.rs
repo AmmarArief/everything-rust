@@ -346,6 +346,17 @@ pub fn report_fallbacks() {{
 /// Runs the original with the same arguments, stdin and environment, and passes its output and
 /// exit code through. Each call is one fallback.
 pub fn run(args: &[OsString]) -> ExitCode {{
+    run_with(args, None)
+}}
+
+/// For glue that read stdin and then declines the case: runs the original with `input` as its
+/// stdin. Each call is one fallback.
+#[allow(dead_code)]
+pub fn run_with_stdin(args: &[OsString], input: &[u8]) -> ExitCode {{
+    run_with(args, Some(input))
+}}
+
+fn run_with(args: &[OsString], input: Option<&[u8]>) -> ExitCode {{
     if let Some(mut file) = log() {{
         let line: Vec<String> = args
             .iter()
@@ -369,7 +380,18 @@ pub fn run(args: &[OsString]) -> ExitCode {{
     {{
         command.env(\"PYTHONIOENCODING\", \"utf-8\");
     }}
-    let status = command.status();
+    let status = match input {{
+        None => command.status(),
+        Some(input) => command
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .and_then(|mut child| {{
+                if let Some(mut pipe) = child.stdin.take() {{
+                    let _ = pipe.write_all(input);
+                }}
+                child.wait()
+            }}),
+    }};
     match status {{
         Ok(status) => ExitCode::from(exit_code(status)),
         Err(e) => {{
@@ -439,7 +461,9 @@ fn glue_rs(crate_name: &str) -> String {
     let krate = crate_name.replace('-', "_");
     format!(
         "//! Glue from the front door to `{crate_name}`: parse the arguments, call `{krate}::port`,\n\
-         //! print what the original prints and return its exit code.\n\n\
+         //! print what the original prints and return its exit code. A case the port does not\n\
+         //! cover yet goes back with `crate::original::run(&argv[1..])`, or\n\
+         //! `crate::original::run_with_stdin(&argv[1..], &input)` once stdin was read.\n\n\
          use std::ffi::OsString;\n\
          use std::process::ExitCode;\n\n\
          use clap::ArgMatches;\n\n\
@@ -498,11 +522,13 @@ pub(crate) fn cargo_build(app_dir: &Path, target_dir: Option<&Path>) -> Result<P
 }
 
 fn build_and_replay(repo: &Path, state: &State) -> Result<ReplayOutcome> {
+    let app_dir = repo.join(APP_DIR);
+    let target_dir = app_dir.join("target");
     if state.kind == AppKind::Library {
-        crate::library::cargo_build_lib(&repo.join(APP_DIR), None)?;
+        crate::library::cargo_build_lib(&app_dir, Some(&target_dir))?;
         return crate::library::replay(repo, state, None);
     }
-    let exe = cargo_build(&repo.join(APP_DIR), None)?;
+    let exe = cargo_build(&app_dir, Some(&target_dir))?;
     app::replay(&ReplayOptions {
         case: None,
         repo,

@@ -1044,7 +1044,11 @@ pub const JS_RS: &str = concat!(
 
 /// Reads a structured argument sent by `index.cjs`.
 pub fn from_json<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, String> {
-    serde_json::from_str(text).map_err(|e| format!("TypeError: {e}"))
+    let mut de = serde_json::Deserializer::from_str(text);
+    de.disable_recursion_limit();
+    let value = <T as serde::Deserialize>::deserialize(&mut de).map_err(|e| format!("TypeError: {e}"))?;
+    de.end().map_err(|e| format!("TypeError: {e}"))?;
+    Ok(value)
 }
 
 /// Writes a structured result for `index.cjs`.
@@ -1208,7 +1212,7 @@ pub fn required_deps(kind: Kind, api: &PortApi) -> Vec<(&'static str, String)> {
         // default float parser can be off by one ULP; `float_roundtrip` makes it exact.
         deps.push((
             "serde_json",
-            r#"{ version = "1", features = ["preserve_order", "float_roundtrip"] }"#.into(),
+            r#"{ version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }"#.into(),
         ));
     }
     deps
