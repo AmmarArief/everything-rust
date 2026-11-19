@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `setup`: a Codex entry written as an inline table (`rust-anything = { ..., env = { ... } }`)
+  keeps its other keys on reinstall, as a `[mcp_servers.rust-anything]` table already did.
+
 ## 2.0.0 (2026-11-19)
 
 Highlights:
