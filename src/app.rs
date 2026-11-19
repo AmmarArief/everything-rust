@@ -96,6 +96,9 @@ pub struct Config {
     /// Numbers in the output match within this relative tolerance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub float_tolerance: Option<f64>,
+    /// Written files holding raw floats, by path: compared value by value (`f32le`, `f64le`).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub float_files: BTreeMap<String, String>,
     /// Outputs whose line order the original's own runs disagreed on, by case: their lines must
     /// match in any order.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -209,6 +212,7 @@ pub(crate) struct Normalizers {
     patterns: Vec<Regex>,
     key_order: bool,
     float_tolerance: Option<f64>,
+    float_files: BTreeMap<PathBuf, usize>,
     unordered: BTreeMap<String, Vec<String>>,
 }
 
@@ -243,10 +247,16 @@ impl Normalizers {
             .float_tolerance
             .map(crate::tolerance::check)
             .transpose()?;
+        let float_files = config
+            .float_files
+            .iter()
+            .map(|(path, format)| Ok((PathBuf::from(path), float_width(format)?)))
+            .collect::<Result<_>>()?;
         Ok(Normalizers {
             patterns,
             key_order,
             float_tolerance,
+            float_files,
             unordered: config.unordered.clone(),
         })
     }
@@ -1252,6 +1262,9 @@ pub struct RecordOptions<'a> {
     /// Numbers in the output match within this tolerance; kept from the last recording when
     /// `None`, removed with 0.
     pub float_tolerance: Option<f64>,
+    /// Written files of raw floats, `path=f32le` or `path=f64le`; kept from the last recording
+    /// when empty.
+    pub float_files: &'a [String],
     pub effects: Option<crate::effects::EffectsConfig>,
 }
 
@@ -1528,6 +1541,23 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
             Some(t) => (crate::tolerance::check(t)? > 0.0).then_some(t),
             None => existing.as_ref().and_then(|c| c.float_tolerance),
         },
+        float_files: if opts.float_files.is_empty() {
+            existing
+                .as_ref()
+                .map(|c| c.float_files.clone())
+                .unwrap_or_default()
+        } else {
+            opts.float_files
+                .iter()
+                .map(|spec| {
+                    let (path, format) = spec.rsplit_once('=').with_context(|| {
+                        format!("--float-file `{spec}`: use PATH=f32le or PATH=f64le")
+                    })?;
+                    float_width(format)?;
+                    Ok((path.to_string(), format.to_string()))
+                })
+                .collect::<Result<_>>()?
+        },
         unordered: BTreeMap::new(),
         effects: crate::effects::EffectsConfig::merge(
             existing.as_ref().and_then(|c| c.effects.clone()),
@@ -1774,6 +1804,59 @@ fn load_spec(dir: &Path, path: &Path) -> Result<Spec> {
     })
 }
 
+fn float_width(format: &str) -> Result<usize> {
+    match format {
+        "f32le" => Ok(4),
+        "f64le" => Ok(8),
+        other => bail!("float file format `{other}`: use f32le or f64le"),
+    }
+}
+
+fn floats(bytes: &[u8], width: usize) -> Vec<f64> {
+    bytes
+        .chunks_exact(width)
+        .map(|c| match c.try_into() {
+            Ok(b) if width == 4 => f64::from(f32::from_le_bytes(b)),
+            _ => c.try_into().map_or(f64::NAN, f64::from_le_bytes),
+        })
+        .collect()
+}
+
+fn compare_floats(
+    expected: &[u8],
+    actual: &[u8],
+    width: usize,
+    tol: Option<f64>,
+) -> Option<String> {
+    if !expected.len().is_multiple_of(width) || expected.len() != actual.len() {
+        return Some(format!(
+            "{} values expected, {} bytes got ({} bytes per value)\n",
+            expected.len() / width,
+            actual.len(),
+            width
+        ));
+    }
+    let (e, a) = (floats(expected, width), floats(actual, width));
+    let tol = tol.unwrap_or(0.0);
+    let same =
+        |x: f64, y: f64| x == y || (x.is_nan() && y.is_nan()) || crate::tolerance::near(x, y, tol);
+    let off: Vec<usize> = (0..e.len()).filter(|&i| !same(e[i], a[i])).collect();
+    let first = *off.first()?;
+    let (mut abs, mut rel) = (0.0f64, 0.0f64);
+    for &i in &off {
+        let d = (e[i] - a[i]).abs();
+        abs = abs.max(d);
+        rel = rel.max(d / e[i].abs().max(a[i].abs()).max(f64::MIN_POSITIVE));
+    }
+    Some(format!(
+        "{} of {} values differ beyond the tolerance ({tol}); first at index {first}: {} expected, {} got; max abs diff {abs:e}, max rel diff {rel:e}\n",
+        off.len(),
+        e.len(),
+        e[first],
+        a[first]
+    ))
+}
+
 pub(crate) fn compare(
     norm: &Normalizers,
     expected: &[u8],
@@ -1940,7 +2023,13 @@ fn check(
                 }),
                 Some(actual) => {
                     let unordered = norm.unordered(&spec.name, &field);
-                    if let Some(detail) = compare(norm, &expected, actual, false, unordered) {
+                    let detail = match norm.float_files.get(&path) {
+                        Some(&width) => {
+                            compare_floats(&expected, actual, width, norm.float_tolerance)
+                        }
+                        None => compare(norm, &expected, actual, false, unordered),
+                    };
+                    if let Some(detail) = detail {
                         problems.push(Problem { field, detail });
                     }
                 }
@@ -2092,6 +2181,7 @@ pub fn replay(opts: &ReplayOptions) -> Result<ReplayOutcome> {
         timeout_secs: default_timeout(),
         http: None,
         float_tolerance: None,
+        float_files: BTreeMap::new(),
         unordered: BTreeMap::new(),
         effects: None,
     });
@@ -2269,6 +2359,7 @@ mod tests {
             pace_ms: None,
             port: None,
             float_tolerance: None,
+            float_files: &[],
             effects: None,
         })
         .unwrap();
@@ -2301,6 +2392,7 @@ mod tests {
             timeout_secs: 30,
             http: None,
             float_tolerance: None,
+            float_files: BTreeMap::new(),
             unordered: BTreeMap::new(),
             effects: None,
         })
@@ -2325,6 +2417,7 @@ mod tests {
             timeout_secs: 30,
             http: None,
             float_tolerance: None,
+            float_files: BTreeMap::new(),
             unordered: BTreeMap::from([("c".to_string(), vec!["stdout".to_string()])]),
             effects: None,
         })
@@ -2364,6 +2457,7 @@ mod tests {
             timeout_secs: 30,
             http: None,
             float_tolerance: None,
+            float_files: BTreeMap::new(),
             unordered: BTreeMap::new(),
             effects: None,
         };
@@ -2455,6 +2549,7 @@ mod tests {
             pace_ms: None,
             port: None,
             float_tolerance: None,
+            float_files: &[],
             effects: None,
         })
         .unwrap();

@@ -528,6 +528,7 @@ fn tool_schemas() -> Value {
                 "fresh": { "type": "array", "items": { "type": "string" }, "description": "Servers: repository files or folders the server reads or writes, snapshotted and copied into a fresh working directory before every start. Implies http; saved." },
                 "pace": { "type": "integer", "description": "Servers: milliseconds to wait after each response, for work the server does after answering (a file watcher). Implies http; saved and used by replay; 0 removes it." },
                 "float_tolerance": { "type": "number", "description": "Numeric output: numbers match when they differ by at most this times the larger magnitude (absolute below 1), e.g. 1e-9. Saved with the cases; 0 removes it." },
+                "float_file": { "type": "array", "items": { "type": "string" }, "description": "Written files of raw floats, compared value by value within float_tolerance: `PATH=f32le` or `PATH=f64le`. Saved with the cases." },
             }, "required": ["repo"] },
         },
         {
@@ -824,6 +825,7 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 fresh: &strings("fresh"),
                 pace_ms: args["pace"].as_u64(),
                 float_tolerance: args["float_tolerance"].as_f64(),
+                float_files: &strings("float_file"),
                 effects,
             })?)?
         }

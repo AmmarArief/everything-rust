@@ -43,6 +43,7 @@ fn record(repo: &Path, python: &str, effects: Option<EffectsConfig>) -> app::Rec
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        float_files: &[],
         effects,
     })
     .unwrap()
@@ -189,6 +190,7 @@ fn a_server_that_mails_twice_fails_only_on_that_request() {
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        float_files: &[],
         effects: EffectsConfig::from_args(&["smtp".into()], &[], None, None).unwrap(),
     })
     .unwrap();
@@ -274,6 +276,7 @@ fn rows_written_differently_fail_replay_through_the_db_dump() {
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        float_files: &[],
         effects,
     })
     .unwrap();

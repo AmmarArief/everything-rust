@@ -28,7 +28,9 @@ code too: `profile` and `analyze` flag it, since porting it buys little speed.
 **My code is numeric; will the floats match exactly?** Often not: operation order, fused
 multiply-add and the math library differ between compilers. Record with `--float-tolerance 1e-9`
 (`record` or `app record`), and floats match within that share of the larger value (absolute below
-1). Integers, text and structure still have to match exactly.
+1). Integers, text and structure still have to match exactly. A file of raw floats the app writes
+(numpy `tofile`, `.f32` exports) is compared value by value too when you name it:
+`app record --float-file out.f32=f32le` (or `f64le`).
 
 **Can it port an app I only have as an APK, a JAR or an .exe?** No. It ports source code: it
 parses the functions, records what each one does, and checks the Rust against the running

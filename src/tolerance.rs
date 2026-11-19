@@ -16,7 +16,7 @@ pub fn check(tolerance: f64) -> Result<f64> {
     Ok(tolerance)
 }
 
-fn near(e: f64, a: f64, tolerance: f64) -> bool {
+pub(crate) fn near(e: f64, a: f64, tolerance: f64) -> bool {
     (e - a).abs() <= tolerance * e.abs().max(a.abs()).max(1.0)
 }
 

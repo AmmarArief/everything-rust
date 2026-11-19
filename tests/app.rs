@@ -86,6 +86,7 @@ fn record_then_replay(repo: &Path, run: &str, buggy: &str) {
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        float_files: &[],
         effects: None,
     })
     .unwrap();
@@ -661,6 +662,7 @@ fn lift_end_to_end(repo: &Path, run: &str, semantics: &Semantics, original: &str
         pace_ms: None,
         port: None,
         float_tolerance: None,
+        float_files: &[],
         effects: None,
     })
     .unwrap();

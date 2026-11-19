@@ -346,6 +346,11 @@ enum AppCmd {
         /// removes it.
         #[arg(long)]
         float_tolerance: Option<f64>,
+        /// A written file of raw floats, compared value by value within --float-tolerance
+        /// instead of byte for byte: `PATH=f32le` or `PATH=f64le`. Repeatable; saved with the
+        /// cases.
+        #[arg(long = "float-file", value_name = "PATH=FORMAT")]
+        float_files: Vec<String>,
         /// Record what leaves the process too: `http` runs a local sink that answers every
         /// request (set as HTTP_PROXY, http_proxy and RUST_ANYTHING_HTTP_SINK), `smtp` a local
         /// mail server (SMTP_HOST, SMTP_PORT). Each case stores what reached them, in order,
@@ -992,6 +997,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
             fresh,
             pace,
             float_tolerance,
+            float_files,
             effects,
             effect_env,
             db_reset,
@@ -1019,6 +1025,7 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
                 fresh: &fresh,
                 pace_ms: pace,
                 float_tolerance,
+                float_files: &float_files,
                 effects,
             })?;
             if json {
