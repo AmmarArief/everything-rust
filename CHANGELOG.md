@@ -3,8 +3,9 @@
 ## Unreleased
 
 - README: right under the tagline, it now says the tool doesn't translate code (your agent or you
-  write the Rust) and what PHP and C# support today. From a review by
-  [Mashhood Ali](https://github.com/MASHHOOD2019) (#118).
+  write the Rust) and what PHP and C# support today. From a new-user QA review of the README by
+  [Mashhood Ali](https://github.com/MASHHOOD2019), an independent AI evaluation and QA specialist
+  who tests products and docs the way a new user would ([LinkedIn](https://www.linkedin.com/in/mashhood-ali-514862296)) (#118).
 
 ## 2.1.0 (2026-11-20)
 
