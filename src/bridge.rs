@@ -899,7 +899,9 @@ pub struct Refreshed {
 pub fn refresh(crate_dir: &Path) -> Result<Refreshed> {
     let manifest = Manifest::load(crate_dir)?;
     if manifest.kind == Kind::CAbi {
-        let mut files = c_bindings(&manifest);
+        let port = std::fs::read_to_string(crate_dir.join("src/port.rs"))
+            .context("reading src/port.rs")?;
+        let mut files = c_bindings(&manifest, &port);
         let cargo =
             std::fs::read_to_string(crate_dir.join("Cargo.toml")).context("reading Cargo.toml")?;
         files.push((
@@ -1066,6 +1068,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     let mut exports = Vec::new();
     let mut classes = Vec::new();
     let mut js_only = Vec::new();
+    if lang == crate::lang::Lang::C {
+        crate::lang::c::use_typedefs(&root);
+    }
     for file in &unit.files {
         if file.ends_with(".vue") || file.ends_with(".svelte") || file.ends_with(".astro") {
             continue;
@@ -1367,9 +1372,9 @@ fn write_files(crate_dir: &Path, files: &[(String, String)]) -> Result<()> {
 
 /// The generated C-side files: the `extern "C"` layer and its header. C signatures are fixed
 /// by the original, so they come from the manifest, not from `port.rs`.
-fn c_bindings(m: &Manifest) -> Vec<(String, String)> {
+fn c_bindings(m: &Manifest, port: &str) -> Vec<(String, String)> {
     vec![
-        ("src/lib.rs".into(), crate::codegen_c::lib_rs(m)),
+        ("src/lib.rs".into(), crate::codegen_c::lib_rs(m, port)),
         (
             format!("include/{}.h", m.lib_name()),
             crate::codegen_c::header(m),
@@ -1552,7 +1557,8 @@ fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Ou
             serde_json::to_string_pretty(manifest)? + "\n",
         ),
     ];
-    files.extend(c_bindings(manifest));
+    let port = crate::codegen_c::port_rs(manifest);
+    files.extend(c_bindings(manifest, &port));
     write_files(crate_dir, &files)?;
     format_rust(crate_dir);
     let mut notes = vec![

@@ -103,7 +103,7 @@ enum Cmd {
     },
     /// 2b. Regenerate the bindings (`lib.rs`, `index.cjs`, `js.rs`) from the signatures in `port.rs`.
     Refresh {
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         /// Add a batch class: `function:param` runs `function` over many `param` values kept in
         /// Rust, on all cores. Repeat for more.
@@ -113,7 +113,7 @@ enum Cmd {
     /// 3a. Record what the TS functions return on generated and given inputs.
     Record {
         /// Crate folder made by `bridge`.
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         /// Generated cases per function.
         #[arg(long, default_value_t = 200)]
@@ -151,7 +151,7 @@ enum Cmd {
     /// 3b. Build the crate's JS module (napi-rs `.node`, wasm-bindgen output) or, with
     /// `--profile android`, the JNI library for Android ABIs into `jniLibs/`.
     Build {
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         /// Target: this machine, or Android (needs the NDK and the Rust Android targets).
         #[arg(long, value_enum, default_value_t = Profile::Host)]
@@ -171,7 +171,7 @@ enum Cmd {
     },
     /// 3c. Replay recorded cases against the Rust module.
     Diff {
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         /// Target: this machine, or a connected Android device (for JVM crates).
         #[arg(long, value_enum, default_value_t = Profile::Host)]
@@ -198,7 +198,7 @@ enum Cmd {
     },
     /// 3d. Time the recorded cases on the TS original and on Rust, bridge included.
     Bench {
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         /// Minimum measured time per function and side, in milliseconds.
         #[arg(long, default_value_t = 200)]
@@ -228,7 +228,7 @@ enum Cmd {
     },
     /// 4. Generate a drop-in module that runs TS and Rust side by side.
     Shadow {
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         /// Where to write the module; defaults to `<crate>/shadow/<name>.shadow.ts`.
         #[arg(long, short)]
@@ -236,7 +236,7 @@ enum Cmd {
     },
     /// 5. Check the definition of done for a port.
     Gate {
-        #[arg(default_value = ".")]
+        #[arg(default_value = ".", value_parser = absolute)]
         crate_dir: PathBuf,
         #[arg(long)]
         json: bool,
@@ -1283,4 +1283,10 @@ fn run_app(command: AppCmd) -> Result<ExitCode> {
         }
     }
     Ok(ExitCode::SUCCESS)
+}
+
+/// A path argument made absolute: the tools run compilers and cargo from scratch folders, where
+/// a relative crate path points nowhere.
+fn absolute(arg: &str) -> Result<PathBuf, String> {
+    std::path::absolute(arg).map_err(|e| e.to_string())
 }

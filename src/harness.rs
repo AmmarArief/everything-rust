@@ -1026,11 +1026,25 @@ pub fn trap_args(
     regex: bool,
 ) -> Vec<Vec<Value>> {
     let mut out = Vec::new();
+    let params: Vec<&crate::ts::exports::Param> = params
+        .iter()
+        .filter(|p| !p.ts_type.starts_with("len:"))
+        .collect();
     if base.len() < params.iter().filter(|p| !p.rest).count() {
         return out;
     }
     for (i, p) in params.iter().enumerate() {
         if p.rest || i >= base.len() {
+            continue;
+        }
+        if let Some(values) = c_pointer_traps(&p.ts_type) {
+            for v in values {
+                if base[i] != v {
+                    let mut args = base.to_vec();
+                    args[i] = v;
+                    out.push(args);
+                }
+            }
             continue;
         }
         let t = param_type(p);
@@ -1054,6 +1068,55 @@ pub fn trap_args(
     out
 }
 
+/// Edge cases for C pointer parameters: buffers as hex text (`bytes`, `buffer`) or a size of
+/// zeroed bytes (`buffer`), and the starting value behind an `out` pointer.
+fn c_pointer_traps(ts_type: &str) -> Option<Vec<Value>> {
+    Some(match ts_type {
+        "bytes" => vec![
+            json!(""),
+            json!("00"),
+            json!("ff"),
+            json!("616263"),
+            json!((0..=255u8).map(|b| format!("{b:02x}")).collect::<String>()),
+            json!("ff".repeat(64)),
+        ],
+        "buffer" => vec![
+            json!(0),
+            json!(1),
+            json!(3),
+            json!(64),
+            json!("ff".repeat(16)),
+        ],
+        "out" => vec![json!(0), json!(-1), json!(2_147_483_647)],
+        _ => return None,
+    })
+}
+
+/// A random value for a C pointer parameter (see `c_pointer_traps`).
+fn c_pointer_value(ts_type: &str, rng: &mut Rng) -> Value {
+    const SIZES: [usize; 12] = [0, 1, 2, 3, 4, 5, 8, 16, 17, 64, 100, 1024];
+    match ts_type {
+        "bytes" => {
+            let n = SIZES[rng.below(SIZES.len())];
+            let text = rng.below(2) == 0;
+            json!(
+                (0..n)
+                    .map(|_| {
+                        let b = if text {
+                            0x20 + rng.below(0x5f)
+                        } else {
+                            rng.below(256)
+                        };
+                        format!("{b:02x}")
+                    })
+                    .collect::<String>()
+            )
+        }
+        "buffer" => json!(SIZES[rng.below(SIZES.len())]),
+        _ => json!([0, 1, -1, 7, 1000, 65536][rng.below(6)]),
+    }
+}
+
 /// One argument list for `params`: values that fit, edge cases, and sometimes omitted optionals.
 fn args_for(
     params: &[crate::ts::exports::Param],
@@ -1062,6 +1125,14 @@ fn args_for(
 ) -> Vec<Value> {
     let mut args: Vec<Value> = Vec::new();
     for p in params {
+        match p.ts_type.as_str() {
+            t if t.starts_with("len:") => continue,
+            "bytes" | "buffer" | "out" => {
+                args.push(c_pointer_value(&p.ts_type, rng));
+                continue;
+            }
+            _ => {}
+        }
         let t = param_type(p);
         // Structured parameters: values that fit the TS type, and now and then a value
         // that does not, so error paths get recorded too.

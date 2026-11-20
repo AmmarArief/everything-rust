@@ -16,6 +16,36 @@
   write the Rust) and what PHP and C# support today. From a new-user QA review of the README by
   [Mashhood Ali](https://github.com/MASHHOOD2019), an independent AI evaluation and QA specialist
   who tests products and docs the way a new user would ([LinkedIn](https://www.linkedin.com/in/mashhood-ali-514862296)) (#118).
+- Case study: ffmpeg's libavutil (n7.1), 10 units, 135,773/135,773 recorded calls, gate passes
+  on each (`demo/real-world/ffmpeg-rs`, `docs/real-world.md#ffmpeg`).
+- C bridge: pointer parameters cross it with the original signatures. A `const` byte pointer
+  followed by an integer is a buffer of that length (`&[u8]` in the port); a byte pointer the
+  function writes, paired with the next integer or one named like a size, is `&mut [u8]` and its
+  contents after the call are recorded; a mutable pointer to one scalar is `Option<&mut T>` and
+  its value after the call is recorded; a returned pointer into a parameter is the offset into
+  it (`Option<usize>`). In cases, buffers are hex text (or a size, for that many zero bytes) and
+  length parameters are left out. Typedefs of scalars and enums resolve through the project's
+  headers. Found porting ffmpeg's libavutil, whose APIs all take pointers.
+- C bridge: a port can take a `const char *` as `Option<crate::CChars<'_>>` instead of
+  `Option<&[u8]>`: the bytes are read as the port goes, without the `strlen` the slice needs
+  first. Change the parameter's type in `port.rs` and run `refresh`; `lib.rs` defines `CChars`
+  (an iterator over the bytes, with `peek` and `to_bytes`) only when a port uses it. On short
+  words the two `strlen` calls cost more than ffmpeg's whole `av_strcasecmp`; with `CChars` the
+  port went from 0.23x to 0.68x of C's speed, `av_stristr` from 0.44x to 1.4x.
+- `record` and `bench` for C: a folder holding a header named like a C standard one (ffmpeg's
+  `libavutil/time.h`) is passed with `-iquote`, so `<time.h>` stays the system's; flags in
+  `CFLAGS` are added (`-DHAVE_AV_CONFIG_H`, `-I<tree>`).
+- `build`, `diff`, `bench`, `shadow`, `gate`, `refresh` and `record` take the crate path as
+  given and make it absolute: `rust-anything build .` on a C crate failed, since the compiler and
+  cargo run in a scratch folder.
+- `analyze` for C: files under a CPU-architecture folder (`x86/`, `aarch64/`, `arm/`, ...) stay
+  in C; `goto` no longer marks a unit blocked as dynamic code; `#include "libavutil/x.h"`
+  resolves when the folder analyzed is `libavutil` itself, so its `tests/*.c` count as tests; a
+  unit with no bridgeable export gets a note about the C bridge instead of the JS one.
+- `gate` for C: the size check counts the project functions the ported functions call, since the
+  port does their work too.
+- C `char` parameters are `c_char` in generated code (signed or unsigned as the platform's C
+  `char`), not `c_schar`.
 
 ## 2.1.0 (2026-11-20)
 

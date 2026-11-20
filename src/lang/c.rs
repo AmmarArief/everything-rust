@@ -239,7 +239,6 @@ pub fn scan(source: &str) -> FileFacts {
             add(&mut facts, Risk::PlatformSpecific, node)
         }
         "null" => add(&mut facts, Risk::NullReferences, node),
-        "goto_statement" => add(&mut facts, Risk::DynamicCode, node),
         "preproc_function_def" => add(&mut facts, Risk::Reflection, node),
         "for_statement" | "while_statement" | "do_statement" => facts.loops += 1,
         _ => {}
@@ -254,17 +253,23 @@ pub fn resolve(from: &str, spec: &str, index: &HashMap<&str, usize>) -> super::R
         // The C standard library is part of every platform; other system headers are libraries.
         return match lookup(spec) {
             Some(m) if m.crates == "std" => super::Resolution::Stdlib,
-            _ if STANDARD.contains(&spec) => super::Resolution::Stdlib,
+            _ if STANDARD_HEADERS.contains(&spec) => super::Resolution::Stdlib,
             _ => super::Resolution::External(spec.to_string()),
         };
     }
     let dir = from.rsplit_once('/').map_or("", |(d, _)| d);
-    let candidates = [
+    let mut candidates = vec![
         join(dir, spec),
         spec.to_string(),
         join("include", spec),
         join("src", spec),
     ];
+    if let Some((first, rest)) = spec.split_once('/') {
+        let prefix = format!("{first}/");
+        if !index.keys().any(|k| k.starts_with(&prefix)) {
+            candidates.push(rest.to_string());
+        }
+    }
     for header in candidates.iter().filter_map(|c| normalize(c)) {
         let implementation = header.strip_suffix(".h").map(|stem| format!("{stem}.c"));
         if let Some(i) = implementation
@@ -276,6 +281,34 @@ pub fn resolve(from: &str, spec: &str, index: &HashMap<&str, usize>) -> super::R
         }
     }
     super::Resolution::Unresolved
+}
+
+/// CPU-architecture folders: code there is written for one target (assembly, intrinsics,
+/// feature detection), so a recording on this machine cannot vouch for it.
+const ARCH_DIRS: &[&str] = &[
+    "x86",
+    "x86_64",
+    "i386",
+    "amd64",
+    "arm",
+    "arm64",
+    "aarch64",
+    "ppc",
+    "powerpc",
+    "mips",
+    "loongarch",
+    "riscv",
+    "sparc",
+    "s390",
+    "alpha",
+    "sh4",
+    "avr32",
+    "bfin",
+];
+
+pub fn in_arch_dir(path: &str) -> bool {
+    path.rsplit_once('/')
+        .is_some_and(|(dir, _)| dir.split('/').any(|seg| ARCH_DIRS.contains(&seg)))
 }
 
 fn normalize(path: &str) -> Option<String> {
@@ -292,7 +325,7 @@ fn normalize(path: &str) -> Option<String> {
     Some(parts.join("/"))
 }
 
-const STANDARD: &[&str] = &[
+pub const STANDARD_HEADERS: &[&str] = &[
     "<stdio.h>",
     "<stdlib.h>",
     "<string.h>",
@@ -344,7 +377,8 @@ pub fn scalar(c: &str) -> Option<(&'static str, &'static str, &'static str, &'st
         "unsigned long long" | "unsigned long long int" => {
             ("int", "u64", "std::ffi::c_ulonglong", "c_ulonglong")
         }
-        "char" | "signed char" => ("int", "i8", "std::ffi::c_schar", "c_byte"),
+        "char" => ("int", "i8", "std::ffi::c_char", "c_byte"),
+        "signed char" => ("int", "i8", "std::ffi::c_schar", "c_byte"),
         "unsigned char" => ("int", "u8", "std::ffi::c_uchar", "c_ubyte"),
         "int8_t" => ("int", "i8", "i8", "c_int8"),
         "int16_t" => ("int", "i16", "i16", "c_int16"),
@@ -411,14 +445,208 @@ fn base_type(node: Node, source: &str) -> String {
     parts.join(" ")
 }
 
+thread_local! {
+    static TYPEDEFS: std::cell::RefCell<HashMap<String, String>> =
+        std::cell::RefCell::new(HashMap::new());
+}
+
+/// The project's `typedef`s of scalars and enums (`typedef uint32_t AVAdler;`), by name, as the
+/// C scalar each one stands for.
+pub fn typedefs(root: &Path) -> HashMap<String, String> {
+    let mut raw = HashMap::new();
+    for entry in crate::walk::builder(root)
+        .require_git(false)
+        .build()
+        .flatten()
+    {
+        if !entry
+            .path()
+            .extension()
+            .is_some_and(|e| e == "h" || e == "c")
+        {
+            continue;
+        }
+        if let Ok(source) = std::fs::read_to_string(entry.path()) {
+            collect_typedefs(&source, &mut raw);
+        }
+    }
+    let mut out = HashMap::new();
+    for name in raw.keys() {
+        let mut ty = raw[name].clone();
+        for _ in 0..8 {
+            match raw.get(&ty) {
+                Some(next) => ty = next.clone(),
+                None => break,
+            }
+        }
+        if scalar(&ty).is_some() {
+            out.insert(name.clone(), ty);
+        }
+    }
+    out
+}
+
+fn collect_typedefs(source: &str, out: &mut HashMap<String, String>) {
+    let Some(tree) = syntax::parse(&language(), source) else {
+        return;
+    };
+    syntax::walk(tree.root_node(), |node| {
+        if node.kind() != "type_definition" {
+            return;
+        }
+        let Some(declarator) = node.child_by_field_name("declarator") else {
+            return;
+        };
+        if declarator.kind() != "type_identifier" {
+            return;
+        }
+        let Some(ty) = node.child_by_field_name("type") else {
+            return;
+        };
+        let underlying = match ty.kind() {
+            "enum_specifier" => "int".to_string(),
+            "primitive_type" | "sized_type_specifier" | "type_identifier" => text(ty, source)
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" "),
+            _ => return,
+        };
+        out.insert(text(declarator, source).to_string(), underlying);
+    });
+}
+
+/// Makes `exports` read these typedefs on this thread, for the project `root` it is looking at.
+pub fn use_typedefs(root: &Path) {
+    let map = typedefs(root);
+    TYPEDEFS.with(|t| *t.borrow_mut() = map);
+}
+
+/// A declared type with typedefs and enums replaced by their scalar, `const` kept.
+fn resolve_type(c_type: &str) -> String {
+    let stars = c_type.matches('*').count();
+    let base = c_type.trim_end_matches(['*', ' ']).trim();
+    let is_const = base.split_whitespace().any(|w| w == "const");
+    let bare: Vec<&str> = base.split_whitespace().filter(|w| *w != "const").collect();
+    let bare = bare.join(" ");
+    let resolved = if bare.starts_with("enum ") {
+        "int".to_string()
+    } else {
+        TYPEDEFS
+            .with(|t| t.borrow().get(&bare).cloned())
+            .unwrap_or(bare)
+    };
+    format!(
+        "{}{resolved}{}",
+        if is_const { "const " } else { "" },
+        "*".repeat(stars)
+    )
+}
+
+const BYTE_TYPES: &[&str] = &[
+    "uint8_t",
+    "unsigned char",
+    "char",
+    "signed char",
+    "int8_t",
+    "void",
+];
+
+/// The pointee of a one-star pointer type, without `const`, and whether it is `const`.
+fn pointee(c_type: &str) -> Option<(String, bool)> {
+    let normalized = c_type.replace("char const", "const char");
+    if normalized.matches('*').count() != 1 || normalized.contains("(fn)") {
+        return None;
+    }
+    let base = normalized.trim_end_matches(['*', ' ']).trim();
+    let is_const = base.split_whitespace().any(|w| w == "const");
+    let bare = base
+        .split_whitespace()
+        .filter(|w| *w != "const")
+        .collect::<Vec<_>>()
+        .join(" ");
+    Some((bare, is_const))
+}
+
+fn is_integer(c_type: &str) -> bool {
+    !c_type.contains('*') && scalar(c_type).is_some_and(|(d, ..)| d == "int")
+}
+
+/// Each parameter's dialect type, or why it cannot cross a drop-in bridge. Beyond scalars and
+/// `const char *` strings: a byte pointer followed by an integer is a buffer of that length
+/// (`bytes` when `const`, `buffer` when the function writes it; the length is `len:<index>`),
+/// a mutable pointer to a scalar is `out` (read and written by the function).
+fn classify_params(types: &[(String, Option<String>)]) -> Vec<Result<String, String>> {
+    let mut out: Vec<Option<Result<String, String>>> = vec![None; types.len()];
+    let lens = |out: &[Option<Result<String, String>>], i: usize| -> bool {
+        out[i].is_none() && is_integer(&types[i].0)
+    };
+    for (i, (ty, _)) in types.iter().enumerate() {
+        if let Some((base, true)) = pointee(ty)
+            && base == "char"
+        {
+            out[i] = Some(Ok("string".into()));
+        }
+    }
+    for (i, (ty, _)) in types.iter().enumerate() {
+        if out[i].is_some() {
+            continue;
+        }
+        let Some((base, true)) = pointee(ty) else {
+            continue;
+        };
+        if BYTE_TYPES.contains(&base.as_str()) && i + 1 < types.len() && lens(&out, i + 1) {
+            out[i] = Some(Ok("bytes".into()));
+            out[i + 1] = Some(Ok(format!("len:{i}")));
+        }
+    }
+    for (i, (ty, _)) in types.iter().enumerate() {
+        if out[i].is_some() {
+            continue;
+        }
+        let Some((base, false)) = pointee(ty) else {
+            continue;
+        };
+        if !BYTE_TYPES.contains(&base.as_str()) {
+            continue;
+        }
+        let sized = |j: usize| {
+            types[j].1.as_deref().is_some_and(|n| {
+                let n = n.to_ascii_lowercase();
+                n.contains("size") || n.contains("len") || n == "n" || n == "cap"
+            })
+        };
+        let partner = if i + 1 < types.len() && lens(&out, i + 1) {
+            Some(i + 1)
+        } else {
+            (0..types.len()).find(|&j| j != i && lens(&out, j) && sized(j))
+        };
+        if let Some(j) = partner {
+            out[i] = Some(Ok("buffer".into()));
+            out[j] = Some(Ok(format!("len:{i}")));
+        }
+    }
+    types
+        .iter()
+        .zip(out)
+        .map(|((ty, _), done)| {
+            done.unwrap_or_else(|| match pointee(ty) {
+                Some((base, true)) if BYTE_TYPES.contains(&base.as_str()) => Err(format!(
+                    "passes a pointer (`{ty}`) with no length parameter after it"
+                )),
+                Some((base, false)) if BYTE_TYPES.contains(&base.as_str()) => Err(format!(
+                    "writes to a buffer (`{ty}`) whose size is not a parameter"
+                )),
+                Some((base, false)) if scalar(&base).is_some_and(|(d, ..)| d != "void") => {
+                    Ok("out".into())
+                }
+                _ => classify(ty),
+            })
+        })
+        .collect()
+}
+
 /// A C parameter or return type: its dialect type, or why it cannot cross a drop-in bridge.
 fn classify(c_type: &str) -> Result<String, String> {
-    let normalized = c_type.replace("char const", "const char");
-    if normalized.trim_end_matches('*').trim() == "const char"
-        && normalized.matches('*').count() == 1
-    {
-        return Ok("string".into());
-    }
     if c_type.contains("(fn)") {
         return Err("takes a function pointer".into());
     }
@@ -436,6 +664,22 @@ fn classify(c_type: &str) -> Result<String, String> {
             "uses `{c_type}`, which is not a C scalar the bridge knows"
         )),
     }
+}
+
+/// Whether a function body allocates what it may return (`malloc`, `strdup`, `av_asprintf`).
+fn allocates(body: Node, source: &str) -> bool {
+    let mut found = false;
+    syntax::walk(body, |n| {
+        if n.kind() == "call_expression" {
+            let callee = n
+                .child_by_field_name("function")
+                .map_or("", |f| text(f, source));
+            if callee.contains("alloc") || callee.contains("dup") || callee.contains("printf") {
+                found = true;
+            }
+        }
+    });
+    found
 }
 
 /// Non-`static` function definitions in `.c` files.
@@ -482,7 +726,7 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
             continue;
         }
         let mut blocker = None;
-        let mut params = Vec::new();
+        let mut declared_params = Vec::new();
         if let Some(list) = function.child_by_field_name("parameters") {
             for (i, p) in named_children(list).into_iter().enumerate() {
                 if p.kind() == "variadic_parameter" {
@@ -500,25 +744,55 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
                 if c_type == "void" && param_name.is_none() {
                     continue;
                 }
-                let ts_type = classify(&c_type).unwrap_or_else(|reason| {
-                    blocker.get_or_insert(reason);
-                    "unknown".into()
-                });
-                params.push(Param {
-                    name: param_name.unwrap_or_else(|| format!("arg{i}")),
-                    ts_type,
-                    native_type: Some(c_type),
-                    ..Default::default()
-                });
+                declared_params.push((
+                    resolve_type(&c_type),
+                    param_name.unwrap_or_else(|| format!("arg{i}")),
+                ));
             }
         }
+        let typed: Vec<(String, Option<String>)> = declared_params
+            .iter()
+            .map(|(t, n)| (t.clone(), Some(n.clone())))
+            .collect();
+        let kinds = classify_params(&typed);
+        let mut params = Vec::new();
+        for ((c_type, param_name), kind) in declared_params.into_iter().zip(kinds) {
+            let ts_type = kind.unwrap_or_else(|reason| {
+                blocker.get_or_insert(reason);
+                "unknown".into()
+            });
+            params.push(Param {
+                name: param_name,
+                ts_type,
+                native_type: Some(c_type),
+                ..Default::default()
+            });
+        }
+        let ret = resolve_type(&ret);
         let returns = match ret.as_str() {
             "void" => "void".to_string(),
             r if r.contains('*') => {
-                blocker.get_or_insert(format!(
-                    "returns a pointer (`{r}`): who frees it must be designed"
-                ));
-                "unknown".into()
+                let into = pointee(r).and_then(|(target, _)| {
+                    params.iter().position(|p| {
+                        matches!(p.ts_type.as_str(), "string" | "bytes" | "buffer")
+                            && p.native_type
+                                .as_deref()
+                                .and_then(pointee)
+                                .is_some_and(|(b, _)| b == target)
+                    })
+                });
+                let body_allocates = node
+                    .child_by_field_name("body")
+                    .is_some_and(|b| allocates(b, source));
+                match into {
+                    Some(i) if !body_allocates => format!("ptr:{i}"),
+                    _ => {
+                        blocker.get_or_insert(format!(
+                            "returns a pointer (`{r}`): who frees it must be designed"
+                        ));
+                        "unknown".into()
+                    }
+                }
             }
             r => classify(r).unwrap_or_else(|reason| {
                 blocker.get_or_insert(reason);
@@ -541,6 +815,82 @@ pub fn exports(path: &str, source: &str) -> Vec<ExportedFn> {
             blocker,
             ..Default::default()
         });
+    }
+    out
+}
+
+/// The project's `.c` files (beside the headers `unit` includes with quotes) that define a
+/// function one of `ported` calls: a port replaces those too, since Rust cannot call back into
+/// them. Calls from functions kept in C do not count.
+pub fn called_implementations(root: &Path, unit: &str, ported: &[&str]) -> Vec<std::path::PathBuf> {
+    let Ok(source) = std::fs::read_to_string(root.join(unit)) else {
+        return Vec::new();
+    };
+    let Some(tree) = syntax::parse(&language(), &source) else {
+        return Vec::new();
+    };
+    let mut callees = std::collections::HashSet::new();
+    let mut headers = Vec::new();
+    for function in named_children(tree.root_node()) {
+        let name = function
+            .child_by_field_name("declarator")
+            .map(|mut d| {
+                while d.kind() != "function_declarator" {
+                    match d.child_by_field_name("declarator") {
+                        Some(inner) => d = inner,
+                        None => break,
+                    }
+                }
+                d.child_by_field_name("declarator")
+                    .map_or("", |n| text(n, &source))
+            })
+            .unwrap_or("");
+        if function.kind() != "function_definition" || !ported.contains(&name) {
+            continue;
+        }
+        syntax::walk(function, |node| {
+            if node.kind() == "call_expression"
+                && let Some(f) = node.child_by_field_name("function")
+            {
+                callees.insert(text(f, &source).to_string());
+            }
+        });
+    }
+    syntax::walk(tree.root_node(), |node| {
+        if node.kind() == "preproc_include"
+            && let Some(path) = node.child_by_field_name("path")
+            && path.kind() == "string_literal"
+        {
+            headers.push(text(path, &source).trim_matches('"').to_string());
+        }
+    });
+    let dir = Path::new(unit).parent().unwrap_or(Path::new(""));
+    let mut out = Vec::new();
+    for header in headers {
+        let Some(stem) = header.strip_suffix(".h") else {
+            continue;
+        };
+        let mut candidates = vec![
+            root.join(dir).join(format!("{stem}.c")),
+            root.join(format!("{stem}.c")),
+        ];
+        if let Some((_, rest)) = stem.split_once('/') {
+            candidates.push(root.join(format!("{rest}.c")));
+        }
+        let Some(file) = candidates.into_iter().find(|c| c.is_file()) else {
+            continue;
+        };
+        if file == root.join(unit) || out.contains(&file) {
+            continue;
+        }
+        let text = std::fs::read_to_string(&file).unwrap_or_default();
+        let name = file.to_string_lossy().into_owned();
+        if exports(&name, &text)
+            .iter()
+            .any(|f| callees.contains(&f.name))
+        {
+            out.push(file);
+        }
     }
     out
 }
@@ -568,7 +918,7 @@ mod tests {
             int word_count(const char *text) { return 0; }\n\
             static int helper(int x) { return x; }\n\
             unsigned long checksum(const char *data, size_t len) { return 0; }\n\
-            char *dup(const char *s) { return 0; }\n\
+            char *dup(const char *s) { return strdup(s); }\n\
             void fill(char *out, int n) {}\n\
             double mean(const double *xs, int n) { return 0; }\n\
             int sum(int count, ...) { return 0; }\n\
@@ -593,9 +943,91 @@ mod tests {
                 .unwrap()
                 .contains("returns a pointer")
         );
-        assert!(found[3].blocker.as_deref().unwrap().contains("pointer"));
+        assert!(found[3].blocker.is_none());
+        assert_eq!(found[3].params[0].ts_type, "buffer");
+        assert_eq!(found[3].params[1].ts_type, "len:0");
+        assert!(found[4].blocker.as_deref().unwrap().contains("pointer"));
         assert!(found[5].blocker.as_deref().unwrap().contains("variadic"));
         assert!(defines_main(source));
+    }
+
+    #[test]
+    fn pairs_pointers_with_lengths_and_resolves_typedefs() {
+        let header = "typedef uint32_t Checksum;\ntypedef Checksum Alias;\n\
+            typedef enum { ROUND_DOWN, ROUND_UP } Rounding;\ntypedef struct Ctx Ctx;\n";
+        let mut defs = HashMap::new();
+        collect_typedefs(header, &mut defs);
+        let dir = std::env::temp_dir().join(format!("ra-typedefs-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("t.h"), header).unwrap();
+        use_typedefs(&dir);
+        std::fs::remove_dir_all(&dir).unwrap();
+        let source = "Alias update(Alias sum, const uint8_t *buf, size_t len) { return sum; }\n\
+            int decode(uint8_t *out, const char *in, int out_size) { return 0; }\n\
+            char *encode(char *out, int out_size, const uint8_t *in, int in_size) { return out; }\n\
+            int reduce(int *num, int *den, int64_t n, int64_t d, enum Mode m, Rounding r) { return 0; }\n\
+            char *find(const char *hay, const char *needle) { return (char *)hay; }\n\
+            char *copy(const char *s) { return strdup(s); }\n\
+            void sum16(uint8_t *dst, const uint8_t *src, size_t len) {}\n\
+            int init(Ctx *ctx) { return 0; }\n";
+        let found = exports("u.c", source);
+        let kinds = |i: usize| -> Vec<&str> {
+            found[i].params.iter().map(|p| p.ts_type.as_str()).collect()
+        };
+        assert_eq!(found[0].native_return.as_deref(), Some("uint32_t"));
+        assert_eq!(kinds(0), ["int", "bytes", "len:1"]);
+        assert_eq!(kinds(1), ["buffer", "string", "len:0"]);
+        assert_eq!(kinds(2), ["buffer", "len:0", "bytes", "len:2"]);
+        assert_eq!(found[2].returns, "ptr:0");
+        assert_eq!(kinds(3), ["out", "out", "int", "int", "int", "int"]);
+        assert!(found[3].blocker.is_none());
+        assert_eq!(found[4].returns, "ptr:0");
+        assert!(
+            found[5]
+                .blocker
+                .as_deref()
+                .unwrap()
+                .contains("who frees it")
+        );
+        assert!(
+            found[6]
+                .blocker
+                .as_deref()
+                .unwrap()
+                .contains("size is not a parameter")
+        );
+        assert!(found[7].blocker.is_some());
+        assert!(defs.contains_key("Rounding"));
+        assert!(in_arch_dir("libavutil/x86/cpu.c") && !in_arch_dir("libavutil/crc.c"));
+    }
+
+    #[test]
+    fn counts_the_implementations_ported_functions_call() {
+        let root = std::env::temp_dir().join(format!("ra-called-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("lib")).unwrap();
+        let write = |p: &str, t: &str| std::fs::write(root.join(p), t).unwrap();
+        write(
+            "lib/crc.h",
+            "unsigned crc(const unsigned char *b, unsigned long n);\n",
+        );
+        write(
+            "lib/crc.c",
+            "unsigned crc(const unsigned char *b, unsigned long n) { return n; }\n",
+        );
+        write("lib/print.h", "void print(const char *s);\n");
+        write("lib/print.c", "void print(const char *s) {}\n");
+        write(
+            "lib/wrap.c",
+            "#include \"lib/crc.h\"\n#include \"print.h\"\n\
+             unsigned one(const unsigned char *b, unsigned long n) { return crc(b, n); }\n\
+             void kept(const char *s) { print(s); }\n",
+        );
+        let found = called_implementations(&root, "lib/wrap.c", &["one"]);
+        assert_eq!(found, [root.join("lib/crc.c")]);
+        let both = called_implementations(&root, "lib/wrap.c", &["one", "kept"]);
+        assert_eq!(both.len(), 2);
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

@@ -44,6 +44,15 @@ the original counted against Jest's limit. Wrap anything added to user files in
 **A test command's output corrupted the MCP stream.** The child wrote to the server's stdout.
 Send every child's stdout to stderr or a pipe, never to the MCP server's stdout.
 
+**A project header shadowed the C library's.** ffmpeg ships `libavutil/time.h`, and with that
+folder on the `-I` path, `#include <time.h>` in `parseutils.c` found it instead of the system's.
+A header folder holding a file named like a C standard header goes on `-iquote`; check that a
+C project's originals compile before reading anything into a failed `record`.
+
+**A relative crate path pointed nowhere.** The compiler and cargo run in a scratch folder, so
+`rust-anything build .` looked for `./Cargo.toml` there. The CLI makes crate paths absolute;
+anything new that passes a path to a child process should take it absolute too.
+
 **A test runner in watch mode never ends.** Run every outside program through `crate::process`,
 which closes stdin and stops it at a time limit; `from_tests` also sets `CI=1`.
 

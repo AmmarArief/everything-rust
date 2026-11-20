@@ -166,6 +166,14 @@ fn size_check(crate_dir: &Path, manifest: &Manifest) -> Option<Check> {
     if manifest.language == crate::lang::Lang::Ts {
         files = with_local_imports(&manifest.root, files);
     }
+    if manifest.language == crate::lang::Lang::C {
+        let ported: Vec<&str> = manifest.exports.iter().map(|f| f.name.as_str()).collect();
+        files.extend(crate::lang::c::called_implementations(
+            &manifest.root,
+            &manifest.unit,
+            &ported,
+        ));
+    }
     let source: usize = files
         .iter()
         .filter_map(|p| std::fs::read_to_string(p).ok())
