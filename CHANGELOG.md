@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- `package` (CLI and MCP tool) lays out a gated port as packages end users install, and writes
+  files only: PyO3 ports become a maturin project (an abi3 wheel importable under the original's
+  module name), napi ports the napi-rs per-platform npm layout (a main package with
+  `optionalDependencies` on `<name>-<platform>`, a loader that falls back to the original JS where
+  no binary fits), wasm ports one npm package. PyO3 and napi ports also get a GitHub Actions
+  workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows. Installed from
+  their packages, `demo/fuzzy-napi` and `demo/fuzzy-rs` pass 2000/2000 recorded cases and
+  `demo/fixtures/python-textkit-rs` 1144/1144 (`docs/packaging.md`).
 - `fuzz`: a live differential test. It generates fresh inputs from a new seed (the record
   generator, skipping inputs already recorded), runs them through the original and the built
   port, and reports the mismatches the recorded cases missed. `--cases N` per function, `--seed S`

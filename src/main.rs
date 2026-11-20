@@ -278,6 +278,29 @@ enum Cmd {
         #[arg(long = "node-arg", allow_hyphen_values = true)]
         node_args: Vec<String>,
     },
+    /// 6. Lay out installable packages and a CI workflow for every platform; never publishes.
+    Package {
+        #[arg(default_value = ".", value_parser = absolute)]
+        crate_dir: PathBuf,
+        /// Package name on npm or PyPI; defaults to the crate name.
+        #[arg(long)]
+        name: Option<String>,
+        /// Package version; defaults to the original package's.
+        #[arg(long)]
+        version: Option<String>,
+        /// Output folder; defaults to `<crate>/package`.
+        #[arg(long, value_parser = absolute)]
+        out: Option<PathBuf>,
+        /// napi: the module to load where no binary fits (defaults to the original file when it
+        /// imports nothing).
+        #[arg(long)]
+        fallback: Option<String>,
+        /// List the files, write nothing.
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long)]
+        json: bool,
+    },
     /// Record the whole app's behavior and replay any build against it (CLIs).
     App {
         #[command(subcommand)]
@@ -1005,6 +1028,46 @@ fn run() -> Result<ExitCode> {
                 say!(
                     "Import it in place of the original. RUST_ANYTHING_MODE=old|shadow|new switches at runtime."
                 );
+            }
+        }
+        Cmd::Package {
+            crate_dir,
+            name,
+            version,
+            out,
+            fallback,
+            dry_run,
+            json,
+        } => {
+            let outcome = rust_anything::package::package(&rust_anything::package::Options {
+                crate_dir: &crate_dir,
+                name,
+                version,
+                out,
+                dry_run,
+                fallback,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                say!(
+                    "{} {} {}@{} in {}:",
+                    if outcome.dry_run {
+                        "Would write"
+                    } else {
+                        "Wrote"
+                    },
+                    outcome.files.len(),
+                    outcome.name,
+                    outcome.version,
+                    outcome.out.display()
+                );
+                for file in &outcome.files {
+                    say!("  {file}");
+                }
+                for note in &outcome.notes {
+                    say!("{note}");
+                }
             }
         }
         Cmd::Gate {

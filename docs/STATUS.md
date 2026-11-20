@@ -48,6 +48,7 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | Side effects (`app record --effects`, `--db-reset`, `--db-dump`) | Tested | email, webhooks and SQLite rows for a CLI and a server in `tests/effects.rs` |
 | Front door (`front-door`), `wire` | Verified (TS server and CLI) | Prettier: one unit wired, 17,224/17,224 at 8.1% fallback (JS, TS, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less in Rust), glue declining per case with `original::run_with_stdin`; json-server: reads wired first (22.6% fallback), then every route (0%); servers in eight languages in `tests/http.rs` |
 | `lift` | Verified (TS server), Tested (CLIs) | json-server: pure Rust binary, 514/514; CLIs in all eight languages in `tests/app.rs` |
+| `package` | Tested | napi, wasm and PyO3 demos installed from their packages on macOS arm64 (2000/2000, 2000/2000, 1144/1144); napi tarball install and fallback in `tests/package.rs`; the generated GitHub workflows have not run yet |
 | MCP server (`mcp`) | Tested | protocol test in `src/mcp.rs` |
 | `setup` | Tested | registers the MCP server (and the skill, where the agent reads skills) with Claude Code, Codex, Cursor, Gemini CLI and OpenCode; per-agent tests in `src/setup.rs`, read back in `src/doctor.rs` and `tests/doctor.rs`. The OpenCode entry was also confirmed by OpenCode 2.3.2 itself (`mcp.servers`, `command` as an array) |
 

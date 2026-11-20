@@ -360,6 +360,7 @@ const TOOL_META: &[ToolMeta] = &[
         [false, false, true, true],
     ),
     meta("map", "Map the port", [true, false, true, false]),
+    meta("package", "Lay out packages", [false, false, true, false]),
     meta(
         "app_record",
         "Record whole app",
@@ -520,6 +521,18 @@ fn tool_schemas() -> Value {
                 "repo": { "type": "string", "description": "Repository root." },
                 "crates": { "type": "array", "items": { "type": "string" }, "description": "Folders with crates kept outside the repository." }
             }, "required": ["repo"] },
+        },
+        {
+            "name": "package",
+            "description": "Lay out installable packages for a gated port; writes files only, never builds other platforms or publishes. PyO3: a maturin project (abi3 wheel importable under the original module's name). napi: a main npm package whose loader picks `<name>-<platform>` from optionalDependencies and falls back to the original JS, one package per platform (this machine's binary copied in when built). wasm: one npm package with the built pkg/. PyO3 and napi also get a GitHub Actions workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows.",
+            "inputSchema": { "type": "object", "properties": {
+                "crate": crate_dir,
+                "name": { "type": "string", "description": "Package name on npm or PyPI; defaults to the crate name." },
+                "version": { "type": "string", "description": "Package version; defaults to the original package's." },
+                "out": { "type": "string", "description": "Output folder; defaults to <crate>/package." },
+                "fallback": { "type": "string", "description": "napi: module to load where no binary fits; defaults to the original file when it is plain JS that imports nothing." },
+                "dry_run": { "type": "boolean", "description": "List the files, write nothing." },
+            }, "required": ["crate"] },
         },
         {
             "name": "gate",
@@ -850,6 +863,17 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 strings("crates").into_iter().map(Into::into).collect();
             serde_json::to_value(crate::port_map::map(&path("repo")?, &crates)?)?
         }
+        "package" => {
+            let crate_dir = path("crate")?;
+            serde_json::to_value(crate::package::package(&crate::package::Options {
+                crate_dir: &crate_dir,
+                name: args["name"].as_str().map(str::to_string),
+                version: args["version"].as_str().map(str::to_string),
+                out: opt_path("out"),
+                dry_run: args["dry_run"].as_bool().unwrap_or(false),
+                fallback: args["fallback"].as_str().map(str::to_string),
+            })?)?
+        }
         "gate" => serde_json::to_value(gate::gate(
             Path::new(&path("crate")?),
             &strings("node_args"),
@@ -1001,6 +1025,7 @@ mod tests {
                 "fuzz",
                 "shadow",
                 "map",
+                "package",
                 "gate",
                 "app_record",
                 "app_replay",

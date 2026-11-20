@@ -177,6 +177,21 @@ Read-only.
 | `repo` | string | yes | Repository root. |
 | `crates` | string[] |  | Folders with crates kept outside the repository. |
 
+## Lay out packages
+
+Tool `package` · CLI `rust-anything package`
+
+Lay out installable packages for a gated port; writes files only, never builds other platforms or publishes. PyO3: a maturin project (abi3 wheel importable under the original module's name). napi: a main npm package whose loader picks `<name>-<platform>` from optionalDependencies and falls back to the original JS, one package per platform (this machine's binary copied in when built). wasm: one npm package with the built pkg/. PyO3 and napi also get a GitHub Actions workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+| `name` | string |  | Package name on npm or PyPI; defaults to the crate name. |
+| `version` | string |  | Package version; defaults to the original package's. |
+| `out` | string |  | Output folder; defaults to <crate>/package. |
+| `fallback` | string |  | napi: module to load where no binary fits; defaults to the original file when it is plain JS that imports nothing. |
+| `dry_run` | boolean |  | List the files, write nothing. |
+
 ## Check definition of done
 
 Tool `gate` · CLI `rust-anything gate`
