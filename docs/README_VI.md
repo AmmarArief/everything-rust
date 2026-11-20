@@ -4,35 +4,40 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center"><b>Viết lại ứng dụng bằng Rust, và chứng minh nó vẫn hoạt động y như cũ.</b></p>
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · Tiếng Việt</sub></p>
+<p align="center"><sub>Bản dịch này do cộng đồng duy trì và có thể chậm hơn <a href="../README.md">README tiếng Anh</a>.</sub></p>
 
-<p align="center"><sub>Công cụ không tự dịch code: agent lập trình của bạn (hoặc chính bạn) viết Rust, còn rust-anything kiểm tra nó với bản gốc. PHP và C#: hiện hỗ trợ ghi, phát lại và front door; port từng đơn vị sẽ có tiếp theo.</sub></p>
+<p align="center"><b>Viết lại ứng dụng bằng Rust, và chứng minh nó vẫn hoạt động y như cũ.</b><br>
+Công cụ không tự dịch code: agent lập trình của bạn (hoặc chính bạn) viết Rust, còn rust-anything kiểm tra nó với bản gốc.</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/languages/top/erkamyaman/rust-anything?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
+  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
+  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
+  <br>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/erkamyaman/rust-anything?labelColor=171717&color=FF570A&label=Reviewed+by+CodeRabbit" alt="Pull requests reviewed by CodeRabbit"></a>
+  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
+  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
+</p>
+
+<p align="center"><a href="https://trendshift.io/repositories/363468" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/363468/daily?language=Rust" alt="erkamyaman/rust-anything: #1 Rust repository of the day on Trendshift" width="250" height="55"/></a></p>
+
+<p align="center"><b><a href="#quick-start">Bắt đầu nhanh</a></b> · <a href="https://github.com/erkamyaman/rust-anything/releases">Releases</a> · <a href="#quick-start">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=rust-anything">MCP Registry</a> · <a href="real-world.md">Các bản port thực tế</a> · <a href="faq.md#faq">FAQ</a><br>
+<sub><a href="#languages">Ngôn ngữ</a> · <a href="how-it-works.md#how-it-works">Cách hoạt động</a> · <a href="whole-apps.md#port-a-whole-app">Chuyển cả ứng dụng</a> · <a href="../LICENSE">MIT</a></sub><br>
+Làm tại Thổ Nhĩ Kỳ 🇹🇷 bởi <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Tài trợ cho tôi</a> · Được tài trợ bởi <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
 <p align="center">Mới trong 2.0: <a href="real-world.md#prettier">Prettier đã được port sang Rust</a>. Nhanh hơn 19x · 15,837 trên 17,224 lần chạy đã ghi chạy hoàn toàn bằng Rust · tất cả giống từng byte</p>
 
 <p align="center">
-  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="phiên bản crates.io"></a>
-  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="phiên bản npm"></a>
-  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="Lượt sao trên GitHub"></a>
-  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <img src="assets/prettier.gif" alt="Prettier và bản port Rust định dạng cùng 59 file thực tế, mỗi file một tiến trình: Prettier mất 3.63 s, bản port Rust mất 0.20 s, đầu ra giống nhau đến từng byte." width="820">
+  <br>
+  <sub>Prettier so với bản port Rust trên 59 file thực tế lấy từ ms, Fuse.js và json-server (Apple M4). Đầu ra giống nhau đến từng byte. <a href="real-world.md#prettier">Cách đo</a>.</sub>
 </p>
 
-<p align="center">
-  <a href="#quick-start">Bắt đầu nhanh</a> ·
-  <a href="#languages">Ngôn ngữ</a> ·
-  <a href="real-world.md">Các bản port thực tế</a> ·
-  <a href="how-it-works.md#how-it-works">Cách hoạt động</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Chuyển cả ứng dụng</a> ·
-  <a href="faq.md#faq">FAQ</a>
-</p>
-
-<p align="center">Làm tại Thổ Nhĩ Kỳ 🇹🇷 bởi <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Tài trợ cho tôi</a></p>
-
-<p align="center">Được tài trợ bởi <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
-
-<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · Tiếng Việt</sub></p>
-<p align="center"><sub>Bản dịch này do cộng đồng duy trì và có thể chậm hơn <a href="../README.md">README tiếng Anh</a>.</sub></p>
+<p align="center"><sub>PHP và C#: hiện hỗ trợ ghi, phát lại và front door; port từng đơn vị sẽ có tiếp theo.</sub></p>
 
 <table>
   <tr>
@@ -66,12 +71,6 @@
 | Tìm kiếm [Fuse.js](real-world.md#fusejs) trên 50,000 chuỗi, mỗi truy vấn | 91.2 ms | **2.8 ms: nhanh hơn 32x** |
 
 Prettier: 15,837 trong 17,224 lần chạy đã ghi được định dạng hoàn toàn bằng Rust trên 10 ngôn ngữ (JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), và cả 17,224 lần đều khớp với Prettier đến từng byte, vì phần nào chưa port sẽ fallback về Prettier. json-server: 514/514 ca HTTP đã ghi khớp trên một binary Rust thuần. Đo trên Apple M4, mỗi phép đo chạy hai lần, mọi đầu ra đều được so sánh trước khi đo thời gian ([chi tiết](real-world.md)). Gọi Rust riêng cho từng hàm nhỏ thường còn *chậm hơn* JIT; rust-anything tìm vòng lặp đáng chuyển rồi đưa vòng lặp đó sang Rust.
-
-<p align="center">
-  <img src="assets/prettier.gif" alt="Prettier và bản port Rust định dạng cùng 59 file thực tế, mỗi file một tiến trình: Prettier mất 3.63 s, bản port Rust mất 0.20 s, đầu ra giống nhau đến từng byte." width="820">
-  <br>
-  <sub>Prettier so với bản port Rust trên 59 file thực tế lấy từ ms, Fuse.js và json-server (Apple M4). Đầu ra giống nhau đến từng byte. <a href="real-world.md#prettier">Cách đo</a>.</sub>
-</p>
 
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server dưới dạng Node server và dưới dạng một binary Rust: bộ nhớ khi rảnh 74 MB và 3.5 MB, từ khởi động đến phản hồi đầu tiên 79 đến 85 ms và 8 đến 10 ms, 514 trên 514 ca HTTP đã ghi đều khớp." width="820">

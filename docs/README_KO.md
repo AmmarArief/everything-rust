@@ -4,35 +4,40 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center"><b>앱을 Rust로 다시 작성하고, 여전히 똑같이 동작함을 증명하세요.</b></p>
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · 한국어 · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>이 번역은 커뮤니티에서 관리하며 <a href="../README.md">영어 README</a>보다 늦게 반영될 수 있습니다.</sub></p>
 
-<p align="center"><sub>코드를 자동 번역하지 않습니다. Rust는 코딩 에이전트(또는 여러분)가 작성하고, rust-anything이 원본과 대조해 검증합니다. PHP와 C#: 현재는 기록, 재생, front door를 지원하며 유닛 포팅은 다음 단계입니다.</sub></p>
+<p align="center"><b>앱을 Rust로 다시 작성하고, 여전히 똑같이 동작함을 증명하세요.</b><br>
+코드를 자동 번역하지 않습니다. Rust는 코딩 에이전트(또는 여러분)가 작성하고, rust-anything이 원본과 대조해 검증합니다.</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/languages/top/erkamyaman/rust-anything?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
+  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
+  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
+  <br>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/erkamyaman/rust-anything?labelColor=171717&color=FF570A&label=Reviewed+by+CodeRabbit" alt="Pull requests reviewed by CodeRabbit"></a>
+  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
+  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
+</p>
+
+<p align="center"><a href="https://trendshift.io/repositories/363468" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/363468/daily?language=Rust" alt="erkamyaman/rust-anything: #1 Rust repository of the day on Trendshift" width="250" height="55"/></a></p>
+
+<p align="center"><b><a href="#빠른-시작">빠른 시작</a></b> · <a href="https://github.com/erkamyaman/rust-anything/releases">Releases</a> · <a href="#빠른-시작">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=rust-anything">MCP Registry</a> · <a href="real-world.md">실제 포팅 사례</a> · <a href="faq.md#faq">자주 묻는 질문</a><br>
+<sub><a href="#지원-언어">지원 언어</a> · <a href="how-it-works.md#how-it-works">작동 방식</a> · <a href="whole-apps.md#port-a-whole-app">전체 앱 포팅하기</a> · <a href="../LICENSE">MIT</a></sub><br>
+튀르키예 🇹🇷 에서 <a href="https://github.com/erkamyaman">erKam Yaman</a> 제작 · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ 후원하기</a> · 후원: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
 <p align="center">2.0의 새 기능: <a href="real-world.md#prettier">Prettier를 Rust로 포팅</a>. 19x 더 빠름 · 기록된 실행 17,224회 중 15,837회가 완전히 Rust · 모두 바이트 단위로 동일</p>
 
 <p align="center">
-  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io 버전"></a>
-  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm 버전"></a>
-  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub 스타"></a>
-  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <img src="assets/prettier.gif" alt="Prettier와 그 Rust 포팅 버전이 파일당 프로세스 하나로 같은 실제 파일 59개를 포맷하는 모습: Prettier는 3.63 s, Rust 포팅 버전은 0.20 s가 걸리며 출력은 바이트 단위로 동일합니다." width="820">
+  <br>
+  <sub>ms, Fuse.js, json-server의 실제 파일 59개에서 Prettier와 Rust 포팅 버전을 비교(Apple M4). 출력은 바이트 단위로 동일합니다. <a href="real-world.md#prettier">측정 방법</a>.</sub>
 </p>
 
-<p align="center">
-  <a href="#빠른-시작">빠른 시작</a> ·
-  <a href="#지원-언어">지원 언어</a> ·
-  <a href="real-world.md">실제 포팅 사례</a> ·
-  <a href="how-it-works.md#how-it-works">작동 방식</a> ·
-  <a href="whole-apps.md#port-a-whole-app">전체 앱 포팅하기</a> ·
-  <a href="faq.md#faq">자주 묻는 질문</a>
-</p>
-
-<p align="center">튀르키예 🇹🇷 에서 <a href="https://github.com/erkamyaman">erKam Yaman</a> 제작 · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ 후원하기</a></p>
-
-<p align="center">후원: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
-
-<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · 한국어 · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
-<p align="center"><sub>이 번역은 커뮤니티에서 관리하며 <a href="../README.md">영어 README</a>보다 늦게 반영될 수 있습니다.</sub></p>
+<p align="center"><sub>PHP와 C#: 현재는 기록, 재생, front door를 지원하며 유닛 포팅은 다음 단계입니다.</sub></p>
 
 <table>
   <tr>
@@ -66,12 +71,6 @@
 | 문자열 50,000개에 대한 [Fuse.js](real-world.md#fusejs) 검색, 쿼리당 | 91.2 ms | **2.8 ms: 32x 더 빠름** |
 
 Prettier: 기록된 실행 17,224회 중 15,837회가 10개 언어(JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less)에서 완전히 Rust로 포맷되며, 아직 포팅되지 않은 부분은 Prettier로 폴백하므로 17,224회 모두 Prettier와 바이트 단위로 일치합니다. json-server: 기록된 HTTP 케이스 514/514개가 순수 Rust 바이너리에서 일치합니다. Apple M4에서 각각 두 번 실행해 측정했으며, 시간을 재기 전에 모든 출력을 비교했습니다([자세히](real-world.md)). 작은 함수 하나를 호출할 때마다 Rust를 부르는 것은 보통 JIT보다 *더 느립니다*. rust-anything은 옮길 가치가 있는 루프를 찾아 그 루프 자체를 옮깁니다.
-
-<p align="center">
-  <img src="assets/prettier.gif" alt="Prettier와 그 Rust 포팅 버전이 파일당 프로세스 하나로 같은 실제 파일 59개를 포맷하는 모습: Prettier는 3.63 s, Rust 포팅 버전은 0.20 s가 걸리며 출력은 바이트 단위로 동일합니다." width="820">
-  <br>
-  <sub>ms, Fuse.js, json-server의 실제 파일 59개에서 Prettier와 Rust 포팅 버전을 비교(Apple M4). 출력은 바이트 단위로 동일합니다. <a href="real-world.md#prettier">측정 방법</a>.</sub>
-</p>
 
 <p align="center">
   <img src="assets/json-server.gif" alt="Node 서버로서의 json-server와 단일 Rust 바이너리로서의 json-server: 유휴 시 메모리 74 MB와 3.5 MB, 시작부터 첫 응답까지 79~85 ms와 8~10 ms, 기록된 HTTP 케이스 514개 중 514개 일치." width="820">

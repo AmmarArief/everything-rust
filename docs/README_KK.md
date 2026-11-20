@@ -4,35 +4,40 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center"><b>Қолданбаңызды Rust тілінде қайта жазып, оның бұрынғыдай жұмыс істейтінін дәлелдеңіз.</b></p>
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · Қазақша · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>Бұл аударманы қауымдастық жүргізеді, сондықтан ол <a href="../README.md">ағылшынша README</a> нұсқасынан артта қалуы мүмкін.</sub></p>
 
-<p align="center"><sub>Ол кодты өзі аудармайды: Rust-ты кодтау агентіңіз (немесе сіз) жазады, ал rust-anything оны түпнұсқамен тексереді. PHP және C#: бүгін жазу, қайта ойнату және front door; модуль порттары келесі кезекте.</sub></p>
+<p align="center"><b>Қолданбаңызды Rust тілінде қайта жазып, оның бұрынғыдай жұмыс істейтінін дәлелдеңіз.</b><br>
+Ол кодты өзі аудармайды: Rust-ты кодтау агентіңіз (немесе сіз) жазады, ал rust-anything оны түпнұсқамен тексереді.</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/languages/top/erkamyaman/rust-anything?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
+  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
+  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
+  <br>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/erkamyaman/rust-anything?labelColor=171717&color=FF570A&label=Reviewed+by+CodeRabbit" alt="Pull requests reviewed by CodeRabbit"></a>
+  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
+  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
+</p>
+
+<p align="center"><a href="https://trendshift.io/repositories/363468" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/363468/daily?language=Rust" alt="erkamyaman/rust-anything: #1 Rust repository of the day on Trendshift" width="250" height="55"/></a></p>
+
+<p align="center"><b><a href="#жылдам-бастау">Жылдам бастау</a></b> · <a href="https://github.com/erkamyaman/rust-anything/releases">Releases</a> · <a href="#жылдам-бастау">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=rust-anything">MCP Registry</a> · <a href="real-world.md">Нақты порттар</a> · <a href="faq.md#faq">Жиі қойылатын сұрақтар</a><br>
+<sub><a href="#тілдер">Тілдер</a> · <a href="how-it-works.md#how-it-works">Қалай жұмыс істейді</a> · <a href="whole-apps.md#port-a-whole-app">Бүкіл қолданбалар</a> · <a href="../LICENSE">MIT</a></sub><br>
+Түркияда 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> жасаған · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Маған демеуші болыңыз</a> · Демеуші: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
 <p align="center">2.0 нұсқасындағы жаңалық: <a href="real-world.md#prettier">Prettier, Rust-қа портталды</a>. 19x жылдамырақ · 17,224 жазылған іске қосудың 15,837-сі толығымен Rust-та · барлығы байтпа-байт бірдей</p>
 
 <p align="center">
-  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io нұсқасы"></a>
-  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm нұсқасы"></a>
-  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub жұлдыздары"></a>
-  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <img src="assets/prettier.gif" alt="Prettier мен оның Rust порты бірдей 59 нақты файлды пішімдейді, әр файлға бір процесс: Prettier 3.63 s, Rust порты 0.20 s алады, шығысы байтпа-байт бірдей." width="820">
+  <br>
+  <sub>ms, Fuse.js және json-server жобаларынан алынған 59 нақты файлда Prettier мен оның Rust порты (Apple M4). Шығысы байтпа-байт бірдей. <a href="real-world.md#prettier">Қалай өлшенді</a>.</sub>
 </p>
 
-<p align="center">
-  <a href="#жылдам-бастау">Жылдам бастау</a> ·
-  <a href="#тілдер">Тілдер</a> ·
-  <a href="real-world.md">Нақты порттар</a> ·
-  <a href="how-it-works.md#how-it-works">Қалай жұмыс істейді</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Бүкіл қолданбалар</a> ·
-  <a href="faq.md#faq">Жиі қойылатын сұрақтар</a>
-</p>
-
-<p align="center">Түркияда 🇹🇷 <a href="https://github.com/erkamyaman">erKam Yaman</a> жасаған · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Маған демеуші болыңыз</a></p>
-
-<p align="center">Демеуші: <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
-
-<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · Қазақша · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · <a href="README_PT.md">Português</a> · <a href="README_VI.md">Tiếng Việt</a></sub></p>
-<p align="center"><sub>Бұл аударманы қауымдастық жүргізеді, сондықтан ол <a href="../README.md">ағылшынша README</a> нұсқасынан артта қалуы мүмкін.</sub></p>
+<p align="center"><sub>PHP және C#: бүгін жазу, қайта ойнату және front door; модуль порттары келесі кезекте.</sub></p>
 
 <table>
   <tr>
@@ -78,12 +83,6 @@ JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less) толығымен Rust ішін
 келеді. Apple M4-те өлшенді, әрқайсысы екі рет іске қосылды, әр шығыс уақыт өлшенбес бұрын
 салыстырылды ([толығырақ](real-world.md)). Әр кішкентай функция үшін Rust-ты жеке-жеке шақыру әдетте
 JIT-тен *баяуырақ*; rust-anything көшіруге тұрарлық циклды тауып, соны көшіреді.
-
-<p align="center">
-  <img src="assets/prettier.gif" alt="Prettier мен оның Rust порты бірдей 59 нақты файлды пішімдейді, әр файлға бір процесс: Prettier 3.63 s, Rust порты 0.20 s алады, шығысы байтпа-байт бірдей." width="820">
-  <br>
-  <sub>ms, Fuse.js және json-server жобаларынан алынған 59 нақты файлда Prettier мен оның Rust порты (Apple M4). Шығысы байтпа-байт бірдей. <a href="real-world.md#prettier">Қалай өлшенді</a>.</sub>
-</p>
 
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server Node сервері ретінде және бір Rust бинарлық файлы ретінде: бос тұрғандағы жад 74 MB және 3.5 MB, іске қосудан бірінші жауапқа дейін 79 бен 85 ms және 8 бен 10 ms аралығы, жазылған 514 HTTP кейсінің 514-і сәйкес келеді." width="820">

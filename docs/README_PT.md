@@ -4,36 +4,40 @@
 
 <h1 align="center">rust-anything</h1>
 
-<p align="center"><b>Reescreva a sua aplicação em Rust e prove que continua a comportar-se da mesma forma.</b></p>
+<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · Português · <a href="README_VI.md">Tiếng Việt</a></sub></p>
+<p align="center"><sub>Esta tradução é mantida pela comunidade e pode estar desatualizada em relação ao <a href="../README.md">README em inglês</a>.</sub></p>
 
-<p align="center"><sub>Não traduz código: o seu agente de programação (ou você) escreve o Rust, e o rust-anything verifica-o contra o original. PHP e C#: gravação, repetição e front door hoje; a migração de unidades vem a seguir.</sub></p>
+<p align="center"><b>Reescreva a sua aplicação em Rust e prove que continua a comportar-se da mesma forma.</b><br>
+Não traduz código: o seu agente de programação (ou você) escreve o Rust, e o rust-anything verifica-o contra o original.</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/languages/top/erkamyaman/rust-anything?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
+  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
+  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
+  <br>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/erkamyaman/rust-anything?labelColor=171717&color=FF570A&label=Reviewed+by+CodeRabbit" alt="Pull requests reviewed by CodeRabbit"></a>
+  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
+  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
+</p>
+
+<p align="center"><a href="https://trendshift.io/repositories/363468" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/363468/daily?language=Rust" alt="erkamyaman/rust-anything: #1 Rust repository of the day on Trendshift" width="250" height="55"/></a></p>
+
+<p align="center"><b><a href="#início-rápido">Início rápido</a></b> · <a href="https://github.com/erkamyaman/rust-anything/releases">Releases</a> · <a href="#início-rápido">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=rust-anything">MCP Registry</a> · <a href="real-world.md">Migrações reais</a> · <a href="faq.md#faq">Perguntas frequentes</a><br>
+<sub><a href="#linguagens">Linguagens</a> · <a href="how-it-works.md#how-it-works">Como funciona</a> · <a href="whole-apps.md#port-a-whole-app">Aplicações completas</a> · <a href="../LICENSE">MIT</a></sub><br>
+Feito na Turquia 🇹🇷 por <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Patrocine-me</a> · Patrocinado por <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
 <p align="center">Novo na 2.0: <a href="real-world.md#prettier">Prettier, migrado para Rust</a>. 19x mais rápido · 15,837 de 17,224 execuções registadas inteiramente em Rust · todas idênticas byte a byte</p>
 
 <p align="center">
-  <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="Versão no crates.io"></a>
-  <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="Versão no npm"></a>
-  <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="Estrelas no GitHub"></a>
-  <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
+  <img src="assets/prettier.gif" alt="O Prettier e a sua migração para Rust formatam os mesmos 59 ficheiros reais, um processo por ficheiro: o Prettier demora 3.63 s, a migração para Rust 0.20 s, com a mesma saída byte a byte." width="820">
+  <br>
+  <sub>O Prettier contra a sua migração para Rust em 59 ficheiros reais do ms, Fuse.js e json-server (Apple M4). A mesma saída, byte a byte. <a href="real-world.md#prettier">Como foi medido</a>.</sub>
 </p>
 
-<p align="center">
-  <a href="#início-rápido">Início rápido</a> ·
-  <a href="#linguagens">Linguagens</a> ·
-  <a href="real-world.md">Migrações reais</a> ·
-  <a href="how-it-works.md#how-it-works">Como funciona</a> ·
-  <a href="whole-apps.md#port-a-whole-app">Aplicações completas</a> ·
-  <a href="faq.md#faq">Perguntas frequentes</a>
-</p>
-
-<p align="center">Feito na Turquia 🇹🇷 por <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Patrocine-me</a></p>
-
-<p align="center">Patrocinado por <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
-
-<p align="center"><sub><a href="../README.md">English</a> · <a href="README_TR.md">Türkçe</a> · <a href="README_UK.md">Українська</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH-TW.md">繁體中文</a> · <a href="README_DE.md">Deutsch</a> · <a href="README_FR.md">Français</a> · <a href="README_RU.md">Русский</a> · <a href="README_JA.md">日本語</a> · <a href="README_KO.md">한국어</a> · <a href="README_AZ.md">Azərbaycanca</a> · <a href="README_UZ.md">Oʻzbekcha</a> · <a href="README_KK.md">Қазақша</a> · <a href="README_KY.md">Кыргызча</a> · <a href="README_TK.md">Türkmençe</a> · <a href="README_TT.md">Татарча</a> · <a href="README_UG.md">ئۇيغۇرچە</a> · Português · <a href="README_VI.md">Tiếng Việt</a></sub></p>
-
-<p align="center"><sub>Esta tradução é mantida pela comunidade e pode estar desatualizada em relação ao <a href="../README.md">README em inglês</a>.</sub></p>
+<p align="center"><sub>PHP e C#: gravação, repetição e front door hoje; a migração de unidades vem a seguir.</sub></p>
 
 <table>
   <tr>
@@ -67,12 +71,6 @@
 | Pesquisa [Fuse.js](real-world.md#fusejs) em 50,000 strings, por consulta | 91.2 ms | **2.8 ms: 32x mais rápido** |
 
 Prettier: 15,837 de 17,224 execuções registadas são formatadas totalmente em Rust, em 10 linguagens (JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), e todas as 17,224 coincidem com o Prettier byte a byte, já que tudo o que ainda não foi migrado recorre ao Prettier. json-server: 514/514 casos HTTP registados coincidem num binário em Rust puro. Medições num Apple M4, duas execuções cada, com cada saída comparada antes da medição de tempo ([detalhes](real-world.md)). Chamar Rust uma vez por cada pequena função costuma ser *mais lento* do que utilizar um JIT; o rust-anything identifica o ciclo que realmente vale a pena migrar e transfere-o.
-
-<p align="center">
-  <img src="assets/prettier.gif" alt="O Prettier e a sua migração para Rust formatam os mesmos 59 ficheiros reais, um processo por ficheiro: o Prettier demora 3.63 s, a migração para Rust 0.20 s, com a mesma saída byte a byte." width="820">
-  <br>
-  <sub>O Prettier contra a sua migração para Rust em 59 ficheiros reais do ms, Fuse.js e json-server (Apple M4). A mesma saída, byte a byte. <a href="real-world.md#prettier">Como foi medido</a>.</sub>
-</p>
 
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server como servidor Node e como um único binário Rust: memória em repouso 74 MB e 3.5 MB, do arranque à primeira resposta 79 a 85 ms e 8 a 10 ms, e 514 de 514 casos HTTP registados coincidem." width="820">
