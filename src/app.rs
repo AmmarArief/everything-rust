@@ -5,7 +5,7 @@
 //! in `rust/app-cases/`. `replay` runs any build against those files and reports what differs.
 
 use crate::walk::Canonical;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -764,6 +764,87 @@ pub(crate) fn line_matches(expected: &str, actual: &str) -> bool {
         }
     }
     true
+}
+
+/// Whether a line can match a line it is not equal to: `[..]` stands for any text, and with a
+/// tolerance a number can meet a nearby number. Any other line matches its own text and nothing
+/// else, so comparing the sorted sides already settles those.
+fn can_match_beyond_its_text(line: &str, tol: Option<f64>) -> bool {
+    line.contains("[..]") || (tol.is_some() && line.bytes().any(|b| b.is_ascii_digit()))
+}
+
+/// Expected lines against actual lines in any order: every expected line paired with a distinct
+/// actual line. Sorting both sides and pairing by position cannot do this once a line matches
+/// more than its own text, because no order agrees with a match that is not transitive -- `10.0`
+/// has to meet `9.999999999999999` while sorting before `2.0`. So identical lines are paired off
+/// first, and the lines that are left get a search that gives a line up when another line needs
+/// it.
+fn lines_match_in_any_order(expected: &[&str], actual: &[&str], tol: Option<f64>) -> bool {
+    if expected.len() != actual.len() {
+        return false;
+    }
+    let (mut sorted_e, mut sorted_a) = (expected.to_vec(), actual.to_vec());
+    sorted_e.sort_unstable();
+    sorted_a.sort_unstable();
+    if sorted_e == sorted_a {
+        return true;
+    }
+    if !expected.iter().any(|l| can_match_beyond_its_text(l, tol)) {
+        return false;
+    }
+    let mut spare: HashMap<&str, usize> = HashMap::new();
+    for line in actual {
+        *spare.entry(*line).or_default() += 1;
+    }
+    let mut rest_expected = Vec::new();
+    for line in expected {
+        match spare.get_mut(line) {
+            Some(count) if *count > 0 => *count -= 1,
+            _ => rest_expected.push(*line),
+        }
+    }
+    let rest_actual: Vec<&str> = spare
+        .into_iter()
+        .flat_map(|(line, count)| std::iter::repeat_n(line, count))
+        .collect();
+    let mut holder: Vec<Option<usize>> = vec![None; rest_actual.len()];
+    for want in 0..rest_expected.len() {
+        let mut tried = vec![false; rest_actual.len()];
+        if !take_a_line(
+            want,
+            &rest_expected,
+            &rest_actual,
+            tol,
+            &mut tried,
+            &mut holder,
+        ) {
+            return false;
+        }
+    }
+    true
+}
+
+/// One augmenting step: find a line for `want`, moving the expected lines that already hold one
+/// along to another line they also match.
+fn take_a_line(
+    want: usize,
+    expected: &[&str],
+    actual: &[&str],
+    tol: Option<f64>,
+    tried: &mut [bool],
+    holder: &mut [Option<usize>],
+) -> bool {
+    for i in 0..actual.len() {
+        if tried[i] || !line_matches_within(expected[want], actual[i], tol) {
+            continue;
+        }
+        tried[i] = true;
+        if holder[i].is_none_or(|held| take_a_line(held, expected, actual, tol, tried, holder)) {
+            holder[i] = Some(want);
+            return true;
+        }
+    }
+    false
 }
 
 /// A line within the float tolerance, for lines without wildcards.
@@ -1871,13 +1952,9 @@ pub(crate) fn compare(
         let tol = norm.float_tolerance;
         if unordered {
             let (mut el, mut al) = (lines(&e), lines(&a));
+            let same = lines_match_in_any_order(&el, &al, tol);
             el.sort_unstable();
             al.sort_unstable();
-            let same = el.len() == al.len()
-                && el
-                    .iter()
-                    .zip(&al)
-                    .all(|(x, y)| line_matches_within(x, y, tol));
             return (!same).then(|| {
                 format!(
                     "(lines compared in any order: the original's own runs disagreed on it)\n{}",
@@ -2286,6 +2363,83 @@ mod tests {
 
     fn text_matches_exact(e: &str, a: &str) -> bool {
         text_matches(e, a, None)
+    }
+
+    fn norm_with_tolerance(tol: Option<f64>) -> Normalizers {
+        Normalizers::new(&Config {
+            schema: SCHEMA.to_string(),
+            name: "app".to_string(),
+            run: Vec::new(),
+            normalize: Vec::new(),
+            normalizers: BTreeMap::new(),
+            timeout_secs: default_timeout(),
+            http: None,
+            float_tolerance: tol,
+            float_files: BTreeMap::new(),
+            unordered: BTreeMap::new(),
+            effects: None,
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn unordered_lines_pair_up_by_value_within_the_tolerance() {
+        let norm = norm_with_tolerance(Some(1e-9));
+        // `2.0` meets `2.0` and `10.0` meets `9.999999999999999`, but `10.0` sorts before `2.0`
+        // as text, so pairing the sorted lines by position compared `10.0` against `2.0`.
+        let expected = b"n 2.0\nn 10.0\n";
+        let actual = b"n 2.0\nn 9.999999999999999\n";
+        assert!(compare(&norm, expected, actual, false, false).is_none());
+        assert!(compare(&norm, expected, actual, false, true).is_none());
+        // A line that is genuinely different is still reported.
+        let changed = b"n 2.0\nn 11.0\n";
+        assert!(compare(&norm, expected, changed, false, true).is_some());
+        // The order the lines arrive in does not matter.
+        let swapped = b"n 9.999999999999999\nn 2.0\n";
+        assert!(compare(&norm, expected, swapped, false, true).is_none());
+    }
+
+    #[test]
+    fn unordered_lines_pair_up_around_a_wildcard() {
+        let norm = norm_with_tolerance(Some(1e-9));
+        // `[..]` takes the line the numeric pairing does not want, so a tolerance and a wildcard
+        // in the same output do not fight over the ordering.
+        let expected = b"n 10.0\nn [..]\n";
+        assert!(compare(&norm, expected, b"n 10.0\nn 2.0\n", false, true).is_none());
+        assert!(compare(&norm, expected, b"n 2.0\nn 10.0\n", false, true).is_none());
+        assert!(
+            compare(
+                &norm,
+                expected,
+                b"n 2.0\nn 9.999999999999999\n",
+                false,
+                true
+            )
+            .is_none()
+        );
+        // Nothing to take the 10.0: both actual lines are far from it.
+        assert!(compare(&norm, expected, b"n 2.0\nn 3.0\n", false, true).is_some());
+    }
+
+    #[test]
+    fn unordered_lines_keep_a_plain_permutation_matching() {
+        let norm = norm_with_tolerance(Some(1e-9));
+        // The same lines in another order match whatever the numbers look like, and a value
+        // written two ways stays a difference rather than becoming one by being re-sorted.
+        assert!(compare(&norm, b"n 2\nn 2.0\n", b"n 2.0\nn 2\n", false, true).is_none());
+        assert!(compare(&norm, b"n 2\nn 2\n", b"n 2.0\nn 2.0\n", false, true).is_some());
+    }
+
+    #[test]
+    fn unordered_lines_without_a_tolerance_still_compare_as_text() {
+        let norm = norm_with_tolerance(None);
+        let expected = b"b\na\n";
+        assert!(compare(&norm, expected, b"a\nb\n", false, true).is_none());
+        assert!(compare(&norm, expected, b"a\nc\n", false, true).is_some());
+        assert!(compare(&norm, expected, b"a\n", false, true).is_some());
+        // Without a tolerance a number is text like any other, so this stays a mismatch.
+        let numeric = b"n 10.0\nn 2.0\n";
+        assert!(compare(&norm, numeric, b"n 2.0\nn 9.999999999999999\n", false, true).is_some());
     }
 
     #[cfg(unix)]
