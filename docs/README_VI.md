@@ -6,6 +6,8 @@
 
 <p align="center"><b>Viết lại ứng dụng bằng Rust, và chứng minh nó vẫn hoạt động y như cũ.</b></p>
 
+<p align="center"><sub>Công cụ không tự dịch code: agent lập trình của bạn (hoặc chính bạn) viết Rust, còn rust-anything kiểm tra nó với bản gốc. PHP và C#: hiện hỗ trợ ghi, phát lại và front door; port từng đơn vị sẽ có tiếp theo.</sub></p>
+
 <p align="center">Mới trong 2.0: <a href="real-world.md#prettier">Prettier đã được port sang Rust</a>. Nhanh hơn 19x · 15,837 trên 17,224 lần chạy đã ghi chạy hoàn toàn bằng Rust · tất cả giống từng byte</p>
 
 <p align="center">

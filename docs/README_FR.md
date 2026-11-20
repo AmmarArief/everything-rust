@@ -6,6 +6,8 @@
 
 <p align="center"><b>Réécrivez votre application en Rust, et prouvez qu'elle se comporte toujours de la même façon.</b></p>
 
+<p align="center"><sub>Il ne traduit pas le code : votre agent de code (ou vous) écrit le Rust, et rust-anything le vérifie face à l'original. PHP et C# : enregistrement, rejeu et front door aujourd'hui ; les ports d'unités arrivent ensuite.</sub></p>
+
 <p align="center">Nouveau dans la 2.0 : <a href="real-world.md#prettier">Prettier, porté en Rust</a>. 19x plus rapide · 15,837 exécutions enregistrées sur 17,224 entièrement en Rust · toutes identiques octet pour octet</p>
 
 <p align="center">

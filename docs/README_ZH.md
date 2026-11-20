@@ -6,6 +6,8 @@
 
 <p align="center"><b>用 Rust 重写你的应用，并证明它的行为依然完全一致。</b></p>
 
+<p align="center"><sub>它不会自动翻译代码：Rust 由你的编程智能体（或你自己）编写，rust-anything 负责对照原程序进行验证。PHP 和 C#：目前支持录制、回放和 front door；单元移植即将推出。</sub></p>
+
 <p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次录制运行中 15,837 次完全由 Rust 执行 · 全部逐字节一致</p>
 
 <p align="center">

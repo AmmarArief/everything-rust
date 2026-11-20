@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- README: right under the tagline, it now says the tool doesn't translate code (your agent or you
+  write the Rust) and what PHP and C# support today. From a review by
+  [Mashhood Ali](https://github.com/MASHHOOD2019) (#118).
+
 ## 2.1.0 (2026-11-20)
 
 - `app record --float-file PATH=f32le|f64le`: a written file of raw floats is compared value by

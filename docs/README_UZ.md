@@ -6,6 +6,8 @@
 
 <p align="center"><b>Ilovangizni Rust'da qayta yozing va u hamon xuddi shunday ishlashini isbotlang.</b></p>
 
+<p align="center"><sub>U kodni o'zi tarjima qilmaydi: Rust'ni kodlash agentingiz (yoki siz) yozadi, rust-anything esa uni asl nusxa bilan tekshiradi. PHP va C#: bugun yozib olish, qayta ijro va front door; modul portlari keyingi bosqichda.</sub></p>
+
 <p align="center">2.0'da yangi: <a href="real-world.md#prettier">Prettier Rust'ga port qilindi</a>. 19x tezroq · 17,224 ta yozib olingan ishga tushirishdan 15,837 tasi to'liq Rust'da · hammasi baytma-bayt bir xil</p>
 
 <p align="center">

@@ -6,6 +6,8 @@
 
 <p align="center"><b>앱을 Rust로 다시 작성하고, 여전히 똑같이 동작함을 증명하세요.</b></p>
 
+<p align="center"><sub>코드를 자동 번역하지 않습니다. Rust는 코딩 에이전트(또는 여러분)가 작성하고, rust-anything이 원본과 대조해 검증합니다. PHP와 C#: 현재는 기록, 재생, front door를 지원하며 유닛 포팅은 다음 단계입니다.</sub></p>
+
 <p align="center">2.0의 새 기능: <a href="real-world.md#prettier">Prettier를 Rust로 포팅</a>. 19x 더 빠름 · 기록된 실행 17,224회 중 15,837회가 완전히 Rust · 모두 바이트 단위로 동일</p>
 
 <p align="center">

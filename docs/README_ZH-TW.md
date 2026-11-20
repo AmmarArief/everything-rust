@@ -6,6 +6,8 @@
 
 <p align="center"><b>用 Rust 重寫你的應用程式，並證明它的行為依然完全相同。</b></p>
 
+<p align="center"><sub>它不會自動翻譯程式碼：Rust 由你的程式設計代理（或你自己）撰寫，rust-anything 負責對照原程式進行驗證。PHP 與 C#：目前支援錄製、重播和 front door；單元移植即將推出。</sub></p>
+
 <p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次錄製執行中 15,837 次完全由 Rust 執行 · 全部逐位元組一致</p>
 
 <p align="center">

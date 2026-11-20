@@ -6,6 +6,8 @@
 
 <p align="center"><b>Programmaňyzy Rust-da täzeden ýazyň we onuň henizem öňküsi ýaly işleýändigini subut ediň.</b></p>
 
+<p align="center"><sub>Ol kody özi terjime etmeýär: Rust-y kodlaýyş agentiňiz (ýa-da siz) ýazýar, rust-anything bolsa ony asyl nusga bilen barlaýar. PHP we C#: şu gün ýazga almak, gaýtadan işletmek we front door; modul portlary indiki nobatda.</sub></p>
+
 <p align="center">2.0-da täze: <a href="real-world.md#prettier">Prettier Rust-a geçirildi</a>. 19x has çalt · ýazga alnan 17,224 işletmäniň 15,837-si doly Rust-da · hemmesi baýtma-baýt deň</p>
 
 <p align="center">

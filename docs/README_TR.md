@@ -6,6 +6,8 @@
 
 <p align="center"><b>Uygulamanızı Rust ile yeniden yazın ve hâlâ aynı davrandığını kanıtlayın.</b></p>
 
+<p align="center"><sub>Kodu kendisi çevirmez: Rust'ı kodlama ajanınız (ya da siz) yazar, rust-anything onu orijinaline karşı doğrular. PHP ve C#: bugün kayıt, tekrar oynatma ve ön kapı; birim portları sırada.</sub></p>
+
 <p align="center">2.0'da yeni: <a href="real-world.md#prettier">Prettier, Rust'a port edildi</a>. 19x daha hızlı · 17,224 kayıtlı çalıştırmanın 15,837'si tamamen Rust'ta · hepsi bayt bayt aynı</p>
 
 <p align="center">

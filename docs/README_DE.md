@@ -6,6 +6,8 @@
 
 <p align="center"><b>Schreibe deine App in Rust neu und beweise, dass sie sich weiterhin genauso verhält.</b></p>
 
+<p align="center"><sub>Es übersetzt keinen Code: Ihr Coding-Agent (oder Sie) schreibt das Rust, und rust-anything prüft es gegen das Original. PHP und C#: heute Aufzeichnen, Abspielen und die Front Door; Unit-Ports folgen.</sub></p>
+
 <p align="center">Neu in 2.0: <a href="real-world.md#prettier">Prettier, nach Rust portiert</a>. 19x schneller · 15,837 von 17,224 aufgezeichneten Läufen komplett in Rust · alle Byte für Byte gleich</p>
 
 <p align="center">

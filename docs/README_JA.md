@@ -6,6 +6,8 @@
 
 <p align="center"><b>アプリを Rust で書き直し、元と同じように動くことを証明する。</b></p>
 
+<p align="center"><sub>コードを自動翻訳するツールではありません。Rust はコーディングエージェント（またはあなた）が書き、rust-anything が元のプログラムと照合して検証します。PHP と C#：現在は記録・再生と front door に対応、ユニット単位の移植は次の予定です。</sub></p>
+
 <p align="center">2.0 の新機能: <a href="real-world.md#prettier">Prettier を Rust に移植</a>。19x 高速 · 記録済み実行 17,224 件中 15,837 件が完全に Rust · すべてバイト単位で一致</p>
 
 <p align="center">

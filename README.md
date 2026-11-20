@@ -6,6 +6,8 @@
 
 <p align="center"><b>Rewrite your app in Rust, and prove it still behaves the same.</b></p>
 
+<p align="center"><sub>It doesn't translate code: your coding agent (or you) writes the Rust, and rust-anything checks it against the original. PHP and C#: record, replay and the front door today; unit ports come next.</sub></p>
+
 <p align="center">New in 2.0: <a href="docs/real-world.md#prettier">Prettier, ported to Rust</a>. 19x faster · 15,837 of 17,224 recorded runs fully in Rust · every run byte-identical</p>
 
 <p align="center">
