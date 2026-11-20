@@ -38,6 +38,15 @@
   In cases, give its starting offset, `true` for a `NULL` start, or `null` for a `NULL` pointer.
   A `**` the function advances as its own string (`av_get_token(const char **buf, ...)`) still
   stays in C, as does anything returning memory it allocates.
+- `record` (C): generated cases give struct parameters objects of their fields (zeros, ones,
+  minus ones, each field's minimum and maximum, each field zero with the others one, and small
+  random values) instead of values that were recorded as `TypeError`s, and `char **`
+  parameters `true`, `null` or offset 0.
+- `diff` (C): a case where the original returned or wrote a pointer outside its arguments (read
+  past a string, say) is undefined behavior like a crash, and any answer of the port passes it.
+- Case study: the ffmpeg ports add `av_mul_q`, `av_div_q`, `av_add_q`, `av_sub_q`, `av_d2q`,
+  `av_nearer_q`, `av_q2intfloat`, `av_rescale_q`, `av_rescale_q_rnd`, `av_strstart` and
+  `av_stristart`; 226,447/226,447 recorded calls, gate passes on all 10 crates.
 - `diff` (C): a case the original recorded as an error (an argument ctypes could not convert)
   passes when the port gives the same error, instead of always failing.
 - Contributors: `mise.toml` pins the toolchains CI uses, and `hk.pkl` runs the secrets check,

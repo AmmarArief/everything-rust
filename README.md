@@ -87,8 +87,8 @@ recorded HTTP cases match on a pure Rust binary. Measured on an Apple M4, two ru
 output compared before timing ([details](docs/real-world.md)). Calling Rust once per small
 function is usually *slower* than a JIT; rust-anything finds the loop worth moving, and moves it. Against
 C the win is safety, not speed: [ffmpeg's libavutil](docs/real-world.md#ffmpeg) ported to Rust
-matches all 135,773 recorded calls and runs at about C's speed (15 of 34 benchmarks even, 6
-faster, 13 slower by 2 to 32%).
+matches all 226,447 recorded calls and runs at about C's speed (18 of 42 benchmarks even, 8
+faster, 16 slower by 3 to 40%).
 
 <p align="center">
   <img src="docs/assets/json-server.gif" alt="json-server as a Node server and as one Rust binary: memory at idle 74 MB and 3.5 MB, start to first response 79 to 85 ms and 8 to 10 ms, and 514 of 514 recorded HTTP cases match." width="820">
