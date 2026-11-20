@@ -17,7 +17,7 @@ Il ne traduit pas le code : votre agent de code (ou vous) écrit le Rust, et rus
   <a href="https://crates.io/crates/rust-anything"><img src="https://img.shields.io/crates/v/rust-anything?color=E2862A&label=crates.io" alt="crates.io version"></a>
   <a href="https://www.npmjs.com/package/rust-anything"><img src="https://img.shields.io/npm/v/rust-anything?color=E2862A&label=npm" alt="npm version"></a>
   <br>
-  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/erkamyaman/rust-anything?labelColor=171717&color=FF570A&label=Reviewed+by+CodeRabbit" alt="Pull requests reviewed by CodeRabbit"></a>
+  <a href="https://coderabbit.link/erkamyaman"><img src="https://img.shields.io/coderabbit/prs/github/erkamyaman/rust-anything?labelColor=171717&color=FF570A&label=Reviewed+by+CodeRabbit" alt="Pull requests reviewed by CodeRabbit"></a>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
   <a href="https://github.com/erkamyaman/rust-anything"><img src="https://img.shields.io/github/stars/erkamyaman/rust-anything?style=social" alt="GitHub stars"></a>
@@ -29,7 +29,7 @@ Il ne traduit pas le code : votre agent de code (ou vous) écrit le Rust, et rus
 
 <p align="center"><b><a href="#démarrage-rapide">Démarrage rapide</a></b> · <a href="https://github.com/erkamyaman/rust-anything/releases">Releases</a> · <a href="#démarrage-rapide">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=rust-anything">MCP Registry</a> · <a href="real-world.md">Portages réels</a> · <a href="faq.md#faq">FAQ</a><br>
 <sub><a href="#langages">Langages</a> · <a href="how-it-works.md#how-it-works">Fonctionnement</a> · <a href="whole-apps.md#port-a-whole-app">Applications complètes</a> · <a href="../LICENSE">MIT</a></sub><br>
-Fait en Turquie 🇹🇷 par <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Me sponsoriser</a> · Sponsorisé par <a href="https://coderabbit.ai"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
+Fait en Turquie 🇹🇷 par <a href="https://github.com/erkamyaman">erKam Yaman</a> · <a href="../LICENSE">MIT</a> · <a href="https://github.com/sponsors/erkamyaman">❤️ Me sponsoriser</a> · Sponsorisé par <a href="https://coderabbit.link/erkamyaman"><img src="assets/brands/coderabbit.png" width="22" height="22" align="absmiddle" alt=""> <b>CodeRabbit</b></a></p>
 
 <p align="center">Nouveau dans la 2.0 : <a href="real-world.md#prettier">Prettier, porté en Rust</a>. 19x plus rapide · 15,837 exécutions enregistrées sur 17,224 entièrement en Rust · toutes identiques octet pour octet</p>
 
@@ -243,7 +243,7 @@ d'unités via P/Invoke viendra ensuite.
 </p>
 
 <p align="center">
-  <a href="https://coderabbit.ai">
+  <a href="https://coderabbit.link/erkamyaman">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/company-dark.svg">
       <img src="assets/sponsors/company-light.svg" width="800" alt="Sponsor entreprise : CodeRabbit">
