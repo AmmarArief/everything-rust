@@ -123,6 +123,15 @@ them. Match the exact prefix you mean, and check a group's total against the cor
 lines removed the one line that differed (`/* name */ value`). Write the expected and actual
 output to files and diff them whole.
 
+**Sorting cannot pair lines that are matched loosely.** An `unordered` output was compared by
+sorting both sides as text and pairing the lines by position, while the lines were then matched
+within `float_tolerance`: `10.0` sorts before `2.0`, so it met `2.0` instead of the
+`9.999999999999999` it matched, and the weaker check failed output the ordered one accepted.
+Sorting by value instead only moved the problem -- `[..]` and `2` against `2.0` then paired wrong,
+because a loose match is not transitive and no order agrees with it. Pair the lines against each
+other (identical ones first, then a search that gives a line up when another needs it), and keep
+the sort for showing the diff.
+
 ## Language plugins
 
 **A tree-sitter supertype never appears in the tree.** `tree-sitter-kotlin-ng` lists
