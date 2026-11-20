@@ -392,6 +392,58 @@ fn platform_specific_c_stays_in_c_and_compiled_apps_are_refused() {
 }
 
 #[test]
+fn a_c_library_folder_reads_like_ffmpegs_libavutil() {
+    let root = std::env::temp_dir()
+        .join(format!("ra-libavutil-{}", std::process::id()))
+        .join("libavutil");
+    let _ = std::fs::remove_dir_all(&root);
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    };
+    write(
+        "base64.h",
+        "#include <stdint.h>\nint b64_decode(uint8_t *out, const char *in, int out_size);\n",
+    );
+    write(
+        "base64.c",
+        "#include \"base64.h\"\n\
+         int b64_decode(uint8_t *out, const char *in, int out_size) {\n\
+         \x20   if (!out) goto check;\n    return out_size;\ncheck:\n    return in[0] == 0 ? 0 : -1;\n}\n",
+    );
+    write(
+        "tests/base64.c",
+        "#include \"libavutil/base64.h\"\nint main(void) { return b64_decode(0, \"\", 0); }\n",
+    );
+    write("x86/cpu.c", "int cpu_flags(void) { return 1; }\n");
+    let report = analyze(&root).unwrap();
+    let ids: Vec<&str> = report.units.iter().map(|u| u.id.as_str()).collect();
+    let base64 = report
+        .units
+        .iter()
+        .find(|u| u.id == "base64.c")
+        .unwrap_or_else(|| panic!("{ids:?}"));
+    assert_ne!(
+        base64.status,
+        Status::Blocked,
+        "goto is control flow: {base64:?}"
+    );
+    assert_eq!(
+        base64.direct_tests, 1,
+        "`libavutil/base64.h` from inside libavutil: {base64:?}"
+    );
+    assert_eq!(base64.bridgeable, 1, "{base64:?}");
+    let cpu = report
+        .units
+        .iter()
+        .find(|u| u.id.starts_with("x86/"))
+        .unwrap_or_else(|| panic!("{ids:?}"));
+    assert_eq!(cpu.status, Status::Keep, "{cpu:?}");
+    std::fs::remove_dir_all(root.parent().unwrap()).unwrap();
+}
+
+#[test]
 fn electron_apps_get_a_main_process_decision() {
     let root = std::env::temp_dir().join(format!("ra-electron-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);

@@ -285,6 +285,9 @@ pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
 /// change: it is marked `caution` and left out of `start_here`.
 fn check_bridgeable(root: &Path, report: &mut Report, lang: Lang) {
     use crate::ts::exports::{exported_classes, exported_functions};
+    if lang == Lang::C {
+        crate::lang::c::use_typedefs(root);
+    }
     for unit in &mut report.units {
         if matches!(unit.status, Status::Keep | Status::Blocked) {
             continue;
@@ -321,9 +324,15 @@ fn check_bridgeable(root: &Path, report: &mut Report, lang: Lang) {
             unit.status = Status::Caution;
             unit.notes.insert(
                 0,
-                "Every export is JS-shaped (functions, plugin objects, iterators): porting the logic \
-                 means adding a data-only function, an API change."
-                    .into(),
+                if lang == Lang::C {
+                    "No export can cross the C ABI bridge (contexts, function pointers, structs by \
+                     value, pointers it cannot pair with a length): bridge a wrapper with plain \
+                     arguments, an API change."
+                } else {
+                    "Every export is JS-shaped (functions, plugin objects, iterators): porting the \
+                     logic means adding a data-only function, an API change."
+                }
+                .into(),
             );
         }
     }
@@ -464,6 +473,13 @@ fn build(root: &Path, ws: &Workspace, facts: &[Option<FileFacts>], lang: Lang) -
         unit.loops += f.loops;
         unit.parse_errors += f.parse_errors;
         unit.platforms.extend(f.platforms.iter().copied());
+        if lang == Lang::C && crate::lang::c::in_arch_dir(&file.path) {
+            let entry = unit.risks.entry(Risk::PlatformSpecific).or_default();
+            entry.0 += 1;
+            if entry.1.len() < SAMPLES_PER_RISK {
+                entry.1.push(format!("{}:1", file.path));
+            }
+        }
         for (risk, lines) in &f.risks {
             let entry = unit.risks.entry(*risk).or_default();
             entry.0 += lines.len();
