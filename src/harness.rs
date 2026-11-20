@@ -1668,17 +1668,26 @@ const enc = (v, stack = []) => {
   if (Array.isArray(v)) return v.map(x => enc(x, next))
   if (typeof Buffer !== 'undefined' && Buffer.isBuffer(v)) return { $buffer: [...v] }
   if (v instanceof Uint8Array) return { $bytes: [...v] }
+  if (ArrayBuffer.isView(v) && !(v instanceof DataView)) return { $typed: { kind: v.constructor.name, values: [...v].map(x => enc(x, next)) } }
   if (v instanceof Map) return { $map: [...v].map(([k, x]) => [enc(k, next), enc(x, next)]) }
   if (v instanceof Set) return { $set: [...v].map(x => enc(x, next)) }
   if (v instanceof Date) return { $date: Number.isNaN(v.getTime()) ? 'Invalid' : v.toISOString() }
   if (v instanceof RegExp) return { $regexp: String(v) }
   if (v instanceof Error) return { $error: v.message }
-  return Object.fromEntries(Object.keys(v).map(k => [k, enc(v[k], next)]))
+  const plain = Object.fromEntries(Object.keys(v).map(k => [k, enc(v[k], next)]))
+  return looksLikeMarker(plain) ? { $object: plain } : plain
+}
+const MARKERS = ['$undefined', '$num', '$bigint', '$utf16', '$map', '$set', '$date', '$bytes', '$buffer', '$typed', '$object']
+const looksLikeMarker = (v) => {
+  const keys = Object.keys(v)
+  return keys.length === 1 && MARKERS.includes(keys[0])
 }
 const dec = (v) => {
   if (Array.isArray(v)) return v.map(dec)
   if (v === null || typeof v !== 'object') return v
-  if (v.$undefined) return undefined
+  if (!looksLikeMarker(v)) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, dec(x)]))
+  if ('$object' in v) return Object.fromEntries(Object.entries(v.$object).map(([k, x]) => [k, dec(x)]))
+  if ('$undefined' in v) return undefined
   if ('$num' in v) return Number(v.$num)
   if ('$bigint' in v) return BigInt(v.$bigint)
   if ('$utf16' in v) {
@@ -1691,8 +1700,8 @@ const dec = (v) => {
   if ('$set' in v) return new Set(v.$set.map(dec))
   if ('$date' in v) return new Date(v.$date)
   if ('$bytes' in v) return Uint8Array.from(v.$bytes)
-  if ('$buffer' in v) return Buffer.from(v.$buffer)
-  return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, dec(x)]))
+  if ('$typed' in v) return globalThis[v.$typed.kind].from(v.$typed.values.map(dec))
+  return Buffer.from(v.$buffer)
 }
 const canon = (v, sort) => {
   if (Array.isArray(v)) return v.map(x => canon(x, sort))
@@ -1933,6 +1942,40 @@ writeFileSync(outPath, JSON.stringify(summary, null, 2))
 mod tests {
     use super::*;
     use crate::ts::exports::{ExportedFn, Param};
+
+    #[test]
+    fn the_js_codec_keeps_marker_shaped_data_and_typed_arrays() {
+        let script = format!(
+            "{CODEC_JS}\n{}",
+            r#"
+const assert = (ok, what) => { if (!ok) { console.error(what); process.exit(1) } }
+const round = v => dec(JSON.parse(JSON.stringify(enc(v))))
+const plain = [{ $date: '2024-01-01T00:00:00.000Z' }, { $undefined: true }, { $bigint: '7' }, { $object: 1 }]
+for (const v of plain) assert(JSON.stringify(round(v)) === JSON.stringify(v), 'plain ' + JSON.stringify(v))
+const wide = dec({ $date: '2024-01-01T00:00:00.000Z', tz: 'UTC' })
+assert(wide.tz === 'UTC' && typeof wide.$date === 'string', 'sibling keys are data')
+assert(round(new Date(0)) instanceof Date, 'dates still decode')
+for (const T of [Float64Array, Float32Array, Int32Array, Uint8ClampedArray, BigInt64Array]) {
+  const v = T === BigInt64Array ? new T([1n, -2n]) : new T([1, 2])
+  const back = round(v)
+  assert(back instanceof T && back.length === 2 && back[1] === v[1], 'typed ' + T.name)
+}
+assert(JSON.stringify(enc(new Float64Array([1, 2]))) !== JSON.stringify(enc(new Int32Array([1, 2]))), 'kinds differ')
+assert(round(new Uint8Array([1])) instanceof Uint8Array, 'bytes stay bytes')
+"#
+        );
+        let Ok(out) = Command::new("node")
+            .args(["--input-type=module", "-e", &script])
+            .output()
+        else {
+            return;
+        };
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
 
     fn f(params: &[(&str, &str)]) -> ExportedFn {
         ExportedFn {

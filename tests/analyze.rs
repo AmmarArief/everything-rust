@@ -169,6 +169,26 @@ fn numpy_array_parameters_are_flagged() {
 }
 
 #[test]
+fn a_c_unit_depends_on_what_its_own_header_includes() {
+    let root = std::env::temp_dir().join(format!("rust-anything-c-header-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    for (name, text) in [
+        ("src/a.c", "#include \"a.h\"\nint a(void) { return b(); }\n"),
+        ("src/a.h", "#pragma once\n#include \"b.h\"\nint a(void);\n"),
+        ("src/b.c", "#include \"b.h\"\nint b(void) { return 42; }\n"),
+        ("src/b.h", "#pragma once\nint b(void);\n"),
+    ] {
+        std::fs::write(root.join(name), text).unwrap();
+    }
+    let report = rust_anything::analyze::analyze_lang(&root, rust_anything::lang::Lang::C).unwrap();
+    std::fs::remove_dir_all(&root).unwrap();
+    let a = unit(&report, "src/a.c");
+    assert_eq!(a.internal_deps, ["src/b.c"], "{:?}", a.internal_deps);
+    assert!(a.wave > unit(&report, "src/b.c").wave);
+}
+
+#[test]
 fn json_output_is_versioned() {
     let json = serde_json::to_value(mini()).unwrap();
     assert_eq!(json["schema"], "rust-anything/analyze@1");

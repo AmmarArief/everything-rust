@@ -264,6 +264,15 @@ pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
         .iter()
         .map(|file| {
             let text = std::fs::read_to_string(root.join(&file.path)).ok()?;
+            if lang == Lang::C {
+                let mut facts = crate::lang::scan(lang, &file.path, &text);
+                if let Some(header) = own_header(root, &file.path) {
+                    facts
+                        .imports
+                        .extend(crate::lang::scan(lang, &header.0, &header.1).imports);
+                }
+                return Some(facts);
+            }
             if lang != Lang::Ts {
                 return Some(crate::lang::scan(lang, &file.path, &text));
             }
@@ -278,6 +287,14 @@ pub fn analyze_lang(root: &Path, lang: Lang) -> Result<Report> {
     let mut report = build(root, &ws, &facts, lang);
     check_bridgeable(root, &mut report, lang);
     Ok(report)
+}
+
+fn own_header(root: &Path, unit: &str) -> Option<(String, String)> {
+    let stem = unit.strip_suffix(".c")?;
+    let name = stem.rsplit('/').next().unwrap_or(stem);
+    [format!("{stem}.h"), format!("include/{name}.h")]
+        .into_iter()
+        .find_map(|h| Some((h.clone(), std::fs::read_to_string(root.join(&h)).ok()?)))
 }
 
 /// Counts each unit's exports that can cross a bridge, with the rules `bridge` applies. A unit

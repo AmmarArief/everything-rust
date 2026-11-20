@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- `record`/`diff` (TS/JS): plain data shaped like a marker (`{"$date": ...}`, Mongo extended JSON)
+  is kept as data instead of being read as a Date, undefined or bigint, and a marker key next to
+  other keys is ordinary data. Write such an object in `--inputs` as `{"$object": {...}}` (#121).
+- `record`/`diff` (TS/JS): typed arrays other than `Uint8Array` (`Float64Array`, `Int32Array`,
+  `Uint8ClampedArray`, ...) are recorded with their kind, so a port returning the wrong one
+  fails (#122).
+- `app replay`: lines compared in any order are paired by value within `--float-tolerance`, not
+  by sorted position (#123, #125 by @sameermankotia).
+- `analyze` (C): a unit depends on what its own header includes, so `a.c` that reaches `b()`
+  through `a.h` waits for `b.c` (#126).
 - README: right under the tagline, it now says the tool doesn't translate code (your agent or you
   write the Rust) and what PHP and C# support today. From a new-user QA review of the README by
   [Mashhood Ali](https://github.com/MASHHOOD2019), an independent AI evaluation and QA specialist
