@@ -260,6 +260,7 @@ C# да ушундай эле иштейт: `analyze` `.csproj` долбоорл
 
 <p align="center">
   <a href="https://github.com/sponsors/erkamyaman"><img src="https://img.shields.io/badge/%D0%94%D0%B5%D0%BC%D3%A9%D3%A9%D1%80%D1%87%D2%AF_%D0%B1%D0%BE%D0%BB%D1%83%D1%83-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Демөөрчү болуу"></a>
+  <a href="https://buymeacoffee.com/erkamyaman"><img src="https://img.shields.io/badge/Buy_me_a_coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 ## Салым кошуу

@@ -217,6 +217,7 @@ C# も同じように動作します: `analyze` は `.csproj` プロジェクト
 
 <p align="center">
   <a href="https://github.com/sponsors/erkamyaman"><img src="https://img.shields.io/badge/%E3%82%B9%E3%83%9D%E3%83%B3%E3%82%B5%E3%83%BC%E3%81%AB%E3%81%AA%E3%82%8B-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="スポンサーになる"></a>
+  <a href="https://buymeacoffee.com/erkamyaman"><img src="https://img.shields.io/badge/Buy_me_a_coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 ## 貢献

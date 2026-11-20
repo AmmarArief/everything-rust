@@ -259,6 +259,7 @@ ortiga qo'yish mumkin; birliklarni P/Invoke orqali port qilish navbatda.
 
 <p align="center">
   <a href="https://github.com/sponsors/erkamyaman"><img src="https://img.shields.io/badge/Homiy_bo%27lish-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Homiy bo'lish"></a>
+  <a href="https://buymeacoffee.com/erkamyaman"><img src="https://img.shields.io/badge/Buy_me_a_coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 ## Hissa qo'shish

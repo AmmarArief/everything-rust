@@ -282,6 +282,7 @@ C# مۇ ئوخشاشلا ئىشلەيدۇ: `analyze` `.csproj` تۈرلىرى ۋ
 
 <p align="center">
   <a href="https://github.com/sponsors/erkamyaman"><img src="https://img.shields.io/badge/%DA%BE%D8%A7%D9%85%D9%89%D9%8A_%D8%A8%D9%88%D9%84%DB%87%D8%B4-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="ھامىي بولۇش"></a>
+  <a href="https://buymeacoffee.com/erkamyaman"><img src="https://img.shields.io/badge/Buy_me_a_coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
 </p>
 
 ## تۆھپە قوشۇش
