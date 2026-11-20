@@ -497,7 +497,8 @@ now keeps, since a recording on one machine cannot vouch for another target and 
 beat the assembly anyway. `hwcontext_*` (hardware APIs). `av_parse_time` (reads the clock and the
 local time zone). Functions returning memory they allocate (`av_strireplace`), a static string
 (`av_basename` on an empty path), or taking `const char **` or `AVRational` by value: the bridge
-does not carry those yet. None of the ported units has assembly in n7.1, so the bench is C
+did not carry those when this case study was made (it does now, see the changelog; they are not
+ported here yet). None of the ported units has assembly in n7.1, so the bench is C
 compiled by ffmpeg's own build against Rust.
 
 **Found in ffmpeg.** `av_murmur3_update` returns early when a call exactly completes a 16-byte

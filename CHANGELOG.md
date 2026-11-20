@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+- `fuzz`: a live differential test. It generates fresh inputs from a new seed (the record
+  generator, skipping inputs already recorded), runs them through the original and the built
+  port, and reports the mismatches the recorded cases missed. `--cases N` per function, `--seed S`
+  (random by default and printed, so a run replays), `--time SECS` for rounds until the budget is
+  spent, and `--keep` (`--keep=all`) appends the mismatching (all) fresh cases to `cases.jsonl` so
+  the next `diff` and `gate` check them. Works wherever `record` and `diff` do on this machine:
+  TS/JS, Python, C, Go, Ruby, Java and Kotlin. Also an MCP tool.
+- `record --pin-clock` (TS/JS with the napi bridge, Python): units that read the clock or random
+  numbers can be recorded. While pinned (`pinned.json`, until `--no-pin-clock`), record, diff,
+  fuzz and gate run with `RUST_ANYTHING_NOW_MS`, `RUST_ANYTHING_SEED` and `TZ=UTC`; `Date.now()`,
+  `new Date()`, `Date()` and `Math.random` (`time.time`, `datetime.now`, `date.today` and the
+  `random` module) return that instant and a mulberry32 sequence restarted at every case. The port
+  reads the same values from `src/port/pinned.rs` (`now_ms()`, `random()`, `getrandbits()`,
+  `randbelow()`), written by the first `--pin-clock`. Recordings without the flag are unchanged.
+- `analyze`: reads of the clock and random numbers (`Date.now()`, `new Date()`, `Math.random`,
+  `performance.now()`; `time.time`, `datetime.now`, `random.*`, `uuid4`) are a new low-severity
+  risk, "Clock and random numbers", whose advice points to `record --pin-clock`.
+- C bridge: structs of scalar fields cross by value, as parameters and returns (ffmpeg's
+  `AVRational av_mul_q(AVRational b, AVRational c)`). The struct is read from the project's
+  headers (`typedef struct ... Name;` or `struct tag`), is a `#[repr(C)]` struct at the crate root
+  (`crate::AVRational`), and is an object of its fields in cases and recorded results. Structs
+  with a pointer, array, bit-field or nested struct field stay in C.
+- C bridge: a `char **` / `const char **` out-parameter that the function points into a string
+  argument (`av_strstart(str, pfx, &ptr)`, `strtol`'s `endptr`) is recorded as the offset into
+  the first `char` string or buffer parameter, and is `Option<&mut Option<usize>>` in the port.
+  In cases, give its starting offset, `true` for a `NULL` start, or `null` for a `NULL` pointer.
+  A `**` the function advances as its own string (`av_get_token(const char **buf, ...)`) still
+  stays in C, as does anything returning memory it allocates.
+- `diff` (C): a case the original recorded as an error (an argument ctypes could not convert)
+  passes when the port gives the same error, instead of always failing.
+- Contributors: `mise.toml` pins the toolchains CI uses, and `hk.pkl` runs the secrets check,
+  `cargo fmt` and `cargo clippy` before each commit (suggested by u/touristtam on Reddit).
+- `setup --no-backup`: changes settings files in place without saving a
+  `<file>.rust-anything.bak` copy first.
 - `record`/`diff` (TS/JS): plain data shaped like a marker (`{"$date": ...}`, Mongo extended JSON)
   is kept as data instead of being read as a Date, undefined or bigint, and a marker key next to
   other keys is ordinary data. Write such an object in `--inputs` as `{"$object": {...}}` (#121).

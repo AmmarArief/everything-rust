@@ -69,6 +69,7 @@ pub fn record(crate_dir: &Path, cases: &[Value]) -> Result<PathBuf> {
                 .env("PYTHONHASHSEED", "0")
                 // Recording must not leave `__pycache__` folders in the source tree.
                 .env("PYTHONDONTWRITEBYTECODE", "1");
+            crate::pin::apply(&mut cmd, crate_dir)?;
             Ok(cmd)
         },
     )?;
@@ -128,8 +129,8 @@ pub fn diff(crate_dir: &Path, manifest: &Manifest, ignore_key_order: bool) -> Re
     let driver = driver(crate_dir)?;
     let (dir, name) = package(crate_dir, manifest);
     let out = crate_dir.join(WORK_DIR).join("diff.json");
-    run(Command::new(python())
-        .arg(&driver)
+    let mut cmd = Command::new(python());
+    cmd.arg(&driver)
         .arg("diff")
         .arg(&cases)
         .arg(&out)
@@ -138,7 +139,9 @@ pub fn diff(crate_dir: &Path, manifest: &Manifest, ignore_key_order: bool) -> Re
         .arg(if ignore_key_order { "sort" } else { "keep" })
         .env("PYTHONHASHSEED", "0")
         // Recording must not leave `__pycache__` folders in the source tree.
-        .env("PYTHONDONTWRITEBYTECODE", "1"))?;
+        .env("PYTHONDONTWRITEBYTECODE", "1");
+    crate::pin::apply(&mut cmd, crate_dir)?;
+    run(&mut cmd)?;
     Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
 }
 
@@ -272,6 +275,85 @@ def dataclass_named(name):
     return None
 
 
+PIN_CASE = None
+
+
+def pin_clock():
+    """With RUST_ANYTHING_NOW_MS set: a fixed clock and mulberry32 behind `random`, restarted
+    from RUST_ANYTHING_SEED by PIN_CASE before each case (see rust-anything's `pinned.rs`)."""
+    global PIN_CASE
+    now = os.environ.get("RUST_ANYTHING_NOW_MS")
+    if now is None:
+        return
+    import datetime as dt
+    import random as rnd
+    now_ms = int(now)
+    seconds = now_ms / 1000
+    seed = int(os.environ.get("RUST_ANYTHING_SEED", "0")) & 0xFFFFFFFF
+    time.time = lambda: seconds
+    time.time_ns = lambda: now_ms * 1_000_000
+    base_datetime, base_date = dt.datetime, dt.date
+
+    def pinned_type(base, methods):
+        class Meta(type):
+            def __instancecheck__(cls, obj):
+                return isinstance(obj, base)
+
+            def __subclasscheck__(cls, sub):
+                return issubclass(sub, base)
+
+        pinned = Meta(base.__name__, (base,), {k: classmethod(f) for k, f in methods.items()})
+        pinned.__module__ = base.__module__
+        return pinned
+
+    dt.datetime = pinned_type(base_datetime, {
+        "now": lambda cls, tz=None: base_datetime.fromtimestamp(seconds, tz),
+        "utcnow": lambda cls: base_datetime.fromtimestamp(seconds, dt.timezone.utc).replace(tzinfo=None),
+        "today": lambda cls: base_datetime.fromtimestamp(seconds),
+    })
+    dt.date = pinned_type(base_date, {"today": lambda cls: base_date.fromtimestamp(seconds)})
+    state = [seed]
+
+    def next_u32():
+        s = (state[0] + 0x6D2B79F5) & 0xFFFFFFFF
+        state[0] = s
+        t = ((s ^ (s >> 15)) * (s | 1)) & 0xFFFFFFFF
+        t ^= (t + ((t ^ (t >> 7)) * (t | 61))) & 0xFFFFFFFF
+        return t ^ (t >> 14)
+
+    class Pinned(rnd.Random):
+        def seed(self, *args, **kwargs):
+            self.gauss_next = None
+
+        def random(self):
+            return next_u32() / 4294967296
+
+        def getrandbits(self, k):
+            if k < 0:
+                raise ValueError("number of bits must be non-negative")
+            out, shift = 0, 0
+            while k > 0:
+                r = next_u32()
+                if k < 32:
+                    r >>= 32 - k
+                out |= r << shift
+                shift += 32
+                k -= 32
+            return out
+
+    inst = Pinned()
+    for name in rnd.__all__:
+        if not isinstance(getattr(rnd, name, None), type) and callable(getattr(inst, name, None)):
+            setattr(rnd, name, getattr(inst, name))
+
+    def pin_case(index):
+        state[0] = seed
+        inst.gauss_next = None
+        os.environ["RUST_ANYTHING_CASE"] = str(index)
+
+    PIN_CASE = pin_case
+
+
 def canon(v, sort):
     return json.dumps(v, sort_keys=sort, ensure_ascii=False)
 
@@ -343,6 +425,8 @@ def record(inputs_path, out_path):
                     p.write("%d\n" % index)
             if c["module"] not in modules:
                 modules[c["module"]] = load(c["module"])
+            if PIN_CASE:
+                PIN_CASE(index)
             result = run_case(modules[c["module"]], c)
             line = {k: c[k] for k in ("fn", "class", "ctor", "calls", "args", "kwargs") if k in c}
             line.update(result)
@@ -373,7 +457,7 @@ def diff(cases_path, out_path, package_dir, name, key_order):
     mod = native(package_dir, name)
     sort = key_order == "sort"
     summary = {"total": 0, "passed": 0, "failed": 0, "missing": [], "mismatches": []}
-    for line in open(cases_path, encoding="utf-8"):
+    for index, line in enumerate(open(cases_path, encoding="utf-8")):
         if not line.strip():
             continue
         c = json.loads(line)
@@ -384,6 +468,8 @@ def diff(cases_path, out_path, package_dir, name, key_order):
                 summary["missing"].append(name_)
             summary["failed"] += 1
             continue
+        if PIN_CASE:
+            PIN_CASE(index)
         got = run_case(mod, c)
         if c.get("class"):
             want, have = c["results"], got["results"]
@@ -449,6 +535,7 @@ def bench(cases_path, out_path, package_dir, name, modules_path, min_ms):
 
 if __name__ == "__main__":
     mode, *rest = sys.argv[1:]
+    pin_clock()
     if mode == "record":
         record(*rest)
     elif mode == "diff":

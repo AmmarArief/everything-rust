@@ -247,6 +247,11 @@ impl<'a> Visit<'a> for Collector {
                     )
                     | (Some("Reflect"), _) => self.add(Risk::Reflection, it.span),
                     (Some("Promise"), _) => self.add(Risk::Async, it.span),
+                    (Some("Math"), "random")
+                    | (Some("Date" | "performance"), "now")
+                    | (Some("crypto"), "randomUUID" | "getRandomValues") => {
+                        self.add(Risk::ClockAndRandom, it.span);
+                    }
                     (Some("Math"), "round") | (_, "toFixed") => {
                         self.add(Risk::NumberSemantics, it.span);
                     }
@@ -259,6 +264,7 @@ impl<'a> Visit<'a> for Collector {
             }
             Expression::Identifier(id) => match id.name.as_str() {
                 "eval" => self.add(Risk::DynamicCode, it.span),
+                "Date" => self.add(Risk::ClockAndRandom, it.span),
                 "parseInt" | "parseFloat" => self.add(Risk::NumberSemantics, it.span),
                 "require" => match string_arg(it.arguments.first()) {
                     Some(specifier) => self.import(specifier, false, true),
@@ -280,6 +286,7 @@ impl<'a> Visit<'a> for Collector {
                 self.regexp_constructor(it.arguments.first(), it.arguments.get(1), it.span);
             }
             Some("Map" | "Set") => self.add(Risk::OrderedCollections, it.span),
+            Some("Date") if it.arguments.is_empty() => self.add(Risk::ClockAndRandom, it.span),
             Some("Function") => self.add(Risk::DynamicCode, it.span),
             Some("Proxy" | "WeakRef" | "FinalizationRegistry") => {
                 self.add(Risk::Reflection, it.span);

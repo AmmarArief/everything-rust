@@ -147,6 +147,15 @@ enum Cmd {
         /// Android device serial; picked automatically when only one is connected.
         #[arg(long)]
         device: Option<String>,
+        /// Pin the clock and random numbers while recording and diffing (TS/JS with napi,
+        /// Python): `Date.now()`, `new Date()` and `Math.random` (`time.time`, `datetime.now`
+        /// and `random`) get fixed values, saved in `pinned.json`, and the port reads them from
+        /// `src/port/pinned.rs`. Kept for later runs until `--no-pin-clock`.
+        #[arg(long, conflicts_with = "no_pin_clock")]
+        pin_clock: bool,
+        /// Stop pinning the clock and random numbers.
+        #[arg(long)]
+        no_pin_clock: bool,
     },
     /// 3b. Build the crate's JS module (napi-rs `.node`, wasm-bindgen output) or, with
     /// `--profile android`, the JNI library for Android ABIs into `jniLibs/`.
@@ -211,6 +220,32 @@ enum Cmd {
         #[arg(long = "node-arg", allow_hyphen_values = true)]
         node_args: Vec<String>,
     },
+    /// 3e. Run fresh inputs from a new seed through the original and the port and report where
+    /// they differ: what the recorded cases did not cover.
+    Fuzz {
+        #[arg(default_value = ".", value_parser = absolute)]
+        crate_dir: PathBuf,
+        /// Fresh cases per function (and scenarios per class) in each round.
+        #[arg(long, default_value_t = 200)]
+        cases: usize,
+        /// Seed of the first round; random (and printed) when omitted. Later rounds count up.
+        #[arg(long)]
+        seed: Option<u64>,
+        /// Keep running new rounds until this many seconds have passed (one round otherwise).
+        #[arg(long, value_name = "SECS")]
+        time: Option<f64>,
+        /// Append the mismatching cases (`--keep`) or every fresh case (`--keep=all`) to
+        /// `cases.jsonl`, so the next diff and gate check them.
+        #[arg(long, value_enum, num_args = 0..=1, require_equals = true, default_missing_value = "mismatches")]
+        keep: Option<rust_anything::fuzz::Keep>,
+        /// Resolve npm packages the original imports from this folder's `node_modules`.
+        #[arg(long)]
+        resolve_from: Option<PathBuf>,
+        #[arg(long)]
+        json: bool,
+        #[arg(long = "node-arg", allow_hyphen_values = true)]
+        node_args: Vec<String>,
+    },
     /// Run a real workload under the language's profiler and say what to port: hot functions,
     /// their callers, and loops to batch. `rust-anything profile <repo> -- node bench.mjs` (also
     /// `python3 x.py`, `go test -bench . ./pkg`, `java ...`, `ruby x.rb`)
@@ -263,6 +298,9 @@ enum Cmd {
         /// Show what would change, write nothing.
         #[arg(long)]
         dry_run: bool,
+        /// Change settings files in place without saving a `.rust-anything.bak` copy first.
+        #[arg(long)]
+        no_backup: bool,
         #[arg(long)]
         json: bool,
     },
@@ -568,6 +606,8 @@ fn run() -> Result<ExitCode> {
             test_command,
             profile,
             device,
+            pin_clock,
+            no_pin_clock,
         } => {
             anyhow::ensure!(
                 from_tests || test_command.is_empty(),
@@ -603,6 +643,15 @@ fn run() -> Result<ExitCode> {
                 manifest.float_tolerance = (rust_anything::tolerance::check(t)? > 0.0).then_some(t);
                 manifest.save(&crate_dir)?;
             }
+            if (pin_clock || no_pin_clock)
+                && let Some(helper) = rust_anything::pin::set(&crate_dir, pin_clock)?
+            {
+                say!(
+                    "Wrote {}: add `mod pinned;` to port.rs and call `pinned::now_ms()` and \
+                     `pinned::random()` where the original reads the clock or draws a number",
+                    helper.display()
+                );
+            }
             let opts = harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count,
@@ -628,6 +677,14 @@ fn run() -> Result<ExitCode> {
             );
             for (name, n) in &outcome.per_function {
                 say!("  {name}: {n}");
+            }
+            if let Some(pin) = &outcome.pinned {
+                say!(
+                    "Clock pinned at {} ms (UTC), random numbers from seed {} ({})",
+                    pin.now_ms,
+                    pin.seed,
+                    rust_anything::pin::FILE
+                );
             }
             if !outcome.regex_functions.is_empty() {
                 say!(
@@ -794,6 +851,73 @@ fn run() -> Result<ExitCode> {
                 return Ok(ExitCode::FAILURE);
             }
         }
+        Cmd::Fuzz {
+            crate_dir,
+            cases,
+            seed,
+            time,
+            keep,
+            resolve_from,
+            json,
+            node_args,
+        } => {
+            let time = time
+                .map(|t| {
+                    anyhow::ensure!(t.is_finite() && t >= 0.0, "`--time` takes seconds");
+                    Ok(std::time::Duration::from_secs_f64(t))
+                })
+                .transpose()?;
+            let f = rust_anything::fuzz::fuzz(&rust_anything::fuzz::FuzzOptions {
+                crate_dir: &crate_dir,
+                cases,
+                seed,
+                time,
+                keep,
+                resolve_from: resolve_from.as_deref(),
+                node_args: &node_args,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&f)?);
+            } else {
+                say!("Seed {} (replay with --seed {})", f.seed, f.seed);
+                say!(
+                    "{}/{} fresh cases match ({} round{})",
+                    f.passed,
+                    f.cases,
+                    f.rounds,
+                    if f.rounds == 1 { "" } else { "s" }
+                );
+                if !f.missing.is_empty() {
+                    say!("Missing exports: {}", f.missing.join(", "));
+                }
+                for m in &f.mismatches {
+                    say!(
+                        "- {}({}): expected {}, got {}",
+                        m["fn"].as_str().unwrap_or_default(),
+                        m["args"]
+                            .as_array()
+                            .map(|a| a
+                                .iter()
+                                .map(ToString::to_string)
+                                .collect::<Vec<_>>()
+                                .join(", "))
+                            .unwrap_or_default(),
+                        m["expected"],
+                        m["actual"]
+                    );
+                }
+                if f.kept > 0 {
+                    say!(
+                        "Kept {} case(s) in {}: the next diff and gate check them",
+                        f.kept,
+                        f.recording.display()
+                    );
+                }
+            }
+            if f.failed > 0 {
+                return Ok(ExitCode::FAILURE);
+            }
+        }
         Cmd::Bench {
             crate_dir,
             min_ms,
@@ -924,6 +1048,7 @@ fn run() -> Result<ExitCode> {
             agents,
             remove,
             dry_run,
+            no_backup,
             json,
         } => {
             let home = rust_anything::setup::home()?;
@@ -936,6 +1061,7 @@ fn run() -> Result<ExitCode> {
                 command,
                 remove,
                 dry_run,
+                backup: !no_backup,
             })?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);

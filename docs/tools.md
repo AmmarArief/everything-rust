@@ -66,6 +66,7 @@ Runs the original's code or commands.
 | `test_command` | string[] |  | TS/JS or Python: also record every call the original's own test suite makes to the unit's functions, e.g. ["npx", "jest"] or ["pytest"]. Runs in the original's folder. |
 | `profile` | string |  | Record on this machine (default) or on a connected Android device (JVM crates). |
 | `device` | string |  | Android device serial; picked automatically when only one is connected. |
+| `pin_clock` | boolean |  | TS/JS (napi) and Python: true pins the clock and random numbers while recording and diffing (`Date.now()`, `new Date()`, `Math.random`; `time.time`, `datetime.now`, `random`) to the values in pinned.json, and writes src/port/pinned.rs for the port to read them (`mod pinned;` in port.rs). Kept for later runs; false stops pinning. |
 
 ## Build crate
 
@@ -130,6 +131,24 @@ Runs the original's code or commands.
 | `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
 | `resolve_from` | string |  |  |
 | `min_ms` | integer |  | Minimum measured time per function and side, in milliseconds (default 200). |
+| `node_args` | string[] |  | Extra arguments for node, e.g. ["--import=tsx"]. |
+
+## Fuzz port against original
+
+Tool `fuzz` · CLI `rust-anything fuzz`
+
+Live differential test: generate fresh inputs from a new seed (the record generator, without the cases already recorded), run them through the original and the built port, and report mismatches the recording missed. Returns the seed to replay, counts and the first mismatches; `keep` appends mismatching (or all) fresh cases to cases.jsonl so the next diff and gate check them. Works wherever record and diff do on this machine (TS/JS, Python, C, Go, Ruby, Java, Kotlin).
+
+Runs the original's code or commands.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+| `cases` | integer |  | Fresh cases per function (and scenarios per class) in each round (default 200). |
+| `seed` | integer |  | Seed of the first round; random when omitted (returned as `seed`). Later rounds count up from it. |
+| `time` | number |  | Keep running new rounds until this many seconds have passed; one round when omitted. |
+| `keep` | string |  | Append the mismatching fresh cases, or all of them, to cases.jsonl. |
+| `resolve_from` | string |  | Resolve npm packages the original imports from this folder's node_modules. |
 | `node_args` | string[] |  | Extra arguments for node, e.g. ["--import=tsx"]. |
 
 ## Generate shadow module

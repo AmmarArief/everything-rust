@@ -596,9 +596,19 @@ fn wire_fns<'m>(m: &'m Manifest, api: &'m PortApi) -> Vec<WireFn<'m>> {
         } else {
             ("wasm_bindgen", "Result<u32, JsError>", "len: u32", "len, ")
         };
+        let r = if reads.contains("r.") || reads.contains("(r") {
+            "r"
+        } else {
+            "_r"
+        };
+        let w = if write.contains("w.") || write.contains("(w") {
+            "w"
+        } else {
+            "_w"
+        };
         let rust = format!(
             "\n{statics}\n/// `{js}` over the binary wire.\n#[{attr}(js_name = \"{js}Wire\")]\npub fn {name}_wire({len}) -> {ret} {{\n    \
-             wire_io({len_arg}|r, w| {{\n{reads}{write}        Ok(())\n    }})\n}}\n",
+             wire_io({len_arg}|{r}, {w}| {{\n{reads}{write}        Ok(())\n    }})\n}}\n",
             js = f.js_name,
             name = f.rust_name.trim_start_matches("r#"),
         );

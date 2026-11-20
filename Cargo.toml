@@ -9,7 +9,6 @@ rust-version = "1.97"
 keywords = ["migration", "rewrite", "ffi", "napi", "pyo3"]
 categories = ["command-line-utilities", "development-tools", "wasm"]
 repository = "https://github.com/erkamyaman/rust-anything"
-homepage = "https://github.com/erkamyaman/rust-anything"
 exclude = ["demo/", "npm/", "docs/", ".github/", "scripts/", "server.json", "tests/fixtures/**/node_modules"]
 
 [dependencies]

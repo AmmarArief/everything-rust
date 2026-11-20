@@ -257,6 +257,20 @@ pub fn scan(source: &str) -> FileFacts {
                     add(&mut facts, Risk::DynamicTyping, node);
                 }
                 "globals" | "locals" | "vars" => add(&mut facts, Risk::Reflection, node),
+                "time.time"
+                | "time.time_ns"
+                | "datetime.now"
+                | "datetime.utcnow"
+                | "datetime.today"
+                | "date.today"
+                | "datetime.datetime.now"
+                | "datetime.datetime.utcnow"
+                | "datetime.date.today"
+                | "uuid.uuid4"
+                | "os.urandom" => add(&mut facts, Risk::ClockAndRandom, node),
+                _ if callee.starts_with("random.") || callee.starts_with("secrets.") => {
+                    add(&mut facts, Risk::ClockAndRandom, node);
+                }
                 "set" | "frozenset" => add(&mut facts, Risk::UnorderedIteration, node),
                 "threading.Thread"
                 | "Thread"

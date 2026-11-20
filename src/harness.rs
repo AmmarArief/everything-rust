@@ -77,6 +77,9 @@ pub struct RecordOutcome {
     /// Lines of the original the cases ran (TS/JS, from V8's coverage).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coverage: Option<Value>,
+    /// The clock and seed the original ran with (`--pin-clock`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pinned: Option<crate::pin::Pin>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -144,6 +147,16 @@ fn generate_cases(
     opts: &RecordOptions,
     manifest: &Manifest,
 ) -> Result<(Vec<Value>, usize, Vec<String>)> {
+    generate_cases_salted(opts, manifest, 0)
+}
+
+/// [`generate_cases`] with the generator's seeds mixed with `salt`. A non-zero salt gives fresh
+/// inputs (`fuzz`): no traps and no `--inputs`, which the recording already has.
+pub(crate) fn generate_cases_salted(
+    opts: &RecordOptions,
+    manifest: &Manifest,
+    salt: u64,
+) -> Result<(Vec<Value>, usize, Vec<String>)> {
     let mut cases: Vec<Value> = Vec::new();
     let module_for = |file: &str| -> Result<String> {
         let path = match opts.module {
@@ -178,7 +191,7 @@ fn generate_cases(
             regex_functions.push(f.name.clone());
         }
         let types = &scopes[&f.file];
-        let mut all = generate(f, opts.count, types);
+        let mut all = generate_salted(f, opts.count, types, salt);
         let mut seen: std::collections::HashSet<String> = all
             .iter()
             .map(|a| serde_json::to_string(a).unwrap_or_default())
@@ -188,7 +201,10 @@ fn generate_cases(
             .and_then(Value::as_array)
             .cloned()
             .unwrap_or_default();
-        for args in trap_args(&f.params, &base, regex) {
+        for args in trap_args(&f.params, &base, regex)
+            .into_iter()
+            .filter(|_| salt == 0)
+        {
             let args = Value::Array(args);
             if seen.insert(serde_json::to_string(&args).unwrap_or_default()) {
                 all.push(args);
@@ -210,12 +226,12 @@ fn generate_cases(
         let module = module_for(&class.file)?;
         let text = std::fs::read_to_string(manifest.root.join(&class.file)).unwrap_or_default();
         let types = crate::bridge::types_in_scope(&manifest.root, &class.file, &text);
-        for mut scenario in scenarios(class, opts.count.max(20), &types) {
+        for mut scenario in scenarios_salted(class, opts.count.max(20), &types, salt) {
             scenario["module"] = Value::String(module.clone());
             cases.push(scenario);
         }
     }
-    if let Some(path) = opts.inputs {
+    if let Some(path) = opts.inputs.filter(|_| salt == 0) {
         let text =
             std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
         for (i, line) in text
@@ -272,24 +288,35 @@ pub fn record(opts: &RecordOptions) -> Result<RecordOutcome> {
     let _ = std::fs::remove_file(&timed_out_path);
     let coverage_dir = opts.crate_dir.join(WORK_DIR).join(COVERAGE_DIR);
     let _ = std::fs::remove_dir_all(&coverage_dir);
-    let out = if manifest.language == crate::lang::Lang::Python {
-        crate::harness_py::record(opts.crate_dir, &cases)?
-    } else if manifest.kind == Kind::CAbi {
-        crate::harness_c::record(opts.crate_dir, &manifest, &cases)?
-    } else if manifest.language == crate::lang::Lang::Go {
-        crate::harness_go::record(opts.crate_dir, &manifest, &cases)?
-    } else if manifest.language == crate::lang::Lang::Ruby {
-        crate::harness_ruby::record(opts.crate_dir, &manifest, &cases)?
-    } else if manifest.language == crate::lang::Lang::Java {
-        crate::harness_java::record(opts.crate_dir, &manifest, &cases)?
-    } else if manifest.language == crate::lang::Lang::Kotlin {
-        crate::harness_kotlin::record(opts.crate_dir, &manifest, &cases)?
-    } else {
-        record_node(opts, &manifest, &cases)?
-    };
+    let out = record_with(opts, &manifest, &cases)?;
     let coverage = crate::recording::node_coverage(&coverage_dir, &manifest);
     crate::recording::save_fingerprint(opts.crate_dir, &manifest, coverage.as_ref())?;
-    summarize(opts, &out, traps, regex_functions, coverage)
+    let mut outcome = summarize(opts, &out, traps, regex_functions, coverage)?;
+    outcome.pinned = crate::pin::load(opts.crate_dir)?.filter(|_| crate::pin::supported(&manifest));
+    Ok(outcome)
+}
+
+/// Runs `cases` through the original with the language's driver and writes `cases.jsonl`.
+pub(crate) fn record_with(
+    opts: &RecordOptions,
+    manifest: &Manifest,
+    cases: &[Value],
+) -> Result<PathBuf> {
+    Ok(if manifest.language == crate::lang::Lang::Python {
+        crate::harness_py::record(opts.crate_dir, cases)?
+    } else if manifest.kind == Kind::CAbi {
+        crate::harness_c::record(opts.crate_dir, manifest, cases)?
+    } else if manifest.language == crate::lang::Lang::Go {
+        crate::harness_go::record(opts.crate_dir, manifest, cases)?
+    } else if manifest.language == crate::lang::Lang::Ruby {
+        crate::harness_ruby::record(opts.crate_dir, manifest, cases)?
+    } else if manifest.language == crate::lang::Lang::Java {
+        crate::harness_java::record(opts.crate_dir, manifest, cases)?
+    } else if manifest.language == crate::lang::Lang::Kotlin {
+        crate::harness_kotlin::record(opts.crate_dir, manifest, cases)?
+    } else {
+        record_node(opts, manifest, cases)?
+    })
 }
 
 /// Records on a connected Android device: the cases are generated here, the original Kotlin
@@ -345,6 +372,7 @@ fn summarize(
             .map(|c| serde_json::json!({ "fn": c["fn"].clone(), "args": c["args"].clone() }))
             .collect(),
         coverage,
+        pinned: None,
     })
 }
 
@@ -353,7 +381,10 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
     let work = opts.crate_dir.join(WORK_DIR);
     std::fs::create_dir_all(&work)?;
     let script = work.join("record.mjs");
-    std::fs::write(&script, format!("{CODEC_JS}\n{RECORD_JS}"))?;
+    std::fs::write(
+        &script,
+        format!("{CODEC_JS}\n{}\n{RECORD_JS}", crate::pin::PIN_JS),
+    )?;
     let out = opts.crate_dir.join(CASES);
     // TS sources often import the way bundlers resolve (`./errors`, `./types`): a resolve hook
     // lets Node follow them, so the original runs as it is.
@@ -388,6 +419,7 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
             if let Some(dir) = &resolve_from {
                 cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
             }
+            crate::pin::apply(&mut cmd, opts.crate_dir)?;
             Ok(cmd)
         })
     };
@@ -788,6 +820,21 @@ pub fn diff_android(
 }
 
 fn diff_after(opts: &DiffOptions, exact: DiffOutcome) -> Result<DiffOutcome> {
+    let mut outcome = settle(opts, exact)?;
+    outcome.mismatches.truncate(SHOWN_MISMATCHES);
+    anyhow::ensure!(
+        outcome.total > 0,
+        "no recorded cases to compare; run `rust-anything record` first"
+    );
+    if opts.module.is_none() {
+        outcome.trend = crate::recording::track(opts.crate_dir, outcome.passed, outcome.total);
+    }
+    Ok(outcome)
+}
+
+/// Applies the float tolerance and `known-diffs.jsonl` to a driver's outcome, keeping every
+/// mismatch.
+pub(crate) fn settle(opts: &DiffOptions, exact: DiffOutcome) -> Result<DiffOutcome> {
     let mut outcome = exact;
     let manifest = Manifest::load(opts.crate_dir).ok();
     let saved = manifest.as_ref().and_then(|m| m.float_tolerance);
@@ -805,20 +852,13 @@ fn diff_after(opts: &DiffOptions, exact: DiffOutcome) -> Result<DiffOutcome> {
             opts.ignore_key_order || !preserve_key_order,
         );
     }
-    outcome =
-        crate::recording::apply_known(outcome, &crate::recording::known_diffs(opts.crate_dir)?);
-    outcome.mismatches.truncate(SHOWN_MISMATCHES);
-    anyhow::ensure!(
-        outcome.total > 0,
-        "no recorded cases to compare; run `rust-anything record` first"
-    );
-    if opts.module.is_none() {
-        outcome.trend = crate::recording::track(opts.crate_dir, outcome.passed, outcome.total);
-    }
-    Ok(outcome)
+    Ok(crate::recording::apply_known(
+        outcome,
+        &crate::recording::known_diffs(opts.crate_dir)?,
+    ))
 }
 
-fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
+pub(crate) fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
     let crate_dir = std::path::absolute(opts.crate_dir)?;
     let opts = &DiffOptions {
         crate_dir: &crate_dir,
@@ -888,23 +928,23 @@ fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
     let work = opts.crate_dir.join(WORK_DIR);
     std::fs::create_dir_all(&work)?;
     let script = work.join("diff.mjs");
-    std::fs::write(&script, format!("{CODEC_JS}\n{DIFF_JS}"))?;
+    std::fs::write(
+        &script,
+        format!("{CODEC_JS}\n{}\n{DIFF_JS}", crate::pin::PIN_JS),
+    )?;
     let out = work.join("diff.json");
     let flag = if opts.ignore_key_order {
         "sort"
     } else {
         "keep"
     };
-    run_node(
-        opts.node_args,
-        &script,
-        &[
-            module.as_os_str(),
-            cases.as_os_str(),
-            out.as_os_str(),
-            flag.as_ref(),
-        ],
-    )?;
+    let mut cmd = Command::new("node");
+    cmd.args(opts.node_args)
+        .arg(&script)
+        .args([&module, &cases, &out])
+        .arg(flag);
+    crate::pin::apply(&mut cmd, opts.crate_dir)?;
+    run(&mut cmd, "node")?;
     let text = std::fs::read_to_string(&out)?;
     Ok(serde_json::from_str(&text)?)
 }
@@ -931,9 +971,21 @@ pub fn generate(
     count: usize,
     types: &[LocalType],
 ) -> Vec<Value> {
-    let mut rng = Rng::new(f.name.bytes().fold(0x9E37_79B9_7F4A_7C15, |h, b| {
-        (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
-    }));
+    generate_salted(f, count, types, 0)
+}
+
+/// [`generate`] from another seed: `salt` 0 gives the recorded inputs, any other value fresh ones.
+pub fn generate_salted(
+    f: &crate::ts::exports::ExportedFn,
+    count: usize,
+    types: &[LocalType],
+    salt: u64,
+) -> Vec<Value> {
+    let mut rng = Rng::new(
+        f.name.bytes().fold(0x9E37_79B9_7F4A_7C15, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
+        }) ^ salt,
+    );
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
     let mut attempts = 0;
@@ -1193,9 +1245,21 @@ pub fn scenarios(
     count: usize,
     types: &[LocalType],
 ) -> Vec<Value> {
-    let mut rng = Rng::new(class.name.bytes().fold(0x2545_F491_4F6C_DD1D, |h, b| {
-        (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
-    }));
+    scenarios_salted(class, count, types, 0)
+}
+
+/// [`scenarios`] from another seed, as [`generate_salted`].
+pub fn scenarios_salted(
+    class: &crate::ts::exports::ExportedClass,
+    count: usize,
+    types: &[LocalType],
+    salt: u64,
+) -> Vec<Value> {
+    let mut rng = Rng::new(
+        class.name.bytes().fold(0x2545_F491_4F6C_DD1D, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x100_0000_01B3)
+        }) ^ salt,
+    );
     (0..count)
         .map(|_| {
             let ctor = args_for(&class.constructor, types, &mut rng);
@@ -1378,13 +1442,6 @@ impl Rng {
         let x = self.0.wrapping_mul(0x2545_F491_4F6C_DD1D);
         usize::try_from(x >> 33).unwrap_or(0) % n
     }
-}
-
-fn run_node(node_args: &[String], script: &Path, args: &[&std::ffi::OsStr]) -> Result<()> {
-    run(
-        Command::new("node").args(node_args).arg(script).args(args),
-        "node",
-    )
 }
 
 /// How long one recorded case may run before the original is stopped on it:
@@ -1829,6 +1886,7 @@ for (const [index, c] of inputs.entries()) {
       console.error(`${c.class} is not a class exported by ${c.module}`)
       process.exit(2)
     }
+    pinCase(index)
     lines.push(JSON.stringify({ class: c.class, ctor: c.ctor, calls: c.calls, results: await runScenario(Class, c) }))
     continue
   }
@@ -1837,6 +1895,7 @@ for (const [index, c] of inputs.entries()) {
     console.error(`${c.fn} is not a function exported by ${c.module}`)
     process.exit(2)
   }
+  pinCase(index)
   try {
     const value = await fn(...c.args.map(dec))
     lines.push(JSON.stringify({ fn: c.fn, args: c.args, ok: enc(value) }))
@@ -1962,7 +2021,8 @@ const scenario = async (Class, c) => {
 }
 const stepsMatch = (want, got) => want.length === got.length && want.every((w, i) =>
   ('error' in w && 'error' in got[i] && !got[i].error.startsWith('Rust panic:')) || ('ok' in w && 'ok' in got[i] && same(w.ok, got[i].ok, keyOrder === 'sort')))
-for (const c of cases) {
+for (const [index, c] of cases.entries()) {
+  pinCase(index)
   if (c.class) {
     const Class = mod[c.class]
     if (typeof Class !== 'function') {

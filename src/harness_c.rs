@@ -39,10 +39,22 @@ fn compiler() -> &'static str {
 
 /// ctypes signatures: `{ name: { "args": [...], "ret": ... } }`. Pointer parameters are tagged:
 /// `bytes`, `buffer`, `len:<index>:<ctype>` (the length of the buffer at that index, which cases
-/// leave out), `out:<ctype>`; a returned pointer into parameter `i` is `ptr:<i>`.
+/// leave out), `out:<ctype>`, `outptr:<index>` (a `char **` into the parameter at that index);
+/// a returned pointer into parameter `i` is `ptr:<i>`. A struct by value, as an argument or the
+/// return, is `struct:<field>=<ctype>,...`.
 fn signatures(manifest: &Manifest) -> Value {
-    use crate::codegen_c::{CKind, kind, pointee, returns_into};
+    use crate::codegen_c::{CKind, c_struct, kind, pointee, returns_into};
     let ctype = |c: &str| scalar(c).map_or("c_int", |(_, _, _, ct)| ct).to_string();
+    let structure = |ts: &str| {
+        c_struct(ts).map(|s| {
+            let fields: Vec<String> = s
+                .fields
+                .iter()
+                .map(|(ty, name)| format!("{name}={}", ctype(ty)))
+                .collect();
+            format!("struct:{}", fields.join(","))
+        })
+    };
     let map: serde_json::Map<String, Value> = manifest
         .exports
         .iter()
@@ -58,12 +70,17 @@ fn signatures(manifest: &Manifest) -> Value {
                         CKind::Buffer => "buffer".into(),
                         CKind::Len(i) => format!("len:{i}:{}", ctype(native)),
                         CKind::Out => format!("out:{}", ctype(&pointee(native))),
+                        CKind::OutPtr(i) => format!("outptr:{i}"),
+                        CKind::Struct => structure(&p.ts_type).unwrap_or_else(|| "c_int".into()),
                         CKind::Scalar => ctype(native),
                     }
                 })
                 .collect();
             let ret = match returns_into(f) {
                 Some(i) => format!("ptr:{i}"),
+                None if structure(&f.returns).is_some() => {
+                    structure(&f.returns).unwrap_or_default()
+                }
                 None if f.native_return.as_deref().unwrap_or("void") == "void" => "None".into(),
                 None => ctype(f.native_return.as_deref().unwrap_or("int")),
             };
@@ -458,10 +475,50 @@ fn c_call(
                     format!("&out_{tag}_{i}")
                 }
             }
+            CKind::Struct => {
+                let s = crate::codegen_c::c_struct(&p.ts_type)?;
+                let Value::Object(o) = v else {
+                    return None;
+                };
+                let fields = s
+                    .fields
+                    .iter()
+                    .map(|(ty, name)| {
+                        let v = o.get(name).cloned().unwrap_or(Value::from(0));
+                        Some(format!(".{name} = {}", c_arg(&v, ty, false)?))
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                format!("({}){{{}}}", s.c_name, fields.join(", "))
+            }
+            CKind::OutPtr(_) => match v {
+                Value::Null => "NULL".into(),
+                _ => {
+                    let _ = writeln!(
+                        globals,
+                        "static {};",
+                        crate::codegen_c::c_decl(
+                            native.trim_end().strip_suffix('*').unwrap_or(native),
+                            &format!("slot_{tag}_{i}")
+                        )
+                    );
+                    format!("&slot_{tag}_{i}")
+                }
+            },
             CKind::Len(_) => String::new(),
             CKind::Scalar => c_arg(v, native, false)?,
         };
         exprs.push(expr);
+    }
+    for (i, (p, v)) in f.params.iter().zip(&values).enumerate() {
+        if let CKind::OutPtr(target) = kind(p)
+            && !v.is_null()
+        {
+            let at = match v.as_u64() {
+                Some(k) if !v.is_boolean() => format!("({}) + {k}", exprs[target]),
+                _ => "NULL".into(),
+            };
+            let _ = write!(setup, "slot_{tag}_{i} = {at}; ");
+        }
     }
     for (i, p) in f.params.iter().enumerate() {
         if let CKind::Len(target) = kind(p) {
@@ -485,6 +542,7 @@ fn bench_c(m: &Manifest, cases: &[Value], min_ms: u64) -> String {
          static double now_ns(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e9 + t.tv_nsec; }\n\
          static volatile uint64_t sink;\n\n",
     );
+    out.push_str(&crate::codegen_c::c_struct_defs(m));
     let mut rows = Vec::new();
     for f in &m.exports {
         let _ = writeln!(
@@ -509,12 +567,16 @@ fn bench_c(m: &Manifest, cases: &[Value], min_ms: u64) -> String {
             continue;
         }
         let void = f.native_return.as_deref() == Some("void");
+        let first_field = crate::codegen_c::c_struct(&f.returns)
+            .and_then(|s| s.fields.first().map(|(_, n)| n.clone()));
         let body = |target: &str| -> String {
             calls
                 .iter()
                 .map(|(setup, a)| {
                     if void {
                         format!("    {setup}{target}({a});\n")
+                    } else if let Some(field) = &first_field {
+                        format!("    {setup}sink += (uint64_t){target}({a}).{field};\n")
                     } else {
                         format!("    {setup}sink += (uint64_t)(uintptr_t){target}({a});\n")
                     }
@@ -586,8 +648,41 @@ def dec(v):
     return v
 
 
+STRUCTS = {}
+
+
+def structure(kind):
+    """The ctypes Structure for `struct:<field>=<ctype>,...`."""
+    if kind not in STRUCTS:
+        fields = [f.split("=", 1) for f in kind[len("struct:"):].split(",")]
+        STRUCTS[kind] = type("Struct", (ctypes.Structure,), {"_fields_": [(n, getattr(ctypes, t)) for n, t in fields]})
+    return STRUCTS[kind]
+
+
+def scalar(ctype, value):
+    if ctype in (ctypes.c_float, ctypes.c_double):
+        return float(value) if isinstance(value, (int, float)) else 0.0
+    if ctype is ctypes.c_bool:
+        return bool(value)
+    return int(value) if isinstance(value, (int, float)) and math.isfinite(value) else 0
+
+
+def to_struct(kind, value):
+    """A struct argument from an object of its fields; missing fields are zero."""
+    if not isinstance(value, dict):
+        raise TypeError("expects an object with fields %s" % ", ".join(n for n, _ in structure(kind)._fields_))
+    cls = structure(kind)
+    return cls(**{n: scalar(t, dec(value.get(n, 0))) for n, t in cls._fields_})
+
+
+def from_struct(value):
+    return {n: enc(getattr(value, n)) for n, _ in type(value)._fields_}
+
+
 def argtype(kind):
-    if kind in ("bytes", "buffer") or kind.startswith("out:"):
+    if kind.startswith("struct:"):
+        return structure(kind)
+    if kind in ("bytes", "buffer") or kind.startswith("out:") or kind.startswith("outptr:"):
         return ctypes.c_void_p
     if kind.startswith("len:"):
         return getattr(ctypes, kind.split(":")[2])
@@ -608,6 +703,8 @@ def bind(path, signatures):
             fn.restype = None
         elif ret.startswith("ptr:"):
             fn.restype = ctypes.c_void_p
+        elif ret.startswith("struct:"):
+            fn.restype = structure(ret)
         else:
             fn.restype = getattr(ctypes, ret)
         functions[name] = (fn, sig)
@@ -652,6 +749,10 @@ def call(functions, c):
                 cell = ctype(value if ctype in (ctypes.c_float, ctypes.c_double) else int(value))
                 outs[i] = cell
                 args[i] = ctypes.cast(ctypes.pointer(cell), ctypes.c_void_p)
+        elif kind.startswith("struct:"):
+            args[i] = to_struct(kind, value)
+        elif kind.startswith("outptr:"):
+            pass
         elif kind in ("c_float", "c_double"):
             args[i] = float(value) if isinstance(value, (int, float)) else 0.0
         elif kind == "c_bool":
@@ -662,6 +763,18 @@ def call(functions, c):
         if kind.startswith("len:"):
             target = int(kind.split(":")[1])
             args[i] = memory[target][1] if target in memory else 0
+    slots = {}
+    for i, (value, kind) in enumerate(zip(values, kinds)):
+        if kind.startswith("outptr:") and value is not None:
+            # The starting pointer: an offset into its target argument, or NULL for `true`.
+            target = int(kind.split(":")[1])
+            start = None
+            if isinstance(value, int) and not isinstance(value, bool):
+                if target not in memory or not 0 <= value <= memory[target][1]:
+                    return {"error": "starts a pointer outside its arguments"}
+                start = ctypes.addressof(memory[target][0]) + value
+            slots[i] = ctypes.c_void_p(start)
+            args[i] = ctypes.addressof(slots[i])
     result = fn(*args)
     if sig["ret"].startswith("ptr:"):
         target = int(sig["ret"][4:])
@@ -672,6 +785,8 @@ def call(functions, c):
             if not 0 <= offset <= memory[target][1]:
                 return {"error": "returns a pointer outside its arguments"}
             result = offset
+    elif sig["ret"].startswith("struct:"):
+        result = from_struct(result)
     else:
         result = enc(result)
     if not sig.get("writes"):
@@ -683,6 +798,16 @@ def call(functions, c):
             ok[name] = memory[i][0].raw[: memory[i][1]].hex() if i in memory else None
         elif kind.startswith("out:"):
             ok[name] = enc(outs[i].value) if i in outs else None
+        elif kind.startswith("outptr:"):
+            target = int(kind.split(":")[1])
+            pointer = slots[i].value if i in slots else None
+            if pointer is None:
+                ok[name] = None
+            else:
+                offset = pointer - ctypes.addressof(memory[target][0]) if target in memory else -1
+                if target not in memory or not 0 <= offset <= memory[target][1]:
+                    return {"error": "writes a pointer outside its arguments"}
+                ok[name] = offset
     return {"ok": ok}
 
 
@@ -745,7 +870,7 @@ def diff(lib, sigs, cases_path, out_path):
             summary["passed"] += 1
             continue
         got = isolated(functions, c)
-        expected = {"ok": c.get("ok")}
+        expected = {"error": c["error"]} if "error" in c else {"ok": c.get("ok")}
         if json.dumps(got) == json.dumps(expected):
             summary["passed"] += 1
         else:

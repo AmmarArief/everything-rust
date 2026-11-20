@@ -448,12 +448,26 @@ fn base_type(node: Node, source: &str) -> String {
 thread_local! {
     static TYPEDEFS: std::cell::RefCell<HashMap<String, String>> =
         std::cell::RefCell::new(HashMap::new());
+    static STRUCTS: std::cell::RefCell<HashMap<String, Fields>> =
+        std::cell::RefCell::new(HashMap::new());
 }
+
+/// A struct's fields in order, as `(C scalar type, name)`.
+type Fields = Vec<(String, String)>;
 
 /// The project's `typedef`s of scalars and enums (`typedef uint32_t AVAdler;`), by name, as the
 /// C scalar each one stands for.
 pub fn typedefs(root: &Path) -> HashMap<String, String> {
+    project_types(root).0
+}
+
+/// The project's scalar typedefs (see `typedefs`), and its structs whose fields are all scalars
+/// (`typedef struct AVRational { int num, den; } AVRational;`), by the name a declaration uses
+/// (`AVRational`, `struct AVRational`).
+fn project_types(root: &Path) -> (HashMap<String, String>, HashMap<String, Fields>) {
     let mut raw = HashMap::new();
+    let mut bodies = HashMap::new();
+    let mut aliases = HashMap::new();
     for entry in crate::walk::builder(root)
         .require_git(false)
         .build()
@@ -467,7 +481,11 @@ pub fn typedefs(root: &Path) -> HashMap<String, String> {
             continue;
         }
         if let Ok(source) = std::fs::read_to_string(entry.path()) {
-            collect_typedefs(&source, &mut raw);
+            let Some(tree) = syntax::parse(&language(), &source) else {
+                continue;
+            };
+            collect_typedefs_in(tree.root_node(), &source, &mut raw);
+            collect_structs(tree.root_node(), &source, &mut bodies, &mut aliases);
         }
     }
     let mut out = HashMap::new();
@@ -483,14 +501,44 @@ pub fn typedefs(root: &Path) -> HashMap<String, String> {
             out.insert(name.clone(), ty);
         }
     }
-    out
+    let field_type = |ty: &str| -> Option<String> {
+        let bare = ty
+            .split_whitespace()
+            .filter(|w| *w != "const")
+            .collect::<Vec<_>>()
+            .join(" ");
+        let resolved = out.get(&bare).cloned().unwrap_or(bare);
+        scalar(&resolved)
+            .is_some_and(|(d, ..)| d != "void")
+            .then_some(resolved)
+    };
+    let mut structs: HashMap<String, Fields> = bodies
+        .into_iter()
+        .filter_map(|(name, fields): (String, Fields)| {
+            let fields = fields
+                .into_iter()
+                .map(|(ty, field)| Some((field_type(&ty)?, field)))
+                .collect::<Option<Fields>>()?;
+            Some((name, fields))
+        })
+        .collect();
+    for (name, target) in aliases {
+        if let Some(fields) = structs.get(&target).cloned() {
+            structs.entry(name).or_insert(fields);
+        }
+    }
+    (out, structs)
 }
 
+#[cfg(test)]
 fn collect_typedefs(source: &str, out: &mut HashMap<String, String>) {
-    let Some(tree) = syntax::parse(&language(), source) else {
-        return;
-    };
-    syntax::walk(tree.root_node(), |node| {
+    if let Some(tree) = syntax::parse(&language(), source) {
+        collect_typedefs_in(tree.root_node(), source, out);
+    }
+}
+
+fn collect_typedefs_in(root: Node, source: &str, out: &mut HashMap<String, String>) {
+    syntax::walk(root, |node| {
         if node.kind() != "type_definition" {
             return;
         }
@@ -515,10 +563,120 @@ fn collect_typedefs(source: &str, out: &mut HashMap<String, String>) {
     });
 }
 
-/// Makes `exports` read these typedefs on this thread, for the project `root` it is looking at.
+/// The fields of a struct definition as written, when each is a plain named field (no
+/// pointer, array, bit-field or nested definition).
+fn struct_fields(spec: Node, source: &str) -> Option<Fields> {
+    let body = spec.child_by_field_name("body")?;
+    let mut fields = Vec::new();
+    for field in named_children(body) {
+        match field.kind() {
+            "comment" => continue,
+            "field_declaration" => {}
+            _ => return None,
+        }
+        if named_children(field)
+            .iter()
+            .any(|c| c.kind() == "bitfield_clause")
+        {
+            return None;
+        }
+        let ty = field.child_by_field_name("type")?;
+        if !matches!(
+            ty.kind(),
+            "primitive_type" | "sized_type_specifier" | "type_identifier"
+        ) {
+            return None;
+        }
+        let ty = base_type(field, source);
+        let mut cursor = field.walk();
+        let names: Vec<Node> = field
+            .children_by_field_name("declarator", &mut cursor)
+            .collect();
+        if names.is_empty() {
+            return None;
+        }
+        for name in names {
+            if name.kind() != "field_identifier" {
+                return None;
+            }
+            fields.push((ty.clone(), text(name, source).to_string()));
+        }
+    }
+    (!fields.is_empty()).then_some(fields)
+}
+
+/// Struct definitions (`struct Tag { ... }`, `typedef struct { ... } Name;`) and typedefs of
+/// structs defined elsewhere (`typedef struct Tag Name;`, kept in `aliases`).
+fn collect_structs(
+    root: Node,
+    source: &str,
+    bodies: &mut HashMap<String, Fields>,
+    aliases: &mut HashMap<String, String>,
+) {
+    let mut opaque = Vec::new();
+    syntax::walk(root, |node| match node.kind() {
+        "struct_specifier" if node.child_by_field_name("body").is_some() => {
+            if let Some(tag) = node.child_by_field_name("name") {
+                let name = format!("struct {}", text(tag, source));
+                match struct_fields(node, source) {
+                    Some(fields) => {
+                        bodies.insert(name, fields);
+                    }
+                    None => opaque.push(name),
+                }
+            }
+        }
+        "type_definition" => {
+            let (Some(declarator), Some(ty)) = (
+                node.child_by_field_name("declarator"),
+                node.child_by_field_name("type"),
+            ) else {
+                return;
+            };
+            if declarator.kind() != "type_identifier" || ty.kind() != "struct_specifier" {
+                return;
+            }
+            let name = text(declarator, source).to_string();
+            if ty.child_by_field_name("body").is_some() {
+                match struct_fields(ty, source) {
+                    Some(fields) => {
+                        bodies.insert(name, fields);
+                    }
+                    None => opaque.push(name),
+                }
+            } else if let Some(tag) = ty.child_by_field_name("name") {
+                aliases.insert(name, format!("struct {}", text(tag, source)));
+            }
+        }
+        _ => {}
+    });
+    for name in opaque {
+        bodies.remove(&name);
+    }
+}
+
+/// Makes `exports` read these typedefs and structs on this thread, for the project `root` it is
+/// looking at.
 pub fn use_typedefs(root: &Path) {
-    let map = typedefs(root);
-    TYPEDEFS.with(|t| *t.borrow_mut() = map);
+    let (scalars, structs) = project_types(root);
+    TYPEDEFS.with(|t| *t.borrow_mut() = scalars);
+    STRUCTS.with(|t| *t.borrow_mut() = structs);
+}
+
+/// The dialect type of a struct passed by value whose fields are all scalars:
+/// `struct:<C name>:<C type> <field>,...` (`struct:AVRational:int num,int den`).
+fn struct_type(c_type: &str) -> Option<String> {
+    if c_type.contains('*') || c_type.contains("[]") || c_type.contains("(fn)") {
+        return None;
+    }
+    let bare = c_type
+        .split_whitespace()
+        .filter(|w| *w != "const")
+        .collect::<Vec<_>>()
+        .join(" ");
+    let fields = STRUCTS.with(|s| s.borrow().get(&bare).cloned())?;
+    let fields: Vec<String> = fields.iter().map(|(t, n)| format!("{t} {n}")).collect();
+    Some(format!("struct:{bare}:{}", fields.join(",")))
 }
 
 /// A declared type with typedefs and enums replaced by their scalar, `const` kept.
@@ -574,7 +732,9 @@ fn is_integer(c_type: &str) -> bool {
 /// Each parameter's dialect type, or why it cannot cross a drop-in bridge. Beyond scalars and
 /// `const char *` strings: a byte pointer followed by an integer is a buffer of that length
 /// (`bytes` when `const`, `buffer` when the function writes it; the length is `len:<index>`),
-/// a mutable pointer to a scalar is `out` (read and written by the function).
+/// a mutable pointer to a scalar is `out` (read and written by the function), a `char **` is
+/// `outptr:<index>` (the pointer it holds points into the first `char` string or buffer
+/// parameter), and a struct of scalars is passed by value (see `struct_type`).
 fn classify_params(types: &[(String, Option<String>)]) -> Vec<Result<String, String>> {
     let mut out: Vec<Option<Result<String, String>>> = vec![None; types.len()];
     let lens = |out: &[Option<Result<String, String>>], i: usize| -> bool {
@@ -625,6 +785,23 @@ fn classify_params(types: &[(String, Option<String>)]) -> Vec<Result<String, Str
             out[j] = Some(Ok(format!("len:{i}")));
         }
     }
+    for (i, (ty, _)) in types.iter().enumerate() {
+        if out[i].is_some() || !is_char_pointer_pointer(ty) {
+            continue;
+        }
+        let target = (0..types.len()).find(|&j| {
+            matches!(
+                out[j].as_ref().and_then(|k| k.as_deref().ok()),
+                Some("string" | "bytes" | "buffer")
+            ) && pointee(&types[j].0).is_some_and(|(b, _)| b == "char")
+        });
+        out[i] = Some(match target {
+            Some(j) => Ok(format!("outptr:{j}")),
+            None => Err(format!(
+                "passes a pointer to a pointer (`{ty}`) with no `char *` parameter it could point into"
+            )),
+        });
+    }
     types
         .iter()
         .zip(out)
@@ -645,6 +822,15 @@ fn classify_params(types: &[(String, Option<String>)]) -> Vec<Result<String, Str
         .collect()
 }
 
+/// Whether `c_type` is `char **` or `const char **`.
+fn is_char_pointer_pointer(c_type: &str) -> bool {
+    let normalized = c_type.replace("char const", "const char");
+    let Some(base) = normalized.trim_end().strip_suffix('*') else {
+        return false;
+    };
+    pointee(base).is_some_and(|(b, _)| b == "char")
+}
+
 /// A C parameter or return type: its dialect type, or why it cannot cross a drop-in bridge.
 fn classify(c_type: &str) -> Result<String, String> {
     if c_type.contains("(fn)") {
@@ -655,11 +841,14 @@ fn classify(c_type: &str) -> Result<String, String> {
             "passes a pointer (`{c_type}`): ownership must be designed"
         ));
     }
+    if let Some(ts) = struct_type(c_type) {
+        return Ok(ts);
+    }
     match scalar(c_type) {
         Some((dialect, ..)) => Ok(dialect.to_string()),
-        None if c_type.starts_with("struct") || c_type.starts_with("union") => {
-            Err(format!("passes `{c_type}` by value"))
-        }
+        None if c_type.starts_with("struct") || c_type.starts_with("union") => Err(format!(
+            "passes `{c_type}` by value, and not all of its fields are scalars"
+        )),
         None => Err(format!(
             "uses `{c_type}`, which is not a C scalar the bridge knows"
         )),
@@ -999,6 +1188,54 @@ mod tests {
         assert!(found[7].blocker.is_some());
         assert!(defs.contains_key("Rounding"));
         assert!(in_arch_dir("libavutil/x86/cpu.c") && !in_arch_dir("libavutil/crc.c"));
+    }
+
+    #[test]
+    fn passes_structs_of_scalars_by_value_and_char_pointer_pointers() {
+        let header = "typedef int64_t Big;\n\
+            typedef struct AVRational { int num; int den; } AVRational;\n\
+            struct pair { Big a, b; };\ntypedef struct pair Pair;\n\
+            typedef struct { int *p; } Holder;\nstruct bits { int a : 3; };\n";
+        let dir = std::env::temp_dir().join(format!("ra-structs-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("t.h"), header).unwrap();
+        use_typedefs(&dir);
+        std::fs::remove_dir_all(&dir).unwrap();
+        let source = "AVRational mul(AVRational b, const AVRational c) { return b; }\n\
+            Pair swap(struct pair p) { return p; }\n\
+            int start(const char *str, const char *pfx, const char **ptr) { return 0; }\n\
+            long parse(const char *s, char **end) { return 0; }\n\
+            int held(Holder h) { return 0; }\n\
+            int bits(struct bits b) { return 0; }\n\
+            int token(const char **buf) { return 0; }\n";
+        let found = exports("s.c", source);
+        let rational = "struct:AVRational:int num,int den";
+        assert!(found[0].blocker.is_none(), "{:?}", found[0].blocker);
+        assert_eq!(found[0].params[0].ts_type, rational);
+        assert_eq!(found[0].params[1].ts_type, rational);
+        assert_eq!(found[0].returns, rational);
+        assert_eq!(
+            found[1].params[0].ts_type,
+            "struct:struct pair:int64_t a,int64_t b"
+        );
+        assert_eq!(found[1].returns, "struct:Pair:int64_t a,int64_t b");
+        assert_eq!(found[2].params[2].ts_type, "outptr:0");
+        assert_eq!(found[3].params[1].ts_type, "outptr:0");
+        assert!(found[4].blocker.is_some());
+        assert!(
+            found[5]
+                .blocker
+                .as_deref()
+                .unwrap()
+                .contains("not all of its fields")
+        );
+        assert!(
+            found[6]
+                .blocker
+                .as_deref()
+                .unwrap()
+                .contains("pointer to a pointer")
+        );
     }
 
     #[test]

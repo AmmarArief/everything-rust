@@ -100,8 +100,13 @@ a signature in `port.rs`, run `rust-anything refresh <crate>`.
   function writes it), a pointer to one scalar is `Option<&mut T>`, and a returned pointer into
   a parameter is its offset (`Option<usize>`). In `--inputs`, give buffers as hex text (a number
   means that many zero bytes, `null` is `NULL`) and leave length parameters out; recorded
-  results then hold the return value and what the function wrote. Contexts, structs by value
-  and `**` stay blocked: bridge a small wrapper with plain arguments, and say so. Pass the
+  results then hold the return value and what the function wrote. A struct of scalar fields
+  passed or returned by value is a `#[repr(C)]` struct at the crate root (`crate::AVRational`),
+  and an object of its fields in cases. A `char **` / `const char **` the function points into
+  the first `char` string argument is `Option<&mut Option<usize>>` (the offset into it); in
+  cases give the starting offset, `true` for a `NULL` start, or `null` for a `NULL` `**`.
+  Contexts, other structs and other `**` stay blocked: bridge a small wrapper with plain
+  arguments, and say so. Pass the
   project's build flags in `CFLAGS` (`-DHAVE_CONFIG_H`, `-I<root>`) when its sources need them.
 - C strings: `const char *` is `Option<&[u8]>`, which costs a `strlen` per argument. Where that
   dominates (short-string helpers), type the parameter `Option<crate::CChars<'_>>` in `port.rs`

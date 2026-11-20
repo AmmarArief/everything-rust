@@ -65,7 +65,10 @@ Made in Türkiye 🇹🇷 by <a href="https://github.com/erkamyaman">erKam Yaman
 **Rewrite your whole app in Rust, one piece at a time.** rust-anything records what your
 Node.js (TypeScript/JavaScript), Python, C, Go, Ruby, Java or Kotlin app does today, then checks every piece of the
 Rust rewrite against that recording before it moves on, until the app is pure Rust. CLIs, HTTP
-servers and libraries; your coding agent (or you) writes the Rust. It can only catch what the
+servers and libraries; your coding agent (or you) writes the Rust. It is built on
+[napi-rs](https://github.com/napi-rs/napi-rs), [PyO3](https://github.com/PyO3/pyo3) and
+[wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen), which carry the calls between your
+language and Rust; rust-anything decides what to move and proves it matches. It can only catch what the
 recording covers: see [What it can't catch](docs/how-it-works.md#what-it-cant-catch). Whole tools
 and servers, or only the slow part, one hot path at a time:
 
@@ -82,7 +85,10 @@ TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), and all 17,224
 byte for byte, since anything not ported yet falls back to Prettier. json-server: 514/514
 recorded HTTP cases match on a pure Rust binary. Measured on an Apple M4, two runs each, every
 output compared before timing ([details](docs/real-world.md)). Calling Rust once per small
-function is usually *slower* than a JIT; rust-anything finds the loop worth moving, and moves it.
+function is usually *slower* than a JIT; rust-anything finds the loop worth moving, and moves it. Against
+C the win is safety, not speed: [ffmpeg's libavutil](docs/real-world.md#ffmpeg) ported to Rust
+matches all 135,773 recorded calls and runs at about C's speed (15 of 34 benchmarks even, 6
+faster, 13 slower by 2 to 32%).
 
 <p align="center">
   <img src="docs/assets/json-server.gif" alt="json-server as a Node server and as one Rust binary: memory at idle 74 MB and 3.5 MB, start to first response 79 to 85 ms and 8 to 10 ms, and 514 of 514 recorded HTTP cases match." width="820">
@@ -147,7 +153,7 @@ Then ask your agent, for example:
 | OpenCode | MCP server in `~/.config/opencode/opencode.json` (`mcp.servers`), skill in `~/.config/opencode/skills/` |
 | Any other MCP client | add `rust-anything mcp` as a stdio server by hand (see [Install](docs/install.md#install)) |
 
-Before changing a file that exists, `setup` saves a copy beside it (`<file>.rust-anything.bak`).
+Before changing a file that exists, `setup` saves a copy beside it (`<file>.rust-anything.bak`); `--no-backup` skips the copy.
 
 To wire OpenCode up by hand, put the server in `~/.config/opencode/opencode.json` (`command` is
 the whole argv) and copy [`skills/rust-anything/`](./skills/rust-anything) to
@@ -171,6 +177,7 @@ rust-anything bridge . src/fuzzy.ts --batch fuzzyScore:text
 # write src/port.rs (or let your agent), then:
 rust-anything record rust/fuzzy-rs && rust-anything build rust/fuzzy-rs
 rust-anything diff rust/fuzzy-rs                       # every recorded case must match
+rust-anything fuzz rust/fuzzy-rs --time 60 --keep      # fresh inputs: what the recording missed
 rust-anything bench rust/fuzzy-rs                      # faster? the verdict says
 rust-anything gate rust/fuzzy-rs                       # done means this passes
 ```

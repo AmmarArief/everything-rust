@@ -35,6 +35,8 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | `record`/`diff --profile android` | Tested | Kotlin fixture on an Android 11 TV: record 291 cases under ART, then diff against the Android `.so` (12 of them did not match yet, not investigated); guarded test `tests/android_device.rs` skips without a device |
 | Types for untyped JS in `bridge` (sibling `.d.ts`/`.d.mts`/`.d.cts`, then JSDoc) | Tested | `tests/untyped_js_types.rs` |
 | `bench` | Verified | the runs above; numbers in [real-world.md](real-world.md) |
+| `fuzz` | Tested | TS/JS: finds a planted mismatch the recording missed, `--keep` makes `gate` fail (`tests/fuzz.rs`); other languages share the record/diff path untested |
+| `record --pin-clock` | Tested | TS/JS (napi): a unit using `Date.now()` and `Math.random` recorded and matched by a Rust port (`tests/fuzz.rs`); Python driver shares the algorithm, untested on a real port |
 | `record --from-tests` | Verified (TS/JS), Tested (Python) | vercel/ms's Jest suite |
 | Coverage of the original in `record` and `gate` | Verified (TS/JS) | Fuse.js: cases run 81% of the lines it imports; other languages do not measure it yet |
 | `--batch` | Verified | Fuse.js, vercel/ms, x18n search |

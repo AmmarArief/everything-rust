@@ -345,6 +345,11 @@ const TOOL_META: &[ToolMeta] = &[
     meta("profile", "Profile workload", [false, false, true, true]),
     meta("bench", "Benchmark port", [false, false, true, true]),
     meta(
+        "fuzz",
+        "Fuzz port against original",
+        [false, false, false, true],
+    ),
+    meta(
         "shadow",
         "Generate shadow module",
         [false, false, false, true],
@@ -442,6 +447,7 @@ fn tool_schemas() -> Value {
                 "test_command": { "type": "array", "items": { "type": "string" }, "description": "TS/JS or Python: also record every call the original's own test suite makes to the unit's functions, e.g. [\"npx\", \"jest\"] or [\"pytest\"]. Runs in the original's folder." },
                 "profile": { "type": "string", "enum": ["host", "android"], "description": "Record on this machine (default) or on a connected Android device (JVM crates)." },
                 "device": { "type": "string", "description": "Android device serial; picked automatically when only one is connected." },
+                "pin_clock": { "type": "boolean", "description": "TS/JS (napi) and Python: true pins the clock and random numbers while recording and diffing (`Date.now()`, `new Date()`, `Math.random`; `time.time`, `datetime.now`, `random`) to the values in pinned.json, and writes src/port/pinned.rs for the port to read them (`mod pinned;` in port.rs). Kept for later runs; false stops pinning." },
             }, "required": ["crate"] },
         },
         {
@@ -486,6 +492,19 @@ fn tool_schemas() -> Value {
                 "crate": crate_dir,
                 "resolve_from": { "type": "string" },
                 "min_ms": { "type": "integer", "description": "Minimum measured time per function and side, in milliseconds (default 200)." },
+                "node_args": { "type": "array", "items": { "type": "string" }, "description": "Extra arguments for node, e.g. [\"--import=tsx\"]." },
+            }, "required": ["crate"] },
+        },
+        {
+            "name": "fuzz",
+            "description": "Live differential test: generate fresh inputs from a new seed (the record generator, without the cases already recorded), run them through the original and the built port, and report mismatches the recording missed. Returns the seed to replay, counts and the first mismatches; `keep` appends mismatching (or all) fresh cases to cases.jsonl so the next diff and gate check them. Works wherever record and diff do on this machine (TS/JS, Python, C, Go, Ruby, Java, Kotlin).",
+            "inputSchema": { "type": "object", "properties": {
+                "crate": crate_dir,
+                "cases": { "type": "integer", "description": "Fresh cases per function (and scenarios per class) in each round (default 200)." },
+                "seed": { "type": "integer", "description": "Seed of the first round; random when omitted (returned as `seed`). Later rounds count up from it." },
+                "time": { "type": "number", "description": "Keep running new rounds until this many seconds have passed; one round when omitted." },
+                "keep": { "type": "string", "enum": ["mismatches", "all"], "description": "Append the mismatching fresh cases, or all of them, to cases.jsonl." },
+                "resolve_from": { "type": "string", "description": "Resolve npm packages the original imports from this folder's node_modules." },
                 "node_args": { "type": "array", "items": { "type": "string" }, "description": "Extra arguments for node, e.g. [\"--import=tsx\"]." },
             }, "required": ["crate"] },
         },
@@ -670,6 +689,10 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 manifest.float_tolerance = (crate::tolerance::check(t)? > 0.0).then_some(t);
                 manifest.save(&crate_dir)?;
             }
+            let helper = match args["pin_clock"].as_bool() {
+                Some(on) => crate::pin::set(&crate_dir, on)?,
+                None => None,
+            };
             let opts = harness::RecordOptions {
                 crate_dir: &crate_dir,
                 count: args["count"]
@@ -688,6 +711,9 @@ fn call(name: &str, args: &Value) -> Result<Value> {
             })?;
             if let Some(c) = captured {
                 out["from_tests"] = c;
+            }
+            if let Some(helper) = helper {
+                out["pinned_helper"] = json!(helper);
             }
             out
         }
@@ -788,6 +814,32 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 .unwrap_or_default();
             let verdict = harness::verdict(&rows, lang);
             serde_json::json!({ "rows": rows, "verdict": verdict })
+        }
+        "fuzz" => {
+            let crate_dir = path("crate")?;
+            let resolve_from = opt_path("resolve_from");
+            let keep = match args["keep"].as_str() {
+                None => None,
+                Some("mismatches") => Some(crate::fuzz::Keep::Mismatches),
+                Some("all") => Some(crate::fuzz::Keep::All),
+                Some(other) => anyhow::bail!("unknown `keep` `{other}`: use mismatches or all"),
+            };
+            let time = match args["time"].as_f64() {
+                Some(t) if t.is_finite() && t >= 0.0 => Some(std::time::Duration::from_secs_f64(t)),
+                Some(_) => anyhow::bail!("`time` takes seconds"),
+                None => None,
+            };
+            serde_json::to_value(crate::fuzz::fuzz(&crate::fuzz::FuzzOptions {
+                crate_dir: &crate_dir,
+                cases: args["cases"]
+                    .as_u64()
+                    .map_or(200, |n| usize::try_from(n).unwrap_or(200)),
+                seed: args["seed"].as_u64(),
+                time,
+                keep,
+                resolve_from: resolve_from.as_deref(),
+                node_args: &strings("node_args"),
+            })?)?
         }
         "shadow" => {
             let out = opt_path("out");
@@ -946,6 +998,7 @@ mod tests {
                 "diff",
                 "profile",
                 "bench",
+                "fuzz",
                 "shadow",
                 "map",
                 "gate",
@@ -996,6 +1049,7 @@ mod tests {
             "gate",
             "shadow",
             "bench",
+            "fuzz",
             "profile",
             "app_record",
             "app_replay",

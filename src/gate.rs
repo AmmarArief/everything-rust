@@ -62,9 +62,10 @@ fn fix_for(check: &Check, crate_dir: &Path) -> Option<String> {
 }
 
 /// Bindings `bridge` writes into `src/`; everything else there is the port.
-const GENERATED: [&str; 7] = [
+const GENERATED: [&str; 8] = [
     "lib.rs",
     "js.rs",
+    "pinned.rs",
     "pyconv.rs",
     "pynum.rs",
     "rbconv.rs",

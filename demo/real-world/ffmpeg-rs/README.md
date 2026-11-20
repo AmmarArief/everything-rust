@@ -70,7 +70,10 @@ several chunk sizes.
 - `av_strireplace` (returns memory it allocates with `AVBPrint`), `av_basename` (returns a
   static `"."` for an empty path), `av_strstart`, `av_stristart`, `av_get_token` (`const char
   **` out-pointers), and the `AVRational`-by-value functions (`av_mul_q`, `av_d2q`,
-  `av_rescale_q`...): the C bridge does not carry structs by value or pointers to pointers yet.
+  `av_rescale_q`...): the C bridge did not carry structs by value or pointers to pointers when
+  this case study was made. It now carries structs of scalar fields by value and a `const char
+  **` that points into a string argument, so `av_mul_q` and `av_strstart` can be ported next;
+  `av_get_token` still stays (it returns memory it allocates).
 - Contexts as an API (`av_md5_alloc` and friends), as above.
 
 ## Reproduce
