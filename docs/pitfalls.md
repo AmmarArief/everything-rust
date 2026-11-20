@@ -59,6 +59,17 @@ which closes stdin and stops it at a time limit; `from_tests` also sets `CI=1`.
 **Coverage listed one file three times.** Paths from import walking kept `..` segments. Compare
 and print canonical paths.
 
+**A CLI's recorded writes were invisible because the fixture already held them.** A CLI that
+regenerates project files was recorded on a project it had just generated, so every case rewrote
+files with the bytes they already had, and a front door that wrote nothing passed. Record such
+CLIs from a fixture whose generated files are stale (overwrite them with a marker first), and
+check that the `*.out` folders are not empty.
+
+**A front door could not find the original through a symlinked `rust/`.** The generated
+`original.rs` resolved the repository as `CARGO_MANIFEST_DIR/../..`, which is the link target's
+parent. Builds by rust-anything now set `RUST_ANYTHING_REPO`; set it yourself when you build such
+a front door with `cargo`.
+
 **A server's recording carried state from its previous run.** json-server rewrites its database
 on every POST, so the second recording run started from the first one's writes. Record servers
 that write files with `--fresh <path>`, and `--pace` when they do work after answering.

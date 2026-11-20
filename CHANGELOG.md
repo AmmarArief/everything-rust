@@ -58,6 +58,13 @@
   write the Rust) and what PHP and C# support today. From a new-user QA review of the README by
   [Mashhood Ali](https://github.com/MASHHOOD2019), an independent AI evaluation and QA specialist
   who tests products and docs the way a new user would ([LinkedIn](https://www.linkedin.com/in/mashhood-ali-514862296)) (#118).
+- `app record --fresh` works for CLIs: every case starts from a snapshot of the given files or
+  folders (kept in `app-cases/files/`; a path ending in `/` gives its contents, so a whole project
+  can be the working directory), written files are what differs from it, and files a case
+  removes are recorded in `<case>.removed` and compared on replay. An `--inputs` case can also
+  `"remove"` files of the snapshot before it runs. `--fresh` alone no longer implies `--http`.
+- Front doors built by rust-anything find the original when `rust/` is a symlink to a folder
+  outside the repository (`RUST_ANYTHING_REPO` is set at build time).
 - Case study: ffmpeg's libavutil (n7.1), 10 units, 135,773/135,773 recorded calls, gate passes
   on each (`demo/real-world/ffmpeg-rs`, `docs/real-world.md#ffmpeg`).
 - C bridge: pointer parameters cross it with the original signatures. A `const` byte pointer

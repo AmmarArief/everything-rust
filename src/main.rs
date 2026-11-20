@@ -392,9 +392,11 @@ enum AppCmd {
         /// Repeatable; implies --http; saved with the cases.
         #[arg(long = "arg", value_name = "ARG", allow_hyphen_values = true)]
         server_args: Vec<String>,
-        /// A file or folder of the repository the server reads or writes (a database file, a
-        /// public folder): snapshotted into `http/files/` and copied into a fresh working
-        /// directory before every start. Repeatable; implies --http; saved with the cases.
+        /// A file or folder of the repository the app reads or writes (a project tree, a
+        /// database file, a public folder): snapshotted into `files/` (`http/files/` for a
+        /// server) and copied into a fresh working directory before every case (CLIs) or start
+        /// (servers). A CLI's written files are what differs from it afterwards, and the files
+        /// it removed are compared too. Repeatable; saved with the cases.
         #[arg(long)]
         fresh: Vec<String>,
         /// Milliseconds to wait after each response before the next request, for work a server
