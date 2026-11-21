@@ -90,6 +90,32 @@ C the win is safety, not speed: [ffmpeg's libavutil](docs/real-world.md#ffmpeg) 
 matches all 226,447 recorded calls and runs at about C's speed (18 of 42 benchmarks even, 8
 faster, 16 slower by 3 to 40%).
 
+## Only the slow part
+
+You don't have to port the whole app. Point `go` at a command that is too slow, and it ports
+the one function that takes the time:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+It profiles the run, picks the outermost function worth moving (the loop, not the small call
+inside it, batched where the profile says so), records it on generated inputs plus the calls your
+run makes, and hands `src/port.rs` to your agent (`claude`, `codex`, or any command that reads a
+prompt on stdin; without `--agent` it writes `TASK.md` for you and stops). It switches the
+function on only when every recorded case matches and `gate` passes. Then:
+
+```sh
+rust-anything report rust/dedupe-rs     # REPORT.md and card.svg for the pull request
+rust-anything disable rust/dedupe-rs    # back to the original, byte for byte
+```
+
+The [Fuse.js](docs/real-world.md#fusejs) row above is this shape: Fuse's score for one string,
+batched over the list, moved to Rust while object keys, extended search and the rest stay in
+JavaScript, for 91.2 ms to 2.8 ms per query over 50,000 strings. Try `go` on
+[`tests/fixtures/go-fuzzy`](tests/fixtures/go-fuzzy), a 20-line Python dedupe. Every way to switch
+a port on and off: [Switch a port on and off](docs/how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="docs/assets/json-server.gif" alt="json-server as a Node server and as one Rust binary: memory at idle 74 MB and 3.5 MB, start to first response 79 to 85 ms and 8 to 10 ms, and 514 of 514 recorded HTTP cases match." width="820">
   <br>

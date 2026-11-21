@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+- `go`: the hot-path loop in one command. `rust-anything go --agent claude -- python3 app.py`
+  profiles the workload, picks the outermost exported function of a portable unit that takes
+  arguments (bridged with `--batch` where `profile` advises it; `--function` picks another),
+  bridges it alone into `rust/<function>-rs`, records generated cases plus the calls the workload
+  makes, writes `TASK.md`, and hands the port to the agent (`claude`, `codex`, or any command
+  reading the prompt on stdin, with up to `--rounds` turns that get the failing cases back). It
+  then builds, diffs and gates, and switches the unit on with `enable` only when every case
+  matches and gate passes. Without `--agent` it stops at the task; run it again after porting and
+  it keeps every finished step. Also an MCP tool.
+- `enable` and `disable`: switch a TS/JS or Python unit on in place, for every caller, with one
+  marked block in its original files that rebinds the ported functions to the Rust module (no
+  import changes, no absolute paths); `disable` removes exactly those lines. The unit's
+  `RUST_ANYTHING_UNIT_<NAME>=original` or `RUST_ANYTHING_MODE=old` keeps the original for a run,
+  and `record`, `diff`, `bench` and `fuzz` set it for the original's side. `enable` refuses
+  while recorded cases differ (`--force`). Every switch is listed in one place,
+  [Switch a port on and off](docs/how-it-works.md#switch-a-port-on-and-off). MCP tools too.
+- `report`: `report/REPORT.md` and `report/card.svg` for a pull request or README, in the v3
+  card's light style: the unit, recorded cases matched (`diff`), speedup with the call included
+  (`bench`), fallback rate, on or off, and the machine with its core count. MCP tool too.
+- One build cache: ports and bridges build into one cargo target folder (`CARGO_TARGET_DIR`, else
+  `rust-anything/target` in the user's cache folder), so dependencies compile once. A package
+  name belongs to one crate folder there, so a second crate with the same name builds in its own
+  `target/` and cannot replace the first one's library; libraries are copied to each crate's
+  `target/release`. `clean` removes the folder (`--dry-run`, `--force` for a `CARGO_TARGET_DIR`).
+  Front doors keep their own `target/`.
+- `profile` reports `portable`, `params` and the `batch` spec per hot function, and its workload's
+  stdout goes to stderr, so the MCP `profile` tool no longer writes the workload's output into
+  the protocol stream.
+- README: "Only the slow part" near the top (English and Turkish; the other translations still
+  need it).
+
 - Python: `__all__` was ignored when an earlier top-level statement held no assignment (a
   docstring or an import, as in most modules), so `analyze`, `bridge`, library ports and
   `profile` took every name without a leading underscore: names left out of `__all__` were

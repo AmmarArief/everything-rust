@@ -70,6 +70,7 @@ pub fn record(crate_dir: &Path, cases: &[Value]) -> Result<PathBuf> {
                 // Recording must not leave `__pycache__` folders in the source tree.
                 .env("PYTHONDONTWRITEBYTECODE", "1");
             crate::pin::apply(&mut cmd, crate_dir)?;
+            crate::enable::original_only(&mut cmd, &Manifest::load(crate_dir)?);
             Ok(cmd)
         },
     )?;
@@ -77,7 +78,7 @@ pub fn record(crate_dir: &Path, cases: &[Value]) -> Result<PathBuf> {
 }
 
 pub fn build(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
-    let target = crate_dir.join("target");
+    let target = crate::cache::target_for(crate_dir)?.dir;
     let output = Command::new("cargo")
         .args(["build", "--release", "--manifest-path"])
         .arg(crate_dir.join("Cargo.toml"))
@@ -141,6 +142,7 @@ pub fn diff(crate_dir: &Path, manifest: &Manifest, ignore_key_order: bool) -> Re
         // Recording must not leave `__pycache__` folders in the source tree.
         .env("PYTHONDONTWRITEBYTECODE", "1");
     crate::pin::apply(&mut cmd, crate_dir)?;
+    crate::enable::original_only(&mut cmd, &Manifest::load(crate_dir)?);
     run(&mut cmd)?;
     Ok(serde_json::from_str(&std::fs::read_to_string(&out)?)?)
 }
@@ -174,7 +176,9 @@ pub fn bench(crate_dir: &Path, manifest: &Manifest, min_ms: u64) -> Result<Vec<B
     let modules_path = crate_dir.join(WORK_DIR).join("bench-modules.json");
     std::fs::write(&modules_path, serde_json::to_string(&modules)?)?;
     let out = crate_dir.join(WORK_DIR).join("bench.json");
-    run(Command::new(python())
+    let mut cmd = Command::new(python());
+    crate::enable::original_only(&mut cmd, manifest);
+    run(cmd
         .arg(&driver)
         .arg("bench")
         .arg(&cases)

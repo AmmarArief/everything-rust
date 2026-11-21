@@ -23,14 +23,32 @@ take PHP units yet, so tell the user before planning a PHP port past the front d
 the same way: record a built app (`dotnet out/app.dll`, servers with
 `--urls http://127.0.0.1:{port}`); `bridge` does not take C# units yet.
 
-Tools: the `rust-anything` CLI, or the same steps as MCP tools (`rust-anything mcp`): `profile`,
-`analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`, and for a
-whole app `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`.
+Tools: the `rust-anything` CLI, or the same steps as MCP tools (`rust-anything mcp`): `go`,
+`profile`, `analyze`, `bridge`, `refresh`, `record`, `build`, `diff`, `bench`, `shadow`, `gate`,
+`enable`, `disable`, `report`, and for a whole app `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift`.
 If the MCP tools are not available, use the CLI; if `rust-anything` is not installed, ask the user
 to install it (`cargo install rust-anything`) and run
 `rust-anything setup`, then restart the agent. When a step fails because a runtime, the agent
 setup or the MCP server is missing or out of date, run `rust-anything doctor`: it checks each one
 and prints the command that fixes it.
+
+## Only the slow part: `go`
+
+When the user wants one slow command faster rather than a migration, `go` runs steps 0 to 5 for
+the top hot function in one call:
+
+```sh
+rust-anything go -- python3 app.py          # profile, bridge, record, write rust/<fn>-rs/TASK.md
+# port src/port.rs as TASK.md says (build, diff, gate), then the same command again:
+rust-anything go -- python3 app.py          # build, diff, gate, and enable when all pass
+```
+
+It picks the outermost exported function of a portable unit that takes arguments, batched where
+`profile` advises it (`--function` picks another), and records generated cases plus the calls the
+workload makes. You are the agent: port only that function, and do not pass `--agent` (that hands
+the port to another agent process). `go` switches the unit on only when every case matches and gate
+passes; report its stage and next step to the user. `rust-anything report <crate>` then writes
+`report/REPORT.md` and `report/card.svg` with measured numbers for the pull request.
 
 ## 0. Profile: find what is worth moving
 
@@ -196,6 +214,11 @@ rust-anything shadow <crate>                   # drop-in with the original's API
 Load the shadow where the app loaded the original. `RUST_ANYTHING_MODE=shadow` (default) returns the
 original's results and reports Rust mismatches; `new` switches to Rust; `old` turns Rust off.
 The public API does not change.
+
+For TS/JS and Python, `rust-anything enable <crate>` switches a gated unit on in place instead: one
+marked block in the original files rebinds its functions to Rust for every caller.
+`rust-anything disable <crate>` removes it byte for byte; `RUST_ANYTHING_UNIT_<NAME>=original`
+runs the original for one run. Ask the user before enabling: it edits their source files.
 
 ## 5. Done means gate passes
 

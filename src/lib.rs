@@ -3,6 +3,8 @@
 //! The steps (`analyze`, `bridge`, `harness`, `shadow`, `gate`) are language-neutral in shape;
 //! each source language is a plugin module. TypeScript/JavaScript (`ts`) is the first.
 
+#![recursion_limit = "256"]
+
 pub(crate) const MIN_RUST: &str = env!("CARGO_PKG_RUST_VERSION");
 
 pub mod analyze;
@@ -10,6 +12,8 @@ pub mod android;
 pub mod android_device;
 pub mod app;
 pub mod bridge;
+pub mod cache;
+pub mod card;
 pub mod codegen;
 pub mod codegen_batch;
 pub mod codegen_batch_native;
@@ -24,12 +28,14 @@ pub mod codegen_tswire;
 pub mod crates;
 pub mod doctor;
 pub mod effects;
+pub mod enable;
 pub mod error_paths;
 pub mod from_tests;
 pub mod front_door;
 pub mod front_door_http;
 pub mod fuzz;
 pub mod gate;
+pub mod go;
 pub mod harness;
 pub mod harness_c;
 pub mod harness_go;

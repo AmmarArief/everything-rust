@@ -178,16 +178,16 @@ pub fn record(crate_dir: &Path, manifest: &Manifest, cases: &[Value]) -> Result<
 
 /// The Rust library: `lib<name>.so`, `.dylib` or `.dll`.
 pub fn build(crate_dir: &Path, manifest: &Manifest) -> Result<PathBuf> {
-    let target = crate_dir.join("target");
+    let target = crate::cache::target_for(crate_dir)?;
     run(
         Command::new("cargo")
             .args(["build", "--release", "--manifest-path"])
             .arg(crate_dir.join("Cargo.toml"))
-            .env("CARGO_TARGET_DIR", &target),
+            .env("CARGO_TARGET_DIR", &target.dir),
         "cargo build",
     )?;
     let lib = manifest.lib_name();
-    let release = target.join("release");
+    let release = crate::cache::publish(&target, crate_dir, &lib, &target.dir.join("release"))?;
     [
         format!("lib{lib}.so"),
         format!("lib{lib}.dylib"),

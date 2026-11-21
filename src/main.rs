@@ -25,7 +25,7 @@ use rust_anything::{analyze, app, bridge, front_door, gate, harness, lift, mcp, 
     name = "rust-anything",
     version,
     about = "Rewrite TypeScript/JavaScript, Python, C, Go, Ruby, Java or Kotlin apps in Rust, one verified piece at a time",
-    after_help = "Loop per unit: analyze -> bridge -> record -> port src/port.rs -> build -> diff -> shadow -> gate"
+    after_help = "Loop per unit: analyze -> bridge -> record -> port src/port.rs -> build -> diff -> shadow -> gate\nOnly the slow part: go --agent claude -- <workload>, then enable/disable and report"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -260,6 +260,81 @@ enum Cmd {
         /// The workload, after `--`.
         #[arg(last = true, required = true)]
         command: Vec<String>,
+    },
+    /// The hot-path loop in one command: profile the workload, bridge the top portable function,
+    /// record it, hand the port to an agent, then build, diff and gate it, and switch it on only
+    /// when everything matches. `rust-anything go --agent claude -- python3 app.py`
+    Go {
+        /// Repository root.
+        #[arg(long, default_value = ".")]
+        root: PathBuf,
+        /// `claude`, `codex`, or any command that reads a prompt on stdin. Without it, `go` writes
+        /// the crate's TASK.md and stops; run it again once `src/port.rs` is ported.
+        #[arg(long)]
+        agent: Option<String>,
+        /// Port this function instead of the profile's pick.
+        #[arg(long)]
+        function: Option<String>,
+        /// Source language; detected from the repository when omitted.
+        #[arg(long, value_enum)]
+        lang: Option<rust_anything::lang::Lang>,
+        /// Generated cases per function, on top of the calls the workload makes.
+        #[arg(long, default_value_t = 200)]
+        count: usize,
+        /// Agent turns: the port, then one more per failing diff or gate.
+        #[arg(long, default_value_t = 3)]
+        rounds: usize,
+        #[arg(long)]
+        json: bool,
+        /// The workload, after `--`.
+        #[arg(last = true, required = true)]
+        command: Vec<String>,
+    },
+    /// Switch a ported unit on: one marked block in the original source files rebinds its
+    /// functions to the Rust module, for every caller (TS/JS and Python). `disable` removes it.
+    Enable {
+        #[arg(default_value = ".", value_parser = absolute)]
+        crate_dir: PathBuf,
+        /// Switch it on even when recorded cases differ.
+        #[arg(long)]
+        force: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Switch a unit off: removes exactly the lines `enable` added.
+    Disable {
+        #[arg(default_value = ".", value_parser = absolute)]
+        crate_dir: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Write a unit's result for a pull request or README: REPORT.md and card.svg with the
+    /// recorded cases matched, the speedup from bench, the fallback rate and the machine.
+    Report {
+        #[arg(default_value = ".", value_parser = absolute)]
+        crate_dir: PathBuf,
+        /// Output folder; defaults to `<crate>/report`.
+        #[arg(long, short, value_parser = absolute)]
+        out: Option<PathBuf>,
+        /// Minimum measured time per function and side, in milliseconds.
+        #[arg(long, default_value_t = 200)]
+        min_ms: u64,
+        #[arg(long)]
+        json: bool,
+        #[arg(long = "node-arg", allow_hyphen_values = true)]
+        node_args: Vec<String>,
+    },
+    /// Remove the build cache every port and bridge shares (CARGO_TARGET_DIR when set, else
+    /// rust-anything/target in your cache folder). Ports rebuild on their next build.
+    Clean {
+        /// Only print the folder and its size.
+        #[arg(long)]
+        dry_run: bool,
+        /// Remove it even when CARGO_TARGET_DIR names it (other cargo projects may build there).
+        #[arg(long)]
+        force: bool,
+        #[arg(long)]
+        json: bool,
     },
     /// 4. Generate a drop-in module that runs TS and Rust side by side.
     Shadow {
@@ -1009,6 +1084,160 @@ fn run() -> Result<ExitCode> {
                 say!("{}", serde_json::to_string_pretty(&report)?);
             } else {
                 say!("{}", rust_anything::profile::markdown(&report));
+            }
+        }
+        Cmd::Go {
+            root,
+            agent,
+            function,
+            lang,
+            count,
+            rounds,
+            json,
+            command,
+        } => {
+            let outcome = rust_anything::go::go(&rust_anything::go::Options {
+                root: &root,
+                command: &command,
+                lang,
+                agent: agent.as_deref(),
+                function: function.as_deref(),
+                count,
+                rounds,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&outcome)?);
+            } else {
+                for problem in &outcome.failed_checks {
+                    say!("{problem}\n");
+                }
+                say!("{}", outcome.next);
+            }
+            use rust_anything::go::Stage;
+            return Ok(match outcome.stage {
+                Stage::On | Stage::Passed | Stage::WaitingForPort => ExitCode::SUCCESS,
+                Stage::Mismatch | Stage::GateFailed => ExitCode::FAILURE,
+            });
+        }
+        Cmd::Enable {
+            crate_dir,
+            force,
+            json,
+        } => {
+            if !force {
+                harness::build(&crate_dir)?;
+                let d = harness::diff(&harness::DiffOptions {
+                    crate_dir: &crate_dir,
+                    module: None,
+                    ignore_key_order: false,
+                    node_args: &[],
+                    float_tolerance: None,
+                })?;
+                if d.failed > 0 || !d.missing.is_empty() {
+                    anyhow::bail!(
+                        "{}/{} recorded cases match; switch it on once they all do (`rust-anything diff` shows them), or pass --force",
+                        d.passed,
+                        d.total
+                    );
+                }
+            }
+            let on = rust_anything::enable::enable(&crate_dir)?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&on)?);
+            } else {
+                say!(
+                    "On: {} {} in Rust",
+                    on.functions.join(", "),
+                    if on.functions.len() == 1 {
+                        "runs"
+                    } else {
+                        "run"
+                    }
+                );
+                for f in &on.files {
+                    say!("  {}", f.display());
+                }
+                for s in &on.skipped {
+                    say!("- {s}");
+                }
+                say!(
+                    "{}=original (or RUST_ANYTHING_MODE=old) runs the original for one run; `rust-anything disable {}` removes the block.",
+                    on.switch,
+                    crate_dir.display()
+                );
+            }
+        }
+        Cmd::Disable { crate_dir, json } => {
+            let off = rust_anything::enable::disable(&crate_dir)?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&off)?);
+            } else if off.files.is_empty() {
+                say!("{} was not on; nothing changed", off.crate_name);
+            } else {
+                say!(
+                    "Off: {} {} in the original again",
+                    off.functions.join(", "),
+                    if off.functions.len() == 1 {
+                        "runs"
+                    } else {
+                        "run"
+                    }
+                );
+                for f in &off.files {
+                    say!("  {}", f.display());
+                }
+            }
+        }
+        Cmd::Report {
+            crate_dir,
+            out,
+            min_ms,
+            json,
+            node_args,
+        } => {
+            let card = rust_anything::card::report(&rust_anything::card::Options {
+                crate_dir: &crate_dir,
+                out: out.as_deref(),
+                min_ms,
+                node_args: &node_args,
+            })?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&card)?);
+            } else {
+                say_raw!("{}", rust_anything::card::markdown(&card));
+                say!(
+                    "\nWrote {} and {}",
+                    card.markdown.display(),
+                    card.svg.display()
+                );
+            }
+        }
+        Cmd::Clean {
+            dry_run,
+            force,
+            json,
+        } => {
+            let c = rust_anything::cache::clean(dry_run, force)?;
+            if json {
+                say!("{}", serde_json::to_string_pretty(&c)?);
+            } else if c.removed {
+                say!(
+                    "Removed {} ({})",
+                    c.dir.display(),
+                    rust_anything::cache::human(c.bytes)
+                );
+            } else if c.from_env && !dry_run {
+                say!(
+                    "{} ({}) is CARGO_TARGET_DIR, which other cargo projects may share; pass --force to remove it",
+                    c.dir.display(),
+                    rust_anything::cache::human(c.bytes)
+                );
+            } else {
+                say!(
+                    "{} ({})",
+                    c.dir.display(),
+                    rust_anything::cache::human(c.bytes)
+                );
             }
         }
         Cmd::Shadow { crate_dir, out } => {

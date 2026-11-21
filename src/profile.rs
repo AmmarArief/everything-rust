@@ -47,6 +47,13 @@ pub struct Hot {
     pub ns_per_call: Option<f64>,
     pub callers: Vec<Caller>,
     pub advice: String,
+    /// The unit may move to Rust (not marked keep or blocked).
+    pub portable: bool,
+    /// Parameters of the exported function.
+    pub params: Vec<String>,
+    /// `function:param` for `bridge --batch` when the advice is to batch it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub batch: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -280,6 +287,7 @@ fn node(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
     options.push_str(&format!(" --cpu-prof --cpu-prof-dir=\"{dir_option}\""));
     let status = crate::process::status(
         Command::new(&command[0])
+            .stdout(std::io::stderr())
             .args(&command[1..])
             .current_dir(root)
             .env("NODE_OPTIONS", options.trim()),
@@ -437,6 +445,7 @@ fn python(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, 
     let start = std::time::Instant::now();
     let status = crate::process::status(
         Command::new(&command[0])
+            .stdout(std::io::stderr())
             .args(["-m", "cProfile", "-o"])
             .arg(&stats)
             .args(&command[1..])
@@ -453,6 +462,7 @@ fn python(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, 
     std::fs::write(&script, PSTATS_PY)?;
     let status = crate::process::status(
         Command::new(&command[0])
+            .stdout(std::io::stderr())
             .arg(&script)
             .arg(&stats)
             .arg(&json),
@@ -648,6 +658,7 @@ fn go(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Acc>
     let out = work.join("cpu.pprof");
     let status = crate::process::status(
         Command::new(&command[0])
+            .stdout(std::io::stderr())
             .arg("test")
             .arg(format!("-cpuprofile={}", out.display()))
             .args(&command[2..])
@@ -716,6 +727,7 @@ fn java(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
     ));
     let status = crate::process::status(
         Command::new(&command[0])
+            .stdout(std::io::stderr())
             .args(&command[1..])
             .current_dir(root)
             .env("JAVA_TOOL_OPTIONS", options.trim()),
@@ -896,6 +908,7 @@ fn ruby(root: &Path, command: &[String], work: &Path) -> Result<(HashMap<Key, Ac
     let start = std::time::Instant::now();
     let status = crate::process::status(
         Command::new(&command[0])
+            .stdout(std::io::stderr())
             .args(&command[1..])
             .current_dir(root)
             .env("RUBYOPT", rubyopt.trim())
@@ -1096,11 +1109,13 @@ fn report(
             let total_pct = 100.0 * a.total_ms / total_ms;
             let top = callers.first();
             let small_per_call = ns_per_call.is_some_and(|ns| ns < 20_000.0) || (a.calls.is_none() && top.is_some_and(|c| c.ms >= 0.5 * a.total_ms));
+            let params: Vec<String> = export.as_ref().map(|e| e.params.iter().map(|p| p.name.clone()).collect()).unwrap_or_default();
+            let mut batch_spec = None;
             let advice = match (&unit, &export) {
-                (Some((u, true)), Some(e)) if small_per_call && top.is_some() => {
+                (Some((u, true)), Some(_)) if small_per_call && top.is_some() => {
                     let c = top.expect("checked");
-                    let params: Vec<String> = e.params.iter().map(|p| p.name.clone()).collect();
                     let batch = batch_param(root, &(c.file.clone(), c.name.clone(), c.line), &name, &params);
+                    batch_spec = batch.as_ref().map(|p| format!("{name}:{p}"));
                     let calls = a.calls.map_or_else(String::new, |n| format!(", {n} calls"));
                     match batch {
                         Some(param) => format!(
@@ -1125,6 +1140,9 @@ fn report(
                 (None, _) => "Hot, outside the analyzed units.".into(),
             };
             Hot {
+                portable: unit.as_ref().is_some_and(|(_, p)| *p),
+                params,
+                batch: batch_spec,
                 unit: unit.map(|(u, _)| u),
                 exported: export.is_some(),
                 name,
@@ -1249,6 +1267,9 @@ mod tests {
             ns_per_call: None,
             callers: Vec::new(),
             advice: "Port it.".into(),
+            portable: true,
+            params: vec!["x".into()],
+            batch: None,
         };
         let own = compiled_advice(&root, &hot("step", 3), &compiled).unwrap();
         assert!(

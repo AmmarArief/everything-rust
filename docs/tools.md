@@ -118,6 +118,60 @@ Runs the original's code or commands.
 | `command` | string[] | yes | The workload, run in root: ["node", "bench.mjs"]. |
 | `lang` | string |  | Detected from the repository when omitted. |
 
+## Port the hot path end to end
+
+Tool `go` · CLI `rust-anything go`
+
+The hot-path loop in one call: profile the workload, pick the top portable function (the outermost loop; batched where profile says so), bridge it into rust/<function>-rs, record generated cases plus the calls the workload makes, write TASK.md, hand the port to `agent` (claude, codex, or a command reading the prompt on stdin), then build, diff and gate, and switch the unit on with `enable` only when every case matches and gate passes. Without `agent` it stops at `waiting_for_port`: port src/port.rs as TASK.md says and call go again; finished steps are kept. Returns the stage (waiting_for_port, mismatch, gate_failed, on, passed), the pick, the steps and what to do next.
+
+Runs the original's code or commands.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `root` | string | yes | Repository root. |
+| `command` | string[] | yes | The workload, run in root: ["python3", "app.py"]. |
+| `agent` | string |  | claude, codex, or a command that reads a prompt on stdin. Omit to port it yourself. |
+| `function` | string |  | Port this hot function instead of the profile's pick. |
+| `lang` | string |  | Detected from the repository when omitted. |
+| `count` | integer |  | Generated cases per function (default 200). |
+| `rounds` | integer |  | Agent turns: the port, then one per failing diff or gate (default 3). |
+
+## Switch a unit on
+
+Tool `enable` · CLI `rust-anything enable`
+
+Switch a ported TS/JS or Python unit on: one marked block in each original source file rebinds the unit's functions to the built Rust module, for every caller, with no import changed. RUST_ANYTHING_MODE=old or RUST_ANYTHING_UNIT_<NAME>=original runs the original for one run. Refuses while recorded cases differ unless `force`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+| `force` | boolean |  |  |
+
+## Switch a unit off
+
+Tool `disable` · CLI `rust-anything disable`
+
+Switch a unit off: removes exactly the lines enable added, leaving the source files byte for byte as they were.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+
+## Write a report card
+
+Tool `report` · CLI `rust-anything report`
+
+Write <crate>/report/REPORT.md and card.svg for a pull request or README: the unit, recorded cases matched (diff), speedup call included (bench), fallback rate, on or off, and the machine with its core count. Builds first; every number comes from this run.
+
+Runs the original's code or commands.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `crate` | string | yes | Folder of the generated crate (holds rust-anything.json). |
+| `out` | string |  | Output folder; defaults to <crate>/report. |
+| `min_ms` | integer |  | Minimum measured time per function and side, in milliseconds (default 200). |
+| `node_args` | string[] |  | Extra arguments for node, e.g. ["--import=tsx"]. |
+
 ## Benchmark port
 
 Tool `bench` · CLI `rust-anything bench`

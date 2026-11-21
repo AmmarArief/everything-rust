@@ -320,7 +320,7 @@ fn with_kill_switch(text: &str, crate_name: &str) -> String {
     )
 }
 
-fn relative(from: &Path, to: &Path) -> String {
+pub(crate) fn relative(from: &Path, to: &Path) -> String {
     let from: Vec<Component> = from.components().collect();
     let to_parts: Vec<Component> = to.components().collect();
     let common = from

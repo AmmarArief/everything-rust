@@ -222,7 +222,7 @@ pub struct GateOutcome {
 pub fn gate(crate_dir: &Path, node_args: &[String]) -> Result<GateOutcome> {
     let manifest = Manifest::load(crate_dir)?;
     let lockfile = lockfile_check(crate_dir);
-    let mut checks = rust_checks(crate_dir, &crate_dir.join("target"));
+    let mut checks = rust_checks(crate_dir, &crate::cache::target_for(crate_dir)?.dir);
     checks.extend(lockfile);
     checks.extend(advisories_check(crate_dir));
     checks.push(ported_check(crate_dir));

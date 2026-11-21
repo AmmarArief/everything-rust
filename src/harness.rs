@@ -420,6 +420,7 @@ fn record_node(opts: &RecordOptions, manifest: &Manifest, cases: &[Value]) -> Re
                 cmd.env("RUST_ANYTHING_RESOLVE_FROM", dir);
             }
             crate::pin::apply(&mut cmd, opts.crate_dir)?;
+            crate::enable::original_only(&mut cmd, &Manifest::load(opts.crate_dir)?);
             Ok(cmd)
         })
     };
@@ -514,16 +515,16 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
         }
         Kind::CAbi | Kind::Ffi => crate::harness_c::build(crate_dir, &manifest),
         Kind::Napi => {
-            let target = crate_dir.join("target");
+            let target = crate::cache::target_for(crate_dir)?;
             run(
                 Command::new("cargo")
                     .args(["build", "--release", "--manifest-path"])
                     .arg(crate_dir.join("Cargo.toml"))
-                    .env("CARGO_TARGET_DIR", &target),
+                    .env("CARGO_TARGET_DIR", &target.dir),
                 "cargo build",
             )?;
             let lib = manifest.lib_name();
-            let release = target.join("release");
+            let release = target.dir.join("release");
             let built = [
                 format!("lib{lib}.so"),
                 format!("lib{lib}.dylib"),
@@ -538,7 +539,7 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
             Ok(artifact)
         }
         Kind::Wasm => {
-            let target = crate_dir.join("target");
+            let target = crate::cache::target_for(crate_dir)?.dir;
             run(
                 Command::new("cargo")
                     .args([
@@ -769,6 +770,7 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     let native = opts.crate_dir.join("index.cjs").canonical()?;
     let register = work.canonical()?.join("register.mjs");
     let mut cmd = Command::new("node");
+    crate::enable::original_only(&mut cmd, &manifest);
     cmd.args(transform_flag())
         .arg("--no-warnings")
         .arg(format!("--import={}", file_url(&register)))
@@ -944,6 +946,7 @@ pub(crate) fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
         .args([&module, &cases, &out])
         .arg(flag);
     crate::pin::apply(&mut cmd, opts.crate_dir)?;
+    crate::enable::original_only(&mut cmd, &Manifest::load(opts.crate_dir)?);
     run(&mut cmd, "node")?;
     let text = std::fs::read_to_string(&out)?;
     Ok(serde_json::from_str(&text)?)

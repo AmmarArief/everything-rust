@@ -43,6 +43,10 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | wasm bridge (`--kind wasm`) | Verified | x18n search |
 | `shadow` | Verified | x18n's `packages/core` |
 | `profile` | Tested | |
+| `go` | Tested | Python fixture `tests/fixtures/go-fuzzy` by hand on macOS arm64 (2026-11-21): picks `dedupe` over `levenshtein`, 207 cases (one captured from the run), a stand-in agent command writes the port, 207/207, gate passes, switched on; the pick, the agent command lines and crate names in `src/go.rs`. Not yet run with `--agent claude` or `codex`, on TS/JS, or with a batch pick |
+| `enable`, `disable` | Tested | TS/JS (napi, ESM) and Python: callers get the stand-in Rust module, the kill switch brings the original back, disable restores the file byte for byte (`tests/switch.rs`); wasm units untested |
+| `report` | Tested | Markdown and SVG in `src/card.rs`; the `go` fixture above by hand (207/207, `bench` on a loaded machine, so its number is not published) |
+| Shared build cache, `clean` | Tested | one owner per package name and per-crate copies in `src/cache.rs`; two crates named alike built into one shared folder keep their own library in `tests/switch.rs`. Front doors keep their own `target/` |
 | `map` | Tested | ports, upstream changes and `--crates` in `tests/port_map.rs` |
 | `app record`, `app replay` | Verified (servers and CLIs) | json-server: 514 HTTP cases with `--fresh`, `--arg`, `--pace`; Prettier: 17,224 CLI cases with `--inputs`, 63 of them with config files around the input; CLIs in `tests/app.rs`, CLI `--fresh` in `tests/app_fresh.rs` |
 | Side effects (`app record --effects`, `--db-reset`, `--db-dump`) | Tested | email, webhooks and SQLite rows for a CLI and a server in `tests/effects.rs` |

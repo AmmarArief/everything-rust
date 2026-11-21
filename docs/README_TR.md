@@ -86,6 +86,33 @@ iki kez çalıştırılarak ölçülmüştür; her çıktı, süre ölçülmeden
 ([ayrıntılar](real-world.md)). Her küçük fonksiyon için Rust'ı ayrı ayrı çağırmak genellikle bir
 JIT'ten *daha yavaştır*; rust-anything taşımaya değer döngüyü bulur ve onu taşır.
 
+## Sadece yavaş kısım
+
+Uygulamanın tamamını port etmeniz gerekmez. `go`'yu fazla yavaş çalışan bir komuta yöneltin,
+zamanı yiyen tek fonksiyonu port etsin:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Çalıştırmayı profiller, taşımaya değer en dıştaki fonksiyonu seçer (içindeki küçük çağrıyı değil
+döngüyü; profil öyle diyorsa batch olarak), onu üretilen girdiler ve çalıştırmanızın yaptığı
+çağrılarla kaydeder ve `src/port.rs` dosyasını ajanınıza verir (`claude`, `codex` ya da istemi
+stdin'den okuyan herhangi bir komut; `--agent` olmadan sizin için `TASK.md` yazar ve durur).
+Fonksiyonu ancak kaydedilen her vaka eşleştiğinde ve `gate` geçtiğinde devreye alır. Sonra:
+
+```sh
+rust-anything report rust/dedupe-rs     # pull request için REPORT.md ve card.svg
+rust-anything disable rust/dedupe-rs    # bayt bayt orijinale geri dönüş
+```
+
+Yukarıdaki [Fuse.js](real-world.md#fusejs) satırı da bu biçimdedir: Fuse'un tek bir string için
+skoru, listenin tamamı üzerinde batch olarak Rust'a taşındı; nesne anahtarları, genişletilmiş
+arama ve geri kalan her şey JavaScript'te kaldı. 50,000 string üzerinde sorgu başına 91.2 ms'den
+2.8 ms'ye. `go`'yu 20 satırlık bir Python dedupe olan
+[`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy) üzerinde deneyin. Bir portu açıp
+kapatmanın bütün yolları: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="Node sunucusu olarak ve tek bir Rust binary'si olarak json-server: boştayken bellek 74 MB ve 3.5 MB, başlatmadan ilk yanıta 79 ila 85 ms ve 8 ila 10 ms, kaydedilen 514 HTTP vakasının 514'ü eşleşiyor." width="820">
   <br>

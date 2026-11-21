@@ -160,7 +160,7 @@ pub fn build(crate_dir: &Path, manifest: &Manifest, opts: &Options) -> Result<Re
         .clone()
         .unwrap_or_else(|| crate_dir.join("jniLibs"));
     let lib = manifest.lib_name();
-    let target_dir = crate_dir.join("target");
+    let target_dir = crate::cache::target_for(crate_dir)?.dir;
     let mut libraries = Vec::new();
     for abi in abis {
         let linker = bin.join(format!("{}{}-clang", abi.clang_prefix(), opts.api));

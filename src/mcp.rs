@@ -343,6 +343,14 @@ const TOOL_META: &[ToolMeta] = &[
         [false, false, true, true],
     ),
     meta("profile", "Profile workload", [false, false, true, true]),
+    meta(
+        "go",
+        "Port the hot path end to end",
+        [false, false, false, true],
+    ),
+    meta("enable", "Switch a unit on", [false, false, true, false]),
+    meta("disable", "Switch a unit off", [false, false, true, false]),
+    meta("report", "Write a report card", [false, false, true, true]),
     meta("bench", "Benchmark port", [false, false, true, true]),
     meta(
         "fuzz",
@@ -485,6 +493,39 @@ fn tool_schemas() -> Value {
                 "command": { "type": "array", "items": { "type": "string" }, "description": "The workload, run in root: [\"node\", \"bench.mjs\"]." },
                 "lang": { "type": "string", "enum": ["ts", "python", "go", "java", "ruby"], "description": "Detected from the repository when omitted." },
             }, "required": ["root", "command"] },
+        },
+        {
+            "name": "go",
+            "description": "The hot-path loop in one call: profile the workload, pick the top portable function (the outermost loop; batched where profile says so), bridge it into rust/<function>-rs, record generated cases plus the calls the workload makes, write TASK.md, hand the port to `agent` (claude, codex, or a command reading the prompt on stdin), then build, diff and gate, and switch the unit on with `enable` only when every case matches and gate passes. Without `agent` it stops at `waiting_for_port`: port src/port.rs as TASK.md says and call go again; finished steps are kept. Returns the stage (waiting_for_port, mismatch, gate_failed, on, passed), the pick, the steps and what to do next.",
+            "inputSchema": { "type": "object", "properties": {
+                "root": { "type": "string", "description": "Repository root." },
+                "command": { "type": "array", "items": { "type": "string" }, "description": "The workload, run in root: [\"python3\", \"app.py\"]." },
+                "agent": { "type": "string", "description": "claude, codex, or a command that reads a prompt on stdin. Omit to port it yourself." },
+                "function": { "type": "string", "description": "Port this hot function instead of the profile's pick." },
+                "lang": { "type": "string", "enum": ["ts", "python", "go", "java", "ruby"], "description": "Detected from the repository when omitted." },
+                "count": { "type": "integer", "description": "Generated cases per function (default 200)." },
+                "rounds": { "type": "integer", "description": "Agent turns: the port, then one per failing diff or gate (default 3)." },
+            }, "required": ["root", "command"] },
+        },
+        {
+            "name": "enable",
+            "description": "Switch a ported TS/JS or Python unit on: one marked block in each original source file rebinds the unit's functions to the built Rust module, for every caller, with no import changed. RUST_ANYTHING_MODE=old or RUST_ANYTHING_UNIT_<NAME>=original runs the original for one run. Refuses while recorded cases differ unless `force`.",
+            "inputSchema": { "type": "object", "properties": { "crate": crate_dir, "force": { "type": "boolean" } }, "required": ["crate"] },
+        },
+        {
+            "name": "disable",
+            "description": "Switch a unit off: removes exactly the lines enable added, leaving the source files byte for byte as they were.",
+            "inputSchema": { "type": "object", "properties": { "crate": crate_dir }, "required": ["crate"] },
+        },
+        {
+            "name": "report",
+            "description": "Write <crate>/report/REPORT.md and card.svg for a pull request or README: the unit, recorded cases matched (diff), speedup call included (bench), fallback rate, on or off, and the machine with its core count. Builds first; every number comes from this run.",
+            "inputSchema": { "type": "object", "properties": {
+                "crate": crate_dir,
+                "out": { "type": "string", "description": "Output folder; defaults to <crate>/report." },
+                "min_ms": { "type": "integer", "description": "Minimum measured time per function and side, in milliseconds (default 200)." },
+                "node_args": { "type": "array", "items": { "type": "string" }, "description": "Extra arguments for node, e.g. [\"--import=tsx\"]." },
+            }, "required": ["crate"] },
         },
         {
             "name": "bench",
@@ -878,6 +919,63 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 original: args["original"].as_str().map(str::to_string),
             })?)?
         }
+        "go" => {
+            let command = strings("command");
+            anyhow::ensure!(!command.is_empty(), "missing `command`");
+            let lang = match args.get("lang") {
+                Some(v) if !v.is_null() => {
+                    Some(serde_json::from_value(v.clone()).context("`lang`")?)
+                }
+                _ => None,
+            };
+            let root = path("root")?;
+            serde_json::to_value(crate::go::go(&crate::go::Options {
+                root: &root,
+                command: &command,
+                lang,
+                agent: args["agent"].as_str(),
+                function: args["function"].as_str(),
+                count: args["count"]
+                    .as_u64()
+                    .map_or(200, |n| usize::try_from(n).unwrap_or(200)),
+                rounds: args["rounds"]
+                    .as_u64()
+                    .map_or(3, |n| usize::try_from(n).unwrap_or(3)),
+            })?)?
+        }
+        "enable" => {
+            let crate_dir = std::path::absolute(path("crate")?)?;
+            if !args["force"].as_bool().unwrap_or(false) {
+                harness::build(&crate_dir)?;
+                let d = harness::diff(&harness::DiffOptions {
+                    crate_dir: &crate_dir,
+                    module: None,
+                    ignore_key_order: false,
+                    node_args: &[],
+                    float_tolerance: None,
+                })?;
+                anyhow::ensure!(
+                    d.failed == 0 && d.missing.is_empty(),
+                    "{}/{} recorded cases match; switch it on once they all do, or pass force",
+                    d.passed,
+                    d.total
+                );
+            }
+            serde_json::to_value(crate::enable::enable(&crate_dir)?)?
+        }
+        "disable" => serde_json::to_value(crate::enable::disable(&std::path::absolute(path(
+            "crate",
+        )?)?)?)?,
+        "report" => {
+            let crate_dir = std::path::absolute(path("crate")?)?;
+            let out = opt_path("out").map(std::path::absolute).transpose()?;
+            serde_json::to_value(crate::card::report(&crate::card::Options {
+                crate_dir: &crate_dir,
+                out: out.as_deref(),
+                min_ms: args["min_ms"].as_u64().unwrap_or(200),
+                node_args: &strings("node_args"),
+            })?)?
+        }
         "gate" => serde_json::to_value(gate::gate(
             Path::new(&path("crate")?),
             &strings("node_args"),
@@ -1025,6 +1123,10 @@ mod tests {
                 "build",
                 "diff",
                 "profile",
+                "go",
+                "enable",
+                "disable",
+                "report",
                 "bench",
                 "fuzz",
                 "shadow",
