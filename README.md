@@ -113,12 +113,12 @@ the original, pinned to the exact version that was recorded, for everything else
 is the original's either way:
 
 ```sh
-npm install -g @rust-anything/prettier   # the prettier-rs command: Prettier 3.6.2
-npm install -g @rust-anything/eslint     # the eslint-rs command: ESLint 10.15.0
+npm install -g prettier-rs   # Prettier 3.6.2
+npm install -g eslint-rs     # ESLint 10.15.0
 ```
 
 <p align="center">
-  <img src="docs/assets/install.gif" alt="npm i -g @rust-anything/prettier adds 3 packages and prettier-rs --version prints 3.6.2; then Prettier and prettier-rs format all 1,610 files of analogjs, one process per file, with the project's own config: Prettier 132.5 s, prettier-rs 49.8 s, the same output on every file, 1,150 of them in Rust." width="820">
+  <img src="docs/assets/install.gif" alt="npm i -g prettier-rs adds 3 packages and prettier-rs --version prints 3.6.2; then Prettier and prettier-rs format all 1,610 files of analogjs, one process per file, with the project's own config: Prettier 132.5 s, prettier-rs 49.8 s, the same output on every file, 1,150 of them in Rust." width="820">
   <br>
   <sub>Prettier and the installed <code>prettier-rs</code> on every file of a real project (Apple M4). <a href="docs/packaging.md#where-it-was-checked">How it was measured</a>.</sub>
 </p>

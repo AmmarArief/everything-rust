@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p tarballs
-          for spec in prettier:@rust-anything/prettier:prettier-rs:prettier@3.6.2 eslint:@rust-anything/eslint:eslint-rs:eslint@10.15.0; do
+          for spec in prettier:prettier-rs:prettier-rs:prettier@3.6.2 eslint:eslint-rs:eslint-rs:eslint@10.15.0; do
             IFS=: read -r port name bin original <<< "$spec"
             out="out/$port"
             target/release/rust-anything package "demo/real-world/$port-rs/app" \
@@ -82,16 +82,16 @@ jobs:
         shell: bash
         run: |
           prefix="$RUNNER_TEMP/prefix"
-          npm i -g --prefix "$prefix" tarballs/*-linux-x64-gnu-*.tgz tarballs/rust-anything-prettier-3.6.2.tgz tarballs/rust-anything-eslint-10.15.0.tgz
-          test "$(file -b "$prefix/lib/node_modules/@rust-anything/prettier/bin/prettier" | cut -c1-3)" = ELF
+          npm i -g --prefix "$prefix" ./tarballs/*-linux-x64-gnu-*.tgz ./tarballs/prettier-rs-3.6.2.tgz ./tarballs/eslint-rs-10.15.0.tgz
+          test "$(file -b "$prefix/lib/node_modules/prettier-rs/bin/prettier" | cut -c1-3)" = ELF
           printf 'const a = {b:1,\n c:2}\n' > "$RUNNER_TEMP/x.ts"
           printf 'var x = 1; x == null\n' > "$RUNNER_TEMP/y.js"
-          modules="$prefix/lib/node_modules/@rust-anything"
+          modules="$prefix/lib/node_modules"
           diff <("$prefix/bin/prettier-rs" --stdin-filepath x.ts < "$RUNNER_TEMP/x.ts") \
-            <(node "$modules/prettier/node_modules/prettier/bin/prettier.cjs" --stdin-filepath x.ts < "$RUNNER_TEMP/x.ts")
+            <(node "$modules/prettier-rs/node_modules/prettier/bin/prettier.cjs" --stdin-filepath x.ts < "$RUNNER_TEMP/x.ts")
           rule='{"eqeqeq":"error"}'
           diff <("$prefix/bin/eslint-rs" --no-config-lookup --rule "$rule" --stdin < "$RUNNER_TEMP/y.js" || true) \
-            <(node "$modules/eslint/node_modules/eslint/bin/eslint.js" --no-config-lookup --rule "$rule" --stdin < "$RUNNER_TEMP/y.js" || true)
+            <(node "$modules/eslint-rs/node_modules/eslint/bin/eslint.js" --no-config-lookup --rule "$rule" --stdin < "$RUNNER_TEMP/y.js" || true)
       - uses: actions/upload-artifact@v4
         with:
           name: npm-tarballs

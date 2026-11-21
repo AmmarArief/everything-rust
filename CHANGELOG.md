@@ -14,8 +14,8 @@
   generated `original.rs` resolves `node_modules/...` from `RUST_ANYTHING_ORIGINAL_BASE` (set by
   the launcher) or the nearest folder above the binary, before the repository it was built in.
   The Prettier and ESLint front doors carry the change.
-- The Prettier and ESLint ports as npm packages, `@rust-anything/prettier` (the `prettier-rs`
-  command, Prettier 3.6.2) and `@rust-anything/eslint` (`eslint-rs`, ESLint 10.15.0), and `.github/workflows/ports-npm.yml`, which builds both front doors on every
+- The Prettier and ESLint ports as npm packages, `prettier-rs` (Prettier 3.6.2) and `eslint-rs`
+  (ESLint 10.15.0), and `.github/workflows/ports-npm.yml`, which builds both front doors on every
   platform, packs them with `package`, and checks the Linux install against the originals.
   Installed from their tarballs on macOS arm64: `prettier-rs` replays 17,224/17,224 recorded runs
   at 7.9% fallback, through the binary and through the launcher; `eslint-rs` replays

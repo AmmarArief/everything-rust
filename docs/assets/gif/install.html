@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- v3: install @rust-anything/prettier (the prettier-rs command), then Prettier and prettier-rs on every formattable file of a real
+<!-- v3: install prettier-rs, then Prettier and prettier-rs on every formattable file of a real
      project (analogjs, with its .prettierrc, .editorconfig and .prettierignore), one process per
      file. Every number is measured: docs/packaging.md#a-whole-cli-front-door.
      Render with node scripts/gifs.mjs install -->
@@ -41,7 +41,7 @@ const SPEED = 12
 const VERSION = '3.6.2'
 const fps = 15
 const lines = [
-  { cmd: 'npm i -g @rust-anything/prettier', out: [ADDED] },
+  { cmd: 'npm i -g prettier-rs', out: [ADDED] },
   { cmd: 'prettier-rs --version', out: [VERSION] },
 ]
 const typeFrames = c => Math.ceil(c.length / 2)

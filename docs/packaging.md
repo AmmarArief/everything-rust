@@ -94,7 +94,7 @@ prints either way.
 
 ```sh
 rust-anything package rust/app --name prettier-rs              # original from ./node_modules
-rust-anything package rust/app --name @rust-anything/prettier --bin prettier-rs --out dist/prettier
+rust-anything package rust/app --original prettier@3.6.2 --out dist/prettier-rs
 ```
 
 | Flag | Default |
@@ -105,7 +105,7 @@ rust-anything package rust/app --name @rust-anything/prettier --bin prettier-rs 
 | `--original` | the package the front door runs (`node node_modules/<package>/...`), at the version installed in the repository's `node_modules` (`RUST_ANYTHING_REPO` or two folders above the front door). Only an exact version is accepted |
 
 ```
-dist/prettier/
+dist/prettier-rs/
   package.json        bin, dependencies: { prettier: "3.6.2" }, optionalDependencies on <name>-<key>
   bin/prettier        a Node launcher (see below)
   lib/native.cjs      finds this platform's binary and the pinned original
@@ -131,8 +131,8 @@ When the front door was built (`cargo build --release` in `rust/app`), this mach
 copied in:
 
 ```sh
-npm pack dist/prettier/npm/darwin-arm64 && npm pack dist/prettier
-npm install -g ./rust-anything-prettier-darwin-arm64-3.6.2.tgz ./rust-anything-prettier-3.6.2.tgz
+npm pack dist/prettier-rs/npm/darwin-arm64 && npm pack dist/prettier-rs
+npm install -g ./prettier-rs-darwin-arm64-3.6.2.tgz ./prettier-rs-3.6.2.tgz
 ```
 
 `.github/workflows/<name>-npm.yml` builds the binary for every platform and packs every
@@ -157,9 +157,9 @@ installed command with `app replay --build`:
 
 | Package | Installed command | Recorded runs |
 | --- | --- | --- |
-| `@rust-anything/prettier` (Prettier 3.6.2) | binary in place of the launcher | 17,224/17,224, 1,363 of them (7.9%) handed to Prettier |
-| `@rust-anything/prettier` | `--ignore-scripts`: the Node launcher | 17,224/17,224, 1,363 (7.9%) handed to Prettier |
-| `@rust-anything/eslint` (ESLint 10.15.0) | binary in place of the launcher | 10,492/10,585, 381 (3.6%) handed to ESLint; the 93 others print ESLint's own install path |
+| `prettier-rs` (Prettier 3.6.2) | binary in place of the launcher | 17,224/17,224, 1,363 of them (7.9%) handed to Prettier |
+| `prettier-rs` | `--ignore-scripts`: the Node launcher | 17,224/17,224, 1,363 (7.9%) handed to Prettier |
+| `eslint-rs` (ESLint 10.15.0) | binary in place of the launcher | 10,492/10,585, 381 (3.6%) handed to ESLint; the 93 others print ESLint's own install path |
 
 The 93 ESLint runs are stack traces and "There was a problem loading formatter" messages that
 name the file ESLint was loaded from, which moved from the recording's folder to the install
