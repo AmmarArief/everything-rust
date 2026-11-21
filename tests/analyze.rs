@@ -657,3 +657,13 @@ fn a_requirements_file_names_packages_not_urls() {
         );
     }
 }
+
+#[test]
+fn a_requirements_include_is_followed_once() {
+    use rust_anything::lang::Lang;
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/python-includes");
+    let declared = rust_anything::whole_app::declared(&root, Lang::Python);
+    for name in ["flask", "six", "pytest", "ruff"] {
+        assert!(declared.contains(name), "{name}: {declared:?}");
+    }
+}
