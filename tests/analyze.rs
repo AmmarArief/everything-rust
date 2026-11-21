@@ -690,3 +690,41 @@ fn a_java_import_names_the_library_the_table_knows() {
         );
     }
 }
+
+#[test]
+fn a_function_import_does_not_name_a_composer_package() {
+    use rust_anything::lang::Lang;
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/php-namespace");
+    let report = analyze(&root).unwrap();
+    assert_eq!(report.language, Lang::Php);
+    let user = report
+        .units
+        .iter()
+        .find(|u| u.id == "src/User.php")
+        .unwrap_or_else(|| {
+            panic!(
+                "units: {:?}",
+                report.units.iter().map(|u| &u.id).collect::<Vec<_>>()
+            )
+        });
+    assert!(
+        user.external_deps.contains(&"monolog/monolog".to_string()),
+        "{:?}",
+        user.external_deps
+    );
+    assert!(
+        !user.external_deps.contains(&"Acme".to_string()),
+        "the project's own namespace is not a Composer package: {:?}",
+        user.external_deps
+    );
+    assert!(
+        user.external_deps.contains(&"Stripe".to_string()),
+        "a vendor namespace the table cannot place stays external: {:?}",
+        user.external_deps
+    );
+    assert!(
+        user.internal_deps.contains(&"src/Greeter.php".to_string()),
+        "{:?}",
+        user.internal_deps
+    );
+}

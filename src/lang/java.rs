@@ -119,6 +119,7 @@ pub fn discover(root: &Path) -> Result<Workspace> {
                 dir,
                 deps,
                 dev_deps: dev,
+                namespaces: Vec::new(),
             });
         } else if name.ends_with(".java") {
             let is_test = rel.contains("src/test/")
@@ -150,6 +151,7 @@ pub fn discover(root: &Path) -> Result<Workspace> {
             },
             deps: Vec::new(),
             dev_deps: Vec::new(),
+            namespaces: Vec::new(),
         });
     }
     packages.sort_by(|a, b| a.dir.cmp(&b.dir));

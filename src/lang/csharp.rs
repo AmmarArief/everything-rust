@@ -114,6 +114,7 @@ pub fn discover(root: &Path) -> Result<Workspace> {
                 dir,
                 deps,
                 dev_deps,
+                namespaces: Vec::new(),
             });
         } else if name.ends_with(".cs") {
             files.push(rel);
@@ -128,6 +129,7 @@ pub fn discover(root: &Path) -> Result<Workspace> {
             src_root: String::new(),
             deps: Vec::new(),
             dev_deps: Vec::new(),
+            namespaces: Vec::new(),
         });
     }
     packages.sort_by(|a, b| a.dir.cmp(&b.dir));
