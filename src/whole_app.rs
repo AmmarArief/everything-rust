@@ -483,6 +483,9 @@ pub fn declared(root: &Path, lang: Lang) -> BTreeSet<String> {
         }
         Lang::Java | Lang::Kotlin => {
             let pom = read(root, "pom.xml");
+            // A commented-out `<!-- <dependency> ... </dependency> -->` is not one the project
+            // declares; the block regex below would otherwise match inside the comment.
+            let pom = crate::lang::syntax::without_xml_comments(&pom);
             let dep = Regex::new(r"(?s)<dependency>(.*?)</dependency>").expect("valid regex");
             let tag = |block: &str, name: &str| -> Option<String> {
                 let re = Regex::new(&format!(r"<{name}>\s*([^<]+?)\s*</{name}>")).ok()?;

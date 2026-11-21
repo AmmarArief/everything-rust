@@ -601,3 +601,24 @@ fn a_gem_group_ends_at_its_own_end() {
         "a gem inside a nested block in a group is not: {declared:?}"
     );
 }
+
+#[test]
+fn a_commented_out_maven_dependency_is_not_declared() {
+    use rust_anything::lang::Lang;
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/java-pom");
+    let declared = rust_anything::whole_app::declared(&root, Lang::Java);
+    assert!(
+        declared.contains("com.google.guava:guava"),
+        "a live dependency is declared: {declared:?}"
+    );
+    for commented in ["com.example:legacy", "com.example:older"] {
+        assert!(
+            !declared.contains(commented),
+            "{commented} is commented out: {declared:?}"
+        );
+    }
+    assert!(
+        !declared.iter().any(|d| d.contains("junit")),
+        "a test-scope dependency is not a runtime one: {declared:?}"
+    );
+}
