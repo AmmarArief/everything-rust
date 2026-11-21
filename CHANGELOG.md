@@ -74,6 +74,16 @@
   `"remove"` files of the snapshot before it runs. `--fresh` alone no longer implies `--http`.
 - Front doors built by rust-anything find the original when `rust/` is a symlink to a folder
   outside the repository (`RUST_ANYTHING_REPO` is set at build time).
+- Case study: ESLint 10.15.0 behind a Rust front door, 90 rules (`eslint:recommended` and 26
+  more), 10,585/10,585 recorded CLI runs at 3.6% fallback, gate passes on `eslint-stdin-rs`
+  (`demo/real-world/eslint-rs`, `docs/real-world.md#eslint`).
+- `bridge` and `analyze` read CommonJS exports: `module.exports = { a, b: c }`,
+  `module.exports.a = a` and `exports.a = a`, for functions declared in the file. ESLint (and
+  most Node code before ESM) exports this way, so its units showed no functions to bridge.
+- The `timestamps` normalizer also matches JavaScript's `Date#toString()`
+  (`Sat Nov 21 2026 01:30:12 GMT+0300 (...)`). ESLint's HTML report stamps its time that way:
+  the two recording runs differed only in the seconds, so only the seconds became a wildcard and a
+  replay ten minutes later failed.
 - Case study: ffmpeg's libavutil (n7.1), 10 units, 135,773/135,773 recorded calls, gate passes
   on each (`demo/real-world/ffmpeg-rs`, `docs/real-world.md#ffmpeg`).
 - C bridge: pointer parameters cross it with the original signatures. A `const` byte pointer
