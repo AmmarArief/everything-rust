@@ -114,6 +114,13 @@
   port does their work too.
 - C `char` parameters are `c_char` in generated code (signed or unsigned as the platform's C
   `char`), not `c_schar`.
+- `doctor` on Windows: a missing `cargo` gets the C++ Build Tools, then
+  `winget install Rustlang.Rustup`, instead of the `sh.rustup.rs` script, which needs a Unix shell.
+  The Build Tools come first because winget runs `rustup-init -y`, which skips them with a warning.
+  The Build Tools fix also adds the C++ workload (and the ARM64 tools on Windows on ARM): without
+  `--add`, winget installs them with no compiler, linker or Windows SDK. Since winget adds nothing
+  to Build Tools already installed, the fix also says how to add the workload by hand. A fix of
+  several commands prints one per line.
 
 ## 2.1.0 (2026-11-20)
 
