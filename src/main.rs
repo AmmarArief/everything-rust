@@ -295,6 +295,14 @@ enum Cmd {
         /// imports nothing).
         #[arg(long)]
         fallback: Option<String>,
+        /// CLI front door: a command the package installs (repeat for more); defaults to the
+        /// package name without its scope.
+        #[arg(long = "bin")]
+        bin: Vec<String>,
+        /// CLI front door: the original npm package it falls back to, as <name>@<version>;
+        /// defaults to the one in the repository's node_modules.
+        #[arg(long)]
+        original: Option<String>,
         /// List the files, write nothing.
         #[arg(long)]
         dry_run: bool,
@@ -1038,6 +1046,8 @@ fn run() -> Result<ExitCode> {
             version,
             out,
             fallback,
+            bin,
+            original,
             dry_run,
             json,
         } => {
@@ -1048,6 +1058,8 @@ fn run() -> Result<ExitCode> {
                 out,
                 dry_run,
                 fallback,
+                bin,
+                original,
             })?;
             if json {
                 say!("{}", serde_json::to_string_pretty(&outcome)?);

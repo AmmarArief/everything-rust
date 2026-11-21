@@ -179,6 +179,16 @@ because a loose match is not transitive and no order agrees with it. Pair the li
 other (identical ones first, then a search that gives a line up when another needs it), and keep
 the sort for showing the diff.
 
+**A demo's lockfile missed a dependency.** The Prettier front door gained `ignore` for config
+resolution, but its `Cargo.lock` was not updated: the next plain build rewrote it, and a
+`cargo build --locked`, as the release workflow runs, would have failed. After adding a dependency
+to a demo crate, build it and keep the lockfile it writes.
+
+**An installed CLI failed replays on paths it prints about itself.** ESLint's stack traces and
+"There was a problem loading formatter" name the file ESLint was loaded from, so 93 recorded runs
+differed once ESLint lived in an install prefix. Replay the original from the same install too:
+a run that fails both ways is the path, not the port.
+
 ## Language plugins
 
 **A tree-sitter supertype never appears in the tree.** `tree-sitter-kotlin-ng` lists

@@ -51,6 +51,8 @@ fn options(crate_dir: &Path) -> Options<'_> {
         out: None,
         dry_run: false,
         fallback: None,
+        bin: Vec::new(),
+        original: None,
     }
 }
 
@@ -327,4 +329,101 @@ fn wasm_package_needs_a_build() {
         "{err:#}"
     );
     std::fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn cli_package_runs_the_front_door_and_falls_back_to_the_pinned_original() {
+    use std::os::unix::fs::PermissionsExt;
+    if !common::have("node") {
+        return;
+    }
+    let Some(host) = package::host_key() else {
+        return;
+    };
+    let root = project(
+        "cli",
+        &[
+            (
+                "rust/app/rust-anything.json",
+                r#"{"schema":"rust-anything/front-door@1","name":"tool","commands":[],"units":[]}"#,
+            ),
+            (
+                "rust/app/Cargo.toml",
+                "[package]\nname = \"tool\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[[bin]]\nname = \"tool\"\npath = \"src/main.rs\"\n",
+            ),
+            (
+                "rust/app/src/original.rs",
+                "const RUN: &[&str] = &[\"node\", \"node_modules/tool/bin/tool.js\"];\n",
+            ),
+            ("rust/LICENSE-tool", "MIT notice of tool\n"),
+            (
+                "node_modules/tool/package.json",
+                r#"{"name":"tool","version":"1.2.3","license":"MIT"}"#,
+            ),
+            (
+                "node_modules/tool/bin/tool.js",
+                "console.log('original ' + process.argv.slice(2).join(' '))\n",
+            ),
+            (
+                "rust/app/target/release/tool",
+                "#!/bin/sh\necho \"rust $* base=$RUST_ANYTHING_ORIGINAL_BASE\"\n",
+            ),
+        ],
+    );
+    let fake = root.join("rust/app/target/release/tool");
+    std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let app = root.join("rust/app");
+    let out = root.join("node_modules/tool-rs");
+    let outcome = package::package(&Options {
+        out: Some(out.clone()),
+        ..options(&app)
+    })
+    .unwrap();
+    assert_eq!(outcome.name, "tool-rs");
+    assert_eq!(outcome.version, "1.2.3");
+    assert_eq!(outcome.bin, ["tool-rs"]);
+    assert_eq!(outcome.original.as_deref(), Some("tool@1.2.3"));
+    let main: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(out.join("package.json")).unwrap()).unwrap();
+    assert_eq!(main["dependencies"]["tool"], "1.2.3");
+    assert_eq!(main["bin"]["tool-rs"], "bin/tool");
+    assert_eq!(main["license"], "MIT");
+    assert_eq!(main["optionalDependencies"].as_object().unwrap().len(), 5);
+    assert!(out.join("LICENSE-tool").exists());
+    assert!(out.join(format!("npm/{host}/LICENSE-tool")).exists());
+    assert!(out.join(format!("npm/{host}/bin/tool")).exists());
+    assert!(out.join(".github/workflows/tool-rs-npm.yml").exists());
+
+    let launcher = out.join("bin/tool");
+    let launcher = launcher.to_str().unwrap();
+    let base = root.canonicalize().unwrap();
+    assert_eq!(
+        run(&root, "node", &[launcher, "a", "b"]),
+        format!("rust a b base={}", base.display())
+    );
+    let old = Command::new("node")
+        .args([launcher, "a"])
+        .env("RUST_ANYTHING_MODE", "old")
+        .output()
+        .unwrap();
+    assert_eq!(String::from_utf8_lossy(&old.stdout).trim(), "original a");
+
+    run(&out, "node", &["lib/install.cjs"]);
+    assert_eq!(
+        std::fs::read(out.join("bin/tool")).unwrap(),
+        std::fs::read(&fake).unwrap()
+    );
+    assert_eq!(
+        run(&root, out.join("bin/tool").to_str().unwrap(), &["c"]),
+        "rust c base="
+    );
+
+    let wrong = package::package(&Options {
+        out: Some(root.join("other")),
+        original: Some("tool@^1.2.3".into()),
+        ..options(&app)
+    });
+    assert!(wrong.is_err());
+    let _ = std::fs::remove_dir_all(&root);
 }

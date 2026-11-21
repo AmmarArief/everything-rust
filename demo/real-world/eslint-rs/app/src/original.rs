@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, ExitStatus};
 
 const ROOT: &str = match option_env!("RUST_ANYTHING_REPO") {
@@ -9,10 +9,37 @@ const ROOT: &str = match option_env!("RUST_ANYTHING_REPO") {
 };
 const RUN: &[&str] = &["node", "node_modules/eslint/bin/eslint.js"];
 const FALLBACK_LOG: &str = "RUST_ANYTHING_FALLBACK_LOG";
+const ORIGINAL_BASE: &str = "RUST_ANYTHING_ORIGINAL_BASE";
+
+/// Where an installed package finds `node_modules/...`: the folder its launcher resolved the
+/// original from, else the nearest one above this binary while it sits inside `node_modules`.
+fn installed(word: &str) -> Option<OsString> {
+    if !word.starts_with("node_modules/") {
+        return None;
+    }
+    if let Some(base) = std::env::var_os(ORIGINAL_BASE) {
+        let path = Path::new(&base).join(word);
+        if path.exists() {
+            return Some(path.into_os_string());
+        }
+    }
+    let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
+    if !exe.components().any(|c| c.as_os_str() == "node_modules") {
+        return None;
+    }
+    exe.ancestors()
+        .skip(1)
+        .map(|dir| dir.join(word))
+        .find(|path| path.exists())
+        .map(PathBuf::into_os_string)
+}
 
 fn resolve(word: &str) -> OsString {
     if word.starts_with('-') {
         return word.into();
+    }
+    if let Some(path) = installed(word) {
+        return path;
     }
     let path = Path::new(ROOT).join(word);
     let looks_like_path = word.contains('/') || word.contains('\\') || path.is_file();

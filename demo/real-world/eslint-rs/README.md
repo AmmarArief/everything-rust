@@ -6,6 +6,11 @@ are linted in Rust, with output byte-identical to ESLint (messages, locations, f
 suggestions, `json` and `stylish` output, exit codes); every other run goes to ESLint unchanged.
 The case study is in [`docs/real-world.md`](../../../docs/real-world.md#eslint).
 
+Install it as a command: `npm install -g @rust-anything/eslint` gives `eslint-rs`, which runs this front
+door and depends on ESLint 10.15.0 for everything it hands back
+([what runs where](../../../README.md#install-the-ports)). `rust-anything package app` lays out
+the packages ([how](../../../docs/packaging.md#a-whole-cli-front-door)).
+
 ESLint is MIT licensed, Copyright OpenJS Foundation and other contributors; its license is in
 [`LICENSE-eslint`](LICENSE-eslint). The Rust in this folder ports ESLint's code and the parts
 of the packages it runs on: eslint-scope 9.1.2 and espree 11.2.0's token translation

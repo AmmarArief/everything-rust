@@ -181,7 +181,7 @@ Read-only.
 
 Tool `package` · CLI `rust-anything package`
 
-Lay out installable packages for a gated port; writes files only, never builds other platforms or publishes. PyO3: a maturin project (abi3 wheel importable under the original module's name). napi: a main npm package whose loader picks `<name>-<platform>` from optionalDependencies and falls back to the original JS, one package per platform (this machine's binary copied in when built). wasm: one npm package with the built pkg/. PyO3 and napi also get a GitHub Actions workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows.
+Lay out installable packages for a gated port; writes files only, never builds other platforms or publishes. PyO3: a maturin project (abi3 wheel importable under the original module's name). CLI front door (`rust/app` of a Node CLI): a main npm package whose command runs `<name>-<platform>`'s front door binary, with the original pinned to its exact version as a dependency for every case the port hands back. napi: a main npm package whose loader picks `<name>-<platform>` from optionalDependencies and falls back to the original JS, one package per platform (this machine's binary copied in when built). wasm: one npm package with the built pkg/. PyO3 and napi also get a GitHub Actions workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -190,6 +190,8 @@ Lay out installable packages for a gated port; writes files only, never builds o
 | `version` | string |  | Package version; defaults to the original package's. |
 | `out` | string |  | Output folder; defaults to <crate>/package. |
 | `fallback` | string |  | napi: module to load where no binary fits; defaults to the original file when it is plain JS that imports nothing. |
+| `bin` | string[] |  | CLI front door: the commands the package installs; defaults to the package name without its scope. |
+| `original` | string |  | CLI front door: the original npm package it falls back to, as <name>@<version>; defaults to the one in the repository's node_modules. |
 | `dry_run` | boolean |  | List the files, write nothing. |
 
 ## Check definition of done

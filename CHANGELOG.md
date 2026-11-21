@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- `package` makes a whole Node CLI installable: pointed at a front door (`rust/app`), it lays out
+  a main npm package whose command runs the front door binary from `<name>-<platform>` (macOS
+  arm64 and x64, Linux x64 and arm64 with glibc, Windows x64), with the original as a dependency
+  pinned to the exact recorded version for every run the port hands back. A Node launcher runs
+  the binary (or the original where no binary fits, or with `RUST_ANYTHING_MODE=old`); outside
+  Windows a postinstall script puts the binary in its place, so a covered run starts no Node.
+  `--bin` names the commands, `--original <package>@<version>` the original when it is not in
+  the repository's `node_modules`. A generated workflow builds and packs every platform.
+- Front doors find the original next to themselves when installed: inside `node_modules`, the
+  generated `original.rs` resolves `node_modules/...` from `RUST_ANYTHING_ORIGINAL_BASE` (set by
+  the launcher) or the nearest folder above the binary, before the repository it was built in.
+  The Prettier and ESLint front doors carry the change.
+- The Prettier and ESLint ports as npm packages, `@rust-anything/prettier` (the `prettier-rs`
+  command, Prettier 3.6.2) and `@rust-anything/eslint` (`eslint-rs`, ESLint 10.15.0), and `.github/workflows/ports-npm.yml`, which builds both front doors on every
+  platform, packs them with `package`, and checks the Linux install against the originals.
+  Installed from their tarballs on macOS arm64: `prettier-rs` replays 17,224/17,224 recorded runs
+  at 7.9% fallback, through the binary and through the launcher; `eslint-rs` replays
+  10,492/10,585, the 93 others printing ESLint's own install path, as ESLint 10.15.0 run from the
+  same install does (`docs/packaging.md`). The Prettier front door's `Cargo.lock` now lists
+  `ignore`, which `--locked` builds needed.
+
 - Prettier demo: about 75 differences from Prettier 3.6.2 outside the recorded corpus, found by
   differential fuzzing, mutation testing and a Doc-level comparison, are fixed or handed to
   Prettier. 355 new cases and the checks are in `demo/real-world/prettier-rs/equiv`. The

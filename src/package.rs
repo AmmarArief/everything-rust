@@ -8,6 +8,9 @@
 //!   `optionalDependencies` and falls back to the original JS, one package per platform holding
 //!   one `.node`, and a workflow that builds and packs them.
 //! - wasm-bindgen: one npm package with the built `pkg/`, the same on every platform.
+//! - A CLI front door (`rust/app`) of an npm CLI: a main package whose command runs this
+//!   platform's front door binary, with the original pinned as a dependency for every case the
+//!   port does not cover, and one package per platform holding the binary (`cli.rs`).
 
 use std::path::{Component, Path, PathBuf};
 
@@ -16,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::bridge::{Kind, Manifest};
+
+mod cli;
 
 /// Written into the output folder; lists what the last run wrote, so a rerun replaces only that.
 pub const STAMP: &str = "rust-anything-package.json";
@@ -33,11 +38,37 @@ pub struct Options<'a> {
     pub dry_run: bool,
     /// napi: the module the loader requires when no binary fits the platform.
     pub fallback: Option<String>,
+    /// CLI: the commands the package installs; defaults to the package name without its scope.
+    pub bin: Vec<String>,
+    /// CLI: the original npm package the front door falls back to, as `name@version`; defaults
+    /// to the one in `node_modules` of the repository the front door belongs to.
+    pub original: Option<String>,
+}
+
+/// What a package folder holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Layout {
+    Napi,
+    Wasm,
+    Pyo3,
+    /// A front door's binary per platform behind an npm command.
+    Cli,
+}
+
+impl From<Kind> for Layout {
+    fn from(kind: Kind) -> Self {
+        match kind {
+            Kind::Wasm => Layout::Wasm,
+            Kind::Pyo3 => Layout::Pyo3,
+            _ => Layout::Napi,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
 pub struct Outcome {
-    pub kind: Kind,
+    pub kind: Layout,
     pub name: String,
     pub version: String,
     pub out: PathBuf,
@@ -47,6 +78,12 @@ pub struct Outcome {
     /// napi: the platform packages, `<name>-<key>`.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub platforms: Vec<String>,
+    /// CLI: the commands the package installs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub bin: Vec<String>,
+    /// CLI: the original the package depends on, `name@version`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub original: Option<String>,
     pub files: Vec<String>,
     pub dry_run: bool,
     pub notes: Vec<String>,
@@ -55,7 +92,7 @@ pub struct Outcome {
 #[derive(Serialize, Deserialize)]
 struct Stamp {
     schema: String,
-    kind: Kind,
+    kind: Layout,
     name: String,
     version: String,
     files: Vec<String>,
@@ -142,6 +179,9 @@ pub fn host_key() -> Option<&'static str> {
 
 pub fn package(opts: &Options) -> Result<Outcome> {
     let crate_dir = std::path::absolute(opts.crate_dir)?;
+    if cli::is_front_door(&crate_dir) {
+        return cli::package(&crate_dir, opts);
+    }
     let manifest = Manifest::load(&crate_dir)?;
     let out = match &opts.out {
         Some(out) => std::path::absolute(out)?,
@@ -207,15 +247,17 @@ pub fn package(opts: &Options) -> Result<Outcome> {
     notes.push("Nothing was published.".into());
     let listed: Vec<String> = files.iter().map(|(p, _)| p.clone()).collect();
     if !opts.dry_run {
-        write(&out, &manifest, &name, &version, files)?;
+        write(&out, manifest.kind.into(), &name, &version, files)?;
     }
     Ok(Outcome {
-        kind: manifest.kind,
+        kind: manifest.kind.into(),
         name,
         version,
         out,
         module,
         platforms,
+        bin: Vec::new(),
+        original: None,
         files: listed,
         dry_run: opts.dry_run,
         notes,
@@ -224,7 +266,7 @@ pub fn package(opts: &Options) -> Result<Outcome> {
 
 fn write(
     out: &Path,
-    manifest: &Manifest,
+    kind: Layout,
     name: &str,
     version: &str,
     files: Vec<(String, Content)>,
@@ -260,7 +302,7 @@ fn write(
     }
     let stamp = Stamp {
         schema: STAMP_SCHEMA.into(),
-        kind: manifest.kind,
+        kind,
         name: name.into(),
         version: version.into(),
         files: files.into_iter().map(|(p, _)| p).collect(),

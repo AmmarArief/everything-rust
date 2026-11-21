@@ -524,13 +524,15 @@ fn tool_schemas() -> Value {
         },
         {
             "name": "package",
-            "description": "Lay out installable packages for a gated port; writes files only, never builds other platforms or publishes. PyO3: a maturin project (abi3 wheel importable under the original module's name). napi: a main npm package whose loader picks `<name>-<platform>` from optionalDependencies and falls back to the original JS, one package per platform (this machine's binary copied in when built). wasm: one npm package with the built pkg/. PyO3 and napi also get a GitHub Actions workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows.",
+            "description": "Lay out installable packages for a gated port; writes files only, never builds other platforms or publishes. PyO3: a maturin project (abi3 wheel importable under the original module's name). CLI front door (`rust/app` of a Node CLI): a main npm package whose command runs `<name>-<platform>`'s front door binary, with the original pinned to its exact version as a dependency for every case the port hands back. napi: a main npm package whose loader picks `<name>-<platform>` from optionalDependencies and falls back to the original JS, one package per platform (this machine's binary copied in when built). wasm: one npm package with the built pkg/. PyO3 and napi also get a GitHub Actions workflow building macOS (arm64, x86_64), Linux (x86_64, aarch64) and Windows.",
             "inputSchema": { "type": "object", "properties": {
                 "crate": crate_dir,
                 "name": { "type": "string", "description": "Package name on npm or PyPI; defaults to the crate name." },
                 "version": { "type": "string", "description": "Package version; defaults to the original package's." },
                 "out": { "type": "string", "description": "Output folder; defaults to <crate>/package." },
                 "fallback": { "type": "string", "description": "napi: module to load where no binary fits; defaults to the original file when it is plain JS that imports nothing." },
+                "bin": { "type": "array", "items": { "type": "string" }, "description": "CLI front door: the commands the package installs; defaults to the package name without its scope." },
+                "original": { "type": "string", "description": "CLI front door: the original npm package it falls back to, as <name>@<version>; defaults to the one in the repository's node_modules." },
                 "dry_run": { "type": "boolean", "description": "List the files, write nothing." },
             }, "required": ["crate"] },
         },
@@ -872,6 +874,8 @@ fn call(name: &str, args: &Value) -> Result<Value> {
                 out: opt_path("out"),
                 dry_run: args["dry_run"].as_bool().unwrap_or(false),
                 fallback: args["fallback"].as_str().map(str::to_string),
+                bin: strings("bin"),
+                original: args["original"].as_str().map(str::to_string),
             })?)?
         }
         "gate" => serde_json::to_value(gate::gate(

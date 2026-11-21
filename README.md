@@ -106,6 +106,35 @@ faster, 16 slower by 3 to 40%).
 > database or calls the network does that once per case. Run them on a copy of the project, with a
 > test database and no production credentials in the environment.
 
+## Install the ports
+
+The Prettier and ESLint ports are npm commands. Each one runs the Rust port for what it covers and
+the original, pinned to the exact version that was recorded, for everything else, so the output
+is the original's either way:
+
+```sh
+npm install -g @rust-anything/prettier   # the prettier-rs command: Prettier 3.6.2
+npm install -g @rust-anything/eslint     # the eslint-rs command: ESLint 10.15.0
+```
+
+<p align="center">
+  <img src="docs/assets/install.gif" alt="npm i -g @rust-anything/prettier adds 3 packages and prettier-rs --version prints 3.6.2; then Prettier and prettier-rs format all 1,610 files of analogjs, one process per file, with the project's own config: Prettier 132.5 s, prettier-rs 49.8 s, the same output on every file, 1,150 of them in Rust." width="820">
+  <br>
+  <sub>Prettier and the installed <code>prettier-rs</code> on every file of a real project (Apple M4). <a href="docs/packaging.md#where-it-was-checked">How it was measured</a>.</sub>
+</p>
+
+| Command | Answered in Rust | Handed to the original |
+| --- | --- | --- |
+| `prettier-rs` | `--stdin-filepath <file>` for JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less the port covers, with `.prettierrc` (JSON), `.prettierrc.json`, the `package.json` `"prettier"` key, `.editorconfig`, `.prettierignore` and `.gitignore` applied | file and folder arguments (`--write`, `--check`), JS/TS/YAML/TOML config files, plugins, override patterns starting with `./`, HTML, Vue, Angular, embedded code the port does not print |
+| `eslint-rs` | `--no-config-lookup --rule ... --stdin` with the 90 ported rules (`stylish` and `json` output, fixes, suggestions) | `eslint.config.*` lookups (`eslint .`), files and folders, the other 202 core rules, plugins, parsers, the other formatters, parse errors |
+
+The binaries come for macOS (arm64, x64), Linux (x64, arm64, glibc) and Windows x64; elsewhere,
+or with `RUST_ANYTHING_MODE=old`, the command runs the original. Installed from their tarballs on
+macOS arm64, `prettier-rs` replays 17,224/17,224 recorded runs (7.9% handed to Prettier) and
+`eslint-rs` matches ESLint 10.15.0 installed beside it on all 10,585
+([how](docs/packaging.md#a-whole-cli-front-door)). `rust-anything package` makes the same kind
+of package from any CLI front door.
+
 ## Quick start
 
 Paste this into Claude Code, Codex, Cursor, Gemini CLI or OpenCode and let your agent install it:

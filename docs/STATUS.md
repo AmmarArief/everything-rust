@@ -1,6 +1,6 @@
 # Status
 
-What works, and how each part was last checked. Updated 2026-11-20.
+What works, and how each part was last checked. Updated 2026-11-21.
 
 **Verified**: run end to end (bridge, record, port, diff, gate) on real code someone else wrote,
 named below. **Tested**: covered by this repository's tests on fixtures written for them, not yet
@@ -48,7 +48,7 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | Side effects (`app record --effects`, `--db-reset`, `--db-dump`) | Tested | email, webhooks and SQLite rows for a CLI and a server in `tests/effects.rs` |
 | Front door (`front-door`), `wire` | Verified (TS server and CLI) | Prettier: one unit wired, 17,224/17,224 at 7.9% fallback, plus 355 cases from fuzzing and mutation testing (`demo/real-world/prettier-rs/equiv`) (JS, TS, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less in Rust), glue declining per case with `original::run_with_stdin`; json-server: reads wired first (22.6% fallback), then every route (0%); a `rust/` that is a symlink in `tests/app_fresh.rs`; servers in eight languages in `tests/http.rs` |
 | `lift` | Verified (TS server), Tested (CLIs) | json-server: pure Rust binary, 514/514; CLIs in all eight languages in `tests/app.rs` |
-| `package` | Tested | napi, wasm and PyO3 demos installed from their packages on macOS arm64 (2000/2000, 2000/2000, 1144/1144); napi tarball install and fallback in `tests/package.rs`; the generated GitHub workflows have not run yet |
+| `package` | Tested (libraries), Verified (CLI front doors) | napi, wasm and PyO3 demos installed from their packages on macOS arm64 (2000/2000, 2000/2000, 1144/1144); Prettier and ESLint front doors installed from their npm tarballs on macOS arm64 and replayed (17,224/17,224 at 7.9% fallback; 10,492/10,585, the other 93 print ESLint's install path exactly as ESLint 10.15.0 from the same install does); napi tarball install and fallback, and the CLI launcher, postinstall swap and pinned original in `tests/package.rs`; the generated GitHub workflows and `ports-npm.yml` have not run yet |
 | MCP server (`mcp`) | Tested | protocol test in `src/mcp.rs` |
 | `setup` | Tested | registers the MCP server (and the skill, where the agent reads skills) with Claude Code, Codex, Cursor, Gemini CLI and OpenCode; per-agent tests in `src/setup.rs`, read back in `src/doctor.rs` and `tests/doctor.rs`. The OpenCode entry was also confirmed by OpenCode 2.3.2 itself (`mcp.servers`, `command` as an array) |
 
