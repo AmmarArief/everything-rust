@@ -5,10 +5,9 @@ door: JavaScript, TypeScript, JSON, GraphQL, YAML, Markdown, CSS, SCSS and Less 
 byte-identical to Prettier; every other file goes to Prettier unchanged. The case study is in
 [`docs/real-world.md`](../../../docs/real-world.md#prettier).
 
-Install it as a command: `npm install -g prettier-rs` runs this front
-door and depends on Prettier 3.6.2 for everything it hands back
-([what runs where](../../../README.md#install-the-ports)). `rust-anything package app` lays out
-the packages ([how](../../../docs/packaging.md#a-whole-cli-front-door)).
+`rust-anything package app` lays it out as an npm command, `prettier-rs`, that runs this front
+door and depends on Prettier 3.6.2 for everything it hands back; it is not on npm
+([how](../../../docs/packaging.md#a-whole-cli-front-door)).
 
 Prettier is MIT licensed, Copyright © James Long and contributors; its license is in
 [`LICENSE-prettier`](LICENSE-prettier). The Rust in this folder ports Prettier's code: each module

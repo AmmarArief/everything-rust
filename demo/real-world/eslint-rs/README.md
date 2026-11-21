@@ -6,8 +6,8 @@ are linted in Rust, with output byte-identical to ESLint (messages, locations, f
 suggestions, `json` and `stylish` output, exit codes); every other run goes to ESLint unchanged.
 The case study is in [`docs/real-world.md`](../../../docs/real-world.md#eslint).
 
-Install it as a command: `npm install -g eslint-rs` runs this front
-door and depends on ESLint 10.15.0 for everything it hands back
+Install it as a command: `npm install -g eslint-rs` runs this front door (macOS and Linux;
+Windows runs ESLint itself) and depends on ESLint 10.15.0 for everything it hands back
 ([what runs where](../../../README.md#install-the-ports)). `rust-anything package app` lays out
 the packages ([how](../../../docs/packaging.md#a-whole-cli-front-door)).
 
