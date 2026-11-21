@@ -738,10 +738,11 @@ fn score(u: usize, ctx: &Ctx) -> UnitReport {
         notes.push("Leaf: imports no other unit.".into());
     }
     if unit.direct_tests > 0 {
-        notes.push(format!(
-            "{} test files import it directly.",
-            unit.direct_tests
-        ));
+        notes.push(if unit.direct_tests == 1 {
+            "1 test file imports it directly.".to_string()
+        } else {
+            format!("{} test files import it directly.", unit.direct_tests)
+        });
     } else if package_tests == 0 && !keep {
         notes.push(
             "No tests found: write characterization tests against the original code first.".into(),

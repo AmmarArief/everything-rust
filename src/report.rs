@@ -97,8 +97,13 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
     )?;
     writeln!(
         out,
-        "{} packages, {} source files ({} lines), {} test files, {} UI files, grouped into {} units.\n",
-        s.packages, s.source_files, s.loc, s.test_files, s.ui_files, s.units
+        "{}, {} ({} lines), {}, {}, grouped into {}.\n",
+        count(s.packages, "package"),
+        count(s.source_files, "source file"),
+        s.loc,
+        count(s.test_files, "test file"),
+        count(s.ui_files, "UI file"),
+        count(s.units, "unit")
     )?;
     for warning in &r.warnings {
         writeln!(out, "> **Warning:** {warning}\n")?;
@@ -116,8 +121,8 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
     if s.parse_errors > 0 {
         writeln!(
             out,
-            "> {} files had parse errors; their units are marked partial.\n",
-            s.parse_errors
+            "> {} had parse errors; their units are marked partial.\n",
+            count(s.parse_errors, "file")
         )?;
     }
 
@@ -176,12 +181,12 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
         };
         writeln!(
             out,
-            "### {}. {} (`{}`, {}, {} test files{deps})\n",
+            "### {}. {} (`{}`, {}, {}{deps})\n",
             p.order,
             p.name,
             if p.dir.is_empty() { "." } else { &p.dir },
             p.runtime,
-            p.test_files
+            count(p.test_files, "test file")
         )?;
         writeln!(
             out,
@@ -259,13 +264,21 @@ fn render(out: &mut String, r: &Report, title: &str) -> std::fmt::Result {
     Ok(())
 }
 
+fn count(n: usize, word: &str) -> String {
+    if n == 1 {
+        format!("1 {word}")
+    } else {
+        format!("{n} {word}s")
+    }
+}
+
 fn unit_detail(out: &mut String, u: &UnitReport) -> std::fmt::Result {
     writeln!(out, "### `{}`\n", u.id)?;
     writeln!(
         out,
-        "{} lines in {} files, wave {}, priority {}, readiness {}, bridge **{}**.\n",
+        "{} lines in {}, wave {}, priority {}, readiness {}, bridge **{}**.\n",
         u.loc,
-        u.files.len(),
+        count(u.files.len(), "file"),
         u.wave,
         u.priority,
         u.readiness,
