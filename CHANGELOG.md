@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.0.0 (2026-11-21)
+
 - `package` makes a whole Node CLI installable: pointed at a front door (`rust/app`), it lays out
   a main npm package whose command runs the front door binary from `<name>-<platform>` (macOS
   arm64 and x64, Linux x64 and arm64 with glibc, Windows x64), with the original as a dependency
