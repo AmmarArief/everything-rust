@@ -463,7 +463,15 @@ pub fn resolve(from: &str, spec: &str, index: &HashMap<&str, usize>, ws: &Worksp
             return Resolution::File(i);
         }
     }
-    let top = spec.split('.').next().unwrap_or(spec);
+    let segments: Vec<&str> = spec.split('.').collect();
+    if let Some(known) = (2..=segments.len())
+        .rev()
+        .map(|k| segments[..k].join("."))
+        .find(|name| lookup(name).is_some())
+    {
+        return Resolution::External(known);
+    }
+    let top = segments[0];
     if STDLIB.contains(&top) {
         Resolution::Stdlib
     } else if index
@@ -1498,6 +1506,25 @@ mod tests {
             resolve("main.py", "site", &local, &ws),
             Resolution::File(0)
         ));
+    }
+
+    #[test]
+    fn a_dotted_import_the_table_knows_keeps_its_dotted_name() {
+        let ws = Workspace {
+            packages: vec![],
+            files: vec![],
+        };
+        let index = HashMap::new();
+        for spec in ["google.protobuf", "google.protobuf.json_format"] {
+            match resolve("main.py", spec, &index, &ws) {
+                Resolution::External(name) => assert_eq!(name, "google.protobuf", "{spec}"),
+                _ => panic!("{spec}: not external"),
+            }
+        }
+        match resolve("main.py", "yaml.loader", &index, &ws) {
+            Resolution::External(name) => assert_eq!(name, "yaml"),
+            _ => panic!("yaml.loader: not external"),
+        }
     }
 
     #[test]

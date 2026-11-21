@@ -70,7 +70,7 @@ by the original and never the other way round, and callbacks stay in the source 
 anywhere. Cargo downloads crates as usual, and your agent's model provider sees what your agent
 sends it, under its own policy.
 
-**What does it need installed?** Rust, plus the runtime of the language you port — and a few extras
+**What does it need installed?** Rust, plus the runtime of the language you port, and a few extras
 that only matter for some languages, which `rust-anything doctor` lists with the command that
 installs each one:
 

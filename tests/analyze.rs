@@ -883,3 +883,14 @@ fn a_unit_importing_another_workspace_package_is_not_a_leaf() {
         b.notes
     );
 }
+
+#[test]
+fn map_names_a_path_that_does_not_exist() {
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_rust-anything"))
+        .args(["map", "/no/such/rust-anything-path"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("/no/such/rust-anything-path"), "{err}");
+}
