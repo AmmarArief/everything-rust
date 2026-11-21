@@ -473,7 +473,8 @@ the utility library under every codec, and ported its pure C units one at a time
 against recordings of the real ffmpeg functions. Everything is in
 [`demo/real-world/ffmpeg-rs`](../demo/real-world/ffmpeg-rs): the crates (LGPL, like the code
 they port; `adler32-rs` keeps zlib's license), and the scripts that clone ffmpeg, assemble the
-tree, record, verify and bench. No ffmpeg source or recorded case is copied.
+tree, record, verify and bench. No ffmpeg source or recorded case is copied. The port is also
+published on its own as [erkamyaman/ffmpeg-rs-anything](https://github.com/erkamyaman/ffmpeg-rs-anything).
 
 | Step | Result |
 | --- | --- |
