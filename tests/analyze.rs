@@ -641,3 +641,19 @@ fn a_commented_out_test_package_does_not_hide_a_csharp_project() {
         "a commented-out package is not declared: {declared:?}"
     );
 }
+
+#[test]
+fn a_requirements_file_names_packages_not_urls() {
+    use rust_anything::lang::Lang;
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/python-reqs");
+    let declared = rust_anything::whole_app::declared(&root, Lang::Python);
+    for name in ["requests", "flask", "myapp", "six"] {
+        assert!(declared.contains(name), "{name}: {declared:?}");
+    }
+    for bogus in ["git", ".", "foo"] {
+        assert!(
+            !declared.contains(bogus),
+            "{bogus} is not a package a registry serves: {declared:?}"
+        );
+    }
+}
