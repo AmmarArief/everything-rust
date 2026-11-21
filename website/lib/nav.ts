@@ -28,6 +28,7 @@ export const docsNav: NavGroup[] = [
     title: 'Concepts',
     items: [
       { title: 'The loop', path: '/docs/concepts/the-loop' },
+      { title: 'Only the slow part', path: '/docs/concepts/go' },
       { title: 'Profile and analyze', path: '/docs/concepts/analyze' },
       { title: 'Bridge', path: '/docs/concepts/bridge' },
       { title: 'Record', path: '/docs/concepts/record' },
@@ -35,6 +36,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Diff and known diffs', path: '/docs/concepts/diff' },
       { title: 'Bench', path: '/docs/concepts/bench' },
       { title: 'Shadow', path: '/docs/concepts/shadow' },
+      { title: 'Switch on and off', path: '/docs/concepts/switch' },
       { title: 'Gate', path: '/docs/concepts/gate' },
       { title: 'Coverage', path: '/docs/concepts/coverage' },
       { title: 'Batches and hot paths', path: '/docs/concepts/batches' },

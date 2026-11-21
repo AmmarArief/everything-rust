@@ -86,6 +86,33 @@ Mesuré sur un Apple M4, deux exécutions chacun, chaque sortie comparée avant 
 ([détails](real-world.md)). Appeler Rust une fois par petite fonction est généralement *plus lent*
 qu'un JIT ; rust-anything identifie la boucle qui vaut la peine d'être déplacée, et la déplace.
 
+## Seulement la partie lente
+
+Inutile de porter toute l'application. Pointez `go` vers une commande trop lente, et il porte la seule
+fonction qui prend le temps :
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Il profile l'exécution, choisit la fonction la plus externe qui vaut la peine d'être déplacée (la
+boucle, pas le petit appel à l'intérieur, par lots quand le profil l'indique), l'enregistre sur des
+entrées générées ainsi que sur les appels que fait votre exécution, et confie `src/port.rs` à votre
+agent (`claude`, `codex` ou toute commande qui lit un prompt sur stdin ; sans `--agent`, il écrit
+`TASK.md` pour vous et s'arrête). Il n'active la fonction que lorsque chaque cas enregistré correspond
+et que `gate` passe. Ensuite :
+
+```sh
+rust-anything report rust/dedupe-rs     # REPORT.md et card.svg pour la pull request
+rust-anything disable rust/dedupe-rs    # retour à l'original, octet par octet
+```
+
+La ligne [Fuse.js](real-world.md#fusejs) ci-dessus suit ce schéma : le score de Fuse pour une chaîne,
+traité par lots sur la liste, déplacé en Rust tandis que les clés d'objet, la recherche étendue et le
+reste restent en JavaScript, pour passer de 91.2 ms à 2.8 ms par requête sur 50,000 chaînes. Essayez
+`go` sur [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy), un dedupe Python de 20 lignes. Toutes les
+façons d'activer et de désactiver un portage : [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server en tant que serveur Node et en tant que binaire Rust unique : mémoire au repos 74 MB et 3.5 MB, du démarrage à la première réponse 79 à 85 ms et 8 à 10 ms, et 514 cas HTTP enregistrés sur 514 correspondent." width="820">
   <br>

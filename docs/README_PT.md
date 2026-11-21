@@ -74,6 +74,23 @@ Feito na Turquia 🇹🇷 por <a href="https://github.com/erkamyaman">erKam Yama
 
 Prettier: 15,861 de 17,224 execuções registadas são formatadas totalmente em Rust, em 10 linguagens (JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), e todas as 17,224 coincidem com o Prettier byte a byte, já que tudo o que ainda não foi migrado recorre ao Prettier. json-server: 514/514 casos HTTP registados coincidem num binário em Rust puro. Medições num Apple M4, duas execuções cada, com cada saída comparada antes da medição de tempo ([detalhes](real-world.md)). Chamar Rust uma vez por cada pequena função costuma ser *mais lento* do que utilizar um JIT; o rust-anything identifica o ciclo que realmente vale a pena migrar e transfere-o.
 
+## Apenas a parte lenta
+
+Não precisa de migrar a aplicação inteira. Aponte o `go` para um comando demasiado lento, e ele migra apenas a função que consome o tempo:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Analisa o perfil da execução, escolhe a função mais exterior que vale a pena mover (o ciclo, não a pequena chamada dentro dele, em lote quando o perfil o indica), regista-a sobre entradas geradas e sobre as chamadas que a sua execução faz, e entrega `src/port.rs` ao seu agente (`claude`, `codex` ou qualquer comando que leia um prompt do stdin; sem `--agent`, escreve `TASK.md` para si e termina aí). Só ativa a função quando todos os casos registados coincidem e o `gate` passa. Depois:
+
+```sh
+rust-anything report rust/dedupe-rs     # REPORT.md e card.svg para o pull request
+rust-anything disable rust/dedupe-rs    # de volta ao original, byte a byte
+```
+
+A linha [Fuse.js](real-world.md#fusejs) acima tem esta forma: a pontuação do Fuse para uma string, processada em lote sobre a lista, foi movida para Rust, enquanto as chaves de objeto, a pesquisa estendida e o resto ficam em JavaScript, passando de 91.2 ms para 2.8 ms por consulta em 50,000 strings. Experimente o `go` em [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy), uma deduplicação em Python com 20 linhas. Todas as formas de ativar e desativar uma migração: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server como servidor Node e como um único binário Rust: memória em repouso 74 MB e 3.5 MB, do arranque à primeira resposta 79 a 85 ms e 8 a 10 ms, e 514 de 514 casos HTTP registados coincidem." width="820">
   <br>

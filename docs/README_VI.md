@@ -74,6 +74,23 @@ Làm tại Thổ Nhĩ Kỳ 🇹🇷 bởi <a href="https://github.com/erkamyaman
 
 Prettier: 15,861 trong 17,224 lần chạy đã ghi được định dạng hoàn toàn bằng Rust trên 10 ngôn ngữ (JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less), và cả 17,224 lần đều khớp với Prettier đến từng byte, vì phần nào chưa port sẽ fallback về Prettier. json-server: 514/514 ca HTTP đã ghi khớp trên một binary Rust thuần. Đo trên Apple M4, mỗi phép đo chạy hai lần, mọi đầu ra đều được so sánh trước khi đo thời gian ([chi tiết](real-world.md)). Gọi Rust riêng cho từng hàm nhỏ thường còn *chậm hơn* JIT; rust-anything tìm vòng lặp đáng chuyển rồi đưa vòng lặp đó sang Rust.
 
+## Chỉ phần chạy chậm
+
+Bạn không cần port cả ứng dụng. Hãy trỏ `go` vào một lệnh chạy quá chậm, công cụ sẽ port đúng một hàm đang tốn thời gian:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Công cụ profile lần chạy, chọn hàm ngoài cùng đáng chuyển (vòng lặp, không phải lời gọi nhỏ bên trong nó, và gom thành batch nếu profile cho thấy nên làm vậy), ghi lại hàm đó trên input tự tạo cùng các lời gọi mà lần chạy của bạn thực hiện, rồi giao `src/port.rs` cho agent của bạn (`claude`, `codex` hoặc bất kỳ lệnh nào đọc prompt từ stdin; nếu không có `--agent`, công cụ viết `TASK.md` cho bạn rồi dừng). Công cụ chỉ bật hàm đó khi mọi ca đã ghi đều khớp và `gate` đạt. Sau đó:
+
+```sh
+rust-anything report rust/dedupe-rs     # REPORT.md và card.svg cho pull request
+rust-anything disable rust/dedupe-rs    # trở về bản gốc, giống đến từng byte
+```
+
+Hàng [Fuse.js](real-world.md#fusejs) trong bảng trên chính là dạng này: hàm tính điểm của Fuse cho một chuỗi, gom thành batch trên cả danh sách, được chuyển sang Rust, còn khóa của object, tìm kiếm mở rộng và phần còn lại vẫn ở JavaScript, nhờ đó mỗi truy vấn trên 50,000 chuỗi giảm từ 91.2 ms xuống 2.8 ms. Hãy thử `go` trên [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy), một chương trình dedupe Python 20 dòng. Mọi cách bật và tắt một bản port: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server dưới dạng Node server và dưới dạng một binary Rust: bộ nhớ khi rảnh 74 MB và 3.5 MB, từ khởi động đến phản hồi đầu tiên 79 đến 85 ms và 8 đến 10 ms, 514 trên 514 ca HTTP đã ghi đều khớp." width="820">
   <br>

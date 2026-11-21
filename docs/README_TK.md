@@ -86,6 +86,34 @@ her biri iki gezek işledilip ölçüldi; wagt ölçülmezden öň her çykyş d
 ([jikme-jiklikler](real-world.md)). Her kiçijik funksiýa üçin Rust-y aýratyn çagyrmak adatça JIT-den
 *haýalrak*; rust-anything göçürmäge degýän aýlawy tapýar we şony göçürýär.
 
+## Diňe haýal bölegi
+
+Tutuş programmany geçirmegiňiz hökman däl. `go`-ny gaty haýal işleýän buýruga gönükdiriň, ol wagty
+alýan ýeke-täk funksiýany geçirer:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Ol işletmäni profilleýär, göçürmäge degýän iň daşky funksiýany saýlaýar (içindäki kiçi çagyryşy
+däl-de, aýlawy; profil şeýle diýse, batch görnüşinde), ony döredilen girişlerde we siziň işletmäňiziň
+edýän çagyryşlarynda ýazga alýar we `src/port.rs` faýlyny agentiňize berýär (`claude`, `codex` ýa-da
+stdin-den prompt okaýan islendik buýruk; `--agent` bolmasa, siziň üçin `TASK.md` ýazýar we
+saklanýar). Funksiýany diňe ýazga alnan her ýagdaý gabat gelende we `gate` geçende işe goýberýär.
+Soňra:
+
+```sh
+rust-anything report rust/dedupe-rs     # pull request üçin REPORT.md we card.svg
+rust-anything disable rust/dedupe-rs    # baýtma-baýt asyl nusga gaýdyş
+```
+
+Ýokardaky [Fuse.js](real-world.md#fusejs) hatary hem şu görnüşde: Fuse-yň bir setir üçin baly tutuş
+sanaw boýunça batch görnüşinde Rust-a göçürildi, obýekt açarlary, giňeldilen gözleg we galan zatlar
+bolsa JavaScript-de galdy. Netijede 50,000 setirde bir soraga 91.2 ms-den 2.8 ms-e çenli. `go`-ny
+20 setirlik Python dedupe bolan [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy) üstünde
+synap görüň. Porty açmagyň we ýapmagyň ähli ýollary:
+[Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="Node serweri hökmünde we ýeke-täk Rust binar faýly hökmünde json-server: boş durandaky ýat 74 MB we 3.5 MB, başlangyçdan ilkinji jogaba çenli 79 bilen 85 ms aralygy we 8 bilen 10 ms aralygy, ýazga alnan 514 HTTP ýagdaýynyň 514-si gabat gelýär." width="820">
   <br>

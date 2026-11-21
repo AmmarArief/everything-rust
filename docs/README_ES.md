@@ -90,6 +90,32 @@ la seguridad, no la velocidad: [libavutil de ffmpeg](real-world.md#ffmpeg) porta
 las 226.447 llamadas registradas y corre a la velocidad de C (18 de 42 benchmarks iguales, 8 más
 rápidos y 16 más lentos entre un 3 y un 40 %).
 
+## Solo la parte lenta
+
+No tienes que portar toda la aplicación. Apunta `go` a un comando demasiado lento, y porta la única
+función que se lleva el tiempo:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Perfila la ejecución, elige la función más externa que merece la pena mover (el bucle, no la pequeña
+llamada de dentro, por lotes donde el perfil lo indica), la registra con entradas generadas más las
+llamadas que hace tu ejecución, y entrega `src/port.rs` a tu agente (`claude`, `codex` o cualquier
+comando que lea un prompt por stdin; sin `--agent` escribe `TASK.md` por ti y se detiene). Solo activa
+la función cuando cada caso registrado coincide y `gate` pasa. Después:
+
+```sh
+rust-anything report rust/dedupe-rs     # REPORT.md y card.svg para el pull request
+rust-anything disable rust/dedupe-rs    # de vuelta al original, byte a byte
+```
+
+La fila de [Fuse.js](real-world.md#fusejs) de arriba tiene esta forma: la puntuación de Fuse para una
+cadena, por lotes sobre la lista, se movió a Rust mientras las claves de objeto, la búsqueda extendida
+y el resto siguen en JavaScript, de 91,2 ms a 2,8 ms por consulta sobre 50.000 cadenas. Prueba `go` en
+[`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy), un dedupe de Python de 20 líneas. Todas las formas
+de activar y desactivar un porte: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server como servidor Node y como un único binario Rust: memoria en reposo 74 MB y 3,5 MB, del arranque a la primera respuesta 79 a 85 ms y 8 a 10 ms, y 514 de 514 casos HTTP registrados coinciden." width="820">
   <br>

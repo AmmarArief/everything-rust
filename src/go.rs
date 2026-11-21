@@ -39,6 +39,9 @@ pub struct Pick {
     /// `function:param` passed to `bridge --batch`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub batch: Option<String>,
+    /// The caller that spends the most time in it: `name` and `file:line`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub caller: Option<(String, String)>,
     pub why: String,
 }
 
@@ -55,6 +58,9 @@ pub enum Stage {
     On,
     /// Everything passed; this language is switched with the shadow module instead.
     Passed,
+    /// Everything matches, but `bench` times the port slower than the original as its
+    /// callers call it, so it stays off.
+    Slower,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,6 +73,9 @@ pub struct Outcome {
     pub cases: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub matched: Option<usize>,
+    /// `bench`'s geometric-mean speedup, call included, once every check passed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speedup: Option<f64>,
     pub failed_checks: Vec<String>,
     pub steps: Vec<String>,
     pub next: String,
@@ -114,6 +123,10 @@ pub fn pick(report: &Report, function: Option<&str>) -> Result<Pick> {
         line: hot.line,
         total_pct: hot.total_pct,
         batch: hot.batch.clone(),
+        caller: hot
+            .callers
+            .first()
+            .map(|c| (c.name.clone(), format!("{}:{}", c.file, c.line))),
         why,
     })
 }
@@ -144,9 +157,13 @@ fn others(root: &Path, lang: Lang, file: &str, function: &str) -> Result<Vec<Str
 
 pub fn task(crate_dir: &Path, pick: &Pick, command: &[String]) -> String {
     let batch = pick.batch.as_ref().map_or_else(String::new, |spec| {
+        let function = spec.split(':').next().unwrap_or(&pick.function);
         format!(
-            "\nThe crate also has a batch class for `{spec}` (see `src/port.rs`): fill it in so a \
-             caller can hand over every item at once.\n"
+            "\nThe crate also has a batch class for `{spec}`, which runs `{function}` over many \
+             items kept in Rust. A `{}Index` struct in `src/port.rs` can prepare the items once \
+             (see the Hot paths section of rust-anything's docs/how-it-works.md); `rust-anything go` runs `rust-anything \
+             refresh` before building, so the batch class uses it.\n",
+            crate::codegen_batch::pascal(function)
         )
     });
     format!(
@@ -322,6 +339,7 @@ pub fn go(opts: &Options) -> Result<Outcome> {
         task: task_path.clone(),
         cases,
         matched,
+        speedup: None,
         failed_checks,
         steps,
         next,
@@ -407,7 +425,35 @@ pub fn go(opts: &Options) -> Result<Outcome> {
         need_port = true;
     };
 
-    if crate::enable::is_supported(&manifest) {
+    let rows = crate::harness::bench(&crate::harness::BenchOptions {
+        crate_dir: &crate_dir,
+        min_ms: 200,
+        resolve_from: None,
+        node_args: &[],
+    })?;
+    let speedup = crate::harness::verdict(&rows, manifest.language).speedup;
+    say(
+        &mut steps,
+        format!(
+            "bench: {} as its callers call it, call included",
+            times(speedup)
+        ),
+    );
+    if speedup < 1.0 {
+        let next = slower_advice(&pick, speedup);
+        let mut out = outcome(
+            Stage::Slower,
+            steps,
+            Some(cases),
+            Some(matched),
+            Vec::new(),
+            next,
+        );
+        out.speedup = Some(speedup);
+        return Ok(out);
+    }
+
+    let mut out = if crate::enable::is_supported(&manifest) {
         let on = crate::enable::enable(&crate_dir)?;
         say(
             &mut steps,
@@ -427,7 +473,7 @@ pub fn go(opts: &Options) -> Result<Outcome> {
                 crate_dir.display()
             ),
         );
-        Ok(outcome(
+        outcome(
             Stage::On,
             steps,
             Some(cases),
@@ -437,9 +483,9 @@ pub fn go(opts: &Options) -> Result<Outcome> {
                 "Measure it: `rust-anything report {}` writes REPORT.md and card.svg.",
                 crate_dir.display()
             ),
-        ))
+        )
     } else {
-        Ok(outcome(
+        outcome(
             Stage::Passed,
             steps,
             Some(cases),
@@ -450,12 +496,55 @@ pub fn go(opts: &Options) -> Result<Outcome> {
                  (`rust-anything shadow {}`), then `rust-anything report` it.",
                 crate_dir.display()
             ),
-        ))
+        )
+    };
+    out.speedup = Some(speedup);
+    Ok(out)
+}
+
+fn times(x: f64) -> String {
+    if x >= 1.0 {
+        format!("{x:.1}x faster")
+    } else {
+        format!("{:.1}x slower", 1.0 / x.max(1e-9))
+    }
+}
+
+/// What to do when every case matches but the port, called as its callers call it, loses.
+pub fn slower_advice(pick: &Pick, speedup: f64) -> String {
+    let caller = pick.caller.as_ref().map_or_else(
+        || "its caller".to_string(),
+        |(n, at)| format!("`{n}` ({at})"),
+    );
+    let lost = times(speedup);
+    match &pick.batch {
+        Some(spec) => {
+            let function = spec.split(':').next().unwrap_or(&pick.function);
+            format!(
+                "Every case matches, but called once per item the port is {lost} than the \
+                 original, so it stays off. The speed is in the batch: in {caller}, build \
+                 `{}Batch` once over the items and call it per query (the crate's type \
+                 declarations list its methods), or port {caller} with it. Then `rust-anything enable` and \
+                 `rust-anything report`.",
+                crate::codegen_batch::pascal(function)
+            )
+        }
+        None => format!(
+            "Every case matches, but the port is {lost} than the original as {caller} calls it: \
+             each call into Rust costs more than its work. It stays off. Port {caller} with it \
+             (`rust-anything go --function <name>`), or keep it in the original."
+        ),
     }
 }
 
 /// Build, diff and gate: the cases, how many match, and what still fails.
 fn check(crate_dir: &Path, steps: &mut Vec<String>) -> Result<(usize, usize, Vec<String>)> {
+    if !Manifest::load(crate_dir)?.batches.is_empty()
+        && let Err(e) = crate::bridge::refresh(crate_dir)
+    {
+        say(steps, "refresh failed".into());
+        return Ok((0, 0, vec![format!("`rust-anything refresh` fails:\n{e:#}")]));
+    }
     if let Err(e) = crate::harness::build(crate_dir) {
         say(steps, "the build failed".into());
         return Ok((0, 0, vec![format!("The build fails:\n{e:#}")]));
@@ -622,6 +711,28 @@ mod tests {
             ("my-agent".as_ref(), vec!["--fast".to_string()])
         );
         assert!(agent_command("  ").is_err());
+    }
+
+    #[test]
+    fn a_slower_port_stays_off_and_says_where_the_speed_is() {
+        let r = report(vec![hot(
+            "score",
+            85.0,
+            true,
+            &["q", "text"],
+            Some("score:text"),
+        )]);
+        let batched = slower_advice(&pick(&r, None).unwrap(), 0.13);
+        assert!(batched.contains("7.7x slower"), "{batched}");
+        assert!(batched.contains("`ScoreBatch`"), "{batched}");
+        assert!(batched.contains("`main` (app.py:9)"), "{batched}");
+        let r = report(vec![hot("dedupe", 85.0, true, &["names"], None)]);
+        let plain = slower_advice(&pick(&r, None).unwrap(), 0.5);
+        assert!(
+            plain.contains("2.0x slower") && plain.contains("--function"),
+            "{plain}"
+        );
+        assert_eq!(times(31.42), "31.4x faster");
     }
 
     #[test]

@@ -994,7 +994,24 @@ fn batch_param(root: &Path, caller: &Key, callee: &str, params: &[String]) -> Op
                     !list.is_empty() && index_vars.iter().any(|v| v == i.trim())
                 })
     };
-    let position = args.iter().position(|a| per_item(a))?;
+    // In nested loops the innermost one runs over the items: its variable is declared last.
+    let declared_at = |a: &str| {
+        let a = a.trim();
+        let var = a
+            .strip_suffix(']')
+            .and_then(|a| a.split_once('['))
+            .map_or(a, |(_, i)| i.trim());
+        regex::Regex::new(&format!(r"\b{}\b", regex::escape(var)))
+            .ok()
+            .and_then(|re| re.find(&body).map(|m| m.start()))
+            .unwrap_or(0)
+    };
+    let position = args
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| per_item(a))
+        .max_by_key(|(_, a)| declared_at(a))?
+        .0;
     params.get(position).cloned()
 }
 
@@ -1424,6 +1441,16 @@ mod tests {
         assert_eq!(
             batch_param(&root, &caller("search.py", "best"), "score", &params).as_deref(),
             Some("text")
+        );
+        std::fs::write(
+            root.join("nested.ts"),
+            "function main() {\n  for (const query of queries) {\n    for (const text of items) {\n      if (score(query, text) > 0) hits++\n    }\n  }\n}\n",
+        )
+        .unwrap();
+        assert_eq!(
+            batch_param(&root, &caller("nested.ts", "main"), "score", &params).as_deref(),
+            Some("text"),
+            "the innermost loop runs over the items"
         );
         // `query` is the same for every item: no batch parameter to give.
         assert_eq!(

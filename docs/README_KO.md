@@ -74,6 +74,23 @@
 
 Prettier: 기록된 실행 17,224회 중 15,861회가 10개 언어(JavaScript, TypeScript, JSX, JSON, GraphQL, YAML, Markdown, CSS, SCSS, Less)에서 완전히 Rust로 포맷되며, 아직 포팅되지 않은 부분은 Prettier로 폴백하므로 17,224회 모두 Prettier와 바이트 단위로 일치합니다. json-server: 기록된 HTTP 케이스 514/514개가 순수 Rust 바이너리에서 일치합니다. Apple M4에서 각각 두 번 실행해 측정했으며, 시간을 재기 전에 모든 출력을 비교했습니다([자세히](real-world.md)). 작은 함수 하나를 호출할 때마다 Rust를 부르는 것은 보통 JIT보다 *더 느립니다*. rust-anything은 옮길 가치가 있는 루프를 찾아 그 루프 자체를 옮깁니다.
 
+## 느린 부분만
+
+앱 전체를 포팅할 필요는 없습니다. 너무 느린 명령에 `go`를 지정하면, 시간을 잡아먹는 함수 하나만 포팅합니다:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+실행을 프로파일링해 옮길 가치가 있는 가장 바깥쪽 함수를 고르고(그 안의 작은 호출이 아니라 루프를, 프로파일이 그렇다고 하면 배치로), 생성된 입력과 실행 중에 일어나는 호출로 그 함수를 기록한 뒤, `src/port.rs`를 에이전트에게 넘깁니다(`claude`, `codex` 또는 stdin으로 프롬프트를 읽는 아무 명령; `--agent`가 없으면 `TASK.md`를 작성하고 멈춥니다). 기록된 모든 케이스가 일치하고 `gate`를 통과할 때만 함수를 켭니다. 그다음:
+
+```sh
+rust-anything report rust/dedupe-rs     # pull request용 REPORT.md와 card.svg
+rust-anything disable rust/dedupe-rs    # 원본으로 되돌리기, 바이트 단위로 동일
+```
+
+위의 [Fuse.js](real-world.md#fusejs) 행이 바로 이 형태입니다. 문자열 하나에 대한 Fuse의 점수 계산을 목록 전체에 대해 배치로 Rust로 옮기고, 객체 키, 확장 검색 등 나머지는 JavaScript에 그대로 두어, 문자열 50,000개에서 쿼리당 91.2 ms가 2.8 ms로 줄었습니다. 20줄짜리 Python 중복 제거 코드인 [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy)에서 `go`를 실행해 보세요. 포팅을 켜고 끄는 모든 방법: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="Node 서버로서의 json-server와 단일 Rust 바이너리로서의 json-server: 유휴 시 메모리 74 MB와 3.5 MB, 시작부터 첫 응답까지 79~85 ms와 8~10 ms, 기록된 HTTP 케이스 514개 중 514개 일치." width="820">
   <br>

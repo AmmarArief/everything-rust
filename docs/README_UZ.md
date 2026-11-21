@@ -86,6 +86,34 @@ Apple M4 da, har biri ikki marta ishga tushirilib o'lchangan; vaqt o'lchanishida
 natija solishtiriladi ([batafsil](real-world.md)). Har bir kichik funksiya uchun Rust'ni alohida
 chaqirish odatda JIT'dan *sekinroq*; rust-anything ko'chirishga arziydigan siklni topadi va uni ko'chiradi.
 
+## Faqat sekin qism
+
+Butun ilovani port qilishingiz shart emas. `go`'ni juda sekin ishlaydigan buyruqqa yo'naltiring, u
+vaqtni oladigan o'sha bitta funksiyani port qiladi:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+U ishga tushirishning profilini oladi, ko'chirishga arziydigan eng tashqi funksiyani tanlaydi (ichidagi
+kichik chaqiruvni emas, siklni; profil shuni ko'rsatsa, batch qilib), uni generatsiya qilingan kirish
+ma'lumotlari hamda ishga tushirishingiz amalga oshiradigan chaqiruvlar ustida yozib oladi va `src/port.rs`'ni
+agentingizga topshiradi (`claude`, `codex` yoki prompt'ni stdin'dan o'qiydigan har qanday buyruq; `--agent`
+bo'lmasa, u siz uchun `TASK.md` yozadi va to'xtaydi). Funksiyani faqat har bir yozib olingan holat mos
+kelganda va `gate` o'tganda yoqadi. So'ng:
+
+```sh
+rust-anything report rust/dedupe-rs     # pull request uchun REPORT.md va card.svg
+rust-anything disable rust/dedupe-rs    # asl nusxaga qaytish, baytma-bayt
+```
+
+Yuqoridagi [Fuse.js](real-world.md#fusejs) qatori aynan shu ko'rinishda: Fuse'ning bitta string uchun
+balli butun ro'yxat bo'ylab batch qilinib Rust'ga ko'chirildi, obyekt kalitlari, kengaytirilgan qidiruv va
+qolgan hammasi esa JavaScript'da qoldi; natijada 50,000 string ustida har so'rovga 91.2 ms o'rniga 2.8 ms.
+`go`'ni 20 qatorli Python dedupe bo'lgan [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy) ustida
+sinab ko'ring. Portni yoqish va o'chirishning barcha usullari:
+[Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server Node server sifatida va bitta Rust binary'si sifatida: bo'sh turgandagi xotira 74 MB va 3.5 MB, ishga tushishdan birinchi javobgacha 79 dan 85 ms gacha va 8 dan 10 ms gacha, yozib olingan 514 ta HTTP holatdan 514 tasi mos keladi." width="820">
   <br>

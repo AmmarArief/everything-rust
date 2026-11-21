@@ -1116,7 +1116,7 @@ fn run() -> Result<ExitCode> {
             use rust_anything::go::Stage;
             return Ok(match outcome.stage {
                 Stage::On | Stage::Passed | Stage::WaitingForPort => ExitCode::SUCCESS,
-                Stage::Mismatch | Stage::GateFailed => ExitCode::FAILURE,
+                Stage::Mismatch | Stage::GateFailed | Stage::Slower => ExitCode::FAILURE,
             });
         }
         Cmd::Enable {

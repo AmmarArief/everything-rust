@@ -46,8 +46,10 @@ rust-anything go -- python3 app.py          # build, diff, gate, and enable when
 It picks the outermost exported function of a portable unit that takes arguments, batched where
 `profile` advises it (`--function` picks another), and records generated cases plus the calls the
 workload makes. You are the agent: port only that function, and do not pass `--agent` (that hands
-the port to another agent process). `go` switches the unit on only when every case matches and gate
-passes; report its stage and next step to the user. `rust-anything report <crate>` then writes
+the port to another agent process). `go` switches the unit on only when every case matches, gate
+passes and `bench` shows it is not slower as its callers call it; a `slower` stage names the
+batch class to call from the loop or the caller to port with it. Report its stage and next step
+to the user. `rust-anything report <crate>` then writes
 `report/REPORT.md` and `report/card.svg` with measured numbers for the pull request.
 
 ## 0. Profile: find what is worth moving

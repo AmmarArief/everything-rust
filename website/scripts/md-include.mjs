@@ -18,6 +18,8 @@ const LINK_MAP = {
   'docs/whole-apps.md#servers': '/docs/whole-apps/servers',
   'docs/whole-apps.md#libraries': '/docs/whole-apps/libraries',
   'docs/how-it-works.md#hot-paths-keep-the-data-in-rust': '/docs/concepts/batches',
+  'docs/how-it-works.md#switch-a-port-on-and-off': '/docs/concepts/switch',
+  'docs/how-it-works.md#one-build-cache': '/docs/concepts/switch',
   'docs/how-it-works.md#what-it-cant-catch': '/docs/concepts/limits',
   'docs/how-it-works.md#what-bridge-decides': '/docs/concepts/bridge',
   'docs/how-it-works.md#what-analyze-looks-at': '/docs/concepts/analyze',

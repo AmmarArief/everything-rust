@@ -86,6 +86,33 @@ Gemessen auf einem Apple M4, jeweils zwei Läufe, jede Ausgabe vor der Zeitmessu
 ([Details](real-world.md)). Rust für jede kleine Funktion einzeln aufzurufen ist meist *langsamer*
 als ein JIT; rust-anything findet die Schleife, deren Auslagerung sich lohnt, und verschiebt sie.
 
+## Nur der langsame Teil
+
+Du musst nicht die ganze App portieren. Richte `go` auf einen Befehl, der zu langsam ist, und es
+portiert die eine Funktion, die die Zeit kostet:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+Es profiliert den Lauf, wählt die äußerste Funktion, deren Auslagerung sich lohnt (die Schleife, nicht
+den kleinen Aufruf darin, als Batch, wo das Profil es nahelegt), zeichnet sie mit generierten Eingaben
+und den Aufrufen deines Laufs auf und übergibt `src/port.rs` an deinen Agenten (`claude`, `codex` oder
+einen beliebigen Befehl, der einen Prompt von stdin liest; ohne `--agent` schreibt es `TASK.md` für
+dich und hält an). Es schaltet die Funktion erst ein, wenn jeder aufgezeichnete Fall übereinstimmt und
+`gate` besteht. Danach:
+
+```sh
+rust-anything report rust/dedupe-rs     # REPORT.md und card.svg für den Pull Request
+rust-anything disable rust/dedupe-rs    # zurück zum Original, Byte für Byte
+```
+
+Die [Fuse.js](real-world.md#fusejs)-Zeile oben hat genau diese Form: Fuses Score für einen String, als
+Batch über die Liste, wurde nach Rust verschoben, während Objektschlüssel, erweiterte Suche und der Rest
+in JavaScript bleiben, von 91.2 ms auf 2.8 ms pro Anfrage über 50,000 Strings. Probiere `go` an
+[`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy) aus, einem 20-zeiligen Python-Dedupe. Alle Wege,
+eine Portierung ein- und auszuschalten: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off).
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server als Node-Server und als eine einzige Rust-Binärdatei: Speicher im Leerlauf 74 MB und 3.5 MB, vom Start bis zur ersten Antwort 79 bis 85 ms und 8 bis 10 ms, und 514 von 514 aufgezeichneten HTTP-Fällen stimmen überein." width="820">
   <br>

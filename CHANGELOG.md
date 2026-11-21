@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- `go` runs `bench` after gate and switches a unit on only when it is not slower as its callers
+  call it; otherwise it stops at `slower` with the measured factor and where the speed is (the
+  batch class to call from the loop, or the caller to port with it). A wasm port called once per
+  item from a JS loop was 7.6x slower than the JIT, and `go` had switched it on. `go` also runs
+  `refresh` before building a crate with batches, so a `<Name>Index` the agent writes is used.
+  Both found by running `go --agent claude` on a TS fixture (`tests/fixtures/go-search-ts`).
+- wasm builds write `pkg/package.json` with `"type": "commonjs"`: inside a `"type": "module"`
+  project Node loaded wasm-bindgen's CommonJS output as an ES module and `diff` failed.
+- `profile` batches over the innermost loop: with nested loops it named the outer loop's
+  variable (`--batch score:query`) instead of the one that runs over the items.
+- README: "Only the slow part" in all 20 translations. Website: "Only the slow part" and
+  "Switch on and off" pages (English).
+
 - `go`: the hot-path loop in one command. `rust-anything go --agent claude -- python3 app.py`
   profiles the workload, picks the outermost exported function of a portable unit that takes
   arguments (bridged with `--batch` where `profile` advises it; `--function` picks another),
@@ -30,8 +43,6 @@
 - `profile` reports `portable`, `params` and the `batch` spec per hot function, and its workload's
   stdout goes to stderr, so the MCP `profile` tool no longer writes the workload's output into
   the protocol stream.
-- README: "Only the slow part" near the top (English and Turkish; the other translations still
-  need it).
 
 - Python: `__all__` was ignored when an earlier top-level statement held no assignment (a
   docstring or an import, as in most modules), so `analyze`, `bridge`, library ports and

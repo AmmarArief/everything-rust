@@ -74,6 +74,23 @@
 
 Prettier：在 17,224 次录制运行中，有 15,861 次完全由 Rust 完成格式化，覆盖 10 种语言（JavaScript、TypeScript、JSX、JSON、GraphQL、YAML、Markdown、CSS、SCSS、Less），并且全部 17,224 次都与 Prettier 逐字节一致，因为尚未移植的部分会回退到 Prettier。json-server：514/514 条录制的 HTTP 用例在纯 Rust 二进制文件上全部一致。以上数据在 Apple M4 上测得，每项运行两次，计时前先比对每一份输出（[详情](real-world.md)）。逐个小函数调用 Rust 通常比 JIT 更*慢*；rust-anything 会找出真正值得迁移的循环，再把整个循环搬过去。
 
+## 只迁移慢的部分
+
+你不必移植整个应用。把 `go` 指向一条太慢的命令，它会移植真正耗时的那一个函数：
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+它会对这次运行做性能剖析，挑出值得迁移的最外层函数（是循环，而不是循环里的小调用；剖析结果显示需要时还会批量处理），用生成的输入以及你这次运行实际发出的调用来录制它，然后把 `src/port.rs` 交给你的智能体（`claude`、`codex`，或任何从 stdin 读取提示词的命令；不加 `--agent` 时，它会为你写好 `TASK.md` 后停止）。只有每一条录制用例都一致且 `gate` 通过，它才会启用这个函数。然后：
+
+```sh
+rust-anything report rust/dedupe-rs     # 用于 pull request 的 REPORT.md 和 card.svg
+rust-anything disable rust/dedupe-rs    # 恢复原实现，逐字节一致
+```
+
+上表中的 [Fuse.js](real-world.md#fusejs) 一行就是这种形态：Fuse 对单个字符串的评分被批量应用到整个列表并迁移到 Rust，而对象键、扩展搜索及其余部分仍留在 JavaScript 中，在 50,000 个字符串上每次查询从 91.2 ms 降到 2.8 ms。可以在 [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy)（一个 20 行的 Python 去重程序）上试试 `go`。开启和关闭移植的所有方式：[Switch a port on and off](how-it-works.md#switch-a-port-on-and-off)。
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server 作为 Node 服务端与作为单个 Rust 二进制文件对比：空闲内存 74 MB 与 3.5 MB，从启动到首次响应 79 至 85 ms 与 8 至 10 ms，514 条录制的 HTTP 用例全部一致。" width="820">
   <br>

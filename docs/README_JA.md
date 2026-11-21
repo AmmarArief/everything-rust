@@ -74,6 +74,23 @@
 
 Prettier: 17,224 件の記録済み実行のうち 15,861 件が 10 言語（JavaScript、TypeScript、JSX、JSON、GraphQL、YAML、Markdown、CSS、SCSS、Less）にわたって完全に Rust でフォーマットされ、17,224 件すべてが Prettier とバイト単位で一致します。まだ移植されていない部分は Prettier にフォールバックするためです。json-server: 記録した 514/514 件の HTTP ケースが純粋な Rust バイナリ上で一致します。Apple M4 で各 2 回実行して計測し、計測前にすべての出力を比較しています（[詳細](real-world.md)）。小さな関数ごとに毎回 Rust を呼び出すと、通常は JIT より*遅く*なります。rust-anything は移植する価値のあるループを見つけ出し、そのループごと移行します。
 
+## 遅い部分だけ
+
+アプリ全体を移植する必要はありません。遅すぎるコマンドに `go` を向けると、時間を食っている関数を 1 つだけ移植します:
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+実行をプロファイリングし、移行する価値のある最も外側の関数を選びます（その中の小さな呼び出しではなくループを選び、プロファイルが示す場合はバッチ化します）。生成した入力と実行中に行われた呼び出しでその関数を記録し、`src/port.rs` をエージェントに渡します（`claude`、`codex`、または stdin からプロンプトを読む任意のコマンド。`--agent` を指定しない場合は `TASK.md` を書き出して停止します）。記録したすべてのケースが一致し、`gate` に合格した場合にのみ、その関数を有効にします。その後は次のとおりです:
+
+```sh
+rust-anything report rust/dedupe-rs     # プルリクエスト用の REPORT.md と card.svg
+rust-anything disable rust/dedupe-rs    # 元の実装にバイト単位で戻す
+```
+
+上の表の [Fuse.js](real-world.md#fusejs) の行がこの形です。1 つの文字列に対する Fuse のスコア計算をリスト全体でバッチ化して Rust に移し、オブジェクトキー、拡張検索、その他の部分は JavaScript に残したまま、50,000 文字列に対して 1 クエリあたり 91.2 ms から 2.8 ms になりました。20 行の Python 製 dedupe である [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy) で `go` を試してみてください。移植版を有効・無効にするすべての方法: [Switch a port on and off](how-it-works.md#switch-a-port-on-and-off)。
+
 <p align="center">
   <img src="assets/json-server.gif" alt="Node サーバーとしての json-server と単一の Rust バイナリとしての json-server: アイドル時のメモリは 74 MB と 3.5 MB、起動から最初のレスポンスまでは 79〜85 ms と 8〜10 ms、記録した 514 件中 514 件の HTTP ケースが一致します。" width="820">
   <br>

@@ -83,6 +83,30 @@ TypeScript、JSX、JSON、GraphQL、YAML、Markdown、CSS、SCSS、Less），且
 （[詳細資訊](real-world.md)）。每個小函式呼叫一次 Rust 通常比 JIT 更*慢*；rust-anything 會找出
 真正值得搬移的迴圈，並將整個迴圈移過去。
 
+## 只移植慢的部分
+
+你不必移植整個應用程式。把 `go` 指向一個太慢的指令，它會移植真正耗時的那一個函式：
+
+```sh
+rust-anything go --agent claude -- python3 app.py
+```
+
+它會對這次執行進行效能剖析，挑出值得搬移的最外層函式（是迴圈，而不是迴圈裡的小呼叫；剖析結果
+顯示需要時還會批次處理），以自動產生的輸入以及你這次執行實際發出的呼叫來錄製它，然後把
+`src/port.rs` 交給你的代理程式（`claude`、`codex`，或任何從 stdin 讀取提示詞的指令；不加
+`--agent` 時，它會替你寫好 `TASK.md` 後停止）。只有每一筆錄製案例都吻合且 `gate` 通過，它才會
+啟用這個函式。接著：
+
+```sh
+rust-anything report rust/dedupe-rs     # 供 pull request 使用的 REPORT.md 與 card.svg
+rust-anything disable rust/dedupe-rs    # 回到原版程式，逐位元組相同
+```
+
+上表中的 [Fuse.js](real-world.md#fusejs) 那一列就是這種形式：Fuse 對單一字串的評分以批次方式套用到
+整個清單並搬到 Rust，而物件鍵、延伸搜尋與其餘部分仍留在 JavaScript，在 50,000 個字串上每次查詢
+從 91.2 ms 降到 2.8 ms。可以在 [`tests/fixtures/go-fuzzy`](../tests/fixtures/go-fuzzy)（一個 20 行
+的 Python 去重程式）上試試 `go`。開啟與關閉移植的所有方式：[Switch a port on and off](how-it-works.md#switch-a-port-on-and-off)。
+
 <p align="center">
   <img src="assets/json-server.gif" alt="json-server 作為 Node 伺服器與作為單一 Rust 執行檔的對比：閒置記憶體 74 MB 與 3.5 MB，從啟動到第一個回應 79 至 85 ms 與 8 至 10 ms，514 筆錄製的 HTTP 案例全部吻合。" width="820">
   <br>

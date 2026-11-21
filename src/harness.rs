@@ -588,6 +588,10 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
                     .arg(&wasm),
                 "wasm-bindgen",
             )?;
+            std::fs::write(
+                crate_dir.join("pkg").join("package.json"),
+                "{\n  \"type\": \"commonjs\"\n}\n",
+            )?;
             Ok(crate_dir.join("pkg").join(format!("{lib}.js")))
         }
     }
