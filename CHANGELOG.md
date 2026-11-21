@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.0 (2026-11-22)
+
 - `go` runs `bench` after gate and switches a unit on only when it is not slower as its callers
   call it; otherwise it stops at `slower` with the measured factor and where the speed is (the
   batch class to call from the loop, or the caller to port with it). A wasm port called once per
