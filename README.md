@@ -133,6 +133,14 @@ must be on your `PATH`):
 /plugin install rust-anything --marketplace erkamyaman/rust-anything
 ```
 
+In Codex, from the agents marketplace in this repo (`.agents/plugins/marketplace.json`, the same
+plugin under `plugin/`, with the skill and MCP server):
+
+```sh
+codex plugin marketplace add erkamyaman/rust-anything
+codex plugin add rust-anything@rust-anything
+```
+
 `setup` adds the MCP server to each agent it finds and installs the workflow skill where the agent
 reads skills. It keeps your other settings, is safe to run again, and `--remove` undoes it.
 Then ask your agent, for example:
