@@ -19,6 +19,13 @@
   argument is a RegExp, an Error, a `URL`, an `ArrayBuffer`, a boxed primitive or an object with
   `toJSON`: those were captured as `{}`, their own fields or their `toJSON` result, which replay
   passed as a different value. A class instance is still captured as its own fields.
+- `analyze` judges each export with the same functions `bridge` uses. It had its own copy of
+  the rules and put units in `start_here` that `bridge` then refused ("every export ... must
+  stay in TypeScript/JavaScript"). The copy missed three of them: a JS unit's sibling `.d.ts` (a
+  callback declared there), a class method or constructor that takes a function, and a type
+  alias such as `type Pat = RegExp`. Such a unit is now `caution` and left out. Both commands
+  share `bridge::ts_functions` and `bridge::class_reason`, so in Python, Ruby, Java, Kotlin and
+  Go `analyze` now also checks class methods.
 
 ## 3.1.0 (2026-11-22)
 
