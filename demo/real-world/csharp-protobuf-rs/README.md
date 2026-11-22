@@ -24,9 +24,10 @@ Rust port of `src/Google.Protobuf/CodedOutputStream.ComputeSize.cs`, bridged wit
 ## Loop
 
 ```sh
-rust-anything record .   # record what the TS code does
-rust-anything build .    # build the a JSON dispatcher module
+rust-anything record .   # record what the C# code does
+rust-anything build .    # build the shared library
 rust-anything diff .     # run the recorded cases against Rust
-rust-anything shadow .   # run both in the app, log mismatches
 rust-anything gate .     # fmt, clippy, tests, unsafe, API, diff
 ```
+
+C# has no shadow module: once `diff` passes, compile `cs/CsharpProtobufRs.cs` into the project and call the `<namespace>.Rust` classes, with the built library next to the app.

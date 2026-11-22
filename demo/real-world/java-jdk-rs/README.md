@@ -19,8 +19,8 @@ Rust port of `src/main/java/com/example/jdk/`, bridged with a JSON dispatcher. G
 ## Loop
 
 ```sh
-rust-anything record .   # record what the TS code does
-rust-anything build .    # build the a JSON dispatcher module
+rust-anything record .   # record what the Java code does
+rust-anything build .    # build the shared library
 rust-anything diff .     # run the recorded cases against Rust
 rust-anything shadow .   # run both in the app, log mismatches
 rust-anything gate .     # fmt, clippy, tests, unsafe, API, diff
