@@ -568,9 +568,40 @@ pub fn php_to_ts(t: &str) -> String {
         "float" | "double" => "number".into(),
         "bool" | "boolean" | "true" | "false" => "boolean".into(),
         "null" | "void" => "undefined".into(),
-        "array" | "iterable" => "unknown[]".into(),
+        "array" | "iterable" => "unknown[] | Record<string, unknown>".into(),
         _ => "unknown".into(),
     }
+}
+
+fn plain_type(t: &str) -> bool {
+    t.trim()
+        .trim_start_matches('?')
+        .split(['|', '&'])
+        .map(|p| p.trim().trim_matches(['(', ')']).to_ascii_lowercase())
+        .all(|p| {
+            matches!(
+                p.as_str(),
+                "int"
+                    | "float"
+                    | "string"
+                    | "bool"
+                    | "array"
+                    | "mixed"
+                    | "null"
+                    | "true"
+                    | "false"
+                    | "void"
+                    | "never"
+            )
+        })
+}
+
+fn bare_array(t: &str) -> bool {
+    t.trim()
+        .trim_start_matches('?')
+        .split('|')
+        .map(|p| p.trim().to_ascii_lowercase())
+        .all(|p| matches!(p.as_str(), "array" | "iterable" | "null"))
 }
 
 fn split_top(text: &str, sep: char) -> Vec<String> {
@@ -657,16 +688,17 @@ fn function_fn(
             (words.next()? == format!("${p}")).then(|| php_to_ts(t))
         })
     };
+    let doc_return = doc.iter().find_map(|tag| {
+        let t = tag.strip_prefix("@return ")?.split_whitespace().next()?;
+        Some(php_to_ts(t))
+    });
     let returns = node
         .child_by_field_name("return_type")
-        .map(|t| php_to_ts(text(t, source)))
+        .map(|t| text(t, source))
+        .filter(|t| !(bare_array(t) && doc_return.is_some()))
+        .map(php_to_ts)
         .filter(|t| t != "unknown")
-        .or_else(|| {
-            doc.iter().find_map(|tag| {
-                let t = tag.strip_prefix("@return ")?.split_whitespace().next()?;
-                Some(php_to_ts(t))
-            })
-        })
+        .or(doc_return)
         .unwrap_or_else(|| "unknown".into());
     let mut blocker = None;
     if name.starts_with("__") {
@@ -706,10 +738,14 @@ fn function_fn(
             if declared.is_some_and(|t| t.contains("callable") || t.contains("Closure")) {
                 blocker.get_or_insert_with(|| format!("takes a callable `${pname}`"));
             }
+            if let Some(t) = declared.filter(|t| !plain_type(t)) {
+                blocker.get_or_insert_with(|| format!("takes an object `${pname}` (`{t}`)"));
+            }
             let value = p
                 .child_by_field_name("default_value")
                 .map(|v| text(v, source).to_string());
             let mut ts_type = declared
+                .filter(|t| !(bare_array(t) && doc_param(&pname).is_some()))
                 .map(php_to_ts)
                 .filter(|t| t != "unknown")
                 .or_else(|| doc_param(&pname))
@@ -731,12 +767,24 @@ fn function_fn(
             });
         }
     }
+    if let Some(t) = node
+        .child_by_field_name("return_type")
+        .map(|t| text(t, source))
+        .filter(|t| !plain_type(t))
+    {
+        blocker.get_or_insert_with(|| format!("returns an object (`{t}`)"));
+    }
     if let Some(body) = node.child_by_field_name("body") {
         let mut yields = false;
         syntax::walk(body, |n| yields |= n.kind() == "yield_expression");
         if yields {
             blocker.get_or_insert_with(|| "is a generator (`yield`)".into());
         }
+    }
+    if sep == "::" {
+        blocker.get_or_insert_with(|| {
+            "a static method: the PHP bridge takes top-level functions for now".into()
+        });
     }
     let prefix = if receiver.is_empty() {
         String::new()

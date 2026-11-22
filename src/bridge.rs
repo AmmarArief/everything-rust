@@ -1078,25 +1078,19 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
             unit.notes.first().map_or("", String::as_str)
         );
     }
-    if unit.bridge == Bridge::PhpFfi {
-        bail!(
-            "bridging PHP units into Rust comes next (PHP FFI over a C ABI); for now a PHP app can \
-             be analyzed, recorded and replayed (`app record`, `app replay`) and get a Rust front \
-             door (`app front-door`) that hands everything to the original"
-        );
+    if unit.bridge == Bridge::PhpFfi && !opts.batch.is_empty() {
+        bail!("`--batch` is not available for PHP units yet");
     }
-    if unit.bridge == Bridge::DotnetFfi {
-        bail!(
-            "bridging C# units into Rust comes next (P/Invoke over a C ABI); for now a C# app can \
-             be analyzed, recorded and replayed (`app record`, `app replay`) and get a Rust front \
-             door (`app front-door`) that hands everything to the original"
-        );
+    if unit.bridge == Bridge::DotnetFfi && !opts.batch.is_empty() {
+        bail!("`--batch` is not available for C# units yet");
     }
     let kind = opts.kind.unwrap_or(match unit.bridge {
         Bridge::WasmBindgen => Kind::Wasm,
         Bridge::Pyo3 => Kind::Pyo3,
         Bridge::CAbi => Kind::CAbi,
-        Bridge::Cgo | Bridge::Fiddle | Bridge::Jni => Kind::Ffi,
+        Bridge::Cgo | Bridge::Fiddle | Bridge::Jni | Bridge::PhpFfi | Bridge::DotnetFfi => {
+            Kind::Ffi
+        }
         _ => Kind::Napi,
     });
 
@@ -1105,6 +1099,9 @@ pub fn bridge(opts: &Options) -> Result<Outcome> {
     let mut js_only = Vec::new();
     if lang == crate::lang::Lang::C {
         crate::lang::c::use_typedefs(&root);
+    }
+    if lang == crate::lang::Lang::Csharp {
+        crate::lang::csharp::use_shapes(&root);
     }
     for file in &unit.files {
         if file.ends_with(".vue") || file.ends_with(".svelte") || file.ends_with(".astro") {
@@ -1467,6 +1464,18 @@ fn ffi_bindings(m: &Manifest, api: &codegen::PortApi) -> Result<Vec<(String, Str
                 crate::codegen_ruby::wrapper(m, api).map_err(anyhow::Error::msg)?,
             ));
         }
+        crate::lang::Lang::Php => {
+            files.push((
+                crate::codegen_php::wrapper_path(m),
+                crate::codegen_php::wrapper(m),
+            ));
+        }
+        crate::lang::Lang::Csharp => {
+            files.push((
+                crate::codegen_csharp::wrapper_path(m),
+                crate::codegen_csharp::wrapper(m),
+            ));
+        }
         crate::lang::Lang::Java | crate::lang::Lang::Kotlin => {
             files.extend(crate::codegen_java::wrappers(m, api));
             files.extend(
@@ -1515,7 +1524,7 @@ fn bridge_ffi(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<
         ("src/port.rs".into(), port),
         (
             ".gitignore".into(),
-            "target/\n.rust-anything/\nruby/*.so\nruby/*.bundle\n".into(),
+            "target/\n.rust-anything/\nruby/*.so\nruby/*.bundle\nphp/*.so\nphp/*.dylib\nphp/*.dll\ncs/*.so\ncs/*.dylib\ncs/*.dll\n".into(),
         ),
         ("README.md".into(), readme(manifest)),
         (
@@ -1557,7 +1566,7 @@ fn bridge_c(manifest: &Manifest, crate_dir: &Path, kept: &[JsOnly]) -> Result<Ou
         ("src/port.rs".into(), crate::codegen_c::port_rs(manifest)),
         (
             ".gitignore".into(),
-            "target/\n.rust-anything/\nruby/*.so\nruby/*.bundle\n".into(),
+            "target/\n.rust-anything/\nruby/*.so\nruby/*.bundle\nphp/*.so\nphp/*.dylib\nphp/*.dll\n".into(),
         ),
         ("README.md".into(), readme(manifest)),
         (

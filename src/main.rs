@@ -266,9 +266,12 @@ enum Cmd {
     /// record it, hand the port to an agent, then build, diff and gate it, and switch it on only
     /// when everything matches. `rust-anything go --agent claude -- python3 app.py`
     Go {
+        /// Repository root, as `profile` takes it.
+        #[arg(value_name = "ROOT", conflicts_with = "root")]
+        path: Option<PathBuf>,
         /// Repository root.
-        #[arg(long, default_value = ".")]
-        root: PathBuf,
+        #[arg(long)]
+        root: Option<PathBuf>,
         /// `claude`, `codex`, or any command that reads a prompt on stdin. Without it, `go` writes
         /// the crate's TASK.md and stops; run it again once `src/port.rs` is ported.
         #[arg(long)]
@@ -1088,6 +1091,7 @@ fn run() -> Result<ExitCode> {
             }
         }
         Cmd::Go {
+            path,
             root,
             agent,
             function,
@@ -1097,6 +1101,7 @@ fn run() -> Result<ExitCode> {
             json,
             command,
         } => {
+            let root = path.or(root).unwrap_or_else(|| PathBuf::from("."));
             let outcome = rust_anything::go::go(&rust_anything::go::Options {
                 root: &root,
                 command: &command,

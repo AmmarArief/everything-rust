@@ -1,6 +1,6 @@
 # Status
 
-What works, and how each part was last checked. Updated 2026-11-21.
+What works, and how each part was last checked. Updated 2026-11-22.
 
 **Verified**: run end to end (bridge, record, port, diff, gate) on real code someone else wrote,
 named below. **Tested**: covered by this repository's tests on fixtures written for them, not yet
@@ -19,8 +19,8 @@ front door); units cannot be bridged yet.
 | C | Verified | [ffmpeg](real-world.md#ffmpeg)'s libavutil n7.1 (2026-11-20), glibc behind a facade (2026-11-16) | ffmpeg: 10 units (six with libavutil's own signatures, four through one-shot wrappers over context APIs), 226,447/226,447, gate passes on each; glibc: 1,859/1,859 after dropping one undefined-behavior case |
 | Kotlin | Tested | none | `analyze`, detection, JNI-shaped exports, bridge, record and diff on a Gradle fixture (`tests/loop.rs`); needs `kotlinc` on PATH, so CI skips it |
 | Kotlin for Android | Tested | none | `build --profile android` builds one installed ABI per test run into `jniLibs/` with every JNI entry point and the 16 KB alignment checked; all three ABIs were also built by hand, and the `armeabi-v7a` library was loaded on an Android 11 TV and called through JNI. `record --profile android` replayed the Kotlin unit under ART on that TV (291 cases) and `diff --profile android` matched 279/291 against the Android `.so`. Needs the NDK/device, so CI skips it |
-| PHP | Whole apps | none | `analyze` and whole apps only; units cannot be bridged yet |
-| C# | Whole apps | none | `analyze` and whole apps only; units cannot be bridged yet |
+| PHP | Verified | PEAR `XML_Util` 1.4.5 behind a facade (2026-11-22) | 1,838/1,838; gate passes. Top-level functions with scalar, string, list and assoc-array parameters, through `ext-ffi`; static methods, classes, objects, references, variadics, callables and generators stay in PHP with the reason; no `shadow`, no `--batch` |
+| C# | Verified | Google.Protobuf 3.29.0's `CodedOutputStream.ComputeSize.cs` (2026-11-22) | 16 public static methods (6 kept in C#), 2,941/2,941 with 2 lone-surrogate cases listed in `known-diffs.jsonl`; gate passes. Records and POCOs as arguments, defaults, nullable, lists and dictionaries are tested on a fixture (`tests/loop.rs`); `shadow` and `--batch` are not available for C#; needs `dotnet` on PATH, so CI skips it |
 
 Details of every run: [real-world.md](real-world.md) (TS/JS) and
 [real-world-languages.md](real-world-languages.md) (the others).
@@ -30,7 +30,7 @@ Details of every run: [real-world.md](real-world.md) (TS/JS) and
 | Command | Status | Notes |
 | --- | --- | --- |
 | `analyze` | Verified | every language above, x18n's 142 units |
-| `bridge`, `record`, `diff`, `gate`, `build` | Verified | the runs above; `bridge --as-json` on json-server's `paginate` |
+| `bridge`, `record`, `diff`, `gate`, `build` | Verified | the runs above; `bridge --as-json` on json-server's `paginate`; PHP and C# units in `tests/loop.rs` (skipped without `php` with FFI or without `dotnet`) |
 | `build --profile android` | Tested | Kotlin fixture, one ABI per test run (all three built by hand), entry points and 16 KB alignment checked; `armeabi-v7a` library loaded on an Android 11 TV and called through JNI |
 | `record`/`diff --profile android` | Tested | Kotlin fixture on an Android 11 TV: record 291 cases under ART, then diff against the Android `.so` (12 of them did not match yet, not investigated); guarded test `tests/android_device.rs` skips without a device |
 | Types for untyped JS in `bridge` and `analyze` (sibling `.d.ts`/`.d.mts`/`.d.cts`, then JSDoc) | Tested | `tests/untyped_js_types.rs`; `analyze` uses `bridge`'s rules; tested there with a `.d.ts`, a class method and an alias (`tests/analyze.rs`) |
@@ -73,8 +73,14 @@ prints what to use instead.
 | Ruby | yes | yes | magnus, FFI | yes | yes | no | yes | no |
 | Java | yes | yes | JNI + binary wire | yes | yes | no | yes | no |
 | Kotlin | yes | yes | JNI through the Java bridge | yes (`kotlinc` on PATH) | yes | no | no (JFR) | no |
-| PHP | yes | yes (`php -S` front door) | no | no | no | no | no (SPX or Xdebug) | no |
-| C# | yes | yes (ASP.NET) | no | no | no | no | no (`dotnet-trace`) | no |
+| PHP | yes | yes (`php -S` front door) | JSON dispatcher over `ext-ffi` | yes (`php` with FFI) | no | no | no (SPX or Xdebug) | no |
+| C# | yes | yes (ASP.NET) | JSON dispatcher over P/Invoke | yes (`dotnet` on PATH) | no | no | no (`dotnet-trace`) | no |
+| C++ | no | yes (any program: `app record`/`app replay`) | no | no | no | no | no | no |
+| Swift | no | yes (any program: `app record`/`app replay`) | no | no | no | no | no | no |
+| Dart | no | yes (any program: `app record`/`app replay`) | no | no | no | no | no | no |
+| PowerShell | no | yes (any program: `app record`/`app replay`) | no | no | no | no | no | no |
+| CUDA | no | yes (any program: `app record`/`app replay`) | no | no | no | no | no | no |
+| Assembly | no | yes (any program: `app record`/`app replay`) | no | no | no | no | no | no |
 
 A `no` in one column is a scope decision, not a gap in the row: `package` covers napi-rs,
 wasm-bindgen and PyO3 crates plus CLI front doors, and says so when handed a `c-abi` crate; `enable`
@@ -83,6 +89,11 @@ switches TS/JS and Python ports in place and points everything else at `shadow`.
 Where the cells come from: entry points in `whole_app.rs`, the unit-bridge guard in `lang/mod.rs`,
 the per-shape branches in `shadow.rs`, `enable.rs`'s `is_supported`, `profile.rs`'s alternatives for
 C, Kotlin, PHP and C#, and `package.rs`'s layout match.
+
+C++ through Assembly have no adapter yet, so `analyze` does not read their source; their
+programs still run through the whole-app flow, which compares any runnable program's output.
+CMake is read only as part of C project discovery. Requested in #200, where the order is tracked.
+`go` needs `profile`, so it runs where `profile` does.
 
 ## Where the tests run
 

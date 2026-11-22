@@ -217,3 +217,25 @@ fn two_crates_with_one_name_keep_their_own_library() {
     assert!(b.join("target/release").is_dir());
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn go_takes_the_root_as_profile_does() {
+    let bin = env!("CARGO_BIN_EXE_rust-anything");
+    let parse = |args: &[&str]| {
+        let out = Command::new(bin)
+            .args(args)
+            .current_dir(std::env::temp_dir())
+            .output()
+            .unwrap();
+        String::from_utf8_lossy(&out.stderr).into_owned()
+    };
+    for args in [
+        &["go", ".", "--", "true"][..],
+        &["go", "--root", ".", "--", "true"][..],
+    ] {
+        let err = parse(args);
+        assert!(!err.contains("unexpected argument"), "{args:?}: {err}");
+    }
+    let both = parse(&["go", "a", "--root", "b", "--", "true"]);
+    assert!(both.contains("cannot be used with"), "{both}");
+}

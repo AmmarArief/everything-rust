@@ -93,6 +93,12 @@ recording against the number of input lines.
 to stdout, so the replay's stdout differed. Java test apps run with `-XX:-UsePerfData`; an app
 recorded on a busy machine needs it too.
 
+**A broken port passed because its case was never recorded.** Recording drops a case whose
+result JSON cannot hold (a PHP string that is not UTF-8). The only `html_entity_decode` input with
+`&#39;` also decoded `&nbsp;` to a lone Latin-1 byte, so a port that wrongly decoded `&#39;` passed.
+After writing inputs for a behavior, check that `cases.jsonl` holds them, and break the port once
+to see `diff` fail.
+
 ## Numbers and claims
 
 **Benchmarks taken while other builds ran were off by a wide margin.** Run `bench` on a quiet

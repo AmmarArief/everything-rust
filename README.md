@@ -39,7 +39,7 @@ Made in Türkiye 🇹🇷 by <a href="https://github.com/erkamyaman">erKam Yaman
   <sub>Prettier against its Rust port on 59 real files from ms, Fuse.js and json-server (Apple M4). Same output, byte for byte. <a href="docs/real-world.md#prettier">How it was measured</a>.</sub>
 </p>
 
-<p align="center"><sub>PHP and C#: record, replay and the front door today; unit ports come next.</sub></p>
+<p align="center"><sub>PHP and C#: unit ports, through FFI and P/Invoke.</sub></p>
 
 <table>
   <tr>
@@ -263,10 +263,10 @@ Same output is not enough. Record what the app sends too, and a rewrite that mai
 | Ruby | file or folder of module functions | a magnus extension under the original modules | a generated Ruby driver |
 | Java | package of `public static` methods | typed JNI and a generated binary wire, in wrapper classes with the original methods | a generated reflection driver |
 | Kotlin | Gradle module of top-level functions and `@JvmStatic` methods | the Java bridge: typed JNI in Java wrapper classes calling the compiled Kotlin statics | a generated reflection driver, with the Kotlin sources compiled by `kotlinc` |
-| PHP | folder of functions and `public static` methods | coming next: PHP FFI over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
-| C# | folder of `public static` methods | coming next: P/Invoke over a C ABI | whole apps today: `app record`, `app replay` and the front door, for CLIs and ASP.NET servers (`dotnet <app>.dll`) |
+| PHP | file or folder of top-level functions (`public static` methods stay in PHP) | a JSON dispatcher over `ext-ffi`, in a file that redeclares the functions with the original parameters | a generated PHP driver; whole apps with `app record`, `app replay` and the front door, for CLIs and servers (`php -S`) |
+| C# | file or folder of `public static` methods | a JSON dispatcher over P/Invoke, in `<namespace>.Rust` classes with the original methods | a generated reflection driver, compiled with the project's sources by `dotnet build`; whole apps with `app record`, `app replay` and the front door, for CLIs and ASP.NET servers (`dotnet <app>.dll`) |
 
-Every language except C also gets batch classes (`--batch`): the items cross once and stay in
+Every language except C, PHP and C# also gets batch classes (`--batch`): the items cross once and stay in
 Rust, and each call runs over all of them on all cores.
 
 The language is detected from the repository (`go.mod`, `pom.xml`, `build.gradle`/`build.gradle.kts`,
@@ -295,21 +295,29 @@ keep using the desktop JVM.
 
 For PHP, `analyze` plans a PHP app (Composer packages and PSR-4 autoloading, risks
 such as loose comparison and integer overflow into floats, Composer packages mapped to crates),
-and a PHP CLI or server can be recorded, replayed and put behind a Rust front door. Porting its
-units into Rust through PHP's FFI is the next step ([issue #2](https://github.com/erkamyaman/rust-anything/issues/2)).
+and a PHP CLI or server can be recorded, replayed and put behind a Rust front door. A unit's
+top-level functions with scalar, string, list and assoc-array parameters are bridged through PHP's
+FFI extension (`php` with `ext-ffi`, on by default for the CLI): require the generated
+`php/<crate>.php` in place of the original file once `diff` passes. Each call crosses as JSON, about
+1 µs, so `bench` shows small functions slower than PHP; there is no `shadow` for PHP yet
+([issue #200](https://github.com/erkamyaman/rust-anything/issues/200)).
 
 C# works the same way: `analyze` reads `.csproj` projects and their NuGet packages
 (mapped to crates), resolves `using` directives to folders, and flags what C# does differently
 (`decimal`, `dynamic`, LINQ's deferred queries, `Task`, `lock`, reflection). A C# CLI or ASP.NET
-server can be recorded, replayed and put behind a Rust front door; porting units through P/Invoke
-comes next.
+server can be recorded, replayed and put behind a Rust front door. A unit's public static methods
+with scalar, string, array, list, dictionary and record or plain-class parameters are bridged
+through P/Invoke (`dotnet` on PATH to record and diff): call the generated `<namespace>.Rust`
+classes, or alias them with `using`, once `diff` passes. Each call crosses as JSON, about 1-3 µs,
+so `bench` shows small methods slower than .NET; there is no `shadow` for C# yet
+([issue #200](https://github.com/erkamyaman/rust-anything/issues/200)).
 
 ## Learn more
 
 - [How it works](docs/how-it-works.md): the loop, what `bridge` and `analyze` decide, hot paths, what it can't catch, what a real port takes, and keeping up with the original (`map`)
 - [Ship a port as a package](docs/packaging.md): maturin wheels and napi-rs per-platform npm packages, with the CI that builds them
 - [Port a whole app](docs/whole-apps.md): servers, CLIs and libraries, from the front door to `app lift`
-- [Examples and case studies](docs/examples.md): x18n, and real code in six languages
+- [Examples and case studies](docs/examples.md): x18n, and real code in eight languages
 - [Real-world ports](docs/real-world.md): json-server, Fuse.js, vercel/ms, with benchmarks
 - [Install, update and develop](docs/install.md): every install method, Windows, and building from source
 - [FAQ](docs/faq.md) · [Status](docs/STATUS.md) · [MCP tools](docs/tools.md)

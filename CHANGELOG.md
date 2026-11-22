@@ -7,6 +7,42 @@
   `diff` and `gate` could not pass on stubs the task said to leave alone.
 - Generated Python bindings allow `clippy::too_many_arguments`: a function or method with many
   parameters made `gate` fail on rust-anything's own `lib.rs`.
+- `go` takes the repository root as its first argument, as `profile` does
+  (`rust-anything go . -- node bench.mjs`); `--root` still works.
+- `docs/STATUS.md`'s table of which command covers which language (XiaoBinGan, #201) has rows
+  for C++, Swift, Dart, PowerShell, CUDA and Assembly (whole apps only, no adapter yet), from
+  his audit in #200.
+- PHP units cross into Rust: `bridge` no longer refuses them. A PHP unit's top-level functions
+  (namespaced or global) with scalar, string, list and assoc-array parameters get a JSON
+  dispatcher crate and `php/<crate>.php`, which redeclares each function in its namespace with the
+  original parameters and calls the Rust library through `ext-ffi`. `record` runs the original
+  under a generated `driver.php` (after `vendor/autoload.php` when present; omitted middle
+  arguments are passed by name so their defaults apply), `build` puts the library beside the
+  wrapper, and `diff` and `bench` call it through the wrapper. Results are compared as PHP values
+  (int and float, key order, `[]` and `{}` as PHP sees them), exceptions by class, printed output
+  too. Static methods, classes, object-typed parameters or returns, references, variadics,
+  callables and generators stay in PHP with the reason; `shadow` and `--batch` refuse PHP units.
+  A bare `array` parameter or return now gives way to its phpdoc type (`list<float>` is
+  `Vec<f64>`), and an undocumented one is a `serde_json::Value`, since it may be a list or a map.
+- Real-code run: PEAR `XML_Util` 1.4.5 behind a facade of seven top-level functions, PHP 8.5.12:
+  1,838/1,838 recorded cases, gate passes; through the JSON bridge every function is slower than
+  PHP (0.09x geometric mean on a busy machine), as `bench` reports
+  (`demo/real-world/php-xml-util-rs`, `docs/real-world-languages.md`).
+- C# units can be bridged. `bridge` takes the public static methods of a unit's public classes
+  and generates a JSON dispatcher over the C ABI (`Kind::Ffi`) plus `cs/<Lib>.cs`: the same
+  classes and signatures (defaults kept) under `<namespace>.Rust`, each calling Rust through
+  P/Invoke. Arguments may be scalars, strings, arrays, lists, string-keyed dictionaries, nullable
+  values, and records or plain classes from the project (public auto-properties, no constructor
+  arguments), which cross as JSON objects. Generic, `ref`/`out`/`in`, `params`, overloaded and
+  async methods, and `decimal`, `char`, `ulong`, `object`, delegates, tuples and spans stay in
+  C# with the reason. `record`, `diff` and `bench` build a console driver with `dotnet build`
+  from the owning project's sources and package references, call each method by reflection, and
+  compare results as typed JSON, exceptions by type and `Console.Out` output. An input that does
+  not convert to a parameter type (a `long` for an `int`) is not recorded. `build` copies the
+  library into `cs/`. `shadow` and `--batch` refuse C# units with the reason. Verified on
+  Google.Protobuf 3.29.0's `CodedOutputStream.ComputeSize.cs`: 16 methods, 2,941/2,941 with two
+  lone-surrogate strings listed in `known-diffs.jsonl` (a Rust `String` cannot hold them), gate
+  passes. Calls cost 0.56-3.3 µs, so these 29-87 ns functions are 0.03x as fast through Rust.
 
 ## 3.2.0 (2026-11-22)
 

@@ -311,6 +311,10 @@ pub(crate) fn record_with(
         crate::harness_go::record(opts.crate_dir, manifest, cases)?
     } else if manifest.language == crate::lang::Lang::Ruby {
         crate::harness_ruby::record(opts.crate_dir, manifest, cases)?
+    } else if manifest.language == crate::lang::Lang::Php {
+        crate::harness_php::record(opts.crate_dir, manifest, cases)?
+    } else if manifest.language == crate::lang::Lang::Csharp {
+        crate::harness_csharp::record(opts.crate_dir, manifest, cases)?
     } else if manifest.language == crate::lang::Lang::Java {
         crate::harness_java::record(opts.crate_dir, manifest, cases)?
     } else if manifest.language == crate::lang::Lang::Kotlin {
@@ -460,6 +464,12 @@ fn stale_build(crate_dir: &Path, manifest: &Manifest) -> Option<PathBuf> {
     let built = match manifest.kind {
         Kind::Napi => crate_dir.join(format!("{}.node", manifest.lib_name())),
         Kind::Pyo3 => crate::harness_py::native_file(crate_dir, manifest),
+        Kind::Ffi if manifest.language == crate::lang::Lang::Php => {
+            crate::harness_php::built_file(crate_dir, manifest)?
+        }
+        Kind::Ffi if manifest.language == crate::lang::Lang::Csharp => {
+            crate::harness_csharp::built_file(crate_dir, manifest)?
+        }
         _ => return None,
     };
     sources_newer_than(crate_dir, &built).then_some(built)
@@ -513,6 +523,12 @@ pub fn build(crate_dir: &Path) -> Result<PathBuf> {
         Kind::Pyo3 => crate::harness_py::build(crate_dir, &manifest),
         Kind::Ffi if manifest.language == crate::lang::Lang::Ruby => {
             crate::harness_ruby::build(crate_dir, &manifest)
+        }
+        Kind::Ffi if manifest.language == crate::lang::Lang::Php => {
+            crate::harness_php::build(crate_dir, &manifest)
+        }
+        Kind::Ffi if manifest.language == crate::lang::Lang::Csharp => {
+            crate::harness_csharp::build(crate_dir, &manifest)
         }
         Kind::CAbi | Kind::Ffi => crate::harness_c::build(crate_dir, &manifest),
         Kind::Napi => {
@@ -717,6 +733,12 @@ pub fn bench(opts: &BenchOptions) -> Result<Vec<BenchRow>> {
     if manifest.language == crate::lang::Lang::Ruby {
         return crate::harness_ruby::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
+    if manifest.language == crate::lang::Lang::Php {
+        return crate::harness_php::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
+    if manifest.language == crate::lang::Lang::Csharp {
+        return crate::harness_csharp::bench(opts.crate_dir, &manifest, opts.min_ms);
+    }
     if manifest.language == crate::lang::Lang::Java {
         return crate::harness_java::bench(opts.crate_dir, &manifest, opts.min_ms);
     }
@@ -901,10 +923,22 @@ pub(crate) fn diff_exact(opts: &DiffOptions) -> Result<DiffOutcome> {
         return crate::harness_go::diff(opts.crate_dir, &manifest);
     }
     if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Csharp
+        && opts.module.is_none()
+    {
+        return crate::harness_csharp::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
         && manifest.language == crate::lang::Lang::Ruby
         && opts.module.is_none()
     {
         return crate::harness_ruby::diff(opts.crate_dir, &manifest);
+    }
+    if let Ok(manifest) = Manifest::load(opts.crate_dir)
+        && manifest.language == crate::lang::Lang::Php
+        && opts.module.is_none()
+    {
+        return crate::harness_php::diff(opts.crate_dir, &manifest);
     }
     if let Ok(manifest) = Manifest::load(opts.crate_dir)
         && manifest.language == crate::lang::Lang::Java
