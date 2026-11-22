@@ -15,10 +15,10 @@ public static class Geometry
 
     public static Point Midpoint(Point a, Point b) => new Point((a.X + b.X) / 2, (a.Y + b.Y) / 2);
 
-    public static int Total(Box parcel)
+    public static int Total(Box box)
     {
         var total = 0;
-        foreach (var s in parcel.Sizes)
+        foreach (var s in box.Sizes)
         {
             total = checked(total + s);
         }

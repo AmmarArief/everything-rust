@@ -465,16 +465,24 @@ pub fn snake_case(name: &str) -> String {
             out.push('_');
         }
     }
-    const KEYWORDS: &[&str] = &[
-        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
-        "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
-        "return", "self", "static", "struct", "super", "trait", "true", "type", "unsafe", "use",
-        "where", "while", "async", "await", "dyn", "gen",
-    ];
-    if KEYWORDS.contains(&out.as_str()) {
-        format!("r#{out}")
+    rust_ident(&out)
+}
+
+const KEYWORDS: &[&str] = &[
+    "as", "break", "const", "continue", "else", "enum", "extern", "false", "fn", "for", "if",
+    "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return", "static",
+    "struct", "trait", "true", "type", "unsafe", "use", "where", "while", "async", "await", "dyn",
+    "abstract", "become", "box", "do", "final", "macro", "override", "priv", "typeof", "unsized",
+    "virtual", "yield", "try", "gen",
+];
+
+pub(crate) fn rust_ident(word: &str) -> String {
+    if matches!(word, "self" | "Self" | "super" | "crate" | "_") {
+        format!("{word}_")
+    } else if KEYWORDS.contains(&word) {
+        format!("r#{word}")
     } else {
-        out
+        word.to_string()
     }
 }
 
@@ -1843,5 +1851,10 @@ mod tests {
         assert_eq!(snake_case("type"), "r#type");
         assert_eq!(snake_case("toURL"), "to_url");
         assert_eq!(snake_case("parseHTMLString"), "parse_html_string");
+        assert_eq!(snake_case("box"), "r#box");
+        assert_eq!(snake_case("yield"), "r#yield");
+        assert_eq!(snake_case("try"), "r#try");
+        assert_eq!(snake_case("self"), "self_");
+        assert_eq!(snake_case("Super"), "super_");
     }
 }

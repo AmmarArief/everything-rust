@@ -192,21 +192,9 @@ fn native(p: &Param) -> &str {
     p.native_type.as_deref().unwrap_or("int")
 }
 
-const KEYWORDS: &[&str] = &[
-    "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn", "for",
-    "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return",
-    "static", "struct", "trait", "true", "type", "unsafe", "use", "where", "while", "async",
-    "await", "dyn", "abstract", "become", "box", "do", "final", "macro", "override", "priv",
-    "typeof", "unsized", "virtual", "yield", "try", "gen",
-];
-
 /// A parameter name as a Rust identifier (`in` becomes `r#in`).
 fn ident(name: &str) -> String {
-    if KEYWORDS.contains(&name) {
-        format!("r#{name}")
-    } else {
-        name.to_string()
-    }
+    crate::bridge::rust_ident(name)
 }
 
 fn ret_type(f: &ExportedFn) -> Option<String> {

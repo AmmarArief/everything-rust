@@ -1785,7 +1785,7 @@ fn csharp_static_methods_bridge_record_and_diff() {
     let port = std::fs::read_to_string(dir.join("src/port.rs")).unwrap();
     for signature in [
         "pub fn distance(a: serde_json::Value, b: serde_json::Value) -> Result<f64, String>",
-        "pub fn total(parcel: serde_json::Value) -> Result<i64, String>",
+        "pub fn total(r#box: serde_json::Value) -> Result<i64, String>",
         "pub fn clamp(value: i64, lo: i64, hi: i64) -> Result<i64, String>",
         "pub fn words(text: String) -> Result<Vec<String>, String>",
         "pub fn first_index(text: String, needle: String) -> Result<Option<i64>, String>",
@@ -1856,9 +1856,9 @@ fn csharp_static_methods_bridge_record_and_diff() {
         ),
         (
             "Total",
-            "if parcel.is_null() { return Err(NRE.into()); } \
+            "if r#box.is_null() { return Err(NRE.into()); } \
              let mut total: i32 = 0; \
-             for s in parcel[\"Sizes\"].as_array().into_iter().flatten() { \
+             for s in r#box[\"Sizes\"].as_array().into_iter().flatten() { \
              total = total.checked_add(s.as_i64().unwrap_or(0) as i32).ok_or(\
              \"System.OverflowException: Arithmetic operation resulted in an overflow.\")?; } \
              Ok(i64::from(total))",
