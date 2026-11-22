@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.3.0 (2026-11-22)
+
 - `go` keeps the file's other classes in the original as well as its other functions. It kept
   only functions, so porting `get_close_matches` from `difflib` also bridged `HtmlDiff`, and
   `diff` and `gate` could not pass on stubs the task said to leave alone.
