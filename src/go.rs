@@ -142,14 +142,18 @@ pub fn crate_name(function: &str) -> String {
 fn others(root: &Path, lang: Lang, file: &str, function: &str) -> Result<Vec<String>> {
     let text =
         std::fs::read_to_string(root.join(file)).with_context(|| format!("reading {file}"))?;
-    let fns = if lang == Lang::Ts {
-        crate::ts::exports::exported_functions(file, &text)
+    let (fns, classes) = if lang == Lang::Ts {
+        (
+            crate::ts::exports::exported_functions(file, &text),
+            crate::ts::exports::exported_classes(file, &text),
+        )
     } else {
-        crate::lang::exports(lang, file, &text).0
+        crate::lang::exports(lang, file, &text)
     };
     Ok(fns
         .into_iter()
         .map(|f| f.name)
+        .chain(classes.into_iter().map(|c| c.name))
         .filter(|n| n != function)
         .map(|n| format!("{n}: not hot in the profiled run; `go` ports one function"))
         .collect())
@@ -733,6 +737,22 @@ mod tests {
             "{plain}"
         );
         assert_eq!(times(31.42), "31.4x faster");
+    }
+
+    #[test]
+    fn the_other_functions_and_classes_of_the_file_stay_in_the_original() {
+        let root = std::env::temp_dir().join(format!("ra-go-others-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(
+            root.join("lib.py"),
+            "def hot(xs):\n    return xs\n\n\ndef cold(x):\n    return x\n\n\nclass Table:\n    def __init__(self, n):\n        self.n = n\n\n    def render(self):\n        return str(self.n)\n",
+        )
+        .unwrap();
+        let kept = others(&root, Lang::Python, "lib.py", "hot").unwrap();
+        std::fs::remove_dir_all(&root).unwrap();
+        let names: Vec<&str> = kept.iter().map(|k| k.split(':').next().unwrap()).collect();
+        assert_eq!(names, ["cold", "Table"], "{kept:?}");
     }
 
     #[test]

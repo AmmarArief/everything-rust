@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `go` keeps the file's other classes in the original as well as its other functions. It kept
+  only functions, so porting `get_close_matches` from `difflib` also bridged `HtmlDiff`, and
+  `diff` and `gate` could not pass on stubs the task said to leave alone.
+- Generated Python bindings allow `clippy::too_many_arguments`: a function or method with many
+  parameters made `gate` fail on rust-anything's own `lib.rs`.
+
 ## 3.2.0 (2026-11-22)
 
 - Python `record --from-tests` keeps the calls that pass arguments by keyword where Python does
