@@ -25,6 +25,21 @@ in nanoseconds. `profile` finds the loop around it, `--batch` moves the whole lo
 gives a verdict before you ship. Code already compiled by numba, Cython or JAX runs as machine
 code too: `profile` and `analyze` flag it, since porting it buys little speed.
 
+**Can I point it at all my tools and get them all in Rust?** Not in one step. `go` moves the one
+function that takes the time in a command you run, and stops there; run it again for the next
+one. A whole app moves piece by piece behind the front door ([Port a whole app](whole-apps.md)),
+each piece checked against recordings before it switches on. Nothing is rewritten that a recording
+can't check.
+
+**Will it speed up a tool that runs shell commands (PowerShell, bash)?** Usually not, and the
+reason is rarely the language. When a tool starts `powershell.exe` or `bash` for every command,
+the time goes to starting the process, often more than the command itself, and the same command
+in Rust still waits for that start. Keep one shell open and send it the commands, batch them into
+one call, or call the API the command wraps (the file system, the registry, HTTP) from your code
+directly. Shell scripts themselves are not a supported language; PowerShell is on the list in
+[issue #200](https://github.com/erkamyaman/rust-anything/issues/200). The code around the calls
+(an Electron main process, a Node or Python tool runner) can be ported as usual.
+
 **My code is numeric; will the floats match exactly?** Often not: operation order, fused
 multiply-add and the math library differ between compilers. Record with `--float-tolerance 1e-9`
 (`record` or `app record`), and floats match within that share of the larger value (absolute below
@@ -32,7 +47,7 @@ multiply-add and the math library differ between compilers. Record with `--float
 (numpy `tofile`, `.f32` exports) is compared value by value too when you name it:
 `app record --float-file out.f32=f32le` (or `f64le`).
 
-**Can it port an app I only have as an APK, a JAR or an .exe?** No. It ports source code: it
+**Can it port an app I only have as an APK, a JAR or an .exe (or Windows itself)?** No. It ports source code: it
 parses the functions, records what each one does, and checks the Rust against the running
 original. A compiled app has none of that to work with, and `analyze` says so. Writing a new Rust
 app from a binary's visible behavior is a different project.
