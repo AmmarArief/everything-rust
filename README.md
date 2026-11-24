@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/logo.svg" width="104" height="104" alt="everything-rust: a checked port beside the original"></p>
+
 # everything-rust
 
 **Port an app to Rust without losing its behaviour.** everything-rust records what your code does
