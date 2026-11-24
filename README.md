@@ -8,7 +8,7 @@ It works on Node.js (TypeScript/JavaScript), Python, C, Go, Ruby, Java and Kotli
 HTTP servers and libraries. It never translates code. Your coding agent writes the Rust, and
 everything-rust decides what to move, proves it matches, and gates the merge.
 
-[![crates.io](https://img.shields.io/crates/v/everything-rust?color=CE422B&label=crates.io)](https://crates.io/crates/everything-rust)
+[![stars](https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social)](https://github.com/AmmarArief/everything-rust)
 [![license](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 ![platforms](https://img.shields.io/badge/macOS%20%7C%20Linux%20%7C%20Windows-native-2563EB)
 
