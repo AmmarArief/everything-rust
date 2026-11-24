@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## Агент оны қалай орындайды
 
-[Whole-app skill](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) агентті осы жол бойымен жүргізеді, тек өзіңіз қабылдай алатын шешімдерден бастап:
+[Whole-app skill](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) агентті осы жол бойымен жүргізеді, тек өзіңіз қабылдай алатын шешімдерден бастап:
 
 - **Сұрақ алу (grilling)**: агент раундтармен сұрайды, әр сұрақ ұсынылған жауабымен, порт тәуелді әр шешім анықталғанша, және әрқайсысын `rust/DECISIONS.md` ішінде ADR ретінде жазады, ал `rust/GLOSSARY.md` түпнұсқаның терминдерін Rust атауларына сәйкестендіреді.
 - **Зерттеу**: фондық агенттер әр тәуелділіктің бастапқы дереккөздерін оқып, тапқан әр семантикалық тұзағымен `rust/research/<topic>.md` жазады.

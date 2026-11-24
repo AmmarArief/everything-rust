@@ -11,20 +11,20 @@
 Ул кодны үзе тәрҗемә итми: Rust'ны кодлау агентыгыз (яки сез) яза, ә everything-rust аны оригинал белән тикшерә.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#тиз-башлау">Тиз башлау</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#тиз-башлау">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Чын портлар</a> · <a href="faq.md#faq">Еш бирелә торган сораулар</a><br>
+<p align="center"><b><a href="#тиз-башлау">Тиз башлау</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#тиз-башлау">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Чын портлар</a> · <a href="faq.md#faq">Еш бирелә торган сораулар</a><br>
 <sub><a href="#телләр">Телләр</a> · <a href="how-it-works.md#how-it-works">Ничек эшли</a> · <a href="whole-apps.md#port-a-whole-app">Бөтен кушымталар</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0 версиясендә яңа: <a href="real-world.md#prettier">Prettier, Rust'ка күчерелде</a>. 19x тизрәк · язып алынган 17,224 җибәрүнең 15,861се тулысынча Rust'та · барысы да байтка байт туры килә</p>
 
@@ -140,14 +140,14 @@ everything-rust setup           # аны Claude Code, Codex, Cursor, Gemini CLI 
 ```
 
 Әле Rust toolchain юкмы? macOS, Linux һәм Windows өчен әзер бинар файллар һәр
-[GitHub релизына](https://github.com/marprojector/everything-rust/releases) беркетелгән, ә JavaScript
+[GitHub релизына](https://github.com/AmmarArief/everything-rust/releases) беркетелгән, ә JavaScript
 проектлары өчен `npm install -g everything-rust` шул ук бинар файлны урнаштыра.
 
 Claude Code'та аны плагин итеп тә урнаштырып була (MCP сервер һәм skill; өстәге CLI
 сезнең `PATH` эчендә булырга тиеш):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` тапкан һәр агентка MCP серверны өсти һәм workflow skill'ны агент skill'ларны укыган урынга
@@ -238,7 +238,7 @@ Rust'та кала, ә һәр чакыру аларның барысын да б
 PHP өчен `analyze` PHP кушымтасын планлаштыра (Composer пакетлары һәм PSR-4 autoloading, катгый булмаган
 чагыштыру һәм бөтен саннарның float'ка ташып чыгуы кебек куркынычлар, Composer пакетларына туры килгән crate'лар),
 ә PHP CLI яки серверны язып алып, кабат уйнатып, Rust front door артына куеп була. Аның
-берәмлекләрен PHP FFI аша Rust'ка күчерү киләсе адым ([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+берәмлекләрен PHP FFI аша Rust'ка күчерү киләсе адым ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# та шулай ук эшли: `analyze` `.csproj` проектларын һәм аларның NuGet пакетларын укый
 (crate'ларга туры китереп), `using` директиваларын папкаларга бәйли һәм C# нәрсәне башкача эшләгәнен билгели
@@ -258,7 +258,7 @@ C# та шулай ук эшли: `analyze` `.csproj` проектларын һ�
 ## Спонсорлар
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> бушлай һәм ачык чыганаклы. Әгәр ул эшегездә ярдәм итсә, зинһар, аңа спонсорлык итүне уйлап карагыз.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> бушлай һәм ачык чыганаклы. Әгәр ул эшегездә ярдәм итсә, зинһар, аңа спонсорлык итүне уйлап карагыз.<br>
   Сезнең ярдәм эшләнмәне дәвам итәргә мөмкинлек бирә.
 </p>
 
@@ -275,4 +275,4 @@ Issue'лар һәм pull request'лар хуплана; [CONTRIBUTING.md](../CON
 
 ## Лицензия
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Репозиторийыгыздагы портлар һәм ясалган код сезнеке.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Репозиторийыгыздагы портлар һәм ясалган код сезнеке.

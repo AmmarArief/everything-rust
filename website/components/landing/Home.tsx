@@ -322,7 +322,7 @@ export default function Home({ hero, install, locale = 'en' }: { hero: React.Rea
                 {p.name}
               </a>
             ))}
-            <a className="btn btn-quiet" href="https://github.com/sponsors/marprojector">
+            <a className="btn btn-quiet" href="https://github.com/sponsors/AmmarArief">
               {m.becomeSponsor}
             </a>
           </div>

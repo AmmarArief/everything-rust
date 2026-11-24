@@ -3,7 +3,7 @@ import { join, posix, resolve } from 'node:path'
 
 export const WEBSITE_ROOT = resolve(import.meta.dirname, '..')
 export const REPO_ROOT = resolve(WEBSITE_ROOT, '..')
-const REPO_URL = 'https://github.com/marprojector/everything-rust'
+const REPO_URL = 'https://github.com/AmmarArief/everything-rust'
 const INCLUDE_RE = /^<!--\s*include:\s*(\S+)\s*-->\s*$/gm
 
 const LINK_MAP = {
@@ -111,7 +111,7 @@ export function rewriteTarget(target, sourceFile, image = false) {
     if (!hash && LINK_MAP[repoPath]) return LINK_MAP[repoPath]
     if (hash && sourceFile === repoPath && !p) return `#${hash}`
   }
-  if (image) return `https://raw.githubusercontent.com/marprojector/everything-rust/main/${repoPath}`
+  if (image) return `https://raw.githubusercontent.com/AmmarArief/everything-rust/main/${repoPath}`
   const abs = join(REPO_ROOT, repoPath)
   const kind = existsSync(abs) && statSync(abs).isDirectory() ? 'tree' : 'blob'
   return `${REPO_URL}/${kind}/main/${repoPath}${hash ? '#' + hash : ''}`

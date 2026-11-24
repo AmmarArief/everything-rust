@@ -36,12 +36,12 @@ MCP серверны бер проектка кулдан өстәргә тел�
 
 ## Skill
 
-Workflow skill ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) агентка циклны ничек алып барырга кирәклеген әйтә: профильләү, планлаштыру һәм раслау өчен туктау, бер берәмлекне күчерү, аны исбатлау, shadow артында чыгару һәм `gate` узгач кына эшне тәмам дип санау. Бөтен кушымта өчен ул [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) буенча эшли; [Бөтен кушымтаны күчерү](/docs/whole-apps/overview) битен карагыз.
+Workflow skill ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) агентка циклны ничек алып барырга кирәклеген әйтә: профильләү, планлаштыру һәм раслау өчен туктау, бер берәмлекне күчерү, аны исбатлау, shadow артында чыгару һәм `gate` узгач кына эшне тәмам дип санау. Бөтен кушымта өчен ул [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) буенча эшли; [Бөтен кушымтаны күчерү](/docs/whole-apps/overview) битен карагыз.
 
 ## Claude Code плагины
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Плагин MCP серверны һәм skill'ны китерә; CLI сезнең `PATH` эчендә булырга тиеш.

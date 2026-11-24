@@ -11,20 +11,20 @@
 코드를 자동 번역하지 않습니다. Rust는 코딩 에이전트(또는 여러분)가 작성하고, everything-rust이 원본과 대조해 검증합니다.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#빠른-시작">빠른 시작</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#빠른-시작">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">실제 포팅 사례</a> · <a href="faq.md#faq">자주 묻는 질문</a><br>
+<p align="center"><b><a href="#빠른-시작">빠른 시작</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#빠른-시작">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">실제 포팅 사례</a> · <a href="faq.md#faq">자주 묻는 질문</a><br>
 <sub><a href="#지원-언어">지원 언어</a> · <a href="how-it-works.md#how-it-works">작동 방식</a> · <a href="whole-apps.md#port-a-whole-app">전체 앱 포팅하기</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0의 새 기능: <a href="real-world.md#prettier">Prettier를 Rust로 포팅</a>. 19x 더 빠름 · 기록된 실행 17,224회 중 15,861회가 완전히 Rust · 모두 바이트 단위로 동일</p>
 
@@ -116,12 +116,12 @@ cargo install everything-rust   # crates.io에서 설치
 everything-rust setup           # Claude Code, Codex, Cursor, Gemini CLI, OpenCode에 등록
 ```
 
-아직 Rust 툴체인이 없으신가요? macOS, Linux, Windows용 사전 빌드 바이너리가 각 [GitHub 릴리스](https://github.com/marprojector/everything-rust/releases)에 첨부되어 있으며, JavaScript 프로젝트의 경우 `npm install -g everything-rust`으로 동일한 바이너리를 설치할 수 있습니다.
+아직 Rust 툴체인이 없으신가요? macOS, Linux, Windows용 사전 빌드 바이너리가 각 [GitHub 릴리스](https://github.com/AmmarArief/everything-rust/releases)에 첨부되어 있으며, JavaScript 프로젝트의 경우 `npm install -g everything-rust`으로 동일한 바이너리를 설치할 수 있습니다.
 
 Claude Code에서는 플러그인(MCP 서버 및 스킬 포함, 위 CLI가 `PATH`에 있어야 함)으로도 설치할 수 있습니다:
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup`은 탐지된 각 에이전트에 MCP 서버를 추가하고 에이전트가 스킬을 읽는 위치에 워크플로 스킬을 설치합니다. 기존 설정은 유지되며, 여러 번 다시 실행해도 안전하고, `--remove`로 되돌릴 수 있습니다. 그런 다음 에이전트에게 다음과 같이 요청해 보세요:
@@ -195,7 +195,7 @@ C를 제외한 모든 언어는 배치 클래스(`--batch`)도 지원합니다. 
 
 언어는 저장소 파일(`go.mod`, `pom.xml`, `.csproj` 또는 `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, 그 외에는 가장 많은 소스 파일)로부터 자동 감지되며 `--lang`으로 재정의할 수 있습니다. 타입 정보는 소스에서 추출합니다(TS 타입, Python 힌트, C/Go/Java/C# 시그니처, Ruby YARD 태그, PHP 타입 및 phpdoc). 타입이 없는 매개변수라도 숫자로 사용되면 숫자로 추론됩니다.
 
-PHP의 경우, `analyze`로 PHP 앱을 계획할 수 있고(Composer 패키지 및 PSR-4 오토로딩, 느슨한 비교나 정수의 float 오버플로 같은 위험 요소, Composer 패키지의 crate 매핑), PHP CLI나 서버를 기록·재실행하고 Rust 프론트 도어 뒤에 둘 수 있습니다. PHP FFI를 통해 유닛을 Rust로 포팅하는 작업이 다음 단계입니다([이슈 #2](https://github.com/marprojector/everything-rust/issues/2)).
+PHP의 경우, `analyze`로 PHP 앱을 계획할 수 있고(Composer 패키지 및 PSR-4 오토로딩, 느슨한 비교나 정수의 float 오버플로 같은 위험 요소, Composer 패키지의 crate 매핑), PHP CLI나 서버를 기록·재실행하고 Rust 프론트 도어 뒤에 둘 수 있습니다. PHP FFI를 통해 유닛을 Rust로 포팅하는 작업이 다음 단계입니다([이슈 #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C#도 같은 방식으로 동작합니다. `analyze`가 `.csproj` 프로젝트와 NuGet 패키지(crate로 매핑)를 읽고 `using` 지시문을 폴더로 해석하며, C#의 고유한 동작 차이(`decimal`, `dynamic`, LINQ 지연 쿼리, `Task`, `lock`, 리플렉션)를 표시합니다. C# CLI나 ASP.NET 서버를 기록·재실행하고 Rust 프론트 도어 뒤에 둘 수 있으며, P/Invoke를 통한 유닛 포팅이 다음으로 지원될 예정입니다.
 
@@ -211,7 +211,7 @@ C#도 같은 방식으로 동작합니다. `analyze`가 `.csproj` 프로젝트�
 ## 후원자
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a>은 무료 오픈 소스입니다. 작업에 도움이 되었다면 후원을 고려해 주세요.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a>은 무료 오픈 소스입니다. 작업에 도움이 되었다면 후원을 고려해 주세요.<br>
   여러분의 지원이 개발을 계속 이어가게 합니다.
 </p>
 
@@ -224,4 +224,4 @@ C#도 같은 방식으로 동작합니다. `analyze`가 `.csproj` 프로젝트�
 
 ## 라이선스
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). 저장소 내 포팅 결과물과 생성된 코드는 여러분의 것입니다.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). 저장소 내 포팅 결과물과 생성된 코드는 여러분의 것입니다.

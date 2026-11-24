@@ -11,20 +11,20 @@
 Il ne traduit pas le code : votre agent de code (ou vous) écrit le Rust, et everything-rust le vérifie face à l'original.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#démarrage-rapide">Démarrage rapide</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#démarrage-rapide">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Portages réels</a> · <a href="faq.md#faq">FAQ</a><br>
+<p align="center"><b><a href="#démarrage-rapide">Démarrage rapide</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#démarrage-rapide">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Portages réels</a> · <a href="faq.md#faq">FAQ</a><br>
 <sub><a href="#langages">Langages</a> · <a href="how-it-works.md#how-it-works">Fonctionnement</a> · <a href="whole-apps.md#port-a-whole-app">Applications complètes</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">Nouveau dans la 2.0 : <a href="real-world.md#prettier">Prettier, porté en Rust</a>. 19x plus rapide · 15,861 exécutions enregistrées sur 17,224 entièrement en Rust · toutes identiques octet pour octet</p>
 
@@ -141,14 +141,14 @@ everything-rust setup           # l'enregistre auprès de Claude Code, Codex, Cu
 ```
 
 Pas encore de chaîne d'outils Rust ? Des binaires précompilés pour macOS, Linux et Windows sont joints
-à chaque [release GitHub](https://github.com/marprojector/everything-rust/releases), et pour les projets
+à chaque [release GitHub](https://github.com/AmmarArief/everything-rust/releases), et pour les projets
 JavaScript, `npm install -g everything-rust` installe le même binaire.
 
 Dans Claude Code, vous pouvez aussi l'installer en tant que plugin (le serveur MCP et le skill ; le CLI
 ci-dessus doit se trouver dans votre `PATH`) :
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` ajoute le serveur MCP à chaque agent détecté et installe le skill de workflow là où l'agent
@@ -240,7 +240,7 @@ Pour PHP, `analyze` planifie une application PHP (paquets Composer et chargement
 PSR-4, risques tels que la comparaison souple et le débordement d'entiers en flottants, paquets Composer
 mappés vers des crates), et un CLI ou serveur PHP peut être enregistré, rejoué et placé derrière une porte
 d'entrée Rust. Le portage de ses unités en Rust via la FFI de PHP est l'étape suivante
-([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# fonctionne de la même manière : `analyze` lit les projets `.csproj` et leurs paquets NuGet (mappés
 vers des crates), résout les directives `using` vers les dossiers correspondants et signale ce que C# gère
@@ -268,4 +268,4 @@ consulter le [code de conduite](../CODE_OF_CONDUCT.md).
 
 ## Licence
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Les portages et le code généré dans votre dépôt vous appartiennent.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Les portages et le code généré dans votre dépôt vous appartiennent.

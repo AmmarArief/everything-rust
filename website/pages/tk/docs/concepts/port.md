@@ -25,7 +25,7 @@ Döredilen `js.rs` Rust-yň tapawutlanýan ýerinde JavaScript-i gaýtalaýan k�
 ## Mysal: orny süýşüren emoji
 
 [x18n](https://github.com/x18n-dev/x18n)-iň `packages/core/src/fuzzy.ts` faýly, iki usulda hem geçirildi,
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo) içinde:
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo) içinde:
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: ready, wasm-bindgen (core runs in browsers)
@@ -46,7 +46,7 @@ JS `indexOf` UTF-16 kod birliklerini sanaýar, şonuň üçin emoji iki orun tut
 `demo/*/src/port.rs` içindäki port döredilen `utf16` kömekçilerini ulanýar we 2000/2000 ýagdaýdan hem-de gate-den geçýär,
 napi-rs (`demo/fuzzy-napi`) we wasm-bindgen (`demo/fuzzy-rs`) hökmünde.
 
-everything-rust-iň tutuş x18n üçin ýazan meýilnamasy: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+everything-rust-iň tutuş x18n üçin ýazan meýilnamasy: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Ol näçe uly bolmaly?
 
 `gate` portuň setirlerini asyl nusganyňky bilen deňeşdirýär we 3x-dan geçende şowsuz bolýar (import we signaturalar üçin goşmaça 50 setir). Ondan köp bolmagy adatça crate-iň eýýäm edýän zadyny el bilen ýazmagy ýa-da ýagdaýlary birme-bir işlemegi aňladýar. `analyze` ulanmaly crate-leri sanaýar.

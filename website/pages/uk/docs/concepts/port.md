@@ -25,7 +25,7 @@ description: Як писати port.rs, єдиний файл, який пише
 ## Приклад: емодзі, що зсунув позицію
 
 `packages/core/src/fuzzy.ts` з [x18n](https://github.com/x18n-dev/x18n), портований обома способами в
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo):
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo):
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: готовий, wasm-bindgen (core працює в браузерах)
@@ -46,7 +46,7 @@ everything-rust gate demo/fuzzy-rs
 `demo/*/src/port.rs` використовує згенеровані хелпери `utf16` і проходить 2000/2000 випадків і gate,
 як napi-rs (`demo/fuzzy-napi`) і як wasm-bindgen (`demo/fuzzy-rs`).
 
-План, який everything-rust пише для всього x18n: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+План, який everything-rust пише для всього x18n: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Яким великим він має бути?
 
 `gate` порівнює кількість рядків порту з оригіналом і падає, якщо порт більший ніж у 3x (плюс 50 рядків на імпорти та сигнатури). Перевищення зазвичай означає, що вручну написано те, що вже робить крейт, або випадки обробляються по одному. `analyze` перелічує крейти, які варто використати.

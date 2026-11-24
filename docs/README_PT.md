@@ -11,20 +11,20 @@
 Não traduz código: o seu agente de programação (ou você) escreve o Rust, e o everything-rust verifica-o contra o original.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#início-rápido">Início rápido</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#início-rápido">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Migrações reais</a> · <a href="faq.md#faq">Perguntas frequentes</a><br>
+<p align="center"><b><a href="#início-rápido">Início rápido</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#início-rápido">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Migrações reais</a> · <a href="faq.md#faq">Perguntas frequentes</a><br>
 <sub><a href="#linguagens">Linguagens</a> · <a href="how-it-works.md#how-it-works">Como funciona</a> · <a href="whole-apps.md#port-a-whole-app">Aplicações completas</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">Novo na 2.0: <a href="real-world.md#prettier">Prettier, migrado para Rust</a>. 19x mais rápido · 15,861 de 17,224 execuções registadas inteiramente em Rust · todas idênticas byte a byte</p>
 
@@ -117,12 +117,12 @@ cargo install everything-rust   # a partir do crates.io
 everything-rust setup           # regista a ferramenta no Claude Code, Codex, Cursor, Gemini CLI e OpenCode
 ```
 
-Ainda não tem a toolchain do Rust? Os binários pré-compilados para macOS, Linux e Windows estão disponíveis em cada [lançamento no GitHub](https://github.com/marprojector/everything-rust/releases). Para projetos JavaScript, `npm install -g everything-rust` instala o mesmo binário.
+Ainda não tem a toolchain do Rust? Os binários pré-compilados para macOS, Linux e Windows estão disponíveis em cada [lançamento no GitHub](https://github.com/AmmarArief/everything-rust/releases). Para projetos JavaScript, `npm install -g everything-rust` instala o mesmo binário.
 
 No Claude Code, também pode instalá-lo como plugin (o servidor MCP e a skill; a CLI acima deve estar disponível no seu `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 O comando `setup` adiciona o servidor MCP a cada agente que encontrar e instala a skill do fluxo de trabalho no local onde o agente procura as suas skills. Preserva as suas outras configurações, pode ser executado novamente em segurança e `--remove` desfaz as alterações. Depois, peça ao seu agente algo como:
@@ -196,7 +196,7 @@ Todas as linguagens, exceto C, também recebem classes de processamento em lote 
 
 A linguagem é detetada a partir do repositório (`go.mod`, `pom.xml`, um `.csproj` ou `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json` ou, caso contrário, os ficheiros de código-fonte mais comuns). A opção `--lang` permite substituir essa deteção. Os tipos são obtidos a partir do código-fonte: tipos de TS, anotações de Python, assinaturas de C, Go, Java e C#, tags YARD de Ruby, tipos PHP e phpdoc. Parâmetros sem tipo que são utilizados como números são inferidos como números.
 
-Para PHP, `analyze` planeia uma aplicação PHP (pacotes Composer e carregamento automático PSR-4, riscos como comparações flexíveis e overflow de inteiros para floats, pacotes Composer associados a crates), e uma CLI ou servidor PHP pode ser registado, reproduzido e colocado atrás de uma front door em Rust. A migração das suas unidades para Rust através do FFI do PHP é o próximo passo ([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+Para PHP, `analyze` planeia uma aplicação PHP (pacotes Composer e carregamento automático PSR-4, riscos como comparações flexíveis e overflow de inteiros para floats, pacotes Composer associados a crates), e uma CLI ou servidor PHP pode ser registado, reproduzido e colocado atrás de uma front door em Rust. A migração das suas unidades para Rust através do FFI do PHP é o próximo passo ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 O C# funciona da mesma forma: `analyze` lê projetos `.csproj` e os respetivos pacotes NuGet (associados a crates), resolve diretivas `using` para pastas e identifica diferenças do C# (`decimal`, `dynamic`, consultas adiadas do LINQ, `Task`, `lock` e reflexão). Uma CLI C# ou um servidor ASP.NET pode ser registado, reproduzido e colocado atrás de uma front door em Rust; a migração de unidades através de P/Invoke vem a seguir.
 
@@ -212,7 +212,7 @@ O C# funciona da mesma forma: `analyze` lê projetos `.csproj` e os respetivos p
 ## Patrocinadores
 
 <p align="center">
-  O <a href="https://github.com/marprojector/everything-rust">everything-rust</a> é gratuito e de código aberto. Se for útil para o seu trabalho, considere patrociná-lo.<br>
+  O <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> é gratuito e de código aberto. Se for útil para o seu trabalho, considere patrociná-lo.<br>
   O seu apoio ajuda a manter o desenvolvimento.
 </p>
 
@@ -225,4 +225,4 @@ Issues e pull requests são bem-vindos; [CONTRIBUTING.md](../CONTRIBUTING.md) ex
 
 ## Licença
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). As migrações e o código gerado no seu repositório pertencem-lhe.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). As migrações e o código gerado no seu repositório pertencem-lhe.

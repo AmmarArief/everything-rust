@@ -12,20 +12,20 @@ Apúntalo a tu aplicación: registra lo que hace el original, tu agente de progr
 y cada pieza se comprueba contra ese registro antes de pasar a la siguiente. No traduce código: demuestra la reescritura.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#inicio-rápido">Instalar</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Versiones</a> · <a href="#inicio-rápido">Plugin para Claude Code</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">Registro MCP</a> · <a href="real-world.md">Portes reales</a> · <a href="faq.md#faq">Preguntas frecuentes</a><br>
+<p align="center"><b><a href="#inicio-rápido">Instalar</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Versiones</a> · <a href="#inicio-rápido">Plugin para Claude Code</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">Registro MCP</a> · <a href="real-world.md">Portes reales</a> · <a href="faq.md#faq">Preguntas frecuentes</a><br>
 <sub><a href="#lenguajes">Lenguajes</a> · <a href="how-it-works.md#how-it-works">Cómo funciona</a> · <a href="whole-apps.md#port-a-whole-app">Aplicaciones completas</a> · <a href="#patrocinadores">Patrocinadores</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">Nuevo en 2.0: <a href="real-world.md#prettier">Prettier, portado a Rust</a>. 19 veces más rápido · 15.861 de 17.224 ejecuciones registradas enteramente en Rust · cada ejecución idéntica byte a byte</p>
 
@@ -167,21 +167,21 @@ everything-rust setup           # lo registra en Claude Code, Codex, Cursor, Gem
 ```
 
 ¿Todavía sin toolchain de Rust? Los binarios ya compilados para macOS, Linux y Windows van adjuntos
-a cada [versión de GitHub](https://github.com/marprojector/everything-rust/releases), y para proyectos
+a cada [versión de GitHub](https://github.com/AmmarArief/everything-rust/releases), y para proyectos
 JavaScript `npm install -g everything-rust` instala el mismo binario.
 
 En Claude Code también puedes instalarlo como plugin (el servidor MCP y la skill; la CLI anterior
 tiene que estar en tu `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 En Codex, desde el marketplace de agentes de este repositorio
 (`.agents/plugins/marketplace.json`, el mismo plugin bajo `plugin/`, con la skill y el servidor MCP):
 
 ```sh
-codex plugin marketplace add marprojector/everything-rust
+codex plugin marketplace add AmmarArief/everything-rust
 codex plugin add everything-rust@everything-rust
 ```
 
@@ -296,7 +296,7 @@ Para PHP, `analyze` planifica una aplicación PHP (paquetes de Composer y autolo
 como la comparación laxa y el desbordamiento de enteros a coma flotante, paquetes de Composer
 mapeados a crates), y una CLI o un servidor PHP se puede registrar, repetir y poner detrás de una
 puerta delantera en Rust. Portar sus unidades a Rust mediante la FFI de PHP es el paso siguiente
-([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# funciona igual: `analyze` lee proyectos `.csproj` y sus paquetes NuGet (mapeados a crates),
 resuelve las directivas `using` a carpetas y señala lo que C# hace distinto (`decimal`, `dynamic`,
@@ -317,7 +317,7 @@ P/Invoke viene después.
 ## Patrocinadores
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> es libre y de código abierto. Si te ayuda en tu trabajo, considera patrocinarlo.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> es libre y de código abierto. Si te ayuda en tu trabajo, considera patrocinarlo.<br>
   Tu apoyo mantiene el desarrollo en marcha.
 </p>
 
@@ -339,4 +339,4 @@ especialmente bienvenidos. Informa en privado de los problemas de seguridad
 
 ## Licencia
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Los portes y el código generado en tu repositorio son tuyos.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Los portes y el código generado en tu repositorio son tuyos.

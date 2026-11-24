@@ -10,13 +10,13 @@ description: 環境設定、測試放在哪裡、如何新增 crate 對應或語
 
 ## 開始之前
 
-- **錯誤：** 開一個 [issue](https://github.com/marprojector/everything-rust/issues/new/choose)，附上
+- **錯誤：** 開一個 [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose)，附上
   你執行的指令、它的輸出、你的平台以及 everything-rust 的版本
   （`everything-rust --version`）。一個很小的重現專案最有幫助。
 - **較大的變更**（新語言、新指令、改變單元或錄製內容的定義）：
   請先開一個 issue，讓我們在你動手撰寫之前先對方向達成共識。過去各項
-  選擇背後的理由記錄在 [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md)。
-- **安全性問題：** 請不要開公開的 issue；請參閱 [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md)。
+  選擇背後的理由記錄在 [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md)。
+- **安全性問題：** 請不要開公開的 issue；請參閱 [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md)。
 
 ## 環境設定
 
@@ -36,7 +36,7 @@ description: 環境設定、測試放在哪裡、如何新增 crate 對應或語
 | wasm 橋接 | `rustup target add wasm32-unknown-unknown` 與對應版本的 `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -81,8 +81,8 @@ cargo test
 ## 新增語言
 
 PHP 與 C# 是在兩個值得先閱讀的 commit 中以預覽形式加入的：
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243)（PHP）與
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a)（C#）。新語言的開始
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70)（PHP）與
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b)（C#）。新語言的開始
 方式相同：
 
 1. 在 `src/lang/<name>.rs` 中撰寫外掛：探索、掃描（匯入與風險）、解析與匯出，
@@ -145,4 +145,4 @@ everything-rust，非常歡迎開一個 issue 或 pull request，把它加入
 
 ## 行為準則
 
-所有參與者都應遵守[行為準則](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md)。
+所有參與者都應遵守[行為準則](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md)。

@@ -58,7 +58,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 
 Компилируемые оригиналы выигрывают меньше: работа на элемент и так быстрая, поэтому пакет выигрывает за счёт числа
 ядер. Пакетные крейты выделяют память через mimalloc: с системным аллокатором пакет для Go был медленнее
-одного потока. Демо: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+одного потока. Демо: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Как написать быстрый индекс
 
 - Пусть вызывающий код строит пакет один раз, а не на каждый запрос. Отображайте возвращённые индексы обратно на элементы обычным циклом.

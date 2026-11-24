@@ -10,13 +10,13 @@ description: 开发环境搭建、测试放在哪里、如何添加 crate 映射
 
 ## 开始之前
 
-- **bug：** 提交一个 [issue](https://github.com/marprojector/everything-rust/issues/new/choose)，附上
+- **bug：** 提交一个 [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose)，附上
   你运行的命令、它的输出、你的平台以及 everything-rust 版本
   （`everything-rust --version`）。一个很小的复现项目最有帮助。
 - **较大的改动**（新语言、新命令、改变单元或录制结果的定义）：
   请先提一个 issue，以便在你动手之前就整体方案达成一致。过往决策背后的原因
-  见 [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md)。
-- **安全问题：** 不要提交公开 issue；见 [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md)。
+  见 [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md)。
+- **安全问题：** 不要提交公开 issue；见 [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md)。
 
 ## 环境搭建
 
@@ -36,7 +36,7 @@ description: 开发环境搭建、测试放在哪里、如何添加 crate 映射
 | wasm 桥接层 | `rustup target add wasm32-unknown-unknown` 以及对应版本的 `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -80,8 +80,8 @@ cargo test
 ## 添加一种语言
 
 PHP 和 C# 是以预览形式在两个提交中加入的，值得先读一读：
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243)（PHP）和
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a)（C#）。新语言
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70)（PHP）和
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b)（C#）。新语言
 也以同样的方式开始：
 
 1. `src/lang/<name>.rs` 中的插件：发现、扫描（导入和风险）、解析和导出项，
@@ -143,4 +143,4 @@ everything-rust，非常欢迎提交 issue 或 Pull Request，把它加到
 
 ## 行为准则
 
-每一位参与者都应遵守[行为准则](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md)。
+每一位参与者都应遵守[行为准则](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md)。

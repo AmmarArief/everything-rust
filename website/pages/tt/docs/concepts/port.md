@@ -25,7 +25,7 @@ description: port.rs язу, сез яки агентыгыз яза торга�
 ## Мисал: позициясен күчергән эмодзи
 
 [x18n](https://github.com/x18n-dev/x18n) эченнән `packages/core/src/fuzzy.ts`, ике ысул белән дә
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo) эчендә күчерелгән:
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo) эчендә күчерелгән:
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: ready, wasm-bindgen (core браузерларда эшли)
@@ -46,7 +46,7 @@ JS `indexOf` UTF-16 код берәмлекләрен саный, шуңа кү�
 `demo/*/src/port.rs` эчендәге порт ясалган `utf16` ярдәмчеләрен куллана һәм 2000/2000 очракны һәм gate'ны уза,
 napi-rs (`demo/fuzzy-napi`) һәм wasm-bindgen (`demo/fuzzy-rs`) итеп тә.
 
-everything-rust бөтен x18n өчен язган план: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+everything-rust бөтен x18n өчен язган план: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Ул нинди зурлыкта булырга тиеш?
 
 `gate` порт юлларын оригиналныкы белән чагыштыра һәм 3x'тан артса (өстәвенә импортлар һәм сигнатуралар өчен 50 юл) узмый. Моннан артуы гадәттә crate инде эшләгән нәрсәне кулдан язуны яки очракларны берәм-берәм эшкәртүне аңлата. `analyze` кулланырга кирәкле crate'ларны күрсәтә.

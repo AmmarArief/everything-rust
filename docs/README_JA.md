@@ -11,20 +11,20 @@
 コードを自動翻訳するツールではありません。Rust はコーディングエージェント（またはあなた）が書き、everything-rust が元のプログラムと照合して検証します。</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#クイックスタート">クイックスタート</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#クイックスタート">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">実プロジェクトの移植</a> · <a href="faq.md#faq">よくある質問</a><br>
+<p align="center"><b><a href="#クイックスタート">クイックスタート</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#クイックスタート">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">実プロジェクトの移植</a> · <a href="faq.md#faq">よくある質問</a><br>
 <sub><a href="#対応言語">対応言語</a> · <a href="how-it-works.md#how-it-works">仕組み</a> · <a href="whole-apps.md#port-a-whole-app">アプリ全体の移植</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0 の新機能: <a href="real-world.md#prettier">Prettier を Rust に移植</a>。19x 高速 · 記録済み実行 17,224 件中 15,861 件が完全に Rust · すべてバイト単位で一致</p>
 
@@ -113,12 +113,12 @@ cargo install everything-rust   # crates.io からインストール
 everything-rust setup           # Claude Code、Codex、Cursor、Gemini CLI、OpenCode に登録
 ```
 
-Rust ツールチェーンをまだ導入していない場合は、各 [GitHub release](https://github.com/marprojector/everything-rust/releases) に macOS、Linux、Windows 向けのビルド済みバイナリが添付されています。JavaScript プロジェクトの場合は `npm install -g everything-rust` でも同じバイナリをインストールできます。
+Rust ツールチェーンをまだ導入していない場合は、各 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) に macOS、Linux、Windows 向けのビルド済みバイナリが添付されています。JavaScript プロジェクトの場合は `npm install -g everything-rust` でも同じバイナリをインストールできます。
 
 Claude Code ではプラグインとしてインストールすることもできます（MCP サーバーとワークフロースキルが含まれます。上記の CLI が `PATH` に通っている必要があります）:
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` は見つかった各エージェントに MCP サーバーを追加し、エージェントがスキルを読み込む場所にワークフロースキルをインストールします。他の設定は保持され、何度実行しても安全で、`--remove` で元に戻せます。あとはエージェントに次のように依頼するだけです:
@@ -192,7 +192,7 @@ C 言語を除くすべての言語でバッチクラス（`--batch`）も生成
 
 言語はリポジトリから自動検出されます（`go.mod`、`pom.xml`、`.csproj` または `.sln`、`pyproject.toml`、`Gemfile`、`composer.json`、`package.json`、該当しない場合は最も多いソースファイルから判断）。`--lang` で上書きもできます。型情報はソースから取得します: TS の型、Python の型ヒント、C/Go/Java/C# のシグネチャ、Ruby の YARD タグ、PHP の型および phpdoc。型注釈がなく数値として使われている引数は数値型と推論されます。
 
-PHP については、`analyze` で PHP アプリの移行計画を立てられ（Composer パッケージと PSR-4 オートローディング、緩い比較や整数オーバーフローによる float 化などのリスク、Composer パッケージからクレートへのマッピング）、PHP の CLI やサーバーを記録・リプレイして Rust 製フロントドアの背後に配置できます。PHP の FFI を通じたユニット単位の Rust 移植は次のステップです（[issue #2](https://github.com/marprojector/everything-rust/issues/2)）。
+PHP については、`analyze` で PHP アプリの移行計画を立てられ（Composer パッケージと PSR-4 オートローディング、緩い比較や整数オーバーフローによる float 化などのリスク、Composer パッケージからクレートへのマッピング）、PHP の CLI やサーバーを記録・リプレイして Rust 製フロントドアの背後に配置できます。PHP の FFI を通じたユニット単位の Rust 移植は次のステップです（[issue #2](https://github.com/AmmarArief/everything-rust/issues/2)）。
 
 C# も同じように動作します: `analyze` は `.csproj` プロジェクトとその NuGet パッケージ（クレートにマッピング）を読み取り、`using` ディレクティブをフォルダに解決して、C# 特有の挙動の違い（`decimal`、`dynamic`、LINQ の遅延クエリ、`Task`、`lock`、リフレクション）を指摘します。C# の CLI や ASP.NET サーバーは記録・リプレイ・Rust フロントドア化が可能で、P/Invoke を用いたユニット単位の移植が次のステップです。
 
@@ -208,7 +208,7 @@ C# も同じように動作します: `analyze` は `.csproj` プロジェクト
 ## スポンサー
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> は無料のオープンソースです。お役に立ちましたら、ぜひスポンサーをご検討ください。<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> は無料のオープンソースです。お役に立ちましたら、ぜひスポンサーをご検討ください。<br>
   皆様のご支援が開発を支えます。
 </p>
 
@@ -221,4 +221,4 @@ Issue や Pull Request を歓迎します。[CONTRIBUTING.md](../CONTRIBUTING.md
 
 ## ライセンス
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector)。あなたのリポジトリ内の移植版および生成コードはすべてあなたのものです。
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief)。あなたのリポジトリ内の移植版および生成コードはすべてあなたのものです。

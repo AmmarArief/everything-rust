@@ -5,7 +5,7 @@ welcome, and you don't need to ask before opening a pull request for a bug fix.
 
 ## Before you start
 
-- **A bug:** open an [issue](https://github.com/marprojector/everything-rust/issues/new/choose) with
+- **A bug:** open an [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) with
   the command you ran, its output, your platform and the everything-rust version
   (`everything-rust --version`). A tiny repro project helps most.
 - **A bigger change** (a new language, a new command, a change to what a unit or a recording is):
@@ -31,7 +31,7 @@ skip a part whose runtime is missing, so install the ones you touch:
 | wasm bridges | `rustup target add wasm32-unknown-unknown` and the matching `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -81,8 +81,8 @@ library missing from the table is reported as `unknown`; never guess a crate.
 ## Add a language
 
 PHP and C# were added in two commits worth reading first:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) and
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). A new language starts
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) and
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). A new language starts
 the same way:
 
 1. A plugin in `src/lang/<name>.rs`: discovery, scan (imports and risks), resolve and exports,

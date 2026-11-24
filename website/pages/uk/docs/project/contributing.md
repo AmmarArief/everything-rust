@@ -10,13 +10,13 @@ description: Налаштування, куди класти тести, як д
 
 ## Перш ніж почати
 
-- **Баг:** відкрийте [issue](https://github.com/marprojector/everything-rust/issues/new/choose) з
+- **Баг:** відкрийте [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) з
   командою, яку ви запустили, її виводом, вашою платформою і версією everything-rust
   (`everything-rust --version`). Найбільше допомагає крихітний проєкт для відтворення.
 - **Більша зміна** (нова мова, нова команда, зміна того, що таке модуль чи запис):
   спершу відкрийте issue, щоб ми домовилися про форму, перш ніж ви її напишете. Причини минулих
-  рішень описано в [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md).
-- **Проблема безпеки:** не відкривайте публічний issue; див. [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md).
+  рішень описано в [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md).
+- **Проблема безпеки:** не відкривайте публічний issue; див. [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md).
 
 ## Налаштування
 
@@ -36,7 +36,7 @@ description: Налаштування, куди класти тести, як д
 | wasm-мости | `rustup target add wasm32-unknown-unknown` і відповідний `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -81,8 +81,8 @@ cargo test
 ## Додайте мову
 
 PHP і C# було додано як попередній перегляд у двох комітах, які варто прочитати першими:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) і
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). Нова мова починається
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) і
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). Нова мова починається
 так само:
 
 1. Плагін у `src/lang/<name>.rs`: пошук, сканування (імпорти і ризики), резолвінг та експорти,
@@ -145,4 +145,4 @@ everything-rust на чомусь реальному, issue або pull request,
 
 ## Кодекс поведінки
 
-Усі учасники мають дотримуватися [кодексу поведінки](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md).
+Усі учасники мають дотримуватися [кодексу поведінки](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md).

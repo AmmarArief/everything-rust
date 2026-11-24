@@ -4,10 +4,10 @@
   "description": "Rewrite your app in Rust, one piece at a time, checked against the original's recorded behavior at every step: profile, bridge, record, diff, bench, shadow and gate, for TypeScript/JavaScript, Python, C, Go, Ruby and Java, with whole-app record and replay for PHP and C#.",
   "author": {
     "name": "M. Ammar R. Arief",
-    "url": "https://github.com/marprojector"
+    "url": "https://github.com/AmmarArief"
   },
-  "homepage": "https://github.com/marprojector/everything-rust",
-  "repository": "https://github.com/marprojector/everything-rust",
+  "homepage": "https://github.com/AmmarArief/everything-rust",
+  "repository": "https://github.com/AmmarArief/everything-rust",
   "license": "MIT",
   "keywords": [
     "rust",
@@ -23,9 +23,9 @@
     "shortDescription": "Rewrite your app in Rust one piece at a time, checked against the original.",
     "category": "Coding",
     "developerName": "M. Ammar R. Arief",
-    "websiteUrl": "https://github.com/marprojector/everything-rust",
-    "privacyPolicyUrl": "https://github.com/marprojector/everything-rust/blob/main/docs/privacy.md",
-    "termsOfServiceUrl": "https://github.com/marprojector/everything-rust/blob/main/LICENSE",
+    "websiteUrl": "https://github.com/AmmarArief/everything-rust",
+    "privacyPolicyUrl": "https://github.com/AmmarArief/everything-rust/blob/main/docs/privacy.md",
+    "termsOfServiceUrl": "https://github.com/AmmarArief/everything-rust/blob/main/LICENSE",
     "logo": "./.claude-plugin/icon.png"
   }
 }

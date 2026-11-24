@@ -340,7 +340,7 @@
 ## 2.0.2 (2026-11-19)
 
 - The npm package carries `mcpName`, and `server.json` describes the MCP server, so it can be
-  listed in the official MCP Registry as `io.github.marprojector/everything-rust`.
+  listed in the official MCP Registry as `io.github.AmmarArief/everything-rust`.
 
 ## 2.0.1 (2026-11-19)
 
@@ -493,7 +493,7 @@ Changed: `diff` exits non-zero when the recording is stale (it printed a warning
 
 ## 1.5.1 (2026-11-18)
 
-- Fix ([#80](https://github.com/marprojector/everything-rust/issues/80)): `record` could stall for good
+- Fix ([#80](https://github.com/AmmarArief/everything-rust/issues/80)): `record` could stall for good
   when a generated input made the original run away (a trap like `2147483647` in `[w] * n`
   allocates gigabytes, a loop that never ends). Every recorder (TS/JS, Python, C, Go, Ruby, Java)
   now runs under a watchdog: a case that runs past the limit (10 seconds, or
@@ -536,18 +536,18 @@ Twenty-two contributions from the community, Windows in CI, and a README in 16 l
 
 Fixes from the first round of outside issues and pull requests, and the project's community files.
 
-- Fix ([#31](https://github.com/marprojector/everything-rust/issues/31)): `bridge` takes a single source
+- Fix ([#31](https://github.com/AmmarArief/everything-rust/issues/31)): `bridge` takes a single source
   file inside a unit (`everything-rust bridge . pkg/core.py`) and ports just that file, so a helper
   script next to the real module can stay in the source language.
-- Fix ([#32](https://github.com/marprojector/everything-rust/issues/32)): a name defined twice in one
+- Fix ([#32](https://github.com/AmmarArief/everything-rust/issues/32)): a name defined twice in one
   unit (a wrapper in `__init__.py` and the function it wraps in a submodule, say) made one
   definition silently replace the other. `bridge` now refuses with both locations and how to
   bridge the module you want on its own.
-- Fix ([#33](https://github.com/marprojector/everything-rust/issues/33)): Python command-line entry
+- Fix ([#33](https://github.com/AmmarArief/everything-rust/issues/33)): Python command-line entry
   points are kept in Python instead of offered as ports: functions the
   `if __name__ == "__main__":` block (or a package's `__main__.py`) calls, and functions returning
   an `argparse.ArgumentParser`. `app front-door` takes the command line over in a whole-app port.
-- Fix ([#34](https://github.com/marprojector/everything-rust/issues/34)): a Python parameter typed with a
+- Fix ([#34](https://github.com/AmmarArief/everything-rust/issues/34)): a Python parameter typed with a
   dataclass now gets real instances in recorded cases, built from the dataclass's fields (defaulted
   fields sometimes left out), instead of only `None` and shapes that can never fit.
 - From @elfenomenokim: optional dataclass parameters bind as `Option` so the generated crate
@@ -580,14 +580,14 @@ fixes from the first outside contributor.
   and servers (front controllers, `$_SERVER`). `app record`, `app replay` and `app front-door`
   work on PHP CLIs and on servers run with `php -S`. Bridging PHP units into Rust (PHP FFI over a
   C ABI) comes next; `bridge` says so for now.
-- Fix ([#3](https://github.com/marprojector/everything-rust/issues/3)): `.gitignore` files in folders
+- Fix ([#3](https://github.com/AmmarArief/everything-rust/issues/3)): `.gitignore` files in folders
   above the repository (a `*` in a home-folder `.gitignore`, for one) no longer hide every source
   file. Ignore files are read the way git reads them: from the repository root down, and not from
   parent folders at all outside a repository. When ignore rules still exclude every source file,
   `analyze` says so instead of returning an empty plan.
 - PHP's built-in server echoes a `Host` header with the port it ran on; HTTP recordings now skip
   it, like `Date`.
-- Fix ([#4](https://github.com/marprojector/everything-rust/issues/4)): Python units bridged on macOS
+- Fix ([#4](https://github.com/AmmarArief/everything-rust/issues/4)): Python units bridged on macOS
   failed to link (`Undefined symbols ... _Py_IsInitialized`). The PyO3 crate now gets the same
   `build.rs` the Ruby bridge has, which lets the interpreter provide Python's symbols at load time.
   `everything-rust refresh <crate>` adds it to crates bridged before this fix.
@@ -623,15 +623,15 @@ fixes from the first outside contributor.
   `WebApplication.CreateBuilder`). `app record`, `app replay` and `app front-door` run built C#
   apps (`dotnet out/app.dll`). Bridging C# units (P/Invoke over a C ABI) comes next; `bridge` says
   so for now.
-- Fix ([#25](https://github.com/marprojector/everything-rust/issues/25)): a bridge crate in its default
+- Fix ([#25](https://github.com/AmmarArief/everything-rust/issues/25)): a bridge crate in its default
   place inside the project (`rust/<crate>`) was read as source, so Java `record` compiled its
   generated wrappers next to the originals ("duplicate class"). Every source walk now skips
   folders holding a `everything-rust.json`.
-- Fix ([#26](https://github.com/marprojector/everything-rust/issues/26)): on Windows, paths handed to
+- Fix ([#26](https://github.com/AmmarArief/everything-rust/issues/26)): on Windows, paths handed to
   `java -cp`, `-D` library paths and the other runtimes carried the `\\?\` verbatim prefix, so
   Java `record`, `diff` and `bench` could not find their classes. Paths are now made absolute
   without it everywhere.
-- Fixes found by gating every demo port ([#27](https://github.com/marprojector/everything-rust/issues/27)
+- Fixes found by gating every demo port ([#27](https://github.com/AmmarArief/everything-rust/issues/27)
   reported the first): the generated binary wire tripped the new
   `chunks_exact_to_as_chunks` lint (every Go and Java port failed `gate`), and on macOS the
   Python and Ruby extension's test binary failed to link; the generated `build.rs` now covers it,

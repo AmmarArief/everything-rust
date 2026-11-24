@@ -22,10 +22,10 @@ everything-rust setup
 
 npm 安裝的是同一個執行檔，方便 JavaScript 專案使用。
 
-macOS、Linux 與 Windows 的預先建置執行檔附在每個 [GitHub release](https://github.com/marprojector/everything-rust/releases) 中。在 Claude Code 中也可以將它安裝為外掛（包含 MCP 伺服器與技能；CLI 必須在你的 `PATH` 上）：
+macOS、Linux 與 Windows 的預先建置執行檔附在每個 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) 中。在 Claude Code 中也可以將它安裝為外掛（包含 MCP 伺服器與技能；CLI 必須在你的 `PATH` 上）：
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## 從原始碼安裝

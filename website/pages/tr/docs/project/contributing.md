@@ -11,12 +11,12 @@ yazılı anlatımları memnuniyetle karşılanır; bir hata düzeltmesi için pu
 ## Başlamadan önce
 
 - **Bir hata:** çalıştırdığınız komutu, çıktısını, platformunuzu ve everything-rust sürümünü
-  (`everything-rust --version`) içeren bir [issue](https://github.com/marprojector/everything-rust/issues/new/choose) açın.
+  (`everything-rust --version`) içeren bir [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) açın.
   En çok küçük bir yeniden üretim projesi yardımcı olur.
 - **Daha büyük bir değişiklik** (yeni bir dil, yeni bir komut, bir birimin ya da kaydın ne olduğuna dair bir değişiklik):
   siz yazmadan önce biçimi üzerinde anlaşabilmemiz için önce bir issue açın. Geçmiş seçimlerin
-  gerekçeleri [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md) içindedir.
-- **Bir güvenlik sorunu:** herkese açık bir issue açmayın; bkz. [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md).
+  gerekçeleri [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md) içindedir.
+- **Bir güvenlik sorunu:** herkese açık bir issue açmayın; bkz. [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md).
 
 ## Kurulum
 
@@ -36,7 +36,7 @@ runtime'ı eksik olan parçayı atlar, bu yüzden dokunduğunuz dillerinkini kur
 | wasm köprüleri | `rustup target add wasm32-unknown-unknown` ve buna uyan `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -81,8 +81,8 @@ açıklanması gerekiyorsa bir `note`. Eşleşen ilk girdi kazanır, bu yüzden 
 ## Bir dil ekleyin
 
 PHP ve C# önizleme olarak, önce okunmaya değer iki commit'te eklendi:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) ve
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). Yeni bir dil de aynı
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) ve
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). Yeni bir dil de aynı
 şekilde başlar:
 
 1. `src/lang/<name>.rs` içinde bir plugin: keşif, tarama (import'lar ve riskler), çözümleme ve export'lar;
@@ -145,4 +145,4 @@ sizi şaşırtan her şeyi ekleyin.
 
 ## Davranış kuralları
 
-Katılan herkesin [davranış kurallarına](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md) uyması beklenir.
+Katılan herkesin [davranış kurallarına](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md) uyması beklenir.

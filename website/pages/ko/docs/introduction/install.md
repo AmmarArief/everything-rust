@@ -22,10 +22,10 @@ everything-rust setup
 
 npm은 JavaScript 프로젝트를 위해 동일한 바이너리를 설치합니다.
 
-macOS, Linux, Windows용 사전 빌드 바이너리는 각 [GitHub 릴리스](https://github.com/marprojector/everything-rust/releases)에 첨부되어 있습니다. Claude Code에서는 플러그인(MCP 서버와 스킬 포함, CLI는 `PATH`에 있어야 함)으로도 설치할 수 있습니다:
+macOS, Linux, Windows용 사전 빌드 바이너리는 각 [GitHub 릴리스](https://github.com/AmmarArief/everything-rust/releases)에 첨부되어 있습니다. Claude Code에서는 플러그인(MCP 서버와 스킬 포함, CLI는 `PATH`에 있어야 함)으로도 설치할 수 있습니다:
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## 소스에서 설치

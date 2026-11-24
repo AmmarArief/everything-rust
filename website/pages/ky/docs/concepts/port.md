@@ -25,7 +25,7 @@ description: port.rs'ти жазуу (сиз же агентиңиз жаза т
 ## Мисал: позицияны жылдырган эмодзи
 
 [x18n](https://github.com/x18n-dev/x18n) долбоорундагы `packages/core/src/fuzzy.ts`, эки жол менен порттолгон,
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo) ичинде:
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo) ичинде:
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: ready, wasm-bindgen (core runs in browsers)
@@ -46,7 +46,7 @@ JS `indexOf` UTF-16 код бирдиктерин санайт, ошондукт
 `demo/*/src/port.rs` ичиндеги порт генерацияланган `utf16` жардамчыларын колдонуп, 2000/2000 кейстен жана gate'тен өтөт,
 napi-rs катары да (`demo/fuzzy-napi`), wasm-bindgen катары да (`demo/fuzzy-rs`).
 
-everything-rust бүт x18n үчүн жазган план: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+everything-rust бүт x18n үчүн жазган план: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Ал канчалык чоң болушу керек?
 
 `gate` порттун саптарын түп нусканыкы менен салыштырат жана 3x'тен ашса өтпөйт (плюс импорттор жана сигнатуралар үчүн 50 сап). Андан ашуу көбүнчө crate буга чейин кылган нерсени кол менен жазуу же кейстерди бир-бирден иштетүү дегенди билдирет. `analyze` колдонула турган crate'терди тизмектейт.

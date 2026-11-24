@@ -58,7 +58,7 @@ x18n бүйірлік панеліндегі 50,000 кілт бойынша із
 
 Компиляцияланатын түпнұсқалар азырақ ұтады: әр элементке жұмыс онсыз да жылдам, сондықтан batch ядролар
 санына қарай ұтады. Batch crate-тері mimalloc арқылы жады бөледі: жүйелік аллокатормен Go batch-і бір
-ағыннан да баяу болды. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+ағыннан да баяу болды. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Жылдам индексті жазу
 
 - Шақырушы batch-ті әр сұраныс сайын емес, бір рет құрсын. Қайтарылған индекстерді элементтерге қарапайым циклмен қайта сәйкестендіріңіз.

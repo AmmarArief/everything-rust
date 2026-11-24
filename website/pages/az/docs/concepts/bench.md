@@ -31,7 +31,7 @@ Real kodda çağırış başına ölçülüb ([altı dil](/docs/real-world/six-l
 | Java | 0.18x | daha böyük vahidləri port edin |
 | Go | 0.04x | daha böyük vahidləri port edin |
 
-x18n-in core-unun API dəyişikliyi olmadan köçə bilən 29 funksiyasının hamısı port edildi: hər gate keçir və 7,925 qeydə alınmış hal dəqiq uyğun gəlir, `bench` isə portların JS-dən çağırıldıqda TS-dən daha yavaş olduğunu göstərdi, çünki körpü işin özündən baha başa gəlir ([hesabat](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms qeydə alınmış halları üzrə çağırış başına 0.56x işlədi ([nümunə araşdırması](/docs/real-world/vercel-ms)).
+x18n-in core-unun API dəyişikliyi olmadan köçə bilən 29 funksiyasının hamısı port edildi: hər gate keçir və 7,925 qeydə alınmış hal dəqiq uyğun gəlir, `bench` isə portların JS-dən çağırıldıqda TS-dən daha yavaş olduğunu göstərdi, çünki körpü işin özündən baha başa gəlir ([hesabat](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms qeydə alınmış halları üzrə çağırış başına 0.56x işlədi ([nümunə araşdırması](/docs/real-world/vercel-ms)).
 
 ## Nə qazandırır: dövrü köçürmək
 

@@ -10,13 +10,13 @@ bem-vindos, e não precisa de pedir autorização antes de abrir um pull request
 
 ## Antes de começar
 
-- **Um bug:** abra um [issue](https://github.com/marprojector/everything-rust/issues/new/choose) com
+- **Um bug:** abra um [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) com
   o comando que executou, a respetiva saída, a sua plataforma e a versão do everything-rust
   (`everything-rust --version`). Um pequeno projeto que reproduza o problema é o que mais ajuda.
 - **Uma alteração maior** (uma nova linguagem, um novo comando, uma mudança ao que é uma unidade ou uma gravação):
   abra primeiro um issue para podermos acordar a forma antes de a escrever. As razões por trás de escolhas
-  anteriores estão em [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md).
-- **Um problema de segurança:** não abra um issue público; consulte [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md).
+  anteriores estão em [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md).
+- **Um problema de segurança:** não abra um issue público; consulte [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md).
 
 ## Configuração
 
@@ -36,7 +36,7 @@ ignoram uma parte cujo runtime esteja em falta, por isso instale os que vai alte
 | Bridges wasm | `rustup target add wasm32-unknown-unknown` e o `wasm-bindgen-cli` correspondente |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -81,8 +81,8 @@ biblioteca que não esteja na tabela é indicada como `unknown`; nunca adivinhe 
 ## Adicionar uma linguagem
 
 PHP e C# foram adicionados como pré-visualizações em dois commits que vale a pena ler primeiro:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) e
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). Uma nova linguagem começa
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) e
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). Uma nova linguagem começa
 da mesma forma:
 
 1. Um plugin em `src/lang/<name>.rs`: descoberta, análise (imports e riscos), resolução e exports,
@@ -145,4 +145,4 @@ executou, o número de casos e tudo o que o tenha surpreendido.
 
 ## Código de conduta
 
-Espera-se que todos os participantes sigam o [código de conduta](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md).
+Espera-se que todos os participantes sigam o [código de conduta](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md).

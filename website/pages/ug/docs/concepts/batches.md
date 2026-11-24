@@ -58,7 +58,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 
 تۈزۈلگەن ئەسلى نۇسخىلار ئازراق پايدا ئالىدۇ: ھەر بىر ئېلېمېنتنىڭ ئىشى ئاللىقاچان تېز، شۇڭا توپ يادرو سانىچىلىك
 ئۇتىدۇ. توپ crate لىرى mimalloc بىلەن ئىچكى ساقلىغۇچ ئاجرىتىدۇ: سىستېما ئاجراتقۇچىسى بىلەن Go توپى
-بىر ئېقىمدىنمۇ ئاستا ئىدى. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+بىر ئېقىمدىنمۇ ئاستا ئىدى. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## تېز ئىندېكس يېزىش
 
 - چاقىرغۇچىغا توپنى ھەر بىر سۈرۈشتۈرۈشتە ئەمەس، بىر قېتىم قۇرغۇزۇڭ. قايتۇرۇلغان ئىندېكسلارنى ئاددىي ئايلانما بىلەن ئېلېمېنتلارغا قايتۇرۇڭ.

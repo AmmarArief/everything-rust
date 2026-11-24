@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Onun vahidlərini PHP-nin FFI-ı vasitəsilə Rust-a port etmək növbəti addımdır ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). O vaxta qədər `bridge` PHP vahidlərini aydın mesajla rədd edir.
+Onun vahidlərini PHP-nin FFI-ı vasitəsilə Rust-a port etmək növbəti addımdır ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). O vaxta qədər `bridge` PHP vahidlərini aydın mesajla rədd edir.
 
 CI PHP quraşdırmır, buna görə PHP testləri yalnız PHP olan maşında işləyir.

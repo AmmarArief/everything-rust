@@ -31,7 +31,7 @@ Pro Aufruf gemessen an echtem Code ([sechs Sprachen](/docs/real-world/six-langua
 | Java | 0.18x | größere Units portieren |
 | Go | 0.04x | größere Units portieren |
 
-Alle 29 Funktionen des Kerns von x18n, die sich ohne API-Änderung verlagern lassen, wurden portiert: Jedes Gate besteht und 7,925 aufgezeichnete Fälle stimmen exakt überein, und `bench` zeigte, dass die Portierungen, aus JS aufgerufen, langsamer als das TS sind, weil die Bridge mehr kostet als die Arbeit ([Bericht](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms lief über seine aufgezeichneten Fälle mit 0.56x pro Aufruf ([Fallstudie](/docs/real-world/vercel-ms)).
+Alle 29 Funktionen des Kerns von x18n, die sich ohne API-Änderung verlagern lassen, wurden portiert: Jedes Gate besteht und 7,925 aufgezeichnete Fälle stimmen exakt überein, und `bench` zeigte, dass die Portierungen, aus JS aufgerufen, langsamer als das TS sind, weil die Bridge mehr kostet als die Arbeit ([Bericht](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms lief über seine aufgezeichneten Fälle mit 0.56x pro Aufruf ([Fallstudie](/docs/real-world/vercel-ms)).
 
 ## Was gewinnt: die Schleife verlagern
 

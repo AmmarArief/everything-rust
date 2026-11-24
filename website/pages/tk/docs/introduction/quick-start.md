@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Entek Rust toolchain ýokmy? macOS, Linux we Windows üçin taýýar binar faýllar her [GitHub release](https://github.com/marprojector/everything-rust/releases) sahypasyna goşulan, JavaScript taslamalary üçin bolsa npm şol bir binar faýly gurnaýar.
+Entek Rust toolchain ýokmy? macOS, Linux we Windows üçin taýýar binar faýllar her [GitHub release](https://github.com/AmmarArief/everything-rust/releases) sahypasyna goşulan, JavaScript taslamalary üçin bolsa npm şol bir binar faýly gurnaýar.
 
 `setup` tapan her agentine MCP serweri goşýar we workflow skill-ini agentiň skill-leri okaýan ýerine gurnaýar. Onuň nämeleri üýtgedýändigi üçin [Agentiňizi sazlaň](/docs/introduction/agents) sahypasyna serediň.
 

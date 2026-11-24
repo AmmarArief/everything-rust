@@ -30,4 +30,4 @@ everything-rust disable rust/dedupe-rs    # back to the original, byte for byte
 
 `report` builds, runs `diff` and `bench`, and writes the recorded cases matched, the speedup with the call included, the fallback rate, whether the unit is on, and the machine with its core count.
 
-Try it on [`tests/fixtures/go-fuzzy`](https://github.com/marprojector/everything-rust/tree/main/tests/fixtures/go-fuzzy) (a Python dedupe, where `go` picks the outer `dedupe` over the inner `levenshtein`) or [`tests/fixtures/go-search-ts`](https://github.com/marprojector/everything-rust/tree/main/tests/fixtures/go-search-ts) (a TypeScript leaf called in a loop, which `go` bridges with a batch).
+Try it on [`tests/fixtures/go-fuzzy`](https://github.com/AmmarArief/everything-rust/tree/main/tests/fixtures/go-fuzzy) (a Python dedupe, where `go` picks the outer `dedupe` over the inner `levenshtein`) or [`tests/fixtures/go-search-ts`](https://github.com/AmmarArief/everything-rust/tree/main/tests/fixtures/go-search-ts) (a TypeScript leaf called in a loop, which `go` bridges with a batch).

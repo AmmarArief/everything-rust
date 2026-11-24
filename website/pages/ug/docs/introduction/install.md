@@ -22,10 +22,10 @@ everything-rust setup
 
 npm ئوخشاش ئىككىلىك ھۆججەتنى JavaScript تۈرلىرى ئۈچۈن ئورنىتىدۇ.
 
-macOS، Linux ۋە Windows ئۈچۈن ئالدىن تۈزۈلگەن ئىككىلىك ھۆججەتلەر ھەر بىر [GitHub release](https://github.com/marprojector/everything-rust/releases) غا قوشۇلغان. Claude Code دا ئۇنى قىستۇرما سۈپىتىدىمۇ ئورناتقىلى بولىدۇ (MCP مۇلازىمېتىرى ۋە ماھارەت؛ CLI چوقۇم `PATH` تا بولۇشى كېرەك):
+macOS، Linux ۋە Windows ئۈچۈن ئالدىن تۈزۈلگەن ئىككىلىك ھۆججەتلەر ھەر بىر [GitHub release](https://github.com/AmmarArief/everything-rust/releases) غا قوشۇلغان. Claude Code دا ئۇنى قىستۇرما سۈپىتىدىمۇ ئورناتقىلى بولىدۇ (MCP مۇلازىمېتىرى ۋە ماھارەت؛ CLI چوقۇم `PATH` تا بولۇشى كېرەك):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## مەنبە كودىدىن

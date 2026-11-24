@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-还没有安装 Rust 工具链？每个 [GitHub release](https://github.com/marprojector/everything-rust/releases) 都附带 macOS、Linux 和 Windows 的预编译二进制文件；对于 JavaScript 项目，npm 安装的也是同一个二进制文件。
+还没有安装 Rust 工具链？每个 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) 都附带 macOS、Linux 和 Windows 的预编译二进制文件；对于 JavaScript 项目，npm 安装的也是同一个二进制文件。
 
 `setup` 会把 MCP 服务器添加到它找到的每一个智能体中，并把工作流技能安装到该智能体读取技能的位置。它具体改动了什么，见[配置你的智能体](/docs/introduction/agents)。
 

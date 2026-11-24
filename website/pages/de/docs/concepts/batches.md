@@ -58,7 +58,7 @@ Arbeit auf 4 Kernen, identische Ergebnisse und Fehler (Benchmarks in jedem Demo-
 
 Kompilierte Originale gewinnen weniger: Die Arbeit pro Element ist bereits schnell, also gewinnt der Batch um die Anzahl der
 Kerne. Batch-Crates allozieren mit mimalloc: Mit dem System-Allocator war der Go-Batch langsamer als
-ein einzelner Thread. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+ein einzelner Thread. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Einen schnellen Index schreiben
 
 - Lass den Aufrufer den Batch einmal bauen, nicht pro Anfrage. Bilde zurückgegebene Indizes mit einer einfachen Schleife auf Elemente ab.

@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## Agent muny nähili ýerine ýetirýär
 
-[Tutuş programma skill-i](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) agenti ädimme-ädim alyp barýar, diňe siziň kabul edip bilýän kararlaryňyzdan başlap:
+[Tutuş programma skill-i](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) agenti ädimme-ädim alyp barýar, diňe siziň kabul edip bilýän kararlaryňyzdan başlap:
 
 - **Sorag-jogap (grilling)**: agent tapgyrlar bilen soraýar, her sorag maslahat berilýän jogaby bilen, portuň bagly her karary kesgitlenýänçä, we her birini `rust/DECISIONS.md` içinde ADR hökmünde ýazýar, `rust/GLOSSARY.md` bolsa asyl nusganyň adalgalaryny Rust atlaryna laýyklaşdyrýar.
 - **Gözleg**: fon agentleri her baglylygyň esasy çeşmelerini okaýar we tapan her semantik duzagy bilen `rust/research/<topic>.md` ýazýar.

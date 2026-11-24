@@ -11,12 +11,12 @@ Kömegiňiz üçin sag boluň. Ýalňyşlyk habarlary, düzedişler, täze dil g
 ## Başlamazdan öň
 
 - **Ýalňyşlyk:** işleden buýrugyňyz, onuň çykyşy, platformaňyz we everything-rust wersiýasy
-  (`everything-rust --version`) bilen [issue](https://github.com/marprojector/everything-rust/issues/new/choose)
+  (`everything-rust --version`) bilen [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose)
   açyň. Ýalňyşlygy gaýtalaýan kiçijik taslama iň köp kömek edýär.
 - **Has uly üýtgeşme** (täze dil, täze buýruk, birligiň ýa-da ýazgynyň näme bolýandygyna üýtgeşme):
   ony ýazmazdan öň görnüşi barada ylalaşmak üçin ilki issue açyň. Öňki kararlaryň sebäpleri
-  [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md) içinde.
-- **Howpsuzlyk meselesi:** açyk issue açmaň; [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md) faýlyna serediň.
+  [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md) içinde.
+- **Howpsuzlyk meselesi:** açyk issue açmaň; [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md) faýlyna serediň.
 
 ## Gurşawy sazlamak
 
@@ -36,7 +36,7 @@ runtime-y ýok bölegi geçip gidýär, şonuň üçin degýän dilleriňiziňki
 | wasm bridge-leri | `rustup target add wasm32-unknown-unknown` we laýyk `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -82,8 +82,8 @@ goýuň. Tablisada ýok kitaphana `unknown` diýip habar berilýär; crate-i hi�
 ## Dil goşmak
 
 PHP we C# preview hökmünde iki commit-de goşuldy, olary ilki okamak peýdaly:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) we
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). Täze dil hem şeýle başlaýar:
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) we
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). Täze dil hem şeýle başlaýar:
 
 1. `src/lang/<name>.rs` içinde plugin: tapmak, skan etmek (importlar we töwekgelçilikler), çözmek we
    eksportlar, üstesine onuň kitaphanalarynyň crate-leri `src/crates.toml` içinde `[[<name>]]`
@@ -148,4 +148,4 @@ sanlaryny we sizi geň galdyran islendik zady görkeziň.
 
 ## Özüňi alyp barş kodeksi
 
-Gatnaşýanlaryň hemmesinden [özüňi alyp barş kodeksine](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md) eýermek garaşylýar.
+Gatnaşýanlaryň hemmesinden [özüňi alyp barş kodeksine](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md) eýermek garaşylýar.

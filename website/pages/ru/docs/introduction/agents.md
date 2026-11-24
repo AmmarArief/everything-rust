@@ -36,12 +36,12 @@ everything-rust setup
 
 ## Навык
 
-Навык рабочего процесса ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) объясняет агенту, как проходить цикл: профилировать, составить план и остановиться для одобрения, портировать один модуль, доказать его корректность, выкатить за теневым режимом и считать работу завершённой, только когда проходит `gate`. Для целого приложения он следует [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md); см. [Портирование целого приложения](/docs/whole-apps/overview).
+Навык рабочего процесса ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) объясняет агенту, как проходить цикл: профилировать, составить план и остановиться для одобрения, портировать один модуль, доказать его корректность, выкатить за теневым режимом и считать работу завершённой, только когда проходит `gate`. Для целого приложения он следует [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md); см. [Портирование целого приложения](/docs/whole-apps/overview).
 
 ## Плагин для Claude Code
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Плагин приносит MCP-сервер и навык; CLI должен быть в вашем `PATH`.

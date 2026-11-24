@@ -11,20 +11,20 @@
 它不会自动翻译代码：Rust 由你的编程智能体（或你自己）编写，everything-rust 负责对照原程序进行验证。</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#快速开始">快速开始</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#快速开始">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">真实项目迁移</a> · <a href="faq.md#faq">常见问题</a><br>
+<p align="center"><b><a href="#快速开始">快速开始</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#快速开始">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">真实项目迁移</a> · <a href="faq.md#faq">常见问题</a><br>
 <sub><a href="#支持语言">支持语言</a> · <a href="how-it-works.md#how-it-works">工作原理</a> · <a href="whole-apps.md#port-a-whole-app">整应用迁移</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次录制运行中 15,861 次完全由 Rust 执行 · 全部逐字节一致</p>
 
@@ -113,12 +113,12 @@ cargo install everything-rust   # 从 crates.io 安装
 everything-rust setup           # 自动注册到 Claude Code、Codex、Cursor、Gemini CLI 和 OpenCode
 ```
 
-还没有安装 Rust 工具链？每个 [GitHub release](https://github.com/marprojector/everything-rust/releases) 都附带了 macOS、Linux 和 Windows 的预编译二进制文件；对于 JavaScript 项目，也可以直接运行 `npm install -g everything-rust` 安装相同的二进制文件。
+还没有安装 Rust 工具链？每个 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) 都附带了 macOS、Linux 和 Windows 的预编译二进制文件；对于 JavaScript 项目，也可以直接运行 `npm install -g everything-rust` 安装相同的二进制文件。
 
 在 Claude Code 中还可以将其作为插件安装（包含 MCP 服务器和工作流技能，需确保上述 CLI 已加入 `PATH`）：
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` 会把 MCP 服务器添加到它检测到的每一个智能体中，并把工作流技能安装到对应智能体读取技能的目录。它会保留你的其他配置，可以安全地重复运行，`--remove` 则会撤销这些改动。之后你就可以直接向智能体提需求，例如：
@@ -192,7 +192,7 @@ everything-rust 并不负责自动翻译代码：具体 Rust 代码由你的编�
 
 语言会根据代码库自动检测（依次检查 `go.mod`、`pom.xml`、`.csproj` 或 `.sln`、`pyproject.toml`、`Gemfile`、`composer.json`、`package.json`，否则统计最常见的源码文件）；也可以通过 `--lang` 手动指定。类型信息直接从源码提取：TS 类型、Python 类型注解、C/Go/Java/C# 函数签名、Ruby YARD 标签、PHP 类型与 phpdoc；对于未标注类型但按数值使用的参数，会自动推断为数值类型。
 
-对于 PHP，`analyze` 可为 PHP 应用生成迁移规划（支持 Composer 包与 PSR-4 自动加载、识别松散比较和整数溢出转浮点等风险、将 Composer 包映射为 Rust crate），并且支持对 PHP CLI 或服务端进行录制、回放与 Rust 前门接管。通过 PHP FFI 将单元逐个迁入 Rust 是下一步计划（[issue #2](https://github.com/marprojector/everything-rust/issues/2)）。
+对于 PHP，`analyze` 可为 PHP 应用生成迁移规划（支持 Composer 包与 PSR-4 自动加载、识别松散比较和整数溢出转浮点等风险、将 Composer 包映射为 Rust crate），并且支持对 PHP CLI 或服务端进行录制、回放与 Rust 前门接管。通过 PHP FFI 将单元逐个迁入 Rust 是下一步计划（[issue #2](https://github.com/AmmarArief/everything-rust/issues/2)）。
 
 C# 的支持方式相同：`analyze` 会读取 `.csproj` 工程及其 NuGet 包（映射为 crate），将 `using` 指令解析到对应目录，并标记 C# 特有的语义差异（`decimal`、`dynamic`、LINQ 延迟查询、`Task`、`lock`、反射）。现已支持对 C# CLI 或 ASP.NET 服务端进行录制、回放与 Rust 前门接管；通过 P/Invoke 迁移单个单元将在后续支持。
 
@@ -208,7 +208,7 @@ C# 的支持方式相同：`analyze` 会读取 `.csproj` 工程及其 NuGet 包�
 ## 赞助商
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> 是一款免费开源项目。如果它对你的工作有所帮助，欢迎考虑赞助支持。<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> 是一款免费开源项目。如果它对你的工作有所帮助，欢迎考虑赞助支持。<br>
   你的支持将助力项目持续开发。
 </p>
 
@@ -221,4 +221,4 @@ C# 的支持方式相同：`analyze` 会读取 `.csproj` 工程及其 NuGet 包�
 
 ## 许可证
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector)。你在自己仓库中生成的移植代码与产物均归你所有。
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief)。你在自己仓库中生成的移植代码与产物均归你所有。

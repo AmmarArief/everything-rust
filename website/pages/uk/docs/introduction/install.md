@@ -22,10 +22,10 @@ everything-rust setup
 
 npm встановлює той самий бінарник, для проєктів на JavaScript.
 
-Готові бінарники для macOS, Linux і Windows додано до кожного [релізу на GitHub](https://github.com/marprojector/everything-rust/releases). У Claude Code його також можна встановити як плагін (сервер MCP і навичка; CLI має бути у вашому `PATH`):
+Готові бінарники для macOS, Linux і Windows додано до кожного [релізу на GitHub](https://github.com/AmmarArief/everything-rust/releases). У Claude Code його також можна встановити як плагін (сервер MCP і навичка; CLI має бути у вашому `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## Із вихідного коду

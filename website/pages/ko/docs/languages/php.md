@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-PHP의 FFI를 통해 유닛을 Rust로 포팅하는 것이 다음 단계입니다([issue #2](https://github.com/marprojector/everything-rust/issues/2)). 그때까지 `bridge`는 명확한 메시지와 함께 PHP 유닛을 거부합니다.
+PHP의 FFI를 통해 유닛을 Rust로 포팅하는 것이 다음 단계입니다([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). 그때까지 `bridge`는 명확한 메시지와 함께 PHP 유닛을 거부합니다.
 
 CI는 PHP를 설치하지 않으므로 PHP 테스트는 PHP가 있는 머신에서만 실행됩니다.

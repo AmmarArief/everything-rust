@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Бенчмарк | `everything-rust bench <crate>` | Замеряет время записанных кейсов на оригинале и на Rust, включая мост |
 | 4. Теневой режим | `everything-rust shadow <crate>` | Замена, которая запускает обе версии, возвращает результат оригинала и сообщает о расхождениях; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Гейт | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, тесты, аудит `unsafe`, ничего непортированного, записанный кейс с ошибкой для каждого пути ошибки оригинала, никаких `unwrap`/`expect`/`panic!` там, где оригинал возвращает ошибку (если только не помечено `// INFALLIBLE: <why>`), сборка, API, поведение |
-| Агенты | `everything-rust setup` | Регистрирует MCP-сервер (`everything-rust mcp`, каждый шаг как инструмент) и навык рабочего процесса ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) в ваших агентах разработки |
+| Агенты | `everything-rust setup` | Регистрирует MCP-сервер (`everything-rust mcp`, каждый шаг как инструмент) и навык рабочего процесса ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) в ваших агентах разработки |
 
 ## Горячие пути: держите данные в Rust {#hot-paths-keep-the-data-in-rust}
 
@@ -96,7 +96,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 
 Компилируемые оригиналы выигрывают меньше: работа на элемент и так быстрая, поэтому пакет выигрывает за счёт числа
 ядер. Пакетные крейты выделяют память через mimalloc: с системным аллокатором пакет для Go был медленнее
-одного потока. Демо: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+одного потока. Демо: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## Что решает `bridge` {#what-bridge-decides}
 
@@ -185,7 +185,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 | 3. Бенчмарк | `everything-rust bench <crate>` | Замеряет время записанных кейсов на оригинале и на Rust, включая мост |
 | 4. Теневой режим | `everything-rust shadow <crate>` | Замена, которая запускает обе версии, возвращает результат оригинала и сообщает о расхождениях; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Гейт | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, тесты, аудит `unsafe`, ничего непортированного, записанный кейс с ошибкой для каждого пути ошибки оригинала, никаких `unwrap`/`expect`/`panic!` там, где оригинал возвращает ошибку (если только не помечено `// INFALLIBLE: <why>`), сборка, API, поведение |
-| Агенты | `everything-rust setup` | Регистрирует MCP-сервер (`everything-rust mcp`, каждый шаг как инструмент) и навык рабочего процесса ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) в ваших агентах разработки |
+| Агенты | `everything-rust setup` | Регистрирует MCP-сервер (`everything-rust mcp`, каждый шаг как инструмент) и навык рабочего процесса ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) в ваших агентах разработки |
 ## Что дальше
 
 У каждого шага есть своя страница: [Профилирование и анализ](/docs/concepts/analyze), [Мост (bridge)](/docs/concepts/bridge), [Запись (record)](/docs/concepts/record), [Порт](/docs/concepts/port), [Diff](/docs/concepts/diff), [Бенчмарки (bench)](/docs/concepts/bench), [Теневой режим (shadow)](/docs/concepts/shadow) и [Гейт (gate)](/docs/concepts/gate).

@@ -58,7 +58,7 @@ x18n 사이드바에서 키 50,000개를 한 글자씩 입력하며 검색했을
 
 컴파일 언어 원본은 이득이 적습니다. 항목당 작업이 이미 빠르므로 배치는 코어 수만큼 이깁니다.
 배치 crate는 mimalloc으로 메모리를 할당합니다. 시스템 할당자를 쓰면 Go 배치가 단일 스레드보다
-느렸습니다. 데모: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+느렸습니다. 데모: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## 빠른 인덱스 작성하기
 
 - 호출하는 쪽이 배치를 쿼리마다가 아니라 한 번만 만들게 하세요. 반환된 인덱스는 평범한 루프로 항목에 다시 매핑하세요.

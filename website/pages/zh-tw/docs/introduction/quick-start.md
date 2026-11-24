@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-還沒有 Rust 工具鏈？macOS、Linux 與 Windows 的預先建置執行檔附在每個 [GitHub release](https://github.com/marprojector/everything-rust/releases) 中，而 JavaScript 專案可以用 npm 安裝同一個執行檔。
+還沒有 Rust 工具鏈？macOS、Linux 與 Windows 的預先建置執行檔附在每個 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) 中，而 JavaScript 專案可以用 npm 安裝同一個執行檔。
 
 `setup` 會把 MCP 伺服器加入它找到的每個 AI 代理，並將工作流程技能安裝到該代理讀取技能的位置。它會變更哪些內容，請參閱[設定你的 AI 代理](/docs/introduction/agents)。
 

@@ -10,7 +10,7 @@ everything-rust 在它支持的每种语言的真实代码上都端到端运行�
 随已安装工具链附带的标准库模块；对于 Java 和 C，由于磁盘上没有合适的库源码，
 就让 JDK 和 glibc 本身放在一层很薄的门面之后充当参照基准。
 
-移植版、录制用例和额外输入位于 [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md)。
+移植版、录制用例和额外输入位于 [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md)。
 
 | 语言 | 代码 | 函数 | 录制用例 | 结果 |
 | --- | --- | ---: | ---: | --- |

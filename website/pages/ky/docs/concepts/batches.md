@@ -58,7 +58,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 
 Компиляцияланган түп нускалар азыраак утушат: бир элементке кеткен иш буга чейин эле ылдам, ошондуктан batch
 ядролордун саны эсебинен утат. Batch crate'тери mimalloc менен эс бөлөт: системалык аллокатор менен Go batch'ы
-бир агымдан жайыраак болгон. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+бир агымдан жайыраак болгон. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Ылдам индекс жазуу
 
 - Чакыруучуга batch'ты ар бир суроого эмес, бир жолу курдуруңуз. Кайтарылган индекстерди элементтерге жөнөкөй цикл менен кайра айлантыңыз.

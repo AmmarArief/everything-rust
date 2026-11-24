@@ -25,7 +25,7 @@ Yaradılmış `js.rs` Rust-un fərqləndiyi yerlərdə JavaScript-i təkrarlayan
 ## Nümunə: mövqeyi sürüşdürən emoji
 
 [x18n](https://github.com/x18n-dev/x18n)-dən `packages/core/src/fuzzy.ts`, hər iki yolla
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo)-da port edilib:
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo)-da port edilib:
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: hazırdır, wasm-bindgen (core brauzerlərdə işləyir)
@@ -46,7 +46,7 @@ JS `indexOf` UTF-16 kod vahidlərini sayır, buna görə emoji iki mövqe tutur.
 `demo/*/src/port.rs`-dəki port yaradılmış `utf16` köməkçilərindən istifadə edir və 2000/2000 haldan və gate-dən keçir,
 həm napi-rs (`demo/fuzzy-napi`), həm də wasm-bindgen (`demo/fuzzy-rs`) kimi.
 
-everything-rust-in bütün x18n üçün yazdığı plan: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+everything-rust-in bütün x18n üçün yazdığı plan: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Nə qədər böyük olmalıdır?
 
 `gate` portun sətirlərini orijinalınkı ilə müqayisə edir və 3 qatdan (üstəgəl import-lar və imzalar üçün 50 sətir) çox olduqda uğursuz olur. Bundan çox adətən crate-in artıq etdiyi şeyi əllə yazmaq və ya halları bir-bir emal etmək deməkdir. `analyze` istifadə ediləcək crate-ləri siyahıya alır.

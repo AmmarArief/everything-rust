@@ -11,12 +11,12 @@ description: Ортаны баптау, тесттер қайда орналас
 ## Бастамас бұрын
 
 - **Қате:** іске қосқан командаңыз, оның шығысы, платформаңыз және everything-rust нұсқасы
-  (`everything-rust --version`) көрсетілген [issue](https://github.com/marprojector/everything-rust/issues/new/choose) ашыңыз.
+  (`everything-rust --version`) көрсетілген [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) ашыңыз.
   Кішкентай қайталау жобасы ең көп көмектеседі.
 - **Үлкенірек өзгеріс** (жаңа тіл, жаңа команда, бірліктің немесе жазбаның не екенін өзгерту):
   жазбас бұрын пішіні туралы келісу үшін алдымен issue ашыңыз. Бұрынғы
-  шешімдердің себептері [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md) ішінде.
-- **Қауіпсіздік мәселесі:** ашық issue ашпаңыз; [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md) қараңыз.
+  шешімдердің себептері [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md) ішінде.
+- **Қауіпсіздік мәселесі:** ашық issue ашпаңыз; [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md) қараңыз.
 
 ## Баптау
 
@@ -36,7 +36,7 @@ runtime-ы жоқ бөлікті өткізіп жібереді, сондықт
 | wasm bridge-тері | `rustup target add wasm32-unknown-unknown` және сәйкес `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -80,8 +80,8 @@ Java мен C# үшін), `crates`, `fit` (`good`, `partial` немесе `none`
 ## Тіл қосу
 
 PHP мен C# preview ретінде алдымен оқуға тұрарлық екі commit-те қосылды:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) және
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). Жаңа тіл де
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) және
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). Жаңа тіл де
 солай басталады:
 
 1. `src/lang/<name>.rs` ішіндегі плагин: табу, сканерлеу (импорттар мен тәуекелдер), шешу және экспорттар,
@@ -144,4 +144,4 @@ everything-rust-ті нақты бір нәрседе қолдансаңыз, о
 
 ## Мінез-құлық кодексі
 
-Қатысушылардың бәрі [мінез-құлық кодексін](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md) ұстануы тиіс.
+Қатысушылардың бәрі [мінез-құлық кодексін](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md) ұстануы тиіс.

@@ -8,7 +8,7 @@ description: O vercel/ms migrado do princípio ao fim. Correto em cada caso regi
 O [vercel/ms](https://github.com/vercel/ms) (5,5k estrelas, commit `4ff48ce`) converte `"2 days"` em
 milissegundos e vice-versa; a maioria dos projetos Node inclui-o através de alguma dependência. Migrado do princípio ao fim
 com o everything-rust 1.5.1; o crate está em
-[`demo/real-world/vercel-ms-rs`](https://github.com/marprojector/everything-rust/tree/main/demo/real-world/vercel-ms-rs).
+[`demo/real-world/vercel-ms-rs`](https://github.com/AmmarArief/everything-rust/tree/main/demo/real-world/vercel-ms-rs).
 
 | Etapa | Resultado |
 | --- | --- |

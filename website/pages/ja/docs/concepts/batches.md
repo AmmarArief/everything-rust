@@ -58,7 +58,7 @@ x18n のサイドバー検索で 50,000 キーに対して 1 文字ずつ入力�
 
 コンパイル型の元の実装では効果が小さくなります: 要素ごとの処理がすでに速いので、バッチの効果はほぼコア数分です。
 バッチのクレートは mimalloc でメモリを確保します: システムのアロケーターでは、Go のバッチは
-シングルスレッドより遅くなりました。デモ: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md)。
+シングルスレッドより遅くなりました。デモ: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md)。
 ## 速いインデックスの書き方
 
 - 呼び出し元にはバッチをクエリごとではなく一度だけ作らせてください。返されたインデックスは単純なループで要素に戻します。

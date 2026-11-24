@@ -10,7 +10,7 @@ işə salınıb. Kod artıq bu maşında olmalı idi: internetdən endirilmiş k
 hədəflər quraşdırılmış toolchain-lərlə gələn standart kitabxana modullarıdır, uyğun kitabxana mənbəyi
 diskdə olmayan Java və C üçün isə JDK və glibc özləri nazik fasad arxasında oracle rolunu oynayır.
 
-Portlar, qeydə alınmış hallar və əlavə girişlər [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md)-dədir.
+Portlar, qeydə alınmış hallar və əlavə girişlər [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md)-dədir.
 
 | Dil | Kod | Funksiyalar | Qeydə alınmış hallar | Nəticə |
 | --- | --- | ---: | ---: | --- |

@@ -31,7 +31,7 @@ Haqiqiy kodda har bir chaqiruv bo'yicha o'lchangan ([olti til](/docs/real-world/
 | Java | 0.18x | kattaroq birliklarni port qilish |
 | Go | 0.04x | kattaroq birliklarni port qilish |
 
-x18n yadrosining API o'zgarishisiz ko'chirilishi mumkin bo'lgan barcha 29 funksiyasi port qilindi: har bir gate o'tadi va 7,925 ta yozib olingan holat aynan mos keladi, `bench` esa portlar JS'dan chaqirilganda TS'dan sekinroq ekanini ko'rsatdi, chunki ko'prik ishning o'zidan qimmatroq ([hisobot](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms yozib olingan holatlari ustida har bir chaqiruvda 0.56x ishladi ([amaliy misol](/docs/real-world/vercel-ms)).
+x18n yadrosining API o'zgarishisiz ko'chirilishi mumkin bo'lgan barcha 29 funksiyasi port qilindi: har bir gate o'tadi va 7,925 ta yozib olingan holat aynan mos keladi, `bench` esa portlar JS'dan chaqirilganda TS'dan sekinroq ekanini ko'rsatdi, chunki ko'prik ishning o'zidan qimmatroq ([hisobot](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms yozib olingan holatlari ustida har bir chaqiruvda 0.56x ishladi ([amaliy misol](/docs/real-world/vercel-ms)).
 
 ## Nima yutadi: siklni ko'chirish
 

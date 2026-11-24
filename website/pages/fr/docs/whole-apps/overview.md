@@ -33,7 +33,7 @@ Les [serveurs](/docs/whole-apps/servers) et les [bibliothèques](/docs/whole-app
 
 ## Comment l'agent s'y prend
 
-Le [skill whole-app](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) guide l'agent pas à pas, en commençant par les décisions que vous seul pouvez prendre :
+Le [skill whole-app](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) guide l'agent pas à pas, en commençant par les décisions que vous seul pouvez prendre :
 
 - **Interrogatoire** : l'agent pose ses questions par séries, chacune avec sa réponse recommandée, jusqu'à ce que chaque décision dont dépend le portage soit tranchée, et consigne chacune sous forme d'ADR dans `rust/DECISIONS.md`, avec `rust/GLOSSARY.md` qui fait correspondre les termes de l'original aux noms Rust.
 - **Recherche** : des agents en arrière-plan lisent les sources primaires de chaque dépendance et écrivent `rust/research/<topic>.md`, avec chaque piège sémantique trouvé.

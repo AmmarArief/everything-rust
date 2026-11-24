@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `everything-rust bench <crate>` | Kaydedilen vakaları orijinal ve Rust üzerinde köprü dahil ölçer |
 | 4. Shadow | `everything-rust shadow <crate>` | İkisini de çalıştıran, orijinalin sonucunu döndüren ve uyuşmazlıkları raporlayan drop-in; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, testler, `unsafe` denetimi, port edilmemiş bir şey kalmaması, orijinalin her hata yolu için kayıtlı başarısız bir vaka, orijinalin hata döndürdüğü yerde `unwrap`/`expect`/`panic!` olmaması (`// INFALLIBLE: <why>` ile işaretlenmedikçe), derleme, API, davranış |
-| Ajanlar | `everything-rust setup` | MCP sunucusunu (`everything-rust mcp`, her adım bir araç olarak) ve iş akışı skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlama ajanlarınıza kaydeder |
+| Ajanlar | `everything-rust setup` | MCP sunucusunu (`everything-rust mcp`, her adım bir araç olarak) ve iş akışı skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlama ajanlarınıza kaydeder |
 
 ## Hot path'ler: veriyi Rust'ta tutun
 
@@ -97,7 +97,7 @@ Her dil batch alır ve çağrı başına portların kaybettiği yerde bile oriji
 
 Derlenen orijinaller daha az kazanır: öğe başına iş zaten hızlıdır, bu yüzden batch çekirdek sayısı
 kadar kazanır. Batch crate'leri bellek ayırmayı mimalloc ile yapar: sistem ayırıcısıyla Go batch'i
-tek thread'den daha yavaştı. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+tek thread'den daha yavaştı. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## `bridge` neye karar verir
 
@@ -187,7 +187,7 @@ vuran şeyler genellikle kaydın dışında yaşar, bu yüzden sınırların ner
 | 3. Bench | `everything-rust bench <crate>` | Kaydedilen vakaları orijinal ve Rust üzerinde köprü dahil ölçer |
 | 4. Shadow | `everything-rust shadow <crate>` | İkisini de çalıştıran, orijinalin sonucunu döndüren ve uyuşmazlıkları raporlayan drop-in; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, testler, `unsafe` denetimi, port edilmemiş bir şey kalmaması, orijinalin her hata yolu için kayıtlı başarısız bir vaka, orijinalin hata döndürdüğü yerde `unwrap`/`expect`/`panic!` olmaması (`// INFALLIBLE: <why>` ile işaretlenmedikçe), derleme, API, davranış |
-| Ajanlar | `everything-rust setup` | MCP sunucusunu (`everything-rust mcp`, her adım bir araç olarak) ve iş akışı skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlama ajanlarınıza kaydeder |
+| Ajanlar | `everything-rust setup` | MCP sunucusunu (`everything-rust mcp`, her adım bir araç olarak) ve iş akışı skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlama ajanlarınıza kaydeder |
 
 ## Sonraki
 

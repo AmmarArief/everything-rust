@@ -36,12 +36,12 @@ everything-rust setup
 
 ## スキル
 
-ワークフロースキル（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）は、エージェントにループの回し方を指示します: プロファイルを取り、計画を立てて承認を待ち、1 つのユニットを移植し、それを証明し、シャドウの背後で出荷し、`gate` に合格したときだけ完了とします。アプリ全体の場合は [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) に従います。[アプリ全体の移植](/docs/whole-apps/overview)を参照してください。
+ワークフロースキル（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）は、エージェントにループの回し方を指示します: プロファイルを取り、計画を立てて承認を待ち、1 つのユニットを移植し、それを証明し、シャドウの背後で出荷し、`gate` に合格したときだけ完了とします。アプリ全体の場合は [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) に従います。[アプリ全体の移植](/docs/whole-apps/overview)を参照してください。
 
 ## Claude Code プラグイン
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 プラグインには MCP サーバーとスキルが含まれます。CLI が `PATH` に通っている必要があります。

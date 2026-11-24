@@ -58,7 +58,7 @@ Hər dil batch-lər alır və onlar hətta çağırış başına portların uduz
 
 Kompilyasiya olunan orijinallar daha az qazanır: element başına iş artıq sürətlidir, buna görə batch nüvələrin sayı
 qədər qazanır. Batch crate-ləri mimalloc ilə yaddaş ayırır: sistem allocator-u ilə Go batch-i bir
-thread-dən daha yavaş idi. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+thread-dən daha yavaş idi. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Sürətli indeks yazmaq
 
 - Çağıranın batch-i hər sorğu üçün yox, bir dəfə qurmasını təmin edin. Qaytarılan indeksləri sadə dövrlə elementlərə geri çevirin.

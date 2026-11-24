@@ -8,7 +8,7 @@ description: vercel/ms porté de bout en bout. Correct sur chaque cas enregistr�
 [vercel/ms](https://github.com/vercel/ms) (5.5k étoiles, commit `4ff48ce`) transforme `"2 days"` en
 millisecondes et inversement ; la plupart des projets Node l'embarquent via une dépendance ou une autre. Porté de bout en bout
 avec everything-rust 1.5.1 ; la crate se trouve dans
-[`demo/real-world/vercel-ms-rs`](https://github.com/marprojector/everything-rust/tree/main/demo/real-world/vercel-ms-rs).
+[`demo/real-world/vercel-ms-rs`](https://github.com/AmmarArief/everything-rust/tree/main/demo/real-world/vercel-ms-rs).
 
 | Étape | Résultat |
 | --- | --- |

@@ -58,7 +58,7 @@ Har bir til batch'larni oladi va ular har bir chaqiruvli portlar yutqazadigan jo
 
 Kompilyatsiya qilinadigan asl nusxalar kamroq yutadi: har bir elementdagi ish allaqachon tez, shuning uchun batch yadrolar
 soni hisobiga yutadi. Batch crate'lari mimalloc bilan xotira ajratadi: tizim allokatori bilan Go batch'i bitta
-thread'dan sekinroq edi. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+thread'dan sekinroq edi. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Tez indeks yozish
 
 - Chaqiruvchi batch'ni har bir so'rovda emas, bir marta qursin. Qaytarilgan indekslarni oddiy sikl bilan elementlarga qayta moslang.

@@ -58,7 +58,7 @@ même travail sur 4 cœurs, résultats et erreurs identiques (benchmarks dans ch
 
 Les originaux compilés gagnent moins : le travail par élément est déjà rapide, donc le lot gagne à hauteur du nombre de
 cœurs. Les crates de lot allouent avec mimalloc : avec l'allocateur système, le lot Go était plus lent qu'un
-seul thread. Démo : [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+seul thread. Démo : [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Écrire un index rapide
 
 - Faites construire le lot une seule fois par l'appelant, pas à chaque requête. Reconvertissez les index renvoyés en éléments avec une simple boucle.

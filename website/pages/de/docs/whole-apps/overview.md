@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## Wie der Agent sich hindurcharbeitet
 
-Der [Whole-App-Skill](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) führt den Agent hindurch und beginnt mit den Entscheidungen, die nur du treffen kannst:
+Der [Whole-App-Skill](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) führt den Agent hindurch und beginnt mit den Entscheidungen, die nur du treffen kannst:
 
 - **Grilling**: Der Agent fragt in Runden, jede Frage mit ihrer empfohlenen Antwort, bis jede Entscheidung geklärt ist, von der die Portierung abhängt, und schreibt jede als ADR in `rust/DECISIONS.md`, wobei `rust/GLOSSARY.md` die Begriffe des Originals auf Rust-Namen abbildet.
 - **Recherche**: Hintergrund-Agents lesen die Primärquellen jeder Abhängigkeit und schreiben `rust/research/<topic>.md`, mit jeder semantischen Falle, die sie gefunden haben.

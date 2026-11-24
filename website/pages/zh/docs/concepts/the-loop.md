@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. 基准测试 | `everything-rust bench <crate>` | 在原实现和 Rust 上为录制用例计时，包含桥接开销 |
 | 4. 影子运行 | `everything-rust shadow <crate>` | 可直接替换的模块，同时运行两者，返回原实现的结果，并报告不一致；`EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. 门禁 | `everything-rust gate <crate>` | fmt、clippy `-D warnings`、测试、`unsafe` 审计、没有未移植的内容、原实现的每条错误路径都有一条录制的失败用例、在原实现返回错误的地方没有 `unwrap`/`expect`/`panic!`（除非标注了 `// INFALLIBLE: <why>`）、构建、API、行为 |
-| 智能体 | `everything-rust setup` | 把 MCP 服务器（`everything-rust mcp`，每个步骤都是一个工具）和工作流技能（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）注册到你的编程智能体 |
+| 智能体 | `everything-rust setup` | 把 MCP 服务器（`everything-rust mcp`，每个步骤都是一个工具）和工作流技能（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）注册到你的编程智能体 |
 
 ## 热点路径：把数据留在 Rust 侧
 
@@ -96,7 +96,7 @@ x18n 的侧边栏搜索中，对 50,000 个键逐字母输入，结果完全一�
 
 编译型原实现获益较少：逐条数据的处理本来就快，所以批处理的优势约等于核心
 数。批处理 crate 使用 mimalloc 分配内存：使用系统分配器时，Go 批处理比
-单线程还慢。示例：[`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md)。
+单线程还慢。示例：[`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md)。
 
 ## `bridge` 如何做决定
 
@@ -185,7 +185,7 @@ x18n 的侧边栏搜索中，对 50,000 个键逐字母输入，结果完全一�
 | 3. 基准测试 | `everything-rust bench <crate>` | 在原实现和 Rust 上为录制用例计时，包含桥接开销 |
 | 4. 影子运行 | `everything-rust shadow <crate>` | 可直接替换的模块，同时运行两者，返回原实现的结果，并报告不一致；`EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. 门禁 | `everything-rust gate <crate>` | fmt、clippy `-D warnings`、测试、`unsafe` 审计、没有未移植的内容、原实现的每条错误路径都有一条录制的失败用例、在原实现返回错误的地方没有 `unwrap`/`expect`/`panic!`（除非标注了 `// INFALLIBLE: <why>`）、构建、API、行为 |
-| 智能体 | `everything-rust setup` | 把 MCP 服务器（`everything-rust mcp`，每个步骤都是一个工具）和工作流技能（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）注册到你的编程智能体 |
+| 智能体 | `everything-rust setup` | 把 MCP 服务器（`everything-rust mcp`，每个步骤都是一个工具）和工作流技能（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）注册到你的编程智能体 |
 ## 下一步
 
 每个步骤都有单独的页面：[性能分析与规划](/docs/concepts/analyze)、[桥接层](/docs/concepts/bridge)、[录制](/docs/concepts/record)、[移植](/docs/concepts/port)、[Diff](/docs/concepts/diff)、[基准测试](/docs/concepts/bench)、[影子运行](/docs/concepts/shadow)和[门禁](/docs/concepts/gate)。

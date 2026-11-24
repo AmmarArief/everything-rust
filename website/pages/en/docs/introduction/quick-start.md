@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-No Rust toolchain yet? Prebuilt binaries for macOS, Linux and Windows are attached to each [GitHub release](https://github.com/marprojector/everything-rust/releases), and for JavaScript projects npm installs the same binary.
+No Rust toolchain yet? Prebuilt binaries for macOS, Linux and Windows are attached to each [GitHub release](https://github.com/AmmarArief/everything-rust/releases), and for JavaScript projects npm installs the same binary.
 
 `setup` adds the MCP server to each agent it finds and installs the workflow skill where the agent reads skills. See [Set up your agent](/docs/introduction/agents) for what it changes.
 

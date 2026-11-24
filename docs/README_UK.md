@@ -11,20 +11,20 @@
 Він не перекладає код: Rust пише ваш агент для програмування (або ви), а everything-rust перевіряє його проти оригіналу.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#швидкий-старт">Швидкий старт</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#швидкий-старт">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Реальні портування</a> · <a href="faq.md#faq">Часті запитання</a><br>
+<p align="center"><b><a href="#швидкий-старт">Швидкий старт</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#швидкий-старт">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Реальні портування</a> · <a href="faq.md#faq">Часті запитання</a><br>
 <sub><a href="#мови">Мови</a> · <a href="how-it-works.md#how-it-works">Як це працює</a> · <a href="whole-apps.md#port-a-whole-app">Цілі застосунки</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">Нове у 2.0: <a href="real-world.md#prettier">Prettier, портований на Rust</a>. У 19x швидше · 15,861 із 17,224 записаних запусків повністю на Rust · усі збігаються байт у байт</p>
 
@@ -138,14 +138,14 @@ everything-rust setup           # реєструє його в Claude Code, Code
 ```
 
 Ще немає Rust toolchain? Готові бінарні файли для macOS, Linux і Windows прикріплено до кожного
-[релізу на GitHub](https://github.com/marprojector/everything-rust/releases), а для JavaScript-проєктів
+[релізу на GitHub](https://github.com/AmmarArief/everything-rust/releases), а для JavaScript-проєктів
 `npm install -g everything-rust` встановлює той самий бінарний файл.
 
 У Claude Code його також можна встановити як плагін (MCP-сервер і skill; CLI вище
 має бути у вашому `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` додає MCP-сервер до кожного агента, якого знаходить, і встановлює workflow skill туди, звідки агент
@@ -235,7 +235,7 @@ Rust, а кожен виклик обробляє їх усі на всіх яд
 Для PHP `analyze` планує PHP-застосунок (пакети Composer і автозавантаження PSR-4, ризики
 на кшталт нестрогого порівняння та переповнення цілих чисел у float, відповідність пакетів Composer crate'ам),
 а PHP CLI чи сервер можна записати, відтворити і поставити за front door на Rust. Портування його
-одиниць у Rust через PHP FFI є наступним кроком ([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+одиниць у Rust через PHP FFI є наступним кроком ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# працює так само: `analyze` читає проєкти `.csproj` та їхні пакети NuGet
 (з відповідними crate'ами), зводить директиви `using` до тек і позначає, що C# робить інакше
@@ -255,7 +255,7 @@ C# працює так само: `analyze` читає проєкти `.csproj` �
 ## Спонсори
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> безкоштовний і з відкритим кодом. Якщо він допомагає вам у роботі, будь ласка, подумайте про спонсорство.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> безкоштовний і з відкритим кодом. Якщо він допомагає вам у роботі, будь ласка, подумайте про спонсорство.<br>
   Ваша підтримка дає змогу продовжувати розробку.
 </p>
 
@@ -272,4 +272,4 @@ Issues і pull requests вітаються; [CONTRIBUTING.md](../CONTRIBUTING.md
 
 ## Ліцензія
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Порти і згенерований код у вашому репозиторії належать вам.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Порти і згенерований код у вашому репозиторії належать вам.

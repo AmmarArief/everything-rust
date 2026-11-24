@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Портування його модулів у Rust через FFI у PHP буде наступним кроком ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). Доти `bridge` відхиляє модулі PHP із зрозумілим повідомленням.
+Портування його модулів у Rust через FFI у PHP буде наступним кроком ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). Доти `bridge` відхиляє модулі PHP із зрозумілим повідомленням.
 
 CI не встановлює PHP, тож тести PHP запускаються лише на машині, де він є.

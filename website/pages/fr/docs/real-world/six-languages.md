@@ -11,7 +11,7 @@ Internet n'a pas été exécuté. Les cibles sont donc des modules de bibliothè
 toolchains installées, et pour Java et C, où aucune source de bibliothèque adaptée n'était sur le disque, le JDK
 et la glibc eux-mêmes servent d'oracle derrière une fine façade.
 
-Les portages, les cas enregistrés et les entrées supplémentaires se trouvent dans [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md).
+Les portages, les cas enregistrés et les entrées supplémentaires se trouvent dans [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md).
 
 | Langage | Code | Fonctions | Cas enregistrés | Résultat |
 | --- | --- | ---: | ---: | --- |

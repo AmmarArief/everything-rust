@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `everything-rust bench <crate>` | Chronomètre les cas enregistrés sur l'original et sur le Rust, bridge compris |
 | 4. Shadow | `everything-rust shadow <crate>` | Module de remplacement direct qui exécute les deux, renvoie le résultat de l'original, signale les écarts ; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, tests, audit des `unsafe`, rien de non porté, un cas d'échec enregistré pour chaque chemin d'erreur de l'original, aucun `unwrap`/`expect`/`panic!` là où l'original renvoie une erreur (sauf si marqué `// INFALLIBLE: <why>`), build, API, comportement |
-| Agents | `everything-rust setup` | Enregistre le serveur MCP (`everything-rust mcp`, chaque étape comme outil) et le skill de workflow ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) auprès de vos agents de code |
+| Agents | `everything-rust setup` | Enregistre le serveur MCP (`everything-rust mcp`, chaque étape comme outil) et le skill de workflow ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) auprès de vos agents de code |
 
 ## Chemins chauds : garder les données en Rust
 
@@ -96,7 +96,7 @@ même travail sur 4 cœurs, résultats et erreurs identiques (benchmarks dans ch
 
 Les originaux compilés gagnent moins : le travail par élément est déjà rapide, donc le lot gagne à hauteur du nombre de
 cœurs. Les crates de lot allouent avec mimalloc : avec l'allocateur système, le lot Go était plus lent qu'un
-seul thread. Démo : [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+seul thread. Démo : [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## Ce que décide `bridge`
 
@@ -185,7 +185,7 @@ se trouve en général hors de l'enregistrement, alors sachez où sont les limit
 | 3. Bench | `everything-rust bench <crate>` | Chronomètre les cas enregistrés sur l'original et sur le Rust, bridge compris |
 | 4. Shadow | `everything-rust shadow <crate>` | Module de remplacement direct qui exécute les deux, renvoie le résultat de l'original, signale les écarts ; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, tests, audit des `unsafe`, rien de non porté, un cas d'échec enregistré pour chaque chemin d'erreur de l'original, aucun `unwrap`/`expect`/`panic!` là où l'original renvoie une erreur (sauf si marqué `// INFALLIBLE: <why>`), build, API, comportement |
-| Agents | `everything-rust setup` | Enregistre le serveur MCP (`everything-rust mcp`, chaque étape comme outil) et le skill de workflow ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) auprès de vos agents de code |
+| Agents | `everything-rust setup` | Enregistre le serveur MCP (`everything-rust mcp`, chaque étape comme outil) et le skill de workflow ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) auprès de vos agents de code |
 ## Pour aller plus loin
 
 Chaque étape a sa propre page : [Profiler et analyser](/docs/concepts/analyze), [Bridge](/docs/concepts/bridge), [Record](/docs/concepts/record), [Port](/docs/concepts/port), [Diff](/docs/concepts/diff), [Bench](/docs/concepts/bench), [Shadow](/docs/concepts/shadow) et [Gate](/docs/concepts/gate).

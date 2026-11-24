@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-ئۇنىڭ بىرلىكلىرىنى PHP نىڭ FFI ى ئارقىلىق Rust قا كۆچۈرۈش كېيىنكى قەدەم ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). ئۇنىڭغىچە `bridge` PHP بىرلىكلىرىنى ئېنىق ئۇچۇر بىلەن رەت قىلىدۇ.
+ئۇنىڭ بىرلىكلىرىنى PHP نىڭ FFI ى ئارقىلىق Rust قا كۆچۈرۈش كېيىنكى قەدەم ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). ئۇنىڭغىچە `bridge` PHP بىرلىكلىرىنى ئېنىق ئۇچۇر بىلەن رەت قىلىدۇ.
 
 CI PHP نى ئورناتمايدۇ، شۇڭا PHP سىناقلىرى پەقەت ئۇ ئورنىتىلغان ماشىنىدىلا ئىجرا بولىدۇ.

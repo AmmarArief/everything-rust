@@ -36,12 +36,12 @@ MCP serweri ýeke taslama el bilen goşmak üçin:
 
 ## Skill
 
-Workflow skill-i ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) agente aýlawy nähili işletmelidigini aýdýar: profillemek, meýilleşdirmek we tassyklama üçin saklanmak, bir birligi geçirmek, ony subut etmek, ony shadow arkasynda çykarmak we diňe `gate` geçende işi tamamlanan hasaplamak. Tutuş programma üçin ol [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) faýlyna eýerýär; [Tutuş programmany geçirmek](/docs/whole-apps/overview) sahypasyna serediň.
+Workflow skill-i ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) agente aýlawy nähili işletmelidigini aýdýar: profillemek, meýilleşdirmek we tassyklama üçin saklanmak, bir birligi geçirmek, ony subut etmek, ony shadow arkasynda çykarmak we diňe `gate` geçende işi tamamlanan hasaplamak. Tutuş programma üçin ol [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) faýlyna eýerýär; [Tutuş programmany geçirmek](/docs/whole-apps/overview) sahypasyna serediň.
 
 ## Claude Code plugin-i
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Plugin MCP serweri we skill-i getirýär; CLI siziň `PATH` içiňizde bolmaly.

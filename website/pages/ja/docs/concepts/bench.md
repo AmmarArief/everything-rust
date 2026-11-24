@@ -31,7 +31,7 @@ everything-rust bench <crate>
 | Java | 0.18 倍 | より大きなユニットを移植 |
 | Go | 0.04 倍 | より大きなユニットを移植 |
 
-API を変えずに移せる x18n のコアの 29 関数すべてを移植しました: すべてのゲートに合格し、7,925 件の記録ケースが完全に一致しましたが、`bench` によると JS から呼ぶ場合は移植版の方が TS より遅いことがわかりました。ブリッジのコストが処理そのものより大きいためです（[レポート](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)）。vercel/ms は記録ケース全体で呼び出しごとに 0.56 倍でした（[ケーススタディ](/docs/real-world/vercel-ms)）。
+API を変えずに移せる x18n のコアの 29 関数すべてを移植しました: すべてのゲートに合格し、7,925 件の記録ケースが完全に一致しましたが、`bench` によると JS から呼ぶ場合は移植版の方が TS より遅いことがわかりました。ブリッジのコストが処理そのものより大きいためです（[レポート](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)）。vercel/ms は記録ケース全体で呼び出しごとに 0.56 倍でした（[ケーススタディ](/docs/real-world/vercel-ms)）。
 
 ## 速くなる方法: ループを移す
 

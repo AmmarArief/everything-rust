@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `everything-rust bench <crate>` | Yozib olingan holatlarni asl nusxada va Rust'da, ko'prik bilan birga, vaqt bo'yicha o'lchaydi |
 | 4. Shadow | `everything-rust shadow <crate>` | Ikkalasini ishga tushiradigan, asl nusxa natijasini qaytaradigan va nomuvofiqliklarni xabar qiladigan o'rinbosar; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, testlar, `unsafe` auditi, port qilinmagan hech narsa qolmagan, asl nusxaning har bir xato yo'li uchun yozib olingan xatoli holat, asl nusxa xato qaytaradigan joyda `unwrap`/`expect`/`panic!` yo'q (`// INFALLIBLE: <why>` bilan belgilanmagan bo'lsa), build, API, xatti-harakat |
-| Agentlar | `everything-rust setup` | MCP serverni (`everything-rust mcp`, har bir qadam vosita sifatida) va workflow skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlash agentlaringizda ro'yxatdan o'tkazadi |
+| Agentlar | `everything-rust setup` | MCP serverni (`everything-rust mcp`, har bir qadam vosita sifatida) va workflow skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlash agentlaringizda ro'yxatdan o'tkazadi |
 
 ## Hot path'lar: ma'lumotni Rust'da saqlang
 
@@ -96,7 +96,7 @@ Har bir til batch'larni oladi va ular har bir chaqiruvli portlar yutqazadigan jo
 
 Kompilyatsiya qilinadigan asl nusxalar kamroq yutadi: har bir elementdagi ish allaqachon tez, shuning uchun batch yadrolar
 soni hisobiga yutadi. Batch crate'lari mimalloc bilan xotira ajratadi: tizim allokatori bilan Go batch'i bitta
-thread'dan sekinroq edi. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+thread'dan sekinroq edi. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## `bridge` nimani hal qiladi
 
@@ -185,7 +185,7 @@ odatda yozuvdan tashqaridagi narsalar qiynaydi, shuning uchun chegaralar qayerda
 | 3. Bench | `everything-rust bench <crate>` | Yozib olingan holatlarni asl nusxada va Rust'da, ko'prik bilan birga, vaqt bo'yicha o'lchaydi |
 | 4. Shadow | `everything-rust shadow <crate>` | Ikkalasini ishga tushiradigan, asl nusxa natijasini qaytaradigan va nomuvofiqliklarni xabar qiladigan o'rinbosar; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, testlar, `unsafe` auditi, port qilinmagan hech narsa qolmagan, asl nusxaning har bir xato yo'li uchun yozib olingan xatoli holat, asl nusxa xato qaytaradigan joyda `unwrap`/`expect`/`panic!` yo'q (`// INFALLIBLE: <why>` bilan belgilanmagan bo'lsa), build, API, xatti-harakat |
-| Agentlar | `everything-rust setup` | MCP serverni (`everything-rust mcp`, har bir qadam vosita sifatida) va workflow skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlash agentlaringizda ro'yxatdan o'tkazadi |
+| Agentlar | `everything-rust setup` | MCP serverni (`everything-rust mcp`, har bir qadam vosita sifatida) va workflow skill'ini ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlash agentlaringizda ro'yxatdan o'tkazadi |
 ## Keyingi
 
 Har bir qadamning o'z sahifasi bor: [Profil va tahlil](/docs/concepts/analyze), [Bridge](/docs/concepts/bridge), [Record](/docs/concepts/record), [Port](/docs/concepts/port), [Diff](/docs/concepts/diff), [Bench](/docs/concepts/bench), [Shadow](/docs/concepts/shadow) va [Gate](/docs/concepts/gate).

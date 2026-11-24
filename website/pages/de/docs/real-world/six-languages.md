@@ -11,7 +11,7 @@ Internet heruntergeladener Code wurde nicht ausgeführt. Daher sind die Ziele Mo
 installierten Toolchains mitkommen, und für Java und C, wo kein passender Bibliotheksquellcode auf der Platte lag, dienen das JDK
 und glibc selbst als Orakel hinter einer dünnen Fassade.
 
-Die Portierungen, aufgezeichneten Fälle und zusätzlichen Eingaben liegen in [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md).
+Die Portierungen, aufgezeichneten Fälle und zusätzlichen Eingaben liegen in [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md).
 
 | Sprache | Code | Funktionen | Aufgezeichnete Fälle | Ergebnis |
 | --- | --- | ---: | ---: | --- |

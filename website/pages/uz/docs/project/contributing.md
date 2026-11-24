@@ -11,12 +11,12 @@ mamnuniyat bilan qabul qilinadi, xatoni tuzatish uchun pull request ochishdan ol
 ## Boshlashdan oldin
 
 - **Xato:** ishga tushirgan buyrug'ingiz, uning chiqishi, platformangiz va everything-rust versiyasi
-  (`everything-rust --version`) bilan [issue](https://github.com/marprojector/everything-rust/issues/new/choose) oching.
+  (`everything-rust --version`) bilan [issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) oching.
   Kichik qayta ishlab chiqaruvchi loyiha eng ko'p yordam beradi.
 - **Kattaroq o'zgarish** (yangi til, yangi buyruq, birlik yoki yozuv nima ekanini o'zgartirish):
   uni yozishdan oldin shakli bo'yicha kelishib olishimiz uchun avval issue oching. O'tgan
-  tanlovlar sabablari [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md) da.
-- **Xavfsizlik muammosi:** ommaviy issue ochmang; [SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md) ga qarang.
+  tanlovlar sabablari [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md) da.
+- **Xavfsizlik muammosi:** ommaviy issue ochmang; [SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md) ga qarang.
 
 ## Sozlash
 
@@ -36,7 +36,7 @@ runtime'i yo'q qismni o'tkazib yuboradi, shuning uchun o'zingiz tegadiganlarini 
 | wasm ko'priklari | `rustup target add wasm32-unknown-unknown` va mos `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -81,8 +81,8 @@ yo'q kutubxona `unknown` deb xabar qilinadi; hech qachon crate'ni taxmin qilmang
 ## Til qo'shish
 
 PHP va C# preview sifatida ikkita commit'da qo'shilgan, avval ularni o'qishga arziydi:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243) (PHP) va
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a) (C#). Yangi til ham
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70) (PHP) va
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b) (C#). Yangi til ham
 xuddi shunday boshlanadi:
 
 1. `src/lang/<name>.rs` dagi plugin: topish, skanerlash (importlar va xavflar), resolve va eksportlar,
@@ -145,4 +145,4 @@ buyruqlaringizni, holatlar sonini va sizni hayratga solgan har qanday narsani ki
 
 ## Xulq-atvor kodeksi
 
-Ishtirok etayotgan har bir kishi [xulq-atvor kodeksi](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md)ga amal qilishi kutiladi.
+Ishtirok etayotgan har bir kishi [xulq-atvor kodeksi](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md)ga amal qilishi kutiladi.

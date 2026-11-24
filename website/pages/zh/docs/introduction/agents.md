@@ -36,12 +36,12 @@ everything-rust setup
 
 ## 技能
 
-工作流技能（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）告诉智能体如何运行核心闭环：做性能分析，制定计划并停下来等待批准，迁移一个单元，证明它正确，以影子运行的方式上线，并且只有在 `gate` 通过时才算完成。对于整个应用，它会遵循 [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)；见[迁移整个应用](/docs/whole-apps/overview)。
+工作流技能（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）告诉智能体如何运行核心闭环：做性能分析，制定计划并停下来等待批准，迁移一个单元，证明它正确，以影子运行的方式上线，并且只有在 `gate` 通过时才算完成。对于整个应用，它会遵循 [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)；见[迁移整个应用](/docs/whole-apps/overview)。
 
 ## Claude Code 插件
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 该插件包含 MCP 服务器和技能；CLI 必须位于 `PATH` 中。

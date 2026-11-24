@@ -11,18 +11,18 @@ Point it at your app: it records what the original does, your coding agent write
 and every piece is checked against that recording before it moves on. It doesn't translate code; it proves the rewrite.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
-<p align="center"><b><a href="#quick-start">Install</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#quick-start">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="docs/real-world.md">Real-world ports</a> · <a href="docs/faq.md#faq">FAQ</a><br>
+<p align="center"><b><a href="#quick-start">Install</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#quick-start">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="docs/real-world.md">Real-world ports</a> · <a href="docs/faq.md#faq">FAQ</a><br>
 <sub><a href="#languages">Languages</a> · <a href="docs/how-it-works.md#how-it-works">How it works</a> · <a href="docs/whole-apps.md#port-a-whole-app">Whole apps</a> · <a href="LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">New in 2.0: <a href="docs/real-world.md#prettier">Prettier, ported to Rust</a>. 19x faster · 15,861 of 17,224 recorded runs fully in Rust · every run byte-identical</p>
 
@@ -164,21 +164,21 @@ everything-rust setup           # registers it with Claude Code, Codex, Cursor, 
 ```
 
 No Rust toolchain yet? Prebuilt binaries for macOS, Linux and Windows are attached to each
-[GitHub release](https://github.com/marprojector/everything-rust/releases), and for JavaScript
+[GitHub release](https://github.com/AmmarArief/everything-rust/releases), and for JavaScript
 projects `npm install -g everything-rust` installs the same binary.
 
 In Claude Code you can also install it as a plugin (the MCP server and the skill; the CLI above
 must be on your `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 In Codex, from the agents marketplace in this repo (`.agents/plugins/marketplace.json`, the same
 plugin under `plugin/`, with the skill and MCP server):
 
 ```sh
-codex plugin marketplace add marprojector/everything-rust
+codex plugin marketplace add AmmarArief/everything-rust
 codex plugin add everything-rust@everything-rust
 ```
 
@@ -293,7 +293,7 @@ top-level functions with scalar, string, list and assoc-array parameters are bri
 FFI extension (`php` with `ext-ffi`, on by default for the CLI): require the generated
 `php/<crate>.php` in place of the original file once `diff` passes. Each call crosses as JSON, about
 1 µs, so `bench` shows small functions slower than PHP; there is no `shadow` for PHP yet
-([issue #200](https://github.com/marprojector/everything-rust/issues/200)).
+([issue #200](https://github.com/AmmarArief/everything-rust/issues/200)).
 
 C# works the same way: `analyze` reads `.csproj` projects and their NuGet packages
 (mapped to crates), resolves `using` directives to folders, and flags what C# does differently
@@ -303,7 +303,7 @@ with scalar, string, array, list, dictionary and record or plain-class parameter
 through P/Invoke (`dotnet` on PATH to record and diff): call the generated `<namespace>.Rust`
 classes, or alias them with `using`, once `diff` passes. Each call crosses as JSON, about 1-3 µs,
 so `bench` shows small methods slower than .NET; there is no `shadow` for C# yet
-([issue #200](https://github.com/marprojector/everything-rust/issues/200)).
+([issue #200](https://github.com/AmmarArief/everything-rust/issues/200)).
 
 ## Learn more
 
@@ -325,4 +325,4 @@ security problems privately ([SECURITY.md](./SECURITY.md)), and see the
 
 ## License
 
-[MIT](./LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Ports and generated code in your repository are yours.
+[MIT](./LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Ports and generated code in your repository are yours.

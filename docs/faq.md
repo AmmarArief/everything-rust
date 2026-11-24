@@ -37,7 +37,7 @@ the time goes to starting the process, often more than the command itself, and t
 in Rust still waits for that start. Keep one shell open and send it the commands, batch them into
 one call, or call the API the command wraps (the file system, the registry, HTTP) from your code
 directly. Shell scripts themselves are not a supported language; PowerShell is on the list in
-[issue #200](https://github.com/marprojector/everything-rust/issues/200). The code around the calls
+[issue #200](https://github.com/AmmarArief/everything-rust/issues/200). The code around the calls
 (an Electron main process, a Node or Python tool runner) can be ported as usual.
 
 **My code is numeric; will the floats match exactly?** Often not: operation order, fused

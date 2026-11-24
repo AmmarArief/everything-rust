@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `everything-rust bench <crate>` | Жазылган кейстерди түп нускада жана Rust'та, bridge'ди кошо, убакытка өлчөйт |
 | 4. Shadow | `everything-rust shadow <crate>` | Экөөн тең иштеткен, түп нусканын натыйжасын кайтарган жана дал келбестиктер жөнүндө кабарлаган drop-in алмаштыргыч; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, тесттер, `unsafe` аудити, портталбаган эч нерсе калбашы, түп нусканын ар бир ката жолу үчүн жазылган ийгиликсиз кейс, түп нуска ката кайтарган жерде `unwrap`/`expect`/`panic!` болбошу (`// INFALLIBLE: <why>` деп белгиленбесе), build, API, жүрүм-турум |
-| Агенттер | `everything-rust setup` | MCP серверди (`everything-rust mcp`, ар бир кадам курал катары) жана workflow skill'ин ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) коддоо агенттериңиз менен каттайт |
+| Агенттер | `everything-rust setup` | MCP серверди (`everything-rust mcp`, ар бир кадам курал катары) жана workflow skill'ин ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) коддоо агенттериңиз менен каттайт |
 
 ## Hot path'тар: маалыматты Rust ичинде кармоо
 
@@ -96,7 +96,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 
 Компиляцияланган түп нускалар азыраак утушат: бир элементке кеткен иш буга чейин эле ылдам, ошондуктан batch
 ядролордун саны эсебинен утат. Batch crate'тери mimalloc менен эс бөлөт: системалык аллокатор менен Go batch'ы
-бир агымдан жайыраак болгон. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+бир агымдан жайыраак болгон. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## `bridge` эмнени чечет
 
@@ -184,7 +184,7 @@ const order = search.rank(query, 0)               // per keystroke: indexes, bes
 | 3. Bench | `everything-rust bench <crate>` | Жазылган кейстерди түп нускада жана Rust'та, bridge'ди кошо, убакытка өлчөйт |
 | 4. Shadow | `everything-rust shadow <crate>` | Экөөн тең иштеткен, түп нусканын натыйжасын кайтарган жана дал келбестиктер жөнүндө кабарлаган drop-in алмаштыргыч; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, тесттер, `unsafe` аудити, портталбаган эч нерсе калбашы, түп нусканын ар бир ката жолу үчүн жазылган ийгиликсиз кейс, түп нуска ката кайтарган жерде `unwrap`/`expect`/`panic!` болбошу (`// INFALLIBLE: <why>` деп белгиленбесе), build, API, жүрүм-турум |
-| Агенттер | `everything-rust setup` | MCP серверди (`everything-rust mcp`, ар бир кадам курал катары) жана workflow skill'ин ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) коддоо агенттериңиз менен каттайт |
+| Агенттер | `everything-rust setup` | MCP серверди (`everything-rust mcp`, ар бир кадам курал катары) жана workflow skill'ин ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) коддоо агенттериңиз менен каттайт |
 ## Кийинки
 
 Ар бир кадамдын өз барагы бар: [Профилдөө жана анализ](/docs/concepts/analyze), [Bridge](/docs/concepts/bridge), [Жазып алуу](/docs/concepts/record), [Порттоо](/docs/concepts/port), [Diff](/docs/concepts/diff), [Бенчмарк](/docs/concepts/bench), [Shadow](/docs/concepts/shadow) жана [Gate](/docs/concepts/gate).

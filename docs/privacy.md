@@ -8,4 +8,4 @@ built, `npm`, `pip` and the other package managers install what the original nee
 runs `cargo deny` or `cargo audit` when one is installed, which fetch the RustSec advisory
 database. Your agent's model provider sees what your agent sends it, under its own policy.
 
-Questions: [open an issue](https://github.com/marprojector/everything-rust/issues).
+Questions: [open an issue](https://github.com/AmmarArief/everything-rust/issues).

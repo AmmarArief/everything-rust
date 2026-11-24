@@ -58,7 +58,7 @@ x18n 的侧边栏搜索中，对 50,000 个键逐字母输入，结果完全一�
 
 编译型原实现获益较少：逐条数据的处理本来就快，所以批处理的优势约等于核心
 数。批处理 crate 使用 mimalloc 分配内存：使用系统分配器时，Go 批处理比
-单线程还慢。示例：[`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md)。
+单线程还慢。示例：[`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md)。
 ## 编写快速索引
 
 - 让调用方只构建一次批处理对象，而不是每次查询都构建。用普通循环把返回的索引映射回数据项。

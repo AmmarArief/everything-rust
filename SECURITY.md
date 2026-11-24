@@ -13,7 +13,7 @@ Security fixes go into the latest release. Upgrade with `cargo install everythin
 ## Reporting a vulnerability
 
 Please report it privately, not in a public issue: use
-[Report a vulnerability](https://github.com/marprojector/everything-rust/security/advisories/new) on
+[Report a vulnerability](https://github.com/AmmarArief/everything-rust/security/advisories/new) on
 the repository's Security tab.
 
 Include what you found, how to reproduce it, which version and platform you used, and what an

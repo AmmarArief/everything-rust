@@ -25,7 +25,7 @@ description: 개발자나 에이전트가 작성하는 유일한 파일인 port.
 ## 예시: 위치가 한 칸 밀린 이모지
 
 [x18n](https://github.com/x18n-dev/x18n)의 `packages/core/src/fuzzy.ts`를
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo)에서 두 방식으로 포팅했습니다:
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo)에서 두 방식으로 포팅했습니다:
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: ready, wasm-bindgen (core runs in browsers)
@@ -46,7 +46,7 @@ JS의 `indexOf`는 UTF-16 코드 유닛을 세므로 이모지 하나가 두 위
 `demo/*/src/port.rs`의 포트는 생성된 `utf16` 헬퍼를 사용해 2000/2000 케이스와 게이트를 통과합니다.
 napi-rs(`demo/fuzzy-napi`)와 wasm-bindgen(`demo/fuzzy-rs`) 양쪽 모두입니다.
 
-everything-rust이 x18n 전체에 대해 작성한 계획: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+everything-rust이 x18n 전체에 대해 작성한 계획: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## 얼마나 커야 할까요?
 
 `gate`는 포트의 줄 수를 원본과 비교해 3배(import와 시그니처용 50줄 추가 허용)를 넘으면 실패합니다. 이를 넘는다면 대개 crate가 이미 하는 일을 손으로 다시 쓰고 있거나, 케이스를 하나하나 따로 처리하고 있다는 뜻입니다. `analyze`가 사용할 crate를 알려 줍니다.

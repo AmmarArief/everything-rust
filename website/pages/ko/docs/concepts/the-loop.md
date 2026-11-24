@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. 벤치 | `everything-rust bench <crate>` | 브리지 비용을 포함해 원본과 Rust에서 기록된 케이스의 실행 시간 측정 |
 | 4. 섀도 | `everything-rust shadow <crate>` | 둘 다 실행해 원본의 결과를 반환하고 불일치를 보고하는 대체 모듈. `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. 게이트 | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, 테스트, `unsafe` 감사, 포팅되지 않은 것 없음, 원본의 모든 오류 경로에 대한 기록된 실패 케이스, 원본이 오류를 반환하는 곳에 `unwrap`/`expect`/`panic!` 없음(`// INFALLIBLE: <why>` 표시가 없는 한), 빌드, API, 동작 |
-| 에이전트 | `everything-rust setup` | MCP 서버(`everything-rust mcp`, 모든 단계를 도구로 제공)와 워크플로 스킬([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md))을 코딩 에이전트에 등록 |
+| 에이전트 | `everything-rust setup` | MCP 서버(`everything-rust mcp`, 모든 단계를 도구로 제공)와 워크플로 스킬([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md))을 코딩 에이전트에 등록 |
 
 ## 핫 패스: 데이터를 Rust 안에 두기
 
@@ -96,7 +96,7 @@ x18n 사이드바에서 키 50,000개를 한 글자씩 입력하며 검색했을
 
 컴파일 언어 원본은 이득이 적습니다. 항목당 작업이 이미 빠르므로 배치는 코어 수만큼 이깁니다.
 배치 crate는 mimalloc으로 메모리를 할당합니다. 시스템 할당자를 쓰면 Go 배치가 단일 스레드보다
-느렸습니다. 데모: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+느렸습니다. 데모: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## `bridge`가 결정하는 것
 
@@ -184,7 +184,7 @@ x18n 사이드바에서 키 50,000개를 한 글자씩 입력하며 검색했을
 | 3. 벤치 | `everything-rust bench <crate>` | 브리지 비용을 포함해 원본과 Rust에서 기록된 케이스의 실행 시간 측정 |
 | 4. 섀도 | `everything-rust shadow <crate>` | 둘 다 실행해 원본의 결과를 반환하고 불일치를 보고하는 대체 모듈. `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. 게이트 | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, 테스트, `unsafe` 감사, 포팅되지 않은 것 없음, 원본의 모든 오류 경로에 대한 기록된 실패 케이스, 원본이 오류를 반환하는 곳에 `unwrap`/`expect`/`panic!` 없음(`// INFALLIBLE: <why>` 표시가 없는 한), 빌드, API, 동작 |
-| 에이전트 | `everything-rust setup` | MCP 서버(`everything-rust mcp`, 모든 단계를 도구로 제공)와 워크플로 스킬([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md))을 코딩 에이전트에 등록 |
+| 에이전트 | `everything-rust setup` | MCP 서버(`everything-rust mcp`, 모든 단계를 도구로 제공)와 워크플로 스킬([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md))을 코딩 에이전트에 등록 |
 ## 다음
 
 각 단계마다 별도 페이지가 있습니다: [프로파일링과 분석](/docs/concepts/analyze), [브리지](/docs/concepts/bridge), [기록](/docs/concepts/record), [포팅](/docs/concepts/port), [Diff](/docs/concepts/diff), [벤치](/docs/concepts/bench), [섀도](/docs/concepts/shadow), [게이트](/docs/concepts/gate).

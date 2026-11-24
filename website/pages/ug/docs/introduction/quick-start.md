@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-تېخى Rust قورال زەنجىرىڭىز يوقمۇ؟ macOS، Linux ۋە Windows ئۈچۈن ئالدىن تۈزۈلگەن ئىككىلىك ھۆججەتلەر ھەر بىر [GitHub release](https://github.com/marprojector/everything-rust/releases) غا قوشۇلغان، JavaScript تۈرلىرى ئۈچۈن بولسا npm ئوخشاش ئىككىلىك ھۆججەتنى ئورنىتىدۇ.
+تېخى Rust قورال زەنجىرىڭىز يوقمۇ؟ macOS، Linux ۋە Windows ئۈچۈن ئالدىن تۈزۈلگەن ئىككىلىك ھۆججەتلەر ھەر بىر [GitHub release](https://github.com/AmmarArief/everything-rust/releases) غا قوشۇلغان، JavaScript تۈرلىرى ئۈچۈن بولسا npm ئوخشاش ئىككىلىك ھۆججەتنى ئورنىتىدۇ.
 
 `setup` تاپقان ھەر بىر ۋاكالەتچىگە MCP مۇلازىمېتىرىنى قوشىدۇ ۋە خىزمەت ئېقىمى ماھارىتىنى ۋاكالەتچى ماھارەتلەرنى ئوقۇيدىغان جايغا ئورنىتىدۇ. ئۇنىڭ نېمىلەرنى ئۆزگەرتىدىغانلىقى ئۈچۈن [ۋاكالەتچىڭىزنى تەڭشەش](/docs/introduction/agents) نى كۆرۈڭ.
 

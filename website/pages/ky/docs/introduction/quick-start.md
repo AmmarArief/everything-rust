@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Rust toolchain азырынча жокпу? macOS, Linux жана Windows үчүн даяр бинардык файлдар ар бир [GitHub release](https://github.com/marprojector/everything-rust/releases) барагына тиркелген, ал эми JavaScript долбоорлору үчүн npm ошол эле бинардык файлды орнотот.
+Rust toolchain азырынча жокпу? macOS, Linux жана Windows үчүн даяр бинардык файлдар ар бир [GitHub release](https://github.com/AmmarArief/everything-rust/releases) барагына тиркелген, ал эми JavaScript долбоорлору үчүн npm ошол эле бинардык файлды орнотот.
 
 `setup` тапкан ар бир агентке MCP серверди кошот жана workflow skill'ин агент skill'дерди окуган жерге орнотот. Ал эмнени өзгөртөрүн [Агентиңизди жөндөө](/docs/introduction/agents) барагынан караңыз.
 

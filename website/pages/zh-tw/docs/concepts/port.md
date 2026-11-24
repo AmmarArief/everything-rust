@@ -25,7 +25,7 @@ description: 撰寫 port.rs，也就是唯一由你或你的 AI 代理撰寫的�
 ## 範例：移動了一個位置的 emoji
 
 來自 [x18n](https://github.com/x18n-dev/x18n) 的 `packages/core/src/fuzzy.ts`，以兩種方式移植於
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo)：
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo)：
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts：就緒，wasm-bindgen（core 在瀏覽器中執行）
@@ -46,7 +46,7 @@ JS 的 `indexOf` 以 UTF-16 程式碼單元計算，所以一個 emoji 佔兩個
 `demo/*/src/port.rs` 中的移植版本使用自動產生的 `utf16` 輔助函式，通過 2000/2000 個案例與 gate，
 無論是以 napi-rs（`demo/fuzzy-napi`）還是 wasm-bindgen（`demo/fuzzy-rs`）的形式。
 
-everything-rust 為整個 x18n 撰寫的計畫：[`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md)。
+everything-rust 為整個 x18n 撰寫的計畫：[`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md)。
 ## 應該寫多大？
 
 `gate` 會比較移植版本與原始版本的行數，超過 3 倍（另加 50 行給匯入與簽章）就會失敗。超過通常代表你手寫了某個 crate 已經做好的事，或是逐一處理個別案例。`analyze` 會列出應該使用的 crate。

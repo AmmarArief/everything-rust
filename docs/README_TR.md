@@ -11,20 +11,20 @@
 Kodu kendisi çevirmez: Rust'ı kodlama ajanınız (ya da siz) yazar, everything-rust onu orijinaline karşı doğrular.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#hızlı-başlangıç">Hızlı başlangıç</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#hızlı-başlangıç">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Gerçek dünya portları</a> · <a href="faq.md#faq">SSS</a><br>
+<p align="center"><b><a href="#hızlı-başlangıç">Hızlı başlangıç</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#hızlı-başlangıç">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Gerçek dünya portları</a> · <a href="faq.md#faq">SSS</a><br>
 <sub><a href="#diller">Diller</a> · <a href="how-it-works.md#how-it-works">Nasıl çalışır</a> · <a href="whole-apps.md#port-a-whole-app">Tüm uygulamalar</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0'da yeni: <a href="real-world.md#prettier">Prettier, Rust'a port edildi</a>. 19x daha hızlı · 17,224 kayıtlı çalıştırmanın 15,861'si tamamen Rust'ta · hepsi bayt bayt aynı</p>
 
@@ -142,14 +142,14 @@ everything-rust setup           # Claude Code, Codex, Cursor, Gemini CLI ve Open
 ```
 
 Henüz Rust toolchain'iniz yok mu? macOS, Linux ve Windows için hazır derlenmiş binary'ler her
-[GitHub release](https://github.com/marprojector/everything-rust/releases)'e eklenmiştir; JavaScript
+[GitHub release](https://github.com/AmmarArief/everything-rust/releases)'e eklenmiştir; JavaScript
 projeleri için `npm install -g everything-rust` aynı binary'yi kurar.
 
 Claude Code'da bunu bir plugin olarak da kurabilirsiniz (MCP sunucusu ve skill; yukarıdaki CLI
 `PATH` içinde olmalıdır):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup`, bulduğu her ajana MCP sunucusunu ekler ve iş akışı skill'ini ajanın skill'leri okuduğu
@@ -240,7 +240,7 @@ PHP için `analyze` bir PHP uygulamasını planlar (Composer paketleri ve PSR-4 
 gevşek karşılaştırma ve tam sayı taşmasının float'a dönüşmesi gibi riskler, crate'lere eşlenmiş
 Composer paketleri) ve bir PHP CLI'ı ya da sunucusu kaydedilebilir, yeniden oynatılabilir ve bir
 Rust front door'unun arkasına konabilir. Birimlerini PHP'nin FFI'ı üzerinden Rust'a port etmek bir
-sonraki adımdır ([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+sonraki adımdır ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# da aynı şekilde çalışır: `analyze` `.csproj` projelerini ve NuGet paketlerini okur
 (crate'lere eşlenmiş olarak), `using` yönergelerini klasörlere çözümler ve C#'ın farklı yaptığı
@@ -268,4 +268,4 @@ ve [davranış kurallarına](../CODE_OF_CONDUCT.md) göz atın.
 
 ## Lisans
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Reponuzdaki portlar ve üretilmiş kod sizindir.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Reponuzdaki portlar ve üretilmiş kod sizindir.

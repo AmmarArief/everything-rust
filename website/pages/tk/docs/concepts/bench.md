@@ -31,7 +31,7 @@ Hakyky kodda bir çagyryş boýunça ölçeldi ([alty dil](/docs/real-world/six-
 | Java | 0.18x | has uly birlikleri geçirmek |
 | Go | 0.04x | has uly birlikleri geçirmek |
 
-x18n ýadrosynyň API üýtgetmezden göçürip bolýan 29 funksiýasynyň hemmesi geçirildi: her gate geçýär we ýazga alnan 7,925 ýagdaý takyk gabat gelýär, `bench` bolsa portlaryň JS-den çagyrylanda TS-den haýaldygyny görkezdi, sebäbi bridge işiň özünden köp durýar ([hasabat](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms ýazga alnan ýagdaýlarynda bir çagyryşda 0.56x işledi ([tejribe mysaly](/docs/real-world/vercel-ms)).
+x18n ýadrosynyň API üýtgetmezden göçürip bolýan 29 funksiýasynyň hemmesi geçirildi: her gate geçýär we ýazga alnan 7,925 ýagdaý takyk gabat gelýär, `bench` bolsa portlaryň JS-den çagyrylanda TS-den haýaldygyny görkezdi, sebäbi bridge işiň özünden köp durýar ([hasabat](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms ýazga alnan ýagdaýlarynda bir çagyryşda 0.56x işledi ([tejribe mysaly](/docs/real-world/vercel-ms)).
 
 ## Näme utýar: aýlawy göçürmek
 

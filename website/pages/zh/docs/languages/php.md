@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-通过 PHP 的 FFI 把它的单元迁移到 Rust 是下一步（[issue #2](https://github.com/marprojector/everything-rust/issues/2)）。在此之前，`bridge` 会拒绝 PHP 单元，并给出明确的提示。
+通过 PHP 的 FFI 把它的单元迁移到 Rust 是下一步（[issue #2](https://github.com/AmmarArief/everything-rust/issues/2)）。在此之前，`bridge` 会拒绝 PHP 单元，并给出明确的提示。
 
 CI 不安装 PHP，所以 PHP 测试只会在装有 PHP 的机器上运行。

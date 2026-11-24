@@ -59,7 +59,7 @@ mesmo trabalho em 4 núcleos, resultados e erros idênticos (benchmarks em cada 
 
 Os originais compilados ganham menos: o trabalho por item já é rápido, por isso o lote ganha pelo número
 de núcleos. As crates de lote alocam com mimalloc: com o alocador do sistema, o lote em Go era mais lento do que
-uma única thread. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+uma única thread. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 ## Escrever um índice rápido
 
 - Faça com que o chamador construa o lote uma vez, não por consulta. Converta os índices devolvidos de volta em itens com um ciclo simples.

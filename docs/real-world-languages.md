@@ -124,7 +124,7 @@ without table lookups and without an intermediate string fixed that; Java's port
 final-sigma rule by lowering only the whitespace-separated piece that holds a `Σ` as a whole.
 Per call, the Go port went from 0.73x to 0.93x, the Java one from 0.46x to 0.68x.
 
-**Correction (2026-11-19, [#110](https://github.com/marprojector/everything-rust/issues/110)).** The Java `slugify` numbers above do not hold up:
+**Correction (2026-11-19, [#110](https://github.com/AmmarArief/everything-rust/issues/110)).** The Java `slugify` numbers above do not hold up:
 
 - **The port was wrong on some text.** Java's `Character.isLetterOrDigit` takes letters and
   decimal digits per UTF-16 unit; the port used Rust's `char::is_alphanumeric`, which also takes

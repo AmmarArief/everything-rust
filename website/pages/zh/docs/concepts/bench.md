@@ -31,7 +31,7 @@ everything-rust bench <crate>
 | Java | 0.18x | 迁移更大的单元 |
 | Go | 0.04x | 迁移更大的单元 |
 
-x18n core 中所有能在不改 API 的情况下迁移的 29 个函数都已迁移：每个门禁都通过，7,925 条录制用例完全一致，而 `bench` 显示从 JS 调用时移植版比 TS 更慢，因为桥接开销比实际工作还大（[报告](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)）。在录制用例上，vercel/ms 逐次调用的速度是 0.56x（[案例研究](/docs/real-world/vercel-ms)）。
+x18n core 中所有能在不改 API 的情况下迁移的 29 个函数都已迁移：每个门禁都通过，7,925 条录制用例完全一致，而 `bench` 显示从 JS 调用时移植版比 TS 更慢，因为桥接开销比实际工作还大（[报告](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)）。在录制用例上，vercel/ms 逐次调用的速度是 0.56x（[案例研究](/docs/real-world/vercel-ms)）。
 
 ## 真正能赢的：迁移循环
 

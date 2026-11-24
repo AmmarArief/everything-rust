@@ -591,7 +591,7 @@ fn readme(
     format!(
         "# {name}\n\n\
          [{orig}](https://www.npmjs.com/package/{orig}) {version} behind a Rust front door, made with \
-         [everything-rust](https://github.com/marprojector/everything-rust). Each run of `{bin}` goes to \
+         [everything-rust](https://github.com/AmmarArief/everything-rust). Each run of `{bin}` goes to \
          the Rust port when it covers the arguments and the input ({units}), and to {orig} \
          {version} otherwise. {orig} {version} is a dependency of this package, so what falls back \
          runs the exact version the port was recorded against, and the output is the same \

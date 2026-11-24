@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-아직 Rust 툴체인이 없나요? macOS, Linux, Windows용 사전 빌드 바이너리가 각 [GitHub 릴리스](https://github.com/marprojector/everything-rust/releases)에 첨부되어 있으며, JavaScript 프로젝트라면 npm으로 동일한 바이너리를 설치할 수 있습니다.
+아직 Rust 툴체인이 없나요? macOS, Linux, Windows용 사전 빌드 바이너리가 각 [GitHub 릴리스](https://github.com/AmmarArief/everything-rust/releases)에 첨부되어 있으며, JavaScript 프로젝트라면 npm으로 동일한 바이너리를 설치할 수 있습니다.
 
 `setup`은 찾아낸 각 에이전트에 MCP 서버를 추가하고, 에이전트가 스킬을 읽는 위치에 워크플로 스킬을 설치합니다. 무엇이 바뀌는지는 [에이전트 설정](/docs/introduction/agents)을 참고하세요.
 

@@ -25,7 +25,7 @@ description: 编写 port.rs（你或你的智能体唯一需要编写的文件�
 ## 示例：移动了一个位置的 emoji
 
 来自 [x18n](https://github.com/x18n-dev/x18n) 的 `packages/core/src/fuzzy.ts`，在
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo) 中用两种方式移植：
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo) 中用两种方式移植：
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts：就绪，wasm-bindgen（core 在浏览器中运行）
@@ -46,7 +46,7 @@ JS 的 `indexOf` 按 UTF-16 码元计数，所以一个 emoji 占两个位置。
 `demo/*/src/port.rs` 中的移植版使用生成的 `utf16` 辅助函数，通过了 2000/2000 条用例和门禁，
 包括 napi-rs 版（`demo/fuzzy-napi`）和 wasm-bindgen 版（`demo/fuzzy-rs`）。
 
-everything-rust 为整个 x18n 编写的规划：[`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md)。
+everything-rust 为整个 x18n 编写的规划：[`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md)。
 ## 应该写多大？
 
 `gate` 会比较移植版与原实现的行数，超过 3 倍（另加 50 行用于导入和签名）就会失败。超出通常意味着在手写某个 crate 已经提供的功能，或者在逐个处理各种情况。`analyze` 会列出应该使用的 crate。

@@ -36,12 +36,12 @@ Pour ajouter plutôt le serveur MCP à la main dans un seul projet :
 
 ## Le skill
 
-Le skill de workflow ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) indique à l'agent comment dérouler la boucle : profiler, planifier et s'arrêter pour validation, porter une unité, la prouver, la livrer derrière un shadow, et ne la déclarer terminée que lorsque `gate` passe. Pour une application entière, il suit [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) ; voir [Porter une application entière](/docs/whole-apps/overview).
+Le skill de workflow ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) indique à l'agent comment dérouler la boucle : profiler, planifier et s'arrêter pour validation, porter une unité, la prouver, la livrer derrière un shadow, et ne la déclarer terminée que lorsque `gate` passe. Pour une application entière, il suit [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) ; voir [Porter une application entière](/docs/whole-apps/overview).
 
 ## Plugin Claude Code
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Le plugin apporte le serveur MCP et le skill ; la CLI doit être dans votre `PATH`.

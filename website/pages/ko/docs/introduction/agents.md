@@ -36,12 +36,12 @@ everything-rust setup
 
 ## 스킬
 
-워크플로 스킬([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md))은 에이전트에게 루프를 실행하는 방법을 알려 줍니다: 프로파일링하고, 계획을 세운 뒤 승인을 기다리고, 유닛 하나를 포팅하고, 검증하고, 섀도 뒤에서 배포하며, `gate`를 통과했을 때만 완료로 간주합니다. 앱 전체의 경우에는 [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)를 따릅니다. [앱 전체 포팅](/docs/whole-apps/overview)을 참고하세요.
+워크플로 스킬([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md))은 에이전트에게 루프를 실행하는 방법을 알려 줍니다: 프로파일링하고, 계획을 세운 뒤 승인을 기다리고, 유닛 하나를 포팅하고, 검증하고, 섀도 뒤에서 배포하며, `gate`를 통과했을 때만 완료로 간주합니다. 앱 전체의 경우에는 [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)를 따릅니다. [앱 전체 포팅](/docs/whole-apps/overview)을 참고하세요.
 
 ## Claude Code 플러그인
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 플러그인에는 MCP 서버와 스킬이 포함되며, CLI는 `PATH`에 있어야 합니다.

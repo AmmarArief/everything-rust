@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## Agent buni qanday bajaradi
 
-[Butun ilova skill'i](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) agentni bosqichma-bosqich olib boradi, faqat siz qabul qila oladigan qarorlardan boshlab:
+[Butun ilova skill'i](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) agentni bosqichma-bosqich olib boradi, faqat siz qabul qila oladigan qarorlardan boshlab:
 
 - **Grilling (savolga tutish)**: agent bosqichma-bosqich, har bir savolni tavsiya etilgan javobi bilan so'raydi, toki port bog'liq bo'lgan har bir qaror hal bo'lmaguncha, va har birini `rust/DECISIONS.md` ga ADR sifatida yozadi, `rust/GLOSSARY.md` esa asl nusxa atamalarini Rust nomlariga moslaydi.
 - **Tadqiqot**: fon agentlari har bir bog'liqlikning asosiy manbalarini o'qiydi va topgan har bir semantik tuzoq bilan `rust/research/<topic>.md` ni yozadi.

@@ -25,7 +25,7 @@ Le `js.rs` généré contient des helpers qui reproduisent JavaScript là où Ru
 ## Un exemple : l'emoji qui décalait une position
 
 `packages/core/src/fuzzy.ts` de [x18n](https://github.com/x18n-dev/x18n), porté des deux façons dans
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo) :
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo) :
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: ready, wasm-bindgen (core runs in browsers)
@@ -46,7 +46,7 @@ Un premier portage qui indexait par `char` Rust passait des tests simples mais �
 `demo/*/src/port.rs` utilise les helpers `utf16` générés et passe 2000/2000 cas ainsi que le gate,
 en napi-rs (`demo/fuzzy-napi`) et en wasm-bindgen (`demo/fuzzy-rs`).
 
-Le plan que everything-rust écrit pour tout x18n : [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+Le plan que everything-rust écrit pour tout x18n : [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Quelle taille doit-il faire ?
 
 `gate` compare les lignes du portage à celles de l'original et échoue au-delà de 3x (plus 50 lignes pour les imports et les signatures). Au-delà, cela signifie en général qu'on réécrit à la main ce qu'une crate fait déjà, ou qu'on traite les cas un par un. `analyze` liste les crates à utiliser.

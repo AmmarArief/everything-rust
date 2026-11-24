@@ -11,20 +11,20 @@
 它不會自動翻譯程式碼：Rust 由你的程式設計代理（或你自己）撰寫，everything-rust 負責對照原程式進行驗證。</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#快速開始">快速開始</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#快速開始">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">真實移植案例</a> · <a href="faq.md#faq">常見問題</a><br>
+<p align="center"><b><a href="#快速開始">快速開始</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#快速開始">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">真實移植案例</a> · <a href="faq.md#faq">常見問題</a><br>
 <sub><a href="#支援語言">支援語言</a> · <a href="how-it-works.md#how-it-works">運作原理</a> · <a href="whole-apps.md#port-a-whole-app">整個應用程式</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0 新功能：<a href="real-world.md#prettier">Prettier 已移植到 Rust</a>。提速 19 倍 · 17,224 次錄製執行中 15,861 次完全由 Rust 執行 · 全部逐位元組一致</p>
 
@@ -133,14 +133,14 @@ cargo install everything-rust   # 從 crates.io 安裝
 everything-rust setup           # 向 Claude Code、Codex、Cursor、Gemini CLI 與 OpenCode 註冊
 ```
 
-還沒有安裝 Rust 工具鏈？每個 [GitHub release](https://github.com/marprojector/everything-rust/releases) 都附帶了 macOS、Linux 與 Windows 的預先編譯執行檔；針對 JavaScript
+還沒有安裝 Rust 工具鏈？每個 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) 都附帶了 macOS、Linux 與 Windows 的預先編譯執行檔；針對 JavaScript
 專案，執行 `npm install -g everything-rust` 也能安裝相同的執行檔。
 
 在 Claude Code 中你也可以將它安裝為外掛（包含 MCP 伺服器與工作流程技能；上述 CLI
 必須位於你的 `PATH` 中）：
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` 會將 MCP 伺服器加入它所偵測到的每個代理程式中，並將工作流程技能安裝至各代理程式讀取技能的目錄。它會保留你的其他設定、可安全重複執行，且可用 `--remove` 復原。
@@ -227,7 +227,7 @@ Rust 中，每次呼叫便會在所有 CPU 核心上平行運算全部項目。
 對於 PHP，`analyze` 可為 PHP 應用程式規劃遷移（支援 Composer 套件與 PSR-4 自動載入，偵測
 寬鬆比較與整數溢位轉浮點數等風險，並將 Composer 套件對應至 crate），
 且支援對 PHP CLI 或伺服器進行錄製、重播與套用 Rust 前門代理。透過 PHP FFI 將各個
-單元移植到 Rust 是下一步規劃（[issue #2](https://github.com/marprojector/everything-rust/issues/2)）。
+單元移植到 Rust 是下一步規劃（[issue #2](https://github.com/AmmarArief/everything-rust/issues/2)）。
 
 C# 的運作方式相同：`analyze` 會讀取 `.csproj` 專案與其 NuGet 套件
 （對應至 crate）、將 `using` 指示詞解析至對應資料夾，並標記 C# 的特殊差異
@@ -246,7 +246,7 @@ C# 的運作方式相同：`analyze` 會讀取 `.csproj` 專案與其 NuGet 套�
 ## 贊助商
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> 是一款免費且開源的專案。如果它對你的工作有所幫助，歡迎考慮贊助支持。<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> 是一款免費且開源的專案。如果它對你的工作有所幫助，歡迎考慮贊助支持。<br>
   你的支持能讓開發持續推進。
 </p>
 
@@ -261,4 +261,4 @@ C# 的運作方式相同：`analyze` 會讀取 `.csproj` 專案與其 NuGet 套�
 
 ## 授權條款
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector)。你在自己儲存庫中產生的移植程式碼與產物均歸你所有。
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief)。你在自己儲存庫中產生的移植程式碼與產物均歸你所有。

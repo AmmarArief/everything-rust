@@ -36,12 +36,12 @@ MCP serverni buning o'rniga bitta loyihaga qo'lda qo'shish uchun:
 
 ## Skill
 
-Workflow skill'i ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) agentga siklni qanday yuritishni aytadi: profil olish, rejalashtirish va tasdiq uchun to'xtash, bitta birlikni port qilish, uni isbotlash, shadow ortida chiqarish va faqat `gate` o'tgandagina tayyor deb hisoblash. Butun ilova uchun u [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) ga amal qiladi; [Butun ilovani port qilish](/docs/whole-apps/overview) sahifasiga qarang.
+Workflow skill'i ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) agentga siklni qanday yuritishni aytadi: profil olish, rejalashtirish va tasdiq uchun to'xtash, bitta birlikni port qilish, uni isbotlash, shadow ortida chiqarish va faqat `gate` o'tgandagina tayyor deb hisoblash. Butun ilova uchun u [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) ga amal qiladi; [Butun ilovani port qilish](/docs/whole-apps/overview) sahifasiga qarang.
 
 ## Claude Code plugin'i
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Plugin MCP serverni va skill'ni olib keladi; CLI `PATH` ichida bo'lishi kerak.

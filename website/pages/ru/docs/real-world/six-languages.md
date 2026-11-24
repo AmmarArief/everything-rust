@@ -11,7 +11,7 @@ everything-rust был прогнан от начала до конца (analyze
 установленными тулчейнами, а для Java и C, где на диске не нашлось подходящих исходников библиотек, эталоном за тонким фасадом
 служат сами JDK и glibc.
 
-Порты, записанные кейсы и дополнительные входные данные лежат в [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md).
+Порты, записанные кейсы и дополнительные входные данные лежат в [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md).
 
 | Язык | Код | Функции | Записанные кейсы | Результат |
 | --- | --- | ---: | ---: | --- |

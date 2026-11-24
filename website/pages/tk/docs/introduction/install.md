@@ -22,10 +22,10 @@ everything-rust setup
 
 npm JavaScript taslamalary üçin şol bir binar faýly gurnaýar.
 
-macOS, Linux we Windows üçin taýýar binar faýllar her [GitHub release](https://github.com/marprojector/everything-rust/releases) sahypasyna goşulan. Claude Code-da ony plugin hökmünde hem gurnap bilersiňiz (MCP serwer we skill; CLI siziň `PATH` içiňizde bolmaly):
+macOS, Linux we Windows üçin taýýar binar faýllar her [GitHub release](https://github.com/AmmarArief/everything-rust/releases) sahypasyna goşulan. Claude Code-da ony plugin hökmünde hem gurnap bilersiňiz (MCP serwer we skill; CLI siziň `PATH` içiňizde bolmaly):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## Çeşme kodundan

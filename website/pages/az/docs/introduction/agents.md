@@ -36,12 +36,12 @@ Bunun əvəzinə MCP serveri bir layihəyə əllə əlavə etmək üçün:
 
 ## Skill
 
-İş axını skill-i ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) agentə dövrü necə işlətməyi deyir: profil çıxarmaq, planlaşdırmaq və təsdiq üçün dayanmaq, bir vahidi port etmək, onu sübut etmək, shadow arxasında buraxmaq və yalnız `gate` keçəndə hazır saymaq. Bütöv tətbiq üçün [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)-ə əməl edir; bax [Bütöv tətbiqi port etmək](/docs/whole-apps/overview).
+İş axını skill-i ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) agentə dövrü necə işlətməyi deyir: profil çıxarmaq, planlaşdırmaq və təsdiq üçün dayanmaq, bir vahidi port etmək, onu sübut etmək, shadow arxasında buraxmaq və yalnız `gate` keçəndə hazır saymaq. Bütöv tətbiq üçün [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)-ə əməl edir; bax [Bütöv tətbiqi port etmək](/docs/whole-apps/overview).
 
 ## Claude Code plugin-i
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Plugin MCP serveri və skill-i gətirir; CLI `PATH`-da olmalıdır.

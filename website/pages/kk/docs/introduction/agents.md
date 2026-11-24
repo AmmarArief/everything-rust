@@ -36,12 +36,12 @@ MCP серверді оның орнына бір жобаға қолмен қо
 
 ## Skill
 
-Workflow skill ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) агентке циклды қалай жүргізу керектігін айтады: профайлдау, жоспарлап, мақұлдау үшін тоқтау, бір бірлікті порттау, оны дәлелдеу, shadow артында шығару және тек `gate` өткенде ғана дайын деп санау. Бүкіл қолданба үшін ол [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) файлын ұстанады; [Бүкіл қолданбаны порттау](/docs/whole-apps/overview) бетін қараңыз.
+Workflow skill ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) агентке циклды қалай жүргізу керектігін айтады: профайлдау, жоспарлап, мақұлдау үшін тоқтау, бір бірлікті порттау, оны дәлелдеу, shadow артында шығару және тек `gate` өткенде ғана дайын деп санау. Бүкіл қолданба үшін ол [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) файлын ұстанады; [Бүкіл қолданбаны порттау](/docs/whole-apps/overview) бетін қараңыз.
 
 ## Claude Code плагині
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Плагин MCP серверді және skill-ді әкеледі; CLI сіздің `PATH` ішінде болуы керек.

@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Hələ Rust toolchain-iniz yoxdur? macOS, Linux və Windows üçün hazır binary fayllar hər [GitHub release](https://github.com/marprojector/everything-rust/releases)-ə əlavə olunub, JavaScript layihələri üçün isə npm eyni binary-ni quraşdırır.
+Hələ Rust toolchain-iniz yoxdur? macOS, Linux və Windows üçün hazır binary fayllar hər [GitHub release](https://github.com/AmmarArief/everything-rust/releases)-ə əlavə olunub, JavaScript layihələri üçün isə npm eyni binary-ni quraşdırır.
 
 `setup` tapdığı hər agentə MCP serveri əlavə edir və iş axını skill-ini agentin skill-ləri oxuduğu yerə quraşdırır. Nəyi dəyişdiyi üçün bax [Agentinizi qurun](/docs/introduction/agents).
 

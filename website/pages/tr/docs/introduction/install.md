@@ -22,10 +22,10 @@ everything-rust setup
 
 npm, JavaScript projeleri için aynı binary'yi kurar.
 
-macOS, Linux ve Windows için hazır derlenmiş binary'ler her [GitHub release](https://github.com/marprojector/everything-rust/releases)'e eklenmiştir. Claude Code'da bunu bir plugin olarak da kurabilirsiniz (MCP sunucusu ve skill; CLI'ın `PATH` içinde olması gerekir):
+macOS, Linux ve Windows için hazır derlenmiş binary'ler her [GitHub release](https://github.com/AmmarArief/everything-rust/releases)'e eklenmiştir. Claude Code'da bunu bir plugin olarak da kurabilirsiniz (MCP sunucusu ve skill; CLI'ın `PATH` içinde olması gerekir):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## Kaynaktan

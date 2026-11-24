@@ -36,12 +36,12 @@ everything-rust setup
 
 ## 技能
 
-工作流程技能（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）會告訴 AI 代理如何執行工作循環：效能剖析、規劃並停下來等待核准、移植一個單元、證明它正確、以影子模式出貨，並且只有在 `gate` 通過時才算完成。對於整個應用程式，它遵循 [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)；請參閱[移植整個應用程式](/docs/whole-apps/overview)。
+工作流程技能（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）會告訴 AI 代理如何執行工作循環：效能剖析、規劃並停下來等待核准、移植一個單元、證明它正確、以影子模式出貨，並且只有在 `gate` 通過時才算完成。對於整個應用程式，它遵循 [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)；請參閱[移植整個應用程式](/docs/whole-apps/overview)。
 
 ## Claude Code 外掛
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 此外掛包含 MCP 伺服器與技能；CLI 必須在你的 `PATH` 上。

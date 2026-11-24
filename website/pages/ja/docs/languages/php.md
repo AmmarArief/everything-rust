@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-PHP の FFI を通じてユニットを Rust に移植するのが次のステップです（[issue #2](https://github.com/marprojector/everything-rust/issues/2)）。それまでは、`bridge` は明確なメッセージとともに PHP のユニットを拒否します。
+PHP の FFI を通じてユニットを Rust に移植するのが次のステップです（[issue #2](https://github.com/AmmarArief/everything-rust/issues/2)）。それまでは、`bridge` は明確なメッセージとともに PHP のユニットを拒否します。
 
 CI は PHP をインストールしないので、PHP のテストは PHP がインストールされたマシンでのみ実行されます。

@@ -11,20 +11,20 @@
 Ol kody özi terjime etmeýär: Rust-y kodlaýyş agentiňiz (ýa-da siz) ýazýar, everything-rust bolsa ony asyl nusga bilen barlaýar.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#çalt-başlangyç">Çalt başlangyç</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#çalt-başlangyç">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Hakyky portlar</a> · <a href="faq.md#faq">Köp soralýan soraglar</a><br>
+<p align="center"><b><a href="#çalt-başlangyç">Çalt başlangyç</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#çalt-başlangyç">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Hakyky portlar</a> · <a href="faq.md#faq">Köp soralýan soraglar</a><br>
 <sub><a href="#diller">Diller</a> · <a href="how-it-works.md#how-it-works">Nähili işleýär</a> · <a href="whole-apps.md#port-a-whole-app">Tutuş programmalar</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">2.0-da täze: <a href="real-world.md#prettier">Prettier Rust-a geçirildi</a>. 19x has çalt · ýazga alnan 17,224 işletmäniň 15,861-si doly Rust-da · hemmesi baýtma-baýt deň</p>
 
@@ -142,14 +142,14 @@ everything-rust setup           # registers it with Claude Code, Codex, Cursor, 
 ```
 
 Entek Rust toolchain ýokmy? macOS, Linux we Windows üçin taýýar binar faýllar her
-[GitHub release](https://github.com/marprojector/everything-rust/releases) sahypasyna goşulan, JavaScript
+[GitHub release](https://github.com/AmmarArief/everything-rust/releases) sahypasyna goşulan, JavaScript
 taslamalary üçin bolsa `npm install -g everything-rust` şol bir binar faýly gurnaýar.
 
 Claude Code-da ony plugin hökmünde hem gurnap bilersiňiz (MCP serwer we skill; ýokardaky CLI siziň
 `PATH` içiňizde bolmaly):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` tapan her agentine MCP serweri goşýar we workflow skill-ini agentiň skill-leri okaýan ýerine
@@ -240,7 +240,7 @@ PHP üçin `analyze` PHP programmasyny meýilleşdirýär (Composer paketleri we
 autoloading, loose comparison we integer-iň float-a dolup geçmegi ýaly töwekgelçilikler, crate-lere
 laýyklaşdyrylan Composer paketleri), PHP CLI-ni ýa-da serwerini bolsa ýazga alyp, gaýtadan işledip we
 Rust front door-yň arkasyna goýup bolýar. Onuň birliklerini PHP FFI arkaly Rust-a geçirmek indiki ädim
-([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# hem edil şeýle işleýär: `analyze` `.csproj` taslamalaryny we olaryň NuGet paketlerini
 okaýar (crate-lere laýyklaşdyrylýar), `using` direktiwalaryny bukjalara çözýär we C#-yň başgaça
@@ -260,7 +260,7 @@ arkasyna goýup bolýar; birlikleri P/Invoke arkaly geçirmek indiki nobatda.
 ## Hemaýatkärler
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> mugt we açyk çeşmeli taslama. Eger ol işiňize kömek edýän bolsa, oňa hemaýatkär bolmagy göz öňünde tutuň.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> mugt we açyk çeşmeli taslama. Eger ol işiňize kömek edýän bolsa, oňa hemaýatkär bolmagy göz öňünde tutuň.<br>
   Siziň goldawyňyz işläp düzmegiň dowam etmegine kömek edýär.
 </p>
 
@@ -277,4 +277,4 @@ hem [özüňi alyp barş kodeksine](../CODE_OF_CONDUCT.md) serediň.
 
 ## Ygtyýarnama
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Repozitoriýiňizdäki portlar we döredilen kod siziňki.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Repozitoriýiňizdäki portlar we döredilen kod siziňki.

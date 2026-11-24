@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Birimlerini PHP'nin FFI'ı üzerinden Rust'a port etmek bir sonraki adımdır ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). O zamana kadar `bridge`, PHP birimlerini açık bir mesajla reddeder.
+Birimlerini PHP'nin FFI'ı üzerinden Rust'a port etmek bir sonraki adımdır ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). O zamana kadar `bridge`, PHP birimlerini açık bir mesajla reddeder.
 
 CI PHP kurmaz, bu yüzden PHP testleri yalnızca PHP kurulu bir makinede çalışır.

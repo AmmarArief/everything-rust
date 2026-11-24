@@ -25,7 +25,7 @@ Die generierte `js.rs` enthält Helfer, die JavaScript nachbilden, wo Rust abwei
 ## Ein Beispiel: das Emoji, das eine Position verschob
 
 `packages/core/src/fuzzy.ts` aus [x18n](https://github.com/x18n-dev/x18n), auf beide Arten portiert in
-[`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo):
+[`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo):
 
 ```sh
 everything-rust analyze ../x18n                                      # fuzzy.ts: bereit, wasm-bindgen (core läuft im Browser)
@@ -46,7 +46,7 @@ JS `indexOf` zählt UTF-16-Codeeinheiten, also belegt ein Emoji zwei Positionen.
 `demo/*/src/port.rs` nutzt die generierten `utf16`-Helfer und besteht 2000/2000 Fälle und das Gate,
 als napi-rs (`demo/fuzzy-napi`) und als wasm-bindgen (`demo/fuzzy-rs`).
 
-Der Plan, den everything-rust für ganz x18n schreibt: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+Der Plan, den everything-rust für ganz x18n schreibt: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 ## Wie groß sollte sie sein?
 
 `gate` vergleicht die Zeilen der Portierung mit denen des Originals und schlägt oberhalb von 3x fehl (plus 50 Zeilen für Imports und Signaturen). Darüber bedeutet es meist, dass von Hand geschrieben wird, was ein Crate bereits tut, oder dass Fälle einzeln behandelt werden. `analyze` listet die zu verwendenden Crates.

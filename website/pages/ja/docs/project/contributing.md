@@ -10,13 +10,13 @@ description: セットアップ、テストの置き場所、クレートの対�
 
 ## 始める前に
 
-- **バグ:** [Issue](https://github.com/marprojector/everything-rust/issues/new/choose) を開き、
+- **バグ:** [Issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) を開き、
   実行したコマンド、その出力、プラットフォーム、everything-rust のバージョン
   （`everything-rust --version`）を添えてください。小さな再現用プロジェクトがあると最も助かります。
 - **大きめの変更**（新しい言語、新しいコマンド、ユニットや記録の定義の変更）:
   書き始める前に形について合意できるよう、まず Issue を開いてください。過去の
-  選択の理由は [DECISIONS.md](https://github.com/marprojector/everything-rust/blob/main/DECISIONS.md) にあります。
-- **セキュリティ上の問題:** 公開の Issue は開かないでください。[SECURITY.md](https://github.com/marprojector/everything-rust/blob/main/SECURITY.md) を参照してください。
+  選択の理由は [DECISIONS.md](https://github.com/AmmarArief/everything-rust/blob/main/DECISIONS.md) にあります。
+- **セキュリティ上の問題:** 公開の Issue は開かないでください。[SECURITY.md](https://github.com/AmmarArief/everything-rust/blob/main/SECURITY.md) を参照してください。
 
 ## セットアップ
 
@@ -36,7 +36,7 @@ Rust（stable、1.97 以降）が必要です。テストは各部分が扱う�
 | wasm ブリッジ | `rustup target add wasm32-unknown-unknown` と、対応するバージョンの `wasm-bindgen-cli` |
 
 ```sh
-git clone https://github.com/marprojector/everything-rust
+git clone https://github.com/AmmarArief/everything-rust
 cd everything-rust
 git config core.hooksPath .githooks
 cargo test
@@ -80,8 +80,8 @@ Java と C# 用）、`crates`、`fit`（`good`、`partial`、`none`）、そし�
 ## 言語を追加する
 
 PHP と C# はプレビューとして 2 つのコミットで追加されました。最初に読んでおく価値があります:
-[e8ac243](https://github.com/marprojector/everything-rust/commit/e8ac243)（PHP）と
-[caea59a](https://github.com/marprojector/everything-rust/commit/caea59a)（C#）。新しい言語も
+[8f2fa70](https://github.com/AmmarArief/everything-rust/commit/8f2fa70)（PHP）と
+[858534b](https://github.com/AmmarArief/everything-rust/commit/858534b)（C#）。新しい言語も
 同じように始めます:
 
 1. `src/lang/<name>.rs` のプラグイン: 検出、スキャン（インポートとリスク）、解決とエクスポート、
@@ -144,4 +144,4 @@ everything-rust を使ったら、[docs/real-world.md](/docs/real-world/overview
 
 ## 行動規範
 
-参加するすべての人は[行動規範](https://github.com/marprojector/everything-rust/blob/main/CODE_OF_CONDUCT.md)に従うことが求められます。
+参加するすべての人は[行動規範](https://github.com/AmmarArief/everything-rust/blob/main/CODE_OF_CONDUCT.md)に従うことが求められます。

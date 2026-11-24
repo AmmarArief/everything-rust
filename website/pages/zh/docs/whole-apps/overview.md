@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## 智能体如何推进
 
-[整应用技能](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)会引导智能体完成全过程，首先从只有你能做的决策开始：
+[整应用技能](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)会引导智能体完成全过程，首先从只有你能做的决策开始：
 
 - **深度访谈**：智能体分轮提问，每个问题都附带推荐答案，直到迁移所依赖的每项决策都确定下来，并把每项决策以 ADR 形式写入 `rust/DECISIONS.md`，同时在 `rust/GLOSSARY.md` 中把原项目的术语映射为 Rust 命名。
 - **调研**：后台智能体阅读每个依赖的一手资料，并编写 `rust/research/<topic>.md`，列出它们发现的每一个语义陷阱。

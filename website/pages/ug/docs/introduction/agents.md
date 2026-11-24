@@ -36,12 +36,12 @@ MCP مۇلازىمېتىرىنى ئۇنىڭ ئورنىغا بىر تۈرگىلا
 
 ## ماھارەت
 
-خىزمەت ئېقىمى ماھارىتى ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) ۋاكالەتچىگە ئايلانمىنى قانداق ئىجرا قىلىشنى ئېيتىدۇ: ئانالىز قىلىش، پىلانلاش ۋە تەستىق ئۈچۈن توختاش، بىر بىرلىكنى كۆچۈرۈش، ئۇنى ئىسپاتلاش، سايە ئارقىسىدا ئېلان قىلىش، ۋە پەقەت `gate` ئۆتكەندىلا تامام دەپ قاراش. پۈتۈن ئەپ ئۈچۈن ئۇ [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) غا ئەمەل قىلىدۇ؛ [پۈتۈن ئەپنى كۆچۈرۈش](/docs/whole-apps/overview) نى كۆرۈڭ.
+خىزمەت ئېقىمى ماھارىتى ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) ۋاكالەتچىگە ئايلانمىنى قانداق ئىجرا قىلىشنى ئېيتىدۇ: ئانالىز قىلىش، پىلانلاش ۋە تەستىق ئۈچۈن توختاش، بىر بىرلىكنى كۆچۈرۈش، ئۇنى ئىسپاتلاش، سايە ئارقىسىدا ئېلان قىلىش، ۋە پەقەت `gate` ئۆتكەندىلا تامام دەپ قاراش. پۈتۈن ئەپ ئۈچۈن ئۇ [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) غا ئەمەل قىلىدۇ؛ [پۈتۈن ئەپنى كۆچۈرۈش](/docs/whole-apps/overview) نى كۆرۈڭ.
 
 ## Claude Code قىستۇرمىسى
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 قىستۇرما MCP مۇلازىمېتىرى ۋە ماھارەتنى ئېلىپ كېلىدۇ؛ CLI چوقۇم `PATH` تا بولۇشى كېرەك.

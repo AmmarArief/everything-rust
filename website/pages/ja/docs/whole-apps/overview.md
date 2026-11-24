@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## エージェントの進め方
 
-[アプリ全体用のスキル](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)は、あなたにしか下せない決定から始めて、エージェントを順に導きます:
+[アプリ全体用のスキル](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)は、あなたにしか下せない決定から始めて、エージェントを順に導きます:
 
 - **質問攻め（grilling）**: エージェントは何回かに分けて質問し、それぞれに推奨回答を添えます。移植が依存するすべての決定が確定するまで続け、それぞれを ADR として `rust/DECISIONS.md` に書き、`rust/GLOSSARY.md` で元の実装の用語を Rust の名前に対応付けます。
 - **調査**: バックグラウンドのエージェントが各依存関係の一次情報を読み、見つけたすべてのセマンティックトラップを含めて `rust/research/<topic>.md` を書きます。

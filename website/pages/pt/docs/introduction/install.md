@@ -22,10 +22,10 @@ everything-rust setup
 
 O npm instala o mesmo binário, para projetos JavaScript.
 
-Os binários pré-compilados para macOS, Linux e Windows estão anexados a cada [lançamento no GitHub](https://github.com/marprojector/everything-rust/releases). No Claude Code, também o pode instalar como plugin (o servidor MCP e a skill; a CLI tem de estar no seu `PATH`):
+Os binários pré-compilados para macOS, Linux e Windows estão anexados a cada [lançamento no GitHub](https://github.com/AmmarArief/everything-rust/releases). No Claude Code, também o pode instalar como plugin (o servidor MCP e a skill; a CLI tem de estar no seu `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## A partir do código-fonte

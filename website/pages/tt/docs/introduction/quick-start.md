@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Әле Rust toolchain юкмы? macOS, Linux һәм Windows өчен әзер бинар файллар һәр [GitHub релизына](https://github.com/marprojector/everything-rust/releases) беркетелгән, ә JavaScript проектлары өчен npm шул ук бинар файлны урнаштыра.
+Әле Rust toolchain юкмы? macOS, Linux һәм Windows өчен әзер бинар файллар һәр [GitHub релизына](https://github.com/AmmarArief/everything-rust/releases) беркетелгән, ә JavaScript проектлары өчен npm шул ук бинар файлны урнаштыра.
 
 `setup` тапкан һәр агентка MCP серверны өсти һәм workflow skill'ны агент skill'ларны укыган урынга урнаштыра. Ул нәрсәне үзгәртүен [Агентны көйләү](/docs/introduction/agents) битеннән карагыз.
 

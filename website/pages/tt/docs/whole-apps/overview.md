@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## Агент моны ничек башкара
 
-[Whole-app skill](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) агентны бу юл буйлап алып бара, бары сез генә кабул итә ала торган карарлардан башлап:
+[Whole-app skill](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) агентны бу юл буйлап алып бара, бары сез генә кабул итә ала торган карарлардан башлап:
 
 - **Сорау алу (grilling)**: агент әйләнешләп сорый, һәр сорау тәкъдим ителгән җавап белән, порт бәйле булган һәр карар хәл ителгәнче, һәм һәрберсен `rust/DECISIONS.md` эчендә ADR итеп яза, ә `rust/GLOSSARY.md` оригиналның терминнарын Rust исемнәренә туры китерә.
 - **Тикшеренү**: фон агентлары һәр бәйлелекнең беренчел чыганакларын укый һәм тапкан һәр семантик тозак белән `rust/research/<topic>.md` яза.

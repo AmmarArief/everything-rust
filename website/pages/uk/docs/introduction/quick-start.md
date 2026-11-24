@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Ще немає тулчейну Rust? Готові бінарники для macOS, Linux і Windows додано до кожного [релізу на GitHub](https://github.com/marprojector/everything-rust/releases), а для проєктів на JavaScript npm встановлює той самий бінарник.
+Ще немає тулчейну Rust? Готові бінарники для macOS, Linux і Windows додано до кожного [релізу на GitHub](https://github.com/AmmarArief/everything-rust/releases), а для проєктів на JavaScript npm встановлює той самий бінарник.
 
 `setup` додає сервер MCP до кожного агента, якого знаходить, і встановлює навичку робочого процесу туди, звідки агент читає навички. Що саме він змінює, див. у [Налаштування агента](/docs/introduction/agents).
 

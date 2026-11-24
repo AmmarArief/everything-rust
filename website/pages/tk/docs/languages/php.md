@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Onuň birliklerini PHP FFI arkaly Rust-a geçirmek indiki ädim ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). Oňa çenli `bridge` PHP birliklerini düşnükli habar bilen ret edýär.
+Onuň birliklerini PHP FFI arkaly Rust-a geçirmek indiki ädim ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). Oňa çenli `bridge` PHP birliklerini düşnükli habar bilen ret edýär.
 
 CI PHP gurnamaýar, şonuň üçin PHP testleri diňe ol gurnalan maşynda işleýär.

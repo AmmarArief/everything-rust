@@ -11,20 +11,20 @@
 Công cụ không tự dịch code: agent lập trình của bạn (hoặc chính bạn) viết Rust, còn everything-rust kiểm tra nó với bản gốc.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#quick-start">Bắt đầu nhanh</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#quick-start">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Các bản port thực tế</a> · <a href="faq.md#faq">FAQ</a><br>
+<p align="center"><b><a href="#quick-start">Bắt đầu nhanh</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#quick-start">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Các bản port thực tế</a> · <a href="faq.md#faq">FAQ</a><br>
 <sub><a href="#languages">Ngôn ngữ</a> · <a href="how-it-works.md#how-it-works">Cách hoạt động</a> · <a href="whole-apps.md#port-a-whole-app">Chuyển cả ứng dụng</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">Mới trong 2.0: <a href="real-world.md#prettier">Prettier đã được port sang Rust</a>. Nhanh hơn 19x · 15,861 trên 17,224 lần chạy đã ghi chạy hoàn toàn bằng Rust · tất cả giống từng byte</p>
 
@@ -113,12 +113,12 @@ cargo install everything-rust   # from crates.io
 everything-rust setup           # registers it with Claude Code, Codex, Cursor, Gemini CLI và OpenCode
 ```
 
-Chưa có bộ công cụ Rust? Tải binary dựng sẵn cho macOS, Linux hoặc Windows ở mục [GitHub release](https://github.com/marprojector/everything-rust/releases). Với project JavaScript, chạy `npm install -g everything-rust` để cài binary đó.
+Chưa có bộ công cụ Rust? Tải binary dựng sẵn cho macOS, Linux hoặc Windows ở mục [GitHub release](https://github.com/AmmarArief/everything-rust/releases). Với project JavaScript, chạy `npm install -g everything-rust` để cài binary đó.
 
 Trong Claude Code, bạn cũng có thể cài dưới dạng plugin. Plugin gồm MCP server và skill; cần thêm CLI ở trên vào `PATH` trước:
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` thêm MCP server cho từng agent tìm thấy, rồi cài workflow skill vào đúng thư mục agent đọc skill. Lệnh này giữ nguyên các cấu hình khác. Có thể chạy lại; dùng `--remove` để gỡ.
@@ -194,7 +194,7 @@ Mọi ngôn ngữ trừ C đều có thêm batch class (`--batch`): dữ liệu 
 
 Công cụ nhận diện ngôn ngữ qua repo dựa trên các file như `go.mod`, `pom.xml`, `.csproj`, `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json` hoặc phần mở rộng xuất hiện nhiều nhất. Muốn chỉ định ngôn ngữ, dùng `--lang`. Kiểu dữ liệu được đọc từ source: type của TypeScript, type hint của Python, chữ ký hàm của C, Go, Java và C#, YARD tag của Ruby, type và phpdoc của PHP. Tham số không khai báo kiểu nhưng được dùng như số sẽ được suy luận là kiểu số.
 
-Với PHP, `analyze` lập kế hoạch chuyển app PHP, gồm package Composer và PSR-4 autoloading, các rủi ro như so sánh lỏng lẻo hay tràn số nguyên thành float, và ánh xạ package Composer sang crate. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI hoặc server PHP. Bước tiếp theo là chuyển từng unit sang Rust qua PHP FFI ([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+Với PHP, `analyze` lập kế hoạch chuyển app PHP, gồm package Composer và PSR-4 autoloading, các rủi ro như so sánh lỏng lẻo hay tràn số nguyên thành float, và ánh xạ package Composer sang crate. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI hoặc server PHP. Bước tiếp theo là chuyển từng unit sang Rust qua PHP FFI ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# cũng hoạt động theo cách tương tự. `analyze` đọc project `.csproj` và package NuGet, ánh xạ package sang crate, phân giải `using` thành thư mục rồi cảnh báo về các điểm riêng của C# như `decimal`, `dynamic`, deferred query của LINQ, `Task`, `lock` và reflection. Hiện có thể ghi lại, replay và đặt Rust front door trước CLI C# hoặc server ASP.NET. Tiếp theo là chuyển các unit qua P/Invoke.
 
@@ -210,7 +210,7 @@ C# cũng hoạt động theo cách tương tự. `analyze` đọc project `.cspr
 ## Nhà tài trợ
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> là dự án mã nguồn mở miễn phí. Nếu dự án hữu ích với bạn, hãy cân nhắc tài trợ.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> là dự án mã nguồn mở miễn phí. Nếu dự án hữu ích với bạn, hãy cân nhắc tài trợ.<br>
   Khoản tài trợ giúp dự án tiếp tục được phát triển.
 </p>
 
@@ -223,4 +223,4 @@ Hoan nghênh issue và pull request. [CONTRIBUTING.md](../CONTRIBUTING.md) hư�
 
 ## Giấy phép
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Các bản port và code được tạo trong repo thuộc về bạn.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Các bản port và code được tạo trong repo thuộc về bạn.

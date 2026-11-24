@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Анын бирдиктерин PHP FFI аркылуу Rust'ка порттоо кийинки кадам ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). Ага чейин `bridge` PHP бирдиктерин түшүнүктүү билдирүү менен четке кагат.
+Анын бирдиктерин PHP FFI аркылуу Rust'ка порттоо кийинки кадам ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). Ага чейин `bridge` PHP бирдиктерин түшүнүктүү билдирүү менен четке кагат.
 
 CI PHP орнотпойт, ошондуктан PHP тесттери ал орнотулган машинада гана иштейт.

@@ -41,7 +41,7 @@ successful run.
 
 For agents, `everything-rust setup` registers everything (see Quick start). The same MCP server and
 skill also ship as a Codex plugin from `.agents/plugins/marketplace.json`
-(`codex plugin marketplace add marprojector/everything-rust`, then
+(`codex plugin marketplace add AmmarArief/everything-rust`, then
 `codex plugin add everything-rust@everything-rust`). To add the MCP server to one project by hand
 instead (`.mcp.json`):
 

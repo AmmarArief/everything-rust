@@ -11,7 +11,7 @@ everything-rust запустили від початку до кінця (analyz
 встановленими тулчейнами, а для Java і C, де на диску не знайшлося відповідного вихідного коду бібліотек, оракулом
 за тонким фасадом слугують самі JDK і glibc.
 
-Порти, записані випадки і додаткові вхідні дані лежать у [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md).
+Порти, записані випадки і додаткові вхідні дані лежать у [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md).
 
 | Мова | Код | Функції | Записані випадки | Результат |
 | --- | --- | ---: | ---: | --- |

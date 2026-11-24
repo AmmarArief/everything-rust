@@ -11,20 +11,20 @@
 Он не переводит код: Rust пишет ваш агент для программирования (или вы), а everything-rust проверяет его по оригиналу.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/top/marprojector/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
+  <img src="https://img.shields.io/github/languages/top/AmmarArief/everything-rust?logo=rust&label=Rust&color=CE422B" alt="Rust share of the code">
   <img src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-native-2563EB" alt="Native binaries for macOS, Linux and Windows">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-555" alt="MIT license"></a>
   <br>
   <a href="https://github.com/rust-unofficial/awesome-rust#development-tools"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Rust"></a>
   <a href="https://github.com/AIshihzong/awesome-reverse-engineer-anything"><img src="https://img.shields.io/badge/Featured%20in-Awesome%20REA-f0b429" alt="Featured in Awesome REA"></a>
-  <a href="https://github.com/marprojector/everything-rust"><img src="https://img.shields.io/github/stars/marprojector/everything-rust?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/AmmarArief/everything-rust"><img src="https://img.shields.io/github/stars/AmmarArief/everything-rust?style=social" alt="GitHub stars"></a>
 </p>
 
 
 
-<p align="center"><b><a href="#быстрый-старт">Быстрый старт</a></b> · <a href="https://github.com/marprojector/everything-rust/releases">Releases</a> · <a href="#быстрый-старт">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Реальные порты</a> · <a href="faq.md#faq">FAQ</a><br>
+<p align="center"><b><a href="#быстрый-старт">Быстрый старт</a></b> · <a href="https://github.com/AmmarArief/everything-rust/releases">Releases</a> · <a href="#быстрый-старт">Claude Code plugin</a> · <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=everything-rust">MCP Registry</a> · <a href="real-world.md">Реальные порты</a> · <a href="faq.md#faq">FAQ</a><br>
 <sub><a href="#поддерживаемые-языки">Языки</a> · <a href="how-it-works.md#how-it-works">Как это работает</a> · <a href="whole-apps.md#port-a-whole-app">Целые приложения</a> · <a href="../LICENSE">MIT</a></sub><br>
-<p align="center">Made by <a href="https://github.com/marprojector">M. Ammar R. Arief</a></p>
+<p align="center">Made and maintained by <a href="https://github.com/AmmarArief">M. Ammar R. Arief</a></p>
 
 <p align="center">Новое в 2.0: <a href="real-world.md#prettier">Prettier, портированный на Rust</a>. В 19x быстрее · 15,861 из 17,224 записанных запусков полностью на Rust · все совпадают байт в байт</p>
 
@@ -117,12 +117,12 @@ cargo install everything-rust   # из crates.io
 everything-rust setup           # регистрирует инструмент в Claude Code, Codex, Cursor, Gemini CLI и OpenCode
 ```
 
-Ещё не установлен тулчейн Rust? Готовые бинарные файлы для macOS, Linux и Windows прикреплены к каждому [релизу на GitHub](https://github.com/marprojector/everything-rust/releases), а для JavaScript-проектов тот же бинарник устанавливается командой `npm install -g everything-rust`.
+Ещё не установлен тулчейн Rust? Готовые бинарные файлы для macOS, Linux и Windows прикреплены к каждому [релизу на GitHub](https://github.com/AmmarArief/everything-rust/releases), а для JavaScript-проектов тот же бинарник устанавливается командой `npm install -g everything-rust`.
 
 В Claude Code инструмент также можно установить как плагин (MCP-сервер и навык; указанный выше CLI должен быть в `PATH`):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 `setup` добавляет MCP-сервер во все найденные агенты и устанавливает навык рабочего процесса туда, откуда агент читает навыки. Остальные настройки сохраняются, повторный запуск безопасен, а `--remove` отменяет изменения. После этого можно давать агенту задачи, например:
@@ -196,7 +196,7 @@ everything-rust не переводит код: код на Rust пишете в
 
 Язык определяется по репозиторию (`go.mod`, `pom.xml`, `.csproj` или `.sln`, `pyproject.toml`, `Gemfile`, `composer.json`, `package.json`, иначе по преобладающим исходным файлам); флаг `--lang` переопределяет автоопределение. Типы берутся из исходного кода: типы TS, аннотации типов Python, сигнатуры C, Go, Java и C#, теги YARD в Ruby, типы и phpdoc в PHP; нетипизированные параметры, используемые как числа, выводятся как числовые.
 
-Для PHP `analyze` планирует PHP-приложение (пакеты Composer и автозагрузка PSR-4, риски вроде нестрогого сравнения и переполнения целых чисел во float, сопоставление пакетов Composer с крейтами), а PHP CLI или сервер можно записать, воспроизвести и поставить за входную точку на Rust. Перенос отдельных модулей в Rust через PHP FFI станет следующим этапом ([issue #2](https://github.com/marprojector/everything-rust/issues/2)).
+Для PHP `analyze` планирует PHP-приложение (пакеты Composer и автозагрузка PSR-4, риски вроде нестрогого сравнения и переполнения целых чисел во float, сопоставление пакетов Composer с крейтами), а PHP CLI или сервер можно записать, воспроизвести и поставить за входную точку на Rust. Перенос отдельных модулей в Rust через PHP FFI станет следующим этапом ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)).
 
 C# работает аналогичным образом: `analyze` читает проекты `.csproj` и их пакеты NuGet (сопоставляемые с крейтами), разрешает директивы `using` в каталоги и отмечает особенности C# (`decimal`, `dynamic`, отложенные запросы LINQ, `Task`, `lock`, рефлексия). C# CLI или сервер ASP.NET можно записать, воспроизвести и поставить за входную точку на Rust; перенос отдельных модулей через P/Invoke появится далее.
 
@@ -212,7 +212,7 @@ C# работает аналогичным образом: `analyze` читае�
 ## Спонсоры
 
 <p align="center">
-  <a href="https://github.com/marprojector/everything-rust">everything-rust</a> бесплатен и распространяется с открытым исходным кодом. Если он помогает вам в работе, пожалуйста, подумайте о спонсорстве.<br>
+  <a href="https://github.com/AmmarArief/everything-rust">everything-rust</a> бесплатен и распространяется с открытым исходным кодом. Если он помогает вам в работе, пожалуйста, подумайте о спонсорстве.<br>
   Ваша поддержка помогает продолжать разработку.
 </p>
 
@@ -225,4 +225,4 @@ C# работает аналогичным образом: `analyze` читае�
 
 ## Лицензия
 
-[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/marprojector). Порты и сгенерированный код в вашем репозитории принадлежат вам.
+[MIT](../LICENSE) © [M. Ammar R. Arief](https://github.com/AmmarArief). Порты и сгенерированный код в вашем репозитории принадлежат вам.

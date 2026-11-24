@@ -8,7 +8,7 @@ description: vercel/ms durchgehend portiert. Korrekt bei jedem aufgezeichneten F
 [vercel/ms](https://github.com/vercel/ms) (5.5k Sterne, Commit `4ff48ce`) wandelt `"2 days"` in
 Millisekunden um und zurück; die meisten Node-Projekte ziehen es über irgendeine Abhängigkeit herein. Durchgehend portiert
 mit everything-rust 1.5.1; das Crate liegt in
-[`demo/real-world/vercel-ms-rs`](https://github.com/marprojector/everything-rust/tree/main/demo/real-world/vercel-ms-rs).
+[`demo/real-world/vercel-ms-rs`](https://github.com/AmmarArief/everything-rust/tree/main/demo/real-world/vercel-ms-rs).
 
 | Schritt | Ergebnis |
 | --- | --- |

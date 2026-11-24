@@ -36,12 +36,12 @@ MCP sunucusunu bunun yerine tek bir projeye elle eklemek için:
 
 ## Skill
 
-İş akışı skill'i ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) ajana döngüyü nasıl çalıştıracağını anlatır: profil çıkar, plan yap ve onay için dur, bir birimi port et, kanıtla, bir shadow arkasında yayına al ve ancak `gate` geçtiğinde bitti de. Tüm bir uygulama için [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) dosyasını izler; bkz. [Tüm uygulamayı port etmek](/docs/whole-apps/overview).
+İş akışı skill'i ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) ajana döngüyü nasıl çalıştıracağını anlatır: profil çıkar, plan yap ve onay için dur, bir birimi port et, kanıtla, bir shadow arkasında yayına al ve ancak `gate` geçtiğinde bitti de. Tüm bir uygulama için [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) dosyasını izler; bkz. [Tüm uygulamayı port etmek](/docs/whole-apps/overview).
 
 ## Claude Code plugin'i
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 Plugin, MCP sunucusunu ve skill'i getirir; CLI'ın `PATH` içinde olması gerekir.

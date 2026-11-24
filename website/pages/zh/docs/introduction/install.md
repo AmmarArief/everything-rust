@@ -22,10 +22,10 @@ everything-rust setup
 
 npm 安装的是同一个二进制文件，方便 JavaScript 项目使用。
 
-每个 [GitHub release](https://github.com/marprojector/everything-rust/releases) 都附带 macOS、Linux 和 Windows 的预编译二进制文件。在 Claude Code 中，你也可以把它作为插件安装（包含 MCP 服务器和技能；CLI 必须位于 `PATH` 中）：
+每个 [GitHub release](https://github.com/AmmarArief/everything-rust/releases) 都附带 macOS、Linux 和 Windows 的预编译二进制文件。在 Claude Code 中，你也可以把它作为插件安装（包含 MCP 服务器和技能；CLI 必须位于 `PATH` 中）：
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## 从源码安装

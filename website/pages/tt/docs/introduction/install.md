@@ -22,10 +22,10 @@ everything-rust setup
 
 npm JavaScript проектлары өчен шул ук бинар файлны урнаштыра.
 
-macOS, Linux һәм Windows өчен әзер бинар файллар һәр [GitHub релизына](https://github.com/marprojector/everything-rust/releases) беркетелгән. Claude Code'та аны плагин итеп тә урнаштырып була (MCP сервер һәм skill; CLI сезнең `PATH` эчендә булырга тиеш):
+macOS, Linux һәм Windows өчен әзер бинар файллар һәр [GitHub релизына](https://github.com/AmmarArief/everything-rust/releases) беркетелгән. Claude Code'та аны плагин итеп тә урнаштырып була (MCP сервер һәм skill; CLI сезнең `PATH` эчендә булырга тиеш):
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 ## Чыганак коддан

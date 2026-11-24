@@ -284,7 +284,7 @@ pub fn svg(card: &Card) -> String {
 <rect x="648" y="360" width="{rust_w:.0}" height="14" rx="7" fill="#e8561a"/>
 <text x="600" y="460" font-size="28" fill="#1a1a1a" text-anchor="middle">{headline}: <tspan font-weight="700" fill="#e8561a">{speed}</tspan></text>
 <text x="600" y="500" font-size="18" fill="#777777" text-anchor="middle">Fallback to the original: {fallback:.1}% of cases · call included · {machine}</text>
-<text x="600" y="556" font-size="17" fill="#888888" text-anchor="middle">github.com/marprojector/everything-rust</text>
+<text x="600" y="556" font-size="17" fill="#888888" text-anchor="middle">github.com/AmmarArief/everything-rust</text>
 </g>
 </svg>
 "##,

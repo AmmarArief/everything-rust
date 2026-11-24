@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Porter ses unités en Rust via le FFI de PHP est la prochaine étape ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). D'ici là, `bridge` refuse les unités PHP avec un message clair.
+Porter ses unités en Rust via le FFI de PHP est la prochaine étape ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). D'ici là, `bridge` refuse les unités PHP avec un message clair.
 
 La CI n'installe pas PHP, donc les tests PHP ne tournent que sur une machine qui l'a.

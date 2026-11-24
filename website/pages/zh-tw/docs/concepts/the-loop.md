@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. 基準測試 | `everything-rust bench <crate>` | 在原始版本與 Rust 上（包含橋接）為已錄製的案例計時 |
 | 4. 影子模式 | `everything-rust shadow <crate>` | 可直接替換的模組，同時執行兩者，回傳原始版本的結果，回報不一致之處；`EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. 閘門 | `everything-rust gate <crate>` | fmt、clippy `-D warnings`、測試、`unsafe` 稽核、沒有未移植的部分、原始版本的每條錯誤路徑都有已錄製的失敗案例、在原始版本會回傳錯誤的地方不使用 `unwrap`/`expect`/`panic!`（除非標記了 `// INFALLIBLE: <why>`）、建置、API、行為 |
-| AI 代理 | `everything-rust setup` | 在你的程式開發 AI 代理中註冊 MCP 伺服器（`everything-rust mcp`，每個步驟都是一個工具）與工作流程技能（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)） |
+| AI 代理 | `everything-rust setup` | 在你的程式開發 AI 代理中註冊 MCP 伺服器（`everything-rust mcp`，每個步驟都是一個工具）與工作流程技能（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)） |
 
 ## 熱路徑：把資料留在 Rust 中
 
@@ -95,7 +95,7 @@ x18n 側邊欄對 50,000 個 key 的搜尋上，逐字母輸入，結果完全�
 
 編譯式的原始版本受益較少：每個項目的工作本來就很快，所以批次勝出的幅度約等於
 核心數。批次 crate 使用 mimalloc 配置記憶體：使用系統配置器時，Go 的批次甚至比
-單一執行緒還慢。Demo：[`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md)。
+單一執行緒還慢。Demo：[`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md)。
 
 ## `bridge` 會決定什麼
 
@@ -183,7 +183,7 @@ x18n 側邊欄對 50,000 個 key 的搜尋上，逐字母輸入，結果完全�
 | 3. 基準測試 | `everything-rust bench <crate>` | 在原始版本與 Rust 上（包含橋接）為已錄製的案例計時 |
 | 4. 影子模式 | `everything-rust shadow <crate>` | 可直接替換的模組，同時執行兩者，回傳原始版本的結果，回報不一致之處；`EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. 閘門 | `everything-rust gate <crate>` | fmt、clippy `-D warnings`、測試、`unsafe` 稽核、沒有未移植的部分、原始版本的每條錯誤路徑都有已錄製的失敗案例、在原始版本會回傳錯誤的地方不使用 `unwrap`/`expect`/`panic!`（除非標記了 `// INFALLIBLE: <why>`）、建置、API、行為 |
-| AI 代理 | `everything-rust setup` | 在你的程式開發 AI 代理中註冊 MCP 伺服器（`everything-rust mcp`，每個步驟都是一個工具）與工作流程技能（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)） |
+| AI 代理 | `everything-rust setup` | 在你的程式開發 AI 代理中註冊 MCP 伺服器（`everything-rust mcp`，每個步驟都是一個工具）與工作流程技能（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)） |
 ## 下一步
 
 每個步驟都有自己的頁面：[效能剖析與分析](/docs/concepts/analyze)、[橋接](/docs/concepts/bridge)、[錄製](/docs/concepts/record)、[移植](/docs/concepts/port)、[比對](/docs/concepts/diff)、[基準測試](/docs/concepts/bench)、[影子模式](/docs/concepts/shadow)與[閘門](/docs/concepts/gate)。

@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Аның берәмлекләрен PHP FFI аша Rust'ка күчерү киләсе адым ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). Ул вакытка кадәр `bridge` PHP берәмлекләрен аңлаешлы хәбәр белән кире кага.
+Аның берәмлекләрен PHP FFI аша Rust'ка күчерү киләсе адым ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). Ул вакытка кадәр `bridge` PHP берәмлекләрен аңлаешлы хәбәр белән кире кага.
 
 CI PHP урнаштырмый, шуңа күрә PHP тестлары бары ул булган машинада гына җибәрелә.

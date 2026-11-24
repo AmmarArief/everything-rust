@@ -9,7 +9,7 @@ makes the decisions; you find the facts.
 Everything you write for the port lives in `<repo>/rust/`: `MAP.md`, `DECISIONS.md`,
 `GLOSSARY.md`, `HANDOFF.md`, `research/`, `app-cases/`, the unit crates, and the `app/` crate.
 Why this shape, with sources:
-https://github.com/marprojector/everything-rust/blob/main/docs/research/whole-app-port.md
+https://github.com/AmmarArief/everything-rust/blob/main/docs/research/whole-app-port.md
 
 ## The map
 

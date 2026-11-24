@@ -36,12 +36,12 @@ Para adicionar o servidor MCP manualmente a um único projeto:
 
 ## A skill
 
-A skill do fluxo de trabalho ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) indica ao agente como executar o ciclo: fazer o profiling, planear e parar para aprovação, migrar uma unidade, prová-la, entregá-la atrás de um shadow e só a dar como concluída quando o `gate` passar. Para uma aplicação completa, segue o [`whole-app.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md); consulte [Migrar uma aplicação completa](/docs/whole-apps/overview).
+A skill do fluxo de trabalho ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) indica ao agente como executar o ciclo: fazer o profiling, planear e parar para aprovação, migrar uma unidade, prová-la, entregá-la atrás de um shadow e só a dar como concluída quando o `gate` passar. Para uma aplicação completa, segue o [`whole-app.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md); consulte [Migrar uma aplicação completa](/docs/whole-apps/overview).
 
 ## Plugin do Claude Code
 
 ```text
-/plugin install everything-rust --marketplace marprojector/everything-rust
+/plugin install everything-rust --marketplace AmmarArief/everything-rust
 ```
 
 O plugin traz o servidor MCP e a skill; a CLI tem de estar no seu `PATH`.

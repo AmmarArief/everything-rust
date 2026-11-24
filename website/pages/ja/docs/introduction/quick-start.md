@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Rust ツールチェーンをまだ導入していない場合は、各 [GitHub リリース](https://github.com/marprojector/everything-rust/releases)に macOS、Linux、Windows 向けのビルド済みバイナリが添付されています。JavaScript プロジェクトでは npm が同じバイナリをインストールします。
+Rust ツールチェーンをまだ導入していない場合は、各 [GitHub リリース](https://github.com/AmmarArief/everything-rust/releases)に macOS、Linux、Windows 向けのビルド済みバイナリが添付されています。JavaScript プロジェクトでは npm が同じバイナリをインストールします。
 
 `setup` は見つかった各エージェントに MCP サーバーを追加し、エージェントがスキルを読み込む場所にワークフロースキルをインストールします。何が変更されるかは[エージェントの設定](/docs/introduction/agents)を参照してください。
 

@@ -31,7 +31,7 @@ Gerçek kod üzerinde çağrı başına ölçülenler ([altı dil](/docs/real-wo
 | Java | 0.18x | daha büyük birimleri port et |
 | Go | 0.04x | daha büyük birimleri port et |
 
-x18n çekirdeğinin API değişikliği olmadan taşınabilen 29 fonksiyonunun tamamı port edildi: her gate geçiyor ve 7,925 kayıtlı vaka tam olarak eşleşiyor; `bench` ise portların JS'ten çağrıldığı haliyle TS'ten daha yavaş olduğunu gösterdi, çünkü köprünün maliyeti yapılan işten fazla ([rapor](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms, kaydedilen vakaları üzerinde çağrı başına 0.56x hızında çalıştı ([vaka çalışması](/docs/real-world/vercel-ms)).
+x18n çekirdeğinin API değişikliği olmadan taşınabilen 29 fonksiyonunun tamamı port edildi: her gate geçiyor ve 7,925 kayıtlı vaka tam olarak eşleşiyor; `bench` ise portların JS'ten çağrıldığı haliyle TS'ten daha yavaş olduğunu gösterdi, çünkü köprünün maliyeti yapılan işten fazla ([rapor](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms, kaydedilen vakaları üzerinde çağrı başına 0.56x hızında çalıştı ([vaka çalışması](/docs/real-world/vercel-ms)).
 
 ## Kazandıran: döngüyü taşımak
 

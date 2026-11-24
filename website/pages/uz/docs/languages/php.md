@@ -23,6 +23,6 @@ everything-rust app replay .
 everything-rust app front-door .
 ```
 
-Uning birliklarini PHP FFI orqali Rust'ga port qilish keyingi qadam ([issue #2](https://github.com/marprojector/everything-rust/issues/2)). Ungacha `bridge` PHP birliklarini aniq xabar bilan rad etadi.
+Uning birliklarini PHP FFI orqali Rust'ga port qilish keyingi qadam ([issue #2](https://github.com/AmmarArief/everything-rust/issues/2)). Ungacha `bridge` PHP birliklarini aniq xabar bilan rad etadi.
 
 CI PHP'ni o'rnatmaydi, shuning uchun PHP testlari faqat u o'rnatilgan mashinada ishlaydi.

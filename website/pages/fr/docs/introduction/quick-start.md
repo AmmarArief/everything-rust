@@ -29,7 +29,7 @@ everything-rust setup
 ```
 :::
 
-Pas encore de toolchain Rust ? Des binaires précompilés pour macOS, Linux et Windows sont joints à chaque [release GitHub](https://github.com/marprojector/everything-rust/releases), et pour les projets JavaScript, npm installe le même binaire.
+Pas encore de toolchain Rust ? Des binaires précompilés pour macOS, Linux et Windows sont joints à chaque [release GitHub](https://github.com/AmmarArief/everything-rust/releases), et pour les projets JavaScript, npm installe le même binaire.
 
 `setup` ajoute le serveur MCP à chaque agent qu'il trouve et installe le skill de workflow là où l'agent lit ses skills. Voir [Configurer votre agent](/docs/introduction/agents) pour savoir ce qu'il modifie.
 

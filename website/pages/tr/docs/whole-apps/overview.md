@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## Ajan bunu nasıl yürütür
 
-[whole-app skill'i](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md), yalnızca sizin verebileceğiniz kararlardan başlayarak ajanı adım adım yönlendirir:
+[whole-app skill'i](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md), yalnızca sizin verebileceğiniz kararlardan başlayarak ajanı adım adım yönlendirir:
 
 - **Sorgulama (grilling)**: ajan, portun bağlı olduğu her karar netleşene kadar, her soruyu önerilen yanıtıyla birlikte turlar halinde sorar ve her birini `rust/DECISIONS.md` içinde bir ADR olarak yazar; `rust/GLOSSARY.md` ise orijinalin terimlerini Rust adlarına eşler.
 - **Araştırma**: arka plan ajanları her bağımlılığın birincil kaynaklarını okur ve buldukları her anlamsal tuzakla birlikte `rust/research/<topic>.md` dosyasını yazar.

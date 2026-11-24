@@ -57,7 +57,7 @@ x18n 側邊欄對 50,000 個 key 的搜尋上，逐字母輸入，結果完全�
 
 編譯式的原始版本受益較少：每個項目的工作本來就很快，所以批次勝出的幅度約等於
 核心數。批次 crate 使用 mimalloc 配置記憶體：使用系統配置器時，Go 的批次甚至比
-單一執行緒還慢。Demo：[`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md)。
+單一執行緒還慢。Demo：[`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md)。
 ## 撰寫快速的索引
 
 - 讓呼叫端只建立一次批次，而不是每次查詢都建立。用一般的迴圈將回傳的索引對應回項目。

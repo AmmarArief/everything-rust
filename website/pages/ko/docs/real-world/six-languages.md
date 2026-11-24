@@ -10,7 +10,7 @@ everything-rust이 지원하는 각 언어의 실제 코드에 처음부터 끝�
 실행하지 않았습니다. 그래서 대상은 설치된 툴체인에 포함된 표준 라이브러리 모듈이며, 적절한 라이브러리 소스가
 디스크에 없었던 Java와 C는 JDK와 glibc 자체를 얇은 파사드 뒤에 두고 정답(oracle)으로 삼았습니다.
 
-포트, 기록된 케이스, 추가 입력은 [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md)에 있습니다.
+포트, 기록된 케이스, 추가 입력은 [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md)에 있습니다.
 
 | 언어 | 코드 | 함수 | 기록된 케이스 | 결과 |
 | --- | --- | ---: | ---: | --- |

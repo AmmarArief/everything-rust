@@ -33,7 +33,7 @@ O `--whole-app` acrescenta a forma da aplicação (CLI, servidor ou biblioteca) 
 
 ## Como o agente avança
 
-A [skill de aplicação completa](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md) guia o agente ao longo do processo, começando pelas decisões que só você pode tomar:
+A [skill de aplicação completa](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md) guia o agente ao longo do processo, começando pelas decisões que só você pode tomar:
 
 - **Interrogatório**: o agente pergunta por rondas, cada pergunta com a respetiva resposta recomendada, até que todas as decisões de que a migração depende estejam resolvidas, e regista cada uma como um ADR em `rust/DECISIONS.md`, com `rust/GLOSSARY.md` a mapear os termos do original para nomes em Rust.
 - **Investigação**: agentes em segundo plano leem as fontes primárias de cada dependência e escrevem `rust/research/<topic>.md`, com todas as armadilhas semânticas que encontraram.

@@ -31,7 +31,7 @@ Measured per call on real code ([six languages](/docs/real-world/six-languages))
 | Java | 0.18x | port bigger units |
 | Go | 0.04x | port bigger units |
 
-All 29 functions of x18n's core that can move without an API change were ported: every gate passes and 7,925 recorded cases match exactly, and `bench` showed the ports are slower than the TS as called from JS, because the bridge costs more than the work ([report](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms ran at 0.56x per call over its recorded cases ([case study](/docs/real-world/vercel-ms)).
+All 29 functions of x18n's core that can move without an API change were ported: every gate passes and 7,925 recorded cases match exactly, and `bench` showed the ports are slower than the TS as called from JS, because the bridge costs more than the work ([report](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-core/README.md)). vercel/ms ran at 0.56x per call over its recorded cases ([case study](/docs/real-world/vercel-ms)).
 
 ## What wins: moving the loop
 

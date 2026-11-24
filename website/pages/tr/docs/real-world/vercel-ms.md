@@ -8,7 +8,7 @@ description: Uçtan uca port edilmiş vercel/ms. Kaydedilen her vakada doğru, �
 [vercel/ms](https://github.com/vercel/ms) (5.5k yıldız, commit `4ff48ce`) `"2 days"`'i milisaniyeye
 ve geri çevirir; çoğu Node projesi onu bir bağımlılık üzerinden çeker. everything-rust 1.5.1 ile uçtan uca
 port edildi; crate
-[`demo/real-world/vercel-ms-rs`](https://github.com/marprojector/everything-rust/tree/main/demo/real-world/vercel-ms-rs) içindedir.
+[`demo/real-world/vercel-ms-rs`](https://github.com/AmmarArief/everything-rust/tree/main/demo/real-world/vercel-ms-rs) içindedir.
 
 | Adım | Sonuç |
 | --- | --- |

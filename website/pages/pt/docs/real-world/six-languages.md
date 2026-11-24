@@ -11,7 +11,7 @@ internet não foi executado. Por isso, os alvos são módulos da biblioteca padr
 toolchains instaladas e, para Java e C, onde não havia código-fonte de bibliotecas adequado no disco, o próprio JDK
 e a glibc servem de oráculo por trás de uma fachada fina.
 
-As migrações, os casos registados e as entradas extra estão em [`demo/real-world`](https://github.com/marprojector/everything-rust/blob/main/demo/real-world/README.md).
+As migrações, os casos registados e as entradas extra estão em [`demo/real-world`](https://github.com/AmmarArief/everything-rust/blob/main/demo/real-world/README.md).
 
 | Linguagem | Código | Funções | Casos registados | Resultado |
 | --- | --- | ---: | ---: | --- |

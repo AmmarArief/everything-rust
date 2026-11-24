@@ -24,7 +24,7 @@ Portu siz ya da ajanınız `src/port.rs` içinde yazarsınız. Crate'teki diğer
 
 ## Bir örnek: bir konum kaydıran emoji
 
-[x18n](https://github.com/x18n-dev/x18n)'den `packages/core/src/fuzzy.ts`, [`demo/`](https://github.com/marprojector/everything-rust/tree/main/demo)
+[x18n](https://github.com/x18n-dev/x18n)'den `packages/core/src/fuzzy.ts`, [`demo/`](https://github.com/AmmarArief/everything-rust/tree/main/demo)
 içinde iki şekilde port edildi:
 
 ```sh
@@ -46,7 +46,7 @@ JS `indexOf` UTF-16 kod birimlerini sayar, bu yüzden bir emoji iki konum tutar.
 içindeki port üretilen `utf16` yardımcılarını kullanır ve hem napi-rs (`demo/fuzzy-napi`) hem de
 wasm-bindgen (`demo/fuzzy-rs`) olarak 2000/2000 vakayı ve gate'i geçer.
 
-everything-rust'in x18n'in tamamı için yazdığı plan: [`docs/examples/x18n.md`](https://github.com/marprojector/everything-rust/blob/main/docs/examples/x18n.md).
+everything-rust'in x18n'in tamamı için yazdığı plan: [`docs/examples/x18n.md`](https://github.com/AmmarArief/everything-rust/blob/main/docs/examples/x18n.md).
 
 ## Ne kadar büyük olmalı?
 

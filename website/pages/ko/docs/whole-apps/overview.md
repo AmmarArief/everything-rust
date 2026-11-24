@@ -33,7 +33,7 @@ everything-rust analyze . --whole-app
 
 ## 에이전트가 진행하는 방식
 
-[whole-app 스킬](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/whole-app.md)이 에이전트를 안내하며, 개발자만 내릴 수 있는 결정부터 시작합니다:
+[whole-app 스킬](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/whole-app.md)이 에이전트를 안내하며, 개발자만 내릴 수 있는 결정부터 시작합니다:
 
 - **집중 질문(Grilling)**: 에이전트가 여러 차례에 걸쳐 질문하며, 각 질문에는 권장 답이 붙습니다. 포팅이 의존하는 모든 결정이 정해질 때까지 계속하고, 각 결정을 `rust/DECISIONS.md`에 ADR로 기록하며, `rust/GLOSSARY.md`에 원본의 용어를 Rust 이름으로 매핑합니다.
 - **조사**: 백그라운드 에이전트가 각 의존성의 1차 자료를 읽고, 발견한 의미상의 함정을 모두 담아 `rust/research/<topic>.md`를 작성합니다.

@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. ベンチマーク | `everything-rust bench <crate>` | 記録ケースを元の実装と Rust でブリッジ込みで計測する |
 | 4. シャドウ | `everything-rust shadow <crate>` | 両方を実行し、元の実装の結果を返し、不一致を報告する差し替え用モジュール。`EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. ゲート | `everything-rust gate <crate>` | fmt、clippy `-D warnings`、テスト、`unsafe` の監査、未移植のものがないこと、元の実装のすべてのエラーパスについて失敗する記録ケースがあること、元の実装がエラーを返す箇所に `unwrap`/`expect`/`panic!` がないこと（`// INFALLIBLE: <why>` が付いている場合を除く）、ビルド、API、挙動 |
-| エージェント | `everything-rust setup` | MCP サーバー（`everything-rust mcp`、すべてのステップをツールとして提供）とワークフロースキル（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）をコーディングエージェントに登録する |
+| エージェント | `everything-rust setup` | MCP サーバー（`everything-rust mcp`、すべてのステップをツールとして提供）とワークフロースキル（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）をコーディングエージェントに登録する |
 
 ## ホットパス: データを Rust 側に保持する
 
@@ -96,7 +96,7 @@ x18n のサイドバー検索で 50,000 キーに対して 1 文字ずつ入力�
 
 コンパイル型の元の実装では効果が小さくなります: 要素ごとの処理がすでに速いので、バッチの効果はほぼコア数分です。
 バッチのクレートは mimalloc でメモリを確保します: システムのアロケーターでは、Go のバッチは
-シングルスレッドより遅くなりました。デモ: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md)。
+シングルスレッドより遅くなりました。デモ: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md)。
 
 ## `bridge` が判断すること
 
@@ -184,7 +184,7 @@ x18n のサイドバー検索で 50,000 キーに対して 1 文字ずつ入力�
 | 3. ベンチマーク | `everything-rust bench <crate>` | 記録ケースを元の実装と Rust でブリッジ込みで計測する |
 | 4. シャドウ | `everything-rust shadow <crate>` | 両方を実行し、元の実装の結果を返し、不一致を報告する差し替え用モジュール。`EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. ゲート | `everything-rust gate <crate>` | fmt、clippy `-D warnings`、テスト、`unsafe` の監査、未移植のものがないこと、元の実装のすべてのエラーパスについて失敗する記録ケースがあること、元の実装がエラーを返す箇所に `unwrap`/`expect`/`panic!` がないこと（`// INFALLIBLE: <why>` が付いている場合を除く）、ビルド、API、挙動 |
-| エージェント | `everything-rust setup` | MCP サーバー（`everything-rust mcp`、すべてのステップをツールとして提供）とワークフロースキル（[`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)）をコーディングエージェントに登録する |
+| エージェント | `everything-rust setup` | MCP サーバー（`everything-rust mcp`、すべてのステップをツールとして提供）とワークフロースキル（[`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)）をコーディングエージェントに登録する |
 ## 次へ
 
 各ステップには専用のページがあります: [プロファイルと分析](/docs/concepts/analyze)、[ブリッジ](/docs/concepts/bridge)、[記録](/docs/concepts/record)、[移植](/docs/concepts/port)、[差分](/docs/concepts/diff)、[ベンチマーク](/docs/concepts/bench)、[シャドウ](/docs/concepts/shadow)、[ゲート](/docs/concepts/gate)。

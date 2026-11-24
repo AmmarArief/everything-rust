@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `everything-rust bench <crate>` | Qeydə alınmış halların orijinalda və Rust-da, körpü daxil, vaxtını ölçür |
 | 4. Shadow | `everything-rust shadow <crate>` | Hər ikisini işə salan, orijinalın nəticəsini qaytaran və uyğunsuzluqları bildirən drop-in; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, testlər, `unsafe` auditi, port edilməmiş heç nə qalmaması, orijinalın hər xəta yolu üçün qeydə alınmış uğursuz hal, orijinalın xəta qaytardığı yerdə `unwrap`/`expect`/`panic!` olmaması (`// INFALLIBLE: <why>` ilə işarələnməyibsə), qurma, API, davranış |
-| Agentlər | `everything-rust setup` | MCP serveri (`everything-rust mcp`, hər addım alət kimi) və iş axını skill-ini ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlaşdırma agentlərinizdə qeydiyyatdan keçirir |
+| Agentlər | `everything-rust setup` | MCP serveri (`everything-rust mcp`, hər addım alət kimi) və iş axını skill-ini ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlaşdırma agentlərinizdə qeydiyyatdan keçirir |
 
 ## Hot path-lar: məlumatı Rust-da saxlayın
 
@@ -96,7 +96,7 @@ Hər dil batch-lər alır və onlar hətta çağırış başına portların uduz
 
 Kompilyasiya olunan orijinallar daha az qazanır: element başına iş artıq sürətlidir, buna görə batch nüvələrin sayı
 qədər qazanır. Batch crate-ləri mimalloc ilə yaddaş ayırır: sistem allocator-u ilə Go batch-i bir
-thread-dən daha yavaş idi. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+thread-dən daha yavaş idi. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## `bridge` nəyə qərar verir
 
@@ -184,7 +184,7 @@ zərər verən şey adətən qeydin xaricində olur, buna görə sərhədlərin 
 | 3. Bench | `everything-rust bench <crate>` | Qeydə alınmış halların orijinalda və Rust-da, körpü daxil, vaxtını ölçür |
 | 4. Shadow | `everything-rust shadow <crate>` | Hər ikisini işə salan, orijinalın nəticəsini qaytaran və uyğunsuzluqları bildirən drop-in; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, testlər, `unsafe` auditi, port edilməmiş heç nə qalmaması, orijinalın hər xəta yolu üçün qeydə alınmış uğursuz hal, orijinalın xəta qaytardığı yerdə `unwrap`/`expect`/`panic!` olmaması (`// INFALLIBLE: <why>` ilə işarələnməyibsə), qurma, API, davranış |
-| Agentlər | `everything-rust setup` | MCP serveri (`everything-rust mcp`, hər addım alət kimi) və iş axını skill-ini ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlaşdırma agentlərinizdə qeydiyyatdan keçirir |
+| Agentlər | `everything-rust setup` | MCP serveri (`everything-rust mcp`, hər addım alət kimi) və iş axını skill-ini ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) kodlaşdırma agentlərinizdə qeydiyyatdan keçirir |
 ## Növbəti
 
 Hər addımın öz səhifəsi var: [Profil və analiz](/docs/concepts/analyze), [Körpü](/docs/concepts/bridge), [Qeyd](/docs/concepts/record), [Port](/docs/concepts/port), [Diff](/docs/concepts/diff), [Bench](/docs/concepts/bench), [Shadow](/docs/concepts/shadow) və [Gate](/docs/concepts/gate).

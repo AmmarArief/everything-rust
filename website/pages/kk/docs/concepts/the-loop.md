@@ -45,7 +45,7 @@ analyze --whole-app ──> app record ──> app front-door ──> per unit: 
 | 3. Bench | `everything-rust bench <crate>` | Жазылған кейстерді түпнұсқада және Rust-та, bridge-ті қоса алғанда, уақытпен өлшейді |
 | 4. Shadow | `everything-rust shadow <crate>` | Екеуін де іске қосып, түпнұсқаның нәтижесін қайтаратын, сәйкессіздіктерді хабарлайтын алмастырғыш; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, тесттер, `unsafe` аудиті, портталмаған ештеңе қалмауы, түпнұсқаның әр қате жолы үшін жазылған сәтсіз кейс, түпнұсқа қате қайтаратын жерде `unwrap`/`expect`/`panic!` болмауы (`// INFALLIBLE: <why>` деп белгіленбесе), build, API, мінез-құлық |
-| Агенттер | `everything-rust setup` | MCP серверді (`everything-rust mcp`, әр қадам құрал ретінде) және workflow skill-ін ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) кодинг-агенттеріңізде тіркейді |
+| Агенттер | `everything-rust setup` | MCP серверді (`everything-rust mcp`, әр қадам құрал ретінде) және workflow skill-ін ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) кодинг-агенттеріңізде тіркейді |
 
 ## Hot path-тар: деректерді Rust ішінде ұстау
 
@@ -96,7 +96,7 @@ x18n бүйірлік панеліндегі 50,000 кілт бойынша із
 
 Компиляцияланатын түпнұсқалар азырақ ұтады: әр элементке жұмыс онсыз да жылдам, сондықтан batch ядролар
 санына қарай ұтады. Batch crate-тері mimalloc арқылы жады бөледі: жүйелік аллокатормен Go batch-і бір
-ағыннан да баяу болды. Demo: [`demo/x18n-search`](https://github.com/marprojector/everything-rust/blob/main/demo/x18n-search/README.md).
+ағыннан да баяу болды. Demo: [`demo/x18n-search`](https://github.com/AmmarArief/everything-rust/blob/main/demo/x18n-search/README.md).
 
 ## `bridge` не шешеді
 
@@ -184,7 +184,7 @@ x18n бүйірлік панеліндегі 50,000 кілт бойынша із
 | 3. Bench | `everything-rust bench <crate>` | Жазылған кейстерді түпнұсқада және Rust-та, bridge-ті қоса алғанда, уақытпен өлшейді |
 | 4. Shadow | `everything-rust shadow <crate>` | Екеуін де іске қосып, түпнұсқаның нәтижесін қайтаратын, сәйкессіздіктерді хабарлайтын алмастырғыш; `EVERYTHING_RUST_MODE=old\|shadow\|new` |
 | 5. Gate | `everything-rust gate <crate>` | fmt, clippy `-D warnings`, тесттер, `unsafe` аудиті, портталмаған ештеңе қалмауы, түпнұсқаның әр қате жолы үшін жазылған сәтсіз кейс, түпнұсқа қате қайтаратын жерде `unwrap`/`expect`/`panic!` болмауы (`// INFALLIBLE: <why>` деп белгіленбесе), build, API, мінез-құлық |
-| Агенттер | `everything-rust setup` | MCP серверді (`everything-rust mcp`, әр қадам құрал ретінде) және workflow skill-ін ([`skills/everything-rust/SKILL.md`](https://github.com/marprojector/everything-rust/blob/main/skills/everything-rust/SKILL.md)) кодинг-агенттеріңізде тіркейді |
+| Агенттер | `everything-rust setup` | MCP серверді (`everything-rust mcp`, әр қадам құрал ретінде) және workflow skill-ін ([`skills/everything-rust/SKILL.md`](https://github.com/AmmarArief/everything-rust/blob/main/skills/everything-rust/SKILL.md)) кодинг-агенттеріңізде тіркейді |
 ## Келесі
 
 Әр қадамның өз беті бар: [Профайлдау және талдау](/docs/concepts/analyze), [Bridge](/docs/concepts/bridge), [Жазып алу](/docs/concepts/record), [Порт](/docs/concepts/port), [Diff](/docs/concepts/diff), [Bench](/docs/concepts/bench), [Shadow](/docs/concepts/shadow) және [Gate](/docs/concepts/gate).

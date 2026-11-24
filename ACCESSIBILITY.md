@@ -23,6 +23,6 @@ everything-rust is a command-line tool, so its accessibility is mostly about its
 ## Reporting a barrier
 
 If something in everything-rust or its docs gets in your way, please open an
-[issue](https://github.com/marprojector/everything-rust/issues/new/choose) and describe what you were
+[issue](https://github.com/AmmarArief/everything-rust/issues/new/choose) and describe what you were
 trying to do and what you use (screen reader, terminal, OS). Accessibility issues are treated as
 bugs.
